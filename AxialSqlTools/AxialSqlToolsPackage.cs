@@ -105,7 +105,6 @@ namespace AxialSqlTools
             Config options = Config.Load(optionsFileName);
 
             ImageList icons = new ImageList();
-            icons.Images.Add(Resources.folder); //this doesn't work
             icons.Images.Add(Resources.script);
 
             m_plugin = new Plugin(application, profferCommands3, icons, oleMenuCommandService, "AxialSqlTools", "Aurora.Connect", options);
@@ -128,6 +127,40 @@ namespace AxialSqlTools
 
         public void RefreshTemplatesList()
         {
+            // ThreadHelper.ThrowIfNotOnUIThread();
+
+            //// TODO - Need to handle this properly somehow... 
+            //// delete all named command bars and commands
+            //DTE2 application = GetGlobalService(typeof(DTE)) as DTE2;
+
+            //int ii = 1;
+            //while (true)
+            //{
+            //    int removeCommandBarResult = 1;
+            //    int removeCommandResult = 1;
+
+            //    string folderName = "Folder_" + ii;
+            //    string commandName = "Template_" + ii;
+
+            //    try
+            //    {
+            //        CommandBars cmdBars = (Microsoft.VisualStudio.CommandBars.CommandBars)application.CommandBars;
+            //        CommandBar existingCmdBar = null;
+            //        existingCmdBar = cmdBars[folderName];
+            //        removeCommandBarResult = m_plugin.ProfferCommands.RemoveCommandBar(existingCmdBar);
+            //    } catch {}
+
+            //    try
+            //    {
+            //        removeCommandResult = m_plugin.ProfferCommands.RemoveNamedCommand(commandName);
+            //    } catch {}
+
+            //    ii += 1;
+
+            //    if ((removeCommandBarResult == 1 && removeCommandResult == 1) || ii > 1000) {break;}                
+            //}
+
+
 
             Dictionary<string, string> fileNamesCache = new Dictionary<string, string>();
 

@@ -97,14 +97,11 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="index.html" />
     <Content Include="Resources\export-data.png" />
-    <Content Include="Resources\folder.png" />
     <Content Include="Resources\info.png" />
     <Content Include="Resources\refresh.png" />
     <None Include="Resources\script.png" />
     <Content Include="Resources\settings.png" />
-    <Content Include="Resources\SSMS2019Package.ico" />
     <VSCTCompile Include="AxialSqlToolsPackage.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
       <SubType>Designer</SubType>
@@ -267,6 +264,7 @@
     <EmbeddedResource Include="VSPackage.resx">
       <MergeWithCTO>true</MergeWithCTO>
       <ManifestResourceName>VSPackage</ManifestResourceName>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

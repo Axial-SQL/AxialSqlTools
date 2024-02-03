@@ -29,8 +29,7 @@ namespace Aurora
         public AsyncPackage package;
         public string FullFileName;
 
-        override public int FolderIconIndex { get { return 0; } }
-        override public int ScriptIconIndex { get { return 1; } }
+        override public int ScriptIconIndex { get { return 0; } }
 
         public override bool OnCommand()
         {
