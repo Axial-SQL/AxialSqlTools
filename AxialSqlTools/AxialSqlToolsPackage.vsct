@@ -1,0 +1,240 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!--  This is the file that defines the actual layout and type of the commands.
+        It is divided in different sections (e.g. command definition, command
+        placement, ...), with each defining a specific set of properties.
+        See the comment before each section for more details about how to
+        use it. -->
+
+  <!--  The VSCT compiler (the tool that translates this file into the binary
+        format that VisualStudio will consume) has the ability to run a preprocessor
+        on the vsct file; this preprocessor is (usually) the C++ preprocessor, so
+        it is possible to define includes and macros with the same syntax used
+        in C++ files. Using this ability of the compiler here, we include some files
+        defining some of the constants that we will use inside the file. -->
+
+  <!--This is the file that defines the IDs for all the commands exposed by VisualStudio. -->
+  <Extern href="stdidcmd.h" />
+
+  <!--This header contains the command ids for the menus provided by the shell. -->
+  <Extern href="vsshlids.h" />
+
+  <!--The Commands section is where commands, menus, and menu groups are defined.
+      This section uses a Guid to identify the package that provides the command defined inside it. -->
+  <Commands package="guidAxialSqlToolsPackage">
+    <!-- Inside this section we have different sub-sections: one for the menus, another
+    for the menu groups, one for the buttons (the actual commands), one for the combos
+    and the last one for the bitmaps used. Each element is identified by a command id that
+    is a unique pair of guid and numeric identifier; the guid part of the identifier is usually
+    called "command set" and is used to group different command inside a logically related
+    group; your package should define its own command set in order to avoid collisions
+    with command ids defined by other packages. -->
+
+    <!-- In this section you can define new menu groups. A menu group is a container for
+         other menus or buttons (commands); from a visual point of view you can see the
+         group as the part of a menu contained between two lines. The parent of a group
+         must be a menu. -->
+    <Groups>
+      
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" priority="0x0000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbar" />
+      </Group>
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" priority="0x0000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
+      </Group>
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" priority="0x0000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenu" />
+      </Group>
+
+    </Groups>
+
+    <Menus>
+      <Menu guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbar" type="Toolbar">
+        <CommandFlag>DefaultDocked</CommandFlag>
+        <Strings>
+          <ButtonText>Axial SQL Tools</ButtonText>
+          <CommandName>Axial SQL Tools</CommandName>
+        </Strings>
+      </Menu>
+      
+      <Menu guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenu" type="Menu" priority="0x0000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
+        <Strings>
+          <ButtonText>Query Templates</ButtonText>
+        </Strings>
+      </Menu>
+      
+      <Menu guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" type="Menu" priority="0x0000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
+        <Strings>
+          <ButtonText>Tools</ButtonText>
+        </Strings>
+      </Menu>
+      
+    </Menus>
+
+    
+    
+
+    <!--Buttons section. -->
+    <!--This section defines the elements the user can interact with, like a menu command or a button
+        or combo box in a toolbar. -->
+    <Buttons>
+      <!--To define a menu group you have to specify its ID, the parent menu and its display priority.
+          The command is visible and enabled by default. If you need to change the visibility, status, etc, you can use
+          the CommandFlag node.
+          You can add more than one CommandFlag node e.g.:
+              <CommandFlag>DefaultInvisible</CommandFlag>
+              <CommandFlag>DynamicVisibility</CommandFlag>
+          If you do not want an image next to your command, remove the Icon node /> -->
+
+
+      <!-- Toolbar ROOT -->
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialFormatQueryButton" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
+        <Icon guid="guidImagesMagicWand" id="bmpMagicWand" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Format Query</ButtonText>
+        </Strings>
+      </Button>
+      
+      <!-- TOOLS Submenu buttons -->
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Icon guid="guidExportData" id="bmpExportData" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Export Grid to Excel</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridToGoogleSheet" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Icon guid="guidExportData" id="bmpExportData" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings>
+          <ButtonText>Export Grid to New Google Sheet - TODO</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings>
+          <ButtonText>Script Current Object - TODO</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialFindObjectInObjectExplorer" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings>
+          <ButtonText>Find Object In Object Explorer - TODO</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptResultIntoNewWindow" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <CommandFlag>IconAndText</CommandFlag>        
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings>
+          <ButtonText>Script Result Into a New Window - TODO</ButtonText>
+        </Strings>
+      </Button>
+
+      <!-- Query templates Submenu buttons -->
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesButtonRefresh" priority="0x9900" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" />
+        <Icon guid="guidRefresh" id="bmpRefresh" />
+        <!--<CommandFlag>IconAndText</CommandFlag>-->
+        <Strings>
+          <ButtonText>Refresh Templates</ButtonText>
+        </Strings>
+      </Button>
+            
+      
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSettingsButton" priority="0x1000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
+        <Icon guid="guidImagesSettings" id="bmpSettings" />        
+        <Strings>
+          <ButtonText>Settings</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialAboutButton" priority="0x2000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
+        <Icon guid="guidInfo" id="bmpInfo" />
+        <Strings>
+          <ButtonText>About</ButtonText>
+        </Strings>
+      </Button>
+      
+    </Buttons>
+
+    <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
+    <Bitmaps>
+      <!--  The bitmap id is defined in a way that is a little bit different from the others:
+            the declaration starts with a guid for the bitmap strip, then there is the resource id of the
+            bitmap strip containing the bitmaps and then there are the numeric ids of the elements used
+            inside a button definition. An important aspect of this declaration is that the element id
+            must be the actual index (1-based) of the bitmap inside the bitmap strip. -->
+      <Bitmap guid="guidImagesSettings" href="Resources\settings.png" usedList="bmpSettings" />
+      <Bitmap guid="guidImagesMagicWand" href="Resources\wizard.png" usedList="bmpMagicWand" />
+      <Bitmap guid="guidImagesTemplate" href="Resources\template.png" usedList="bmpTemplate" />
+      <Bitmap guid="guidInfo" href="Resources\info.png" usedList="bmpInfo" />
+      <Bitmap guid="guidRefresh" href="Resources\refresh.png" usedList="bmpRefresh" />
+      <Bitmap guid="guidExportData" href="Resources\export-data.png" usedList="bmpExportData" />
+    </Bitmaps>
+  </Commands>
+
+  <Symbols>
+    <!-- This is the package guid. -->
+    <GuidSymbol name="guidAxialSqlToolsPackage" value="{82ff597d-c4bc-469f-b990-637219074984}" />
+
+    <!-- This is the guid used to group the menu commands together -->
+    <GuidSymbol name="guidAxialSqlToolsPackageCmdSet" value="{45457e02-6dec-4a4d-ab22-c9ee126d23c5}">
+
+      <IDSymbol name="AxialToolbar" value="0x1000" />
+      <IDSymbol name="AxialToolbarGroup" value="0x2000" />
+      
+      <IDSymbol name="AxialFormatQueryButton" value="4131" />
+      <IDSymbol name="AxialSettingsButton" value="4130" />
+      <IDSymbol name="AxialAboutButton" value="4129" />
+      
+      <IDSymbol name="AxialQueryTemplatesSubMenu" value="0x1100" />
+      <IDSymbol name="AxialQueryTemplatesSubMenuGroup" value="0x1101" />
+      <IDSymbol name="AxialQueryTemplatesButtonRefresh" value="4132" />
+
+      <IDSymbol name="AxialToolsSubMenu" value="0x1200" />
+      <IDSymbol name="AxialToolsSubMenuGroup" value="0x1201" />
+      
+      <IDSymbol name="AxialExportButtonGridToExcel" value="4133" />
+      
+      <IDSymbol name="AxialScriptCurrentObject" value="4134" />
+      <IDSymbol name="AxialFindObjectInObjectExplorer" value="4135" />
+      <IDSymbol name="AxialScriptResultIntoNewWindow" value="4136" />
+      <IDSymbol name="AxialExportGridToGoogleSheet" value="4137" />
+
+    </GuidSymbol>
+
+    <GuidSymbol name="guidImagesSettings" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c1}">
+      <IDSymbol name="bmpSettings" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidImagesMagicWand" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c2}">
+      <IDSymbol name="bmpMagicWand" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidImagesTemplate" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c3}">
+      <IDSymbol name="bmpTemplate" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidInfo" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c4}">
+      <IDSymbol name="bmpInfo" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidRefresh" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c5}">
+      <IDSymbol name="bmpRefresh" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidExportData" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c6}">
+      <IDSymbol name="bmpExportData" value="1" />
+    </GuidSymbol>
+
+  </Symbols>
+</CommandTable>
