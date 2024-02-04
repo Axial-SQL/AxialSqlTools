@@ -7,12 +7,16 @@
              Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
              Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300"
-             Name="MyToolWindow">
+             d:DesignHeight="300"
+             Name="MyToolWindow" Width="516.974">
     <Grid>
         <StackPanel Orientation="Vertical">
-            <TextBlock Margin="10" HorizontalAlignment="Center">AboutWindow</TextBlock>
-            <Button Content="Click me!" Click="button1_Click" Width="120" Height="80" Name="button1"/>
+            <Image Source="pack://application:,,,/AxialSqlTools;component/Resources/logo.png" Width="250" />
+            <Button Content="Visit our web-site at https://axial-sql.com/" Click="buttonAxialSqlWebsite_Click" Height="30" x:Name="buttonVisitWebsite" VerticalAlignment="Center" Margin="100,10,100,10"/>
+            <TextBlock Margin="10" HorizontalAlignment="Center">Expert SQL Server solutions</TextBlock>
+            <TextBlock Margin="10" HorizontalAlignment="Center">info@axial-sql.com</TextBlock>
+            
+            
         </StackPanel>
     </Grid>
 </UserControl>

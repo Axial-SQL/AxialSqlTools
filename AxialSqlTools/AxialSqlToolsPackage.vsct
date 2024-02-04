@@ -120,10 +120,10 @@
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Icon guid="guidImagesTemplate" id="bmpTemplate" />
         <CommandFlag>IconAndText</CommandFlag>
-        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
-          <ButtonText>Script Current Object - TODO</ButtonText>
+          <ButtonText>Script Selected Object</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialFindObjectInObjectExplorer" priority="0x0000" type="Button">

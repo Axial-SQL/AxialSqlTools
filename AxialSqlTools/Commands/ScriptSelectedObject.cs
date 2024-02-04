@@ -102,7 +102,7 @@ namespace AxialSqlTools
                 {
                     TextSelection selection = dte.ActiveDocument.Selection as TextSelection;
 
-                    string existingCommandText = selection.Text.Trim();
+                    string selectedObjectName = selection.Text.Trim();
 
                     //Could be:
                     // - Table
@@ -113,8 +113,81 @@ namespace AxialSqlTools
                     // script properly from a current connection
                     // display in a single window
 
+                    //////UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
+
+                    //////SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
+
+                    //////builder.DataSource = connection.ServerName;
+                    //////builder.IntegratedSecurity = string.IsNullOrEmpty(connection.Password);
+                    //////builder.Password = connection.Password;
+                    //////builder.UserID = connection.UserName;
+                    //////builder.InitialCatalog = connection.AdvancedOptions["DATABASE"];
+                    //////builder.ApplicationName = "Axial SQL Tools";
+
+                    //////string connectionString = builder.ToString();
+
+                    //////SqlConnection currentServerConnetion = new SqlConnection(connectionString);
+                    //////currentServerConnetion.Open();
+
+                    //////string command = "SELECT * FROM sys.objects WHERE [object_id] = OBJECT_ID(@selectedObjectName)";
+                    //////SqlCommand cmd = new SqlCommand(command, currentServerConnetion);
+                    //////cmd.Parameters.Add(new SqlParameter[] { new SqlParameter("selectedObjectName", selectedObjectName) });
+
+                    //////string object_type = null;
+                    //////string object_schema = null;
+                    //////string object_name = null;
+
+                    //////using (SqlDataReader reader = cmd.ExecuteReader())
+                    //////{
+                    //////    if (reader.Read())
+                    //////    {
+                    //////        object_type = reader.GetString(0);  
+                    //////        object_schema = reader.GetString(0);
+                    //////        object_name = reader.GetString(0);
+
+                    //////    }
+                    //////    reader.Close();
+                    //////}
+
+
+                    //////var a = 0;
+                  
+                    
+
+                    //ServerConnection SmoConnection = new ServerConnection(currentServerConnetion);
+                    //Server server = new Server(SmoConnection);
+
+
+
+                    //Scripter scripter = new Scripter(server)
+                    //{
+                    //    Options = {
+                    //        ScriptData = false,
+                    //        ScriptSchema = true,
+                    //        ScriptDrops = false,
+                    //        WithDependencies = true,
+                    //        Indexes = true, // Include indexes
+                    //        NoCollation = false, // Specify collation
+                    //        // Other options as needed
+                            
+                    //    }
+                    //};
+
+                    //// Select the object to script
+                    //Database db = server.Databases[databaseName];
 
                     
+                    //Table myTable = db.Tables["your_table_name", "your_schema_name"];
+
+                    //// Generate the script
+                    //IEnumerable<string> script = scripter.Script(new Urn[] { myTable.Urn });
+
+                    //// Output the script
+                    //foreach (var line in script)
+                    //{
+                    //    Console.WriteLine(line);
+                    //}
+
 
 
                 }
