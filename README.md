@@ -24,9 +24,24 @@ These templates are designed to cover a wide range of scenarios, helping you to 
 
 ## Installation
 
-Unpack compiled files into the extensions folder: <br/>
-`C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions` <br/>
+To install the addin, you have two options:
+
+1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2017 for compatibility. After compiling, you will have a folder with the necessary files to proceed with the installation.
+
+2. **Download the Release:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository.
+
+
+After obtaining the compiled files (either by compiling from source or downloading from Releases), follow these steps to install the extension:
+
+- For SSMS 18, place the folder with the compiled files into the following directory:
+`C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions` 
+- For SSMS 19, use this directory instead:
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions`
+
+Restart SQL Server Management Studio after placing the files in the extensions directory.
+
+After installation, the Axial SQL Tools toolbar will be available in the list of toolbars within SSMS, providing quick access to all the features.<br/>
+<img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/toolbar.png?raw=true"/>
 
 ## Contributing
 
