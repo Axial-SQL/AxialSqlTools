@@ -180,12 +180,21 @@ namespace AxialSqlTools
                 StringBuilder columnList = new StringBuilder();
                 for (int i = 0; i < data.Columns.Count; i++)
                 {
-                    if (i > 0) columnList.Append(", ");
+                    if (i > 0)
+                    {
+                        columnList.Append(", \n");
+                        columnList.Append("         ");
+                    }
+                    // TODO - need proper types
                     columnList.AppendFormat("[{0}] SQL_VARIANT", data.Columns[i].ColumnName);
                 }
 
-                buffer.AppendFormat("CREATE TABLE #tempBuffer ({0});\nGO", columnList.ToString());
-                buffer.AppendLine("");
+                buffer.AppendLine("IF OBJECT_ID('tempdb..#tempBuffer') IS NOT NULL DROP TABLE #tempBuffer;");
+                buffer.AppendLine("GO");
+                // TODO - probably should format it too
+                buffer.AppendFormat("CREATE TABLE #tempBuffer ({0});\n", columnList.ToString());
+                buffer.AppendLine("GO");
+                buffer.AppendLine("-------------------------------------------");
 
                 string prefix = "INSERT INTO #tempBuffer VALUES";
 
@@ -204,6 +213,10 @@ namespace AxialSqlTools
                         if (row.IsNull(i))
                         {
                             values.Append("NULL");
+                        }
+                        else if (dataType == typeof(bool))
+                        {
+                            values.Append((bool)row[i] ? 1 : 0);
                         }
                         else if (dataType == typeof(int) ||
                             dataType == typeof(decimal) ||
@@ -252,7 +265,14 @@ namespace AxialSqlTools
 
                 }
 
-                if (j % 100 == 1) buffer.AppendLine("GO");
+                // the last batch was less than 100 records
+                if (j % 100 > 1)
+                {
+                    buffer.AppendLine(";");
+                    buffer.AppendLine("GO");
+                }
+
+
                 buffer.AppendLine("SELECT * FROM #tempBuffer;");
 
                 UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
