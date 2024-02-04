@@ -122,6 +122,7 @@ namespace AxialSqlTools
             await SettingsWindowCommand.InitializeAsync(this);
             await AboutWindowCommand.InitializeAsync(this);
             await ScriptSelectedObject.InitializeAsync(this);
+            await ExportGridToAsInsertsCommand.InitializeAsync(this);
 
         }
 

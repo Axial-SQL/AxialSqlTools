@@ -57,6 +57,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
     <Compile Include="WindowAbout\AboutWindow.cs" />
     <Compile Include="WindowAbout\AboutWindowCommand.cs" />
