@@ -1,9 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Data.SqlClient;
 using System.Globalization;
+using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using EnvDTE;
+using Microsoft.SqlServer.Management.Common;
+using Microsoft.SqlServer.Management.Sdk.Sfc;
+using Microsoft.SqlServer.Management.Smo;
+using Microsoft.SqlServer.Management.Smo.RegSvrEnum;
+using Microsoft.SqlServer.Management.UI.VSIntegration;
+using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
+using Microsoft.SqlServer.TransactSql.ScriptDom;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Task = System.Threading.Tasks.Task;
@@ -104,6 +115,11 @@ namespace AxialSqlTools
 
                     string selectedObjectName = selection.Text.Trim();
 
+                    if (string.IsNullOrEmpty(selectedObjectName))
+                    {
+                        throw new Exception("Nothing has been selected");
+                    }
+
                     //Could be:
                     // - Table
                     // - Sproc
@@ -113,53 +129,76 @@ namespace AxialSqlTools
                     // script properly from a current connection
                     // display in a single window
 
-                    //////UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
+                    UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
 
-                    //////SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
+                    string databaseName = connection.AdvancedOptions["DATABASE"];
 
-                    //////builder.DataSource = connection.ServerName;
-                    //////builder.IntegratedSecurity = string.IsNullOrEmpty(connection.Password);
-                    //////builder.Password = connection.Password;
-                    //////builder.UserID = connection.UserName;
-                    //////builder.InitialCatalog = connection.AdvancedOptions["DATABASE"];
-                    //////builder.ApplicationName = "Axial SQL Tools";
+                    SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
 
-                    //////string connectionString = builder.ToString();
+                    builder.DataSource = connection.ServerName;
+                    builder.IntegratedSecurity = string.IsNullOrEmpty(connection.Password);
+                    builder.Password = connection.Password;
+                    builder.UserID = connection.UserName;
+                    builder.InitialCatalog = connection.AdvancedOptions["DATABASE"];
+                    builder.ApplicationName = "Axial SQL Tools";
 
-                    //////SqlConnection currentServerConnetion = new SqlConnection(connectionString);
-                    //////currentServerConnetion.Open();
+                    string connectionString = builder.ToString();
 
-                    //////string command = "SELECT * FROM sys.objects WHERE [object_id] = OBJECT_ID(@selectedObjectName)";
-                    //////SqlCommand cmd = new SqlCommand(command, currentServerConnetion);
-                    //////cmd.Parameters.Add(new SqlParameter[] { new SqlParameter("selectedObjectName", selectedObjectName) });
+                    SqlConnection currentServerConnection = new SqlConnection(connectionString);
+                    currentServerConnection.Open();
 
-                    //////string object_type = null;
-                    //////string object_schema = null;
-                    //////string object_name = null;
+                    string command = $@"
+                    SELECT [type_desc],
+                           SCHEMA_NAME([schema_id]),
+                           [name],
+                           [object_id]
+                    FROM sys.objects
+                    WHERE [object_id] = OBJECT_ID(@selectedObjectName)";
 
-                    //////using (SqlDataReader reader = cmd.ExecuteReader())
-                    //////{
-                    //////    if (reader.Read())
-                    //////    {
-                    //////        object_type = reader.GetString(0);  
-                    //////        object_schema = reader.GetString(0);
-                    //////        object_name = reader.GetString(0);
+                    SqlCommand cmd = new SqlCommand(command, currentServerConnection);
+                    cmd.Parameters.Add(new SqlParameter("selectedObjectName", selectedObjectName));
 
-                    //////    }
-                    //////    reader.Close();
-                    //////}
+                    string object_type = null;
+                    string object_schema = null;
+                    string object_name = null;
+                    int object_id = 0;
 
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            object_type = reader.GetString(0);
+                            object_schema = reader.GetString(1);
+                            object_name = reader.GetString(2);
+                            object_id = reader.GetInt32(3);
 
-                    //////var a = 0;
-                  
-                    
+                        }
+                        reader.Close();
+                    }
+                    currentServerConnection.Close();
 
-                    //ServerConnection SmoConnection = new ServerConnection(currentServerConnetion);
-                    //Server server = new Server(SmoConnection);
+                    if (object_id == 0)
+                    {
+                        throw new Exception("Unable to find this object");
+                    }
 
+                    ServerConnection SmoConnection = new ServerConnection();
+                    SmoConnection.ConnectionString = connectionString;
+                    Server server = new Server(SmoConnection);
 
+                    Scripter scripter = new Scripter(server) { Options = new ScriptingOptions() };
 
-                    //Scripter scripter = new Scripter(server)
+                    scripter.Options.ScriptData = false;
+                    scripter.Options.ScriptForCreateOrAlter = true;
+
+                    scripter.Options.DriAllKeys = true;
+
+                    scripter.Options.Indexes = true;
+                    scripter.Options.Triggers = true;
+
+                    scripter.Options.ScriptDataCompression = true;
+                    scripter.Options.NoCollation = true;
+
                     //{
                     //    Options = {
                     //        ScriptData = false,
@@ -169,24 +208,72 @@ namespace AxialSqlTools
                     //        Indexes = true, // Include indexes
                     //        NoCollation = false, // Specify collation
                     //        // Other options as needed
-                            
+
                     //    }
                     //};
 
                     //// Select the object to script
-                    //Database db = server.Databases[databaseName];
+                    Database db = server.Databases[databaseName];
+
+                    SqlSmoObject dbObject = null;
+
+                    if (db.Tables.Contains(object_name, object_schema))
+                    {
+                        dbObject = db.Tables[object_name, object_schema];
+                    }
+                    else if (db.StoredProcedures.Contains(object_name, object_schema))
+                    {
+                        dbObject = db.StoredProcedures[object_name, object_schema];
+                    }
+                    else if (db.UserDefinedFunctions.Contains(object_name, object_schema))
+                    {
+                        dbObject = db.UserDefinedFunctions[object_name, object_schema];
+                    }
+                    else if (db.Views.Contains(object_name, object_schema))
+                    {
+                        dbObject = db.Views[object_name, object_schema];
+                    } // Add more else-if blocks for other types like Functions, Triggers, etc.
+
+
+                    if (dbObject != null)
+                    {
+                        System.Collections.Specialized.StringCollection sc = scripter.Script(new Urn[] { dbObject.Urn });
+
+                        StringBuilder sb = new StringBuilder();
+                        foreach (string line in sc)
+                        {
+                            sb.AppendLine(line);
+                        }
+                        string fullScriptResult = sb.ToString();
+
+                        // additional format to make it pretty
+                        if (object_type == "USER_TABLE")
+                        {
+                            TSql160Parser sqlParser = new TSql160Parser(false);
+                            IList<ParseError> parseErrors = new List<ParseError>();
+                            TSqlFragment result = sqlParser.Parse(new StringReader(fullScriptResult), out parseErrors);
+
+                            // leave it as is if for some reason we can't format it
+                            if (parseErrors.Count == 0)
+                            {
+                                Sql160ScriptGenerator gen = new Sql160ScriptGenerator();
+                                gen.Options.AlignClauseBodies = false;
+                                gen.Options.IncludeSemicolons = false;
+                                gen.GenerateScript(result, out fullScriptResult);
+                            }
+                        }
+
+                        ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connection, null);
+
+                        // insert SQL definition to document
+                        EnvDTE.TextDocument doc = (EnvDTE.TextDocument)ServiceCache.ExtensibilityModel.Application.ActiveDocument.Object(null);
+
+                        doc.EndPoint.CreateEditPoint().Insert(fullScriptResult);
+
+                    }
+                    //
 
                     
-                    //Table myTable = db.Tables["your_table_name", "your_schema_name"];
-
-                    //// Generate the script
-                    //IEnumerable<string> script = scripter.Script(new Urn[] { myTable.Urn });
-
-                    //// Output the script
-                    //foreach (var line in script)
-                    //{
-                    //    Console.WriteLine(line);
-                    //}
 
 
 

@@ -101,12 +101,20 @@
       </Button>
       
       <!-- TOOLS Submenu buttons -->
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" priority="0x0000" type="Button">
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" priority="0x0100" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
         <Icon guid="guidExportData" id="bmpExportData" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Export Grid to Excel</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" priority="0x0110" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Icon guid="guidExportData" id="bmpExportData" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Export Grid as INSERT to New Window</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridToGoogleSheet" priority="0x0000" type="Button">
@@ -118,12 +126,12 @@
           <ButtonText>Export Grid to New Google Sheet - TODO</ButtonText>
         </Strings>
       </Button>
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" priority="0x0000" type="Button">
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" priority="0x0200" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
         <Icon guid="guidImagesTemplate" id="bmpTemplate" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
-          <ButtonText>Script Selected Object</ButtonText>
+          <ButtonText>Script Definition to New Window</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialFindObjectInObjectExplorer" priority="0x0000" type="Button">
@@ -214,6 +222,7 @@
       <IDSymbol name="AxialFindObjectInObjectExplorer" value="4135" />
       <IDSymbol name="AxialScriptResultIntoNewWindow" value="4136" />
       <IDSymbol name="AxialExportGridToGoogleSheet" value="4137" />
+      <IDSymbol name="AxialExportGridAsInserts" value="4138" />
 
     </GuidSymbol>
 
