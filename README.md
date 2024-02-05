@@ -56,6 +56,10 @@ If you have ideas for new features or have encountered a bug, please feel free t
 
 We appreciate your feedback and contributions!
 
+## Acknowledgements
+
+This project stands on the shoulders of the many developers and authors who have publicly shared their work. I am not an expert in C# or VSIX development, so the creation of this tool would not have been possible without the invaluable resources and examples published by others on GitHub. We do not claim any copyright over the work derived from these contributions. Our aim is to give back to the community by sharing this tool, and we are deeply grateful for the guidance and inspiration provided by the broader developer community.
+
 ## License
 This tool is distributed freely under the Apache-2.0 license, with no warranty implied. 
 It is an internal tool that we use daily at our organization. 
@@ -65,7 +69,6 @@ Feel free to reach out for professional assistance: `info@axial-sql.com`.
 ## Disclaimer
 This extension is provided "as is", with all faults, defects, and errors, and without warranty of any kind. 
 The creators do not offer support and are not responsible for any damage or loss resulting from the use of this tool.
-
 
 ---
 
