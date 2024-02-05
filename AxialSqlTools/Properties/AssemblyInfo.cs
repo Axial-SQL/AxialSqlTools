@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Axial Solutions LLC")]
 [assembly: AssemblyProduct("Axial SQL Tools")]
-[assembly: AssemblyCopyright("Copyright © 2024 Axial Solutions LLC")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
