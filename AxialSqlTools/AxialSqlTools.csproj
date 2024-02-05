@@ -58,6 +58,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
+    <Compile Include="Commands\ExportGridToExcelAndEmailCommand.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
     <Compile Include="WindowAbout\AboutWindow.cs" />
     <Compile Include="WindowAbout\AboutWindowCommand.cs" />

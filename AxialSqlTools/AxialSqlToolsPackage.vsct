@@ -109,6 +109,14 @@
           <ButtonText>Export Grid to Excel</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcelAndEmail" priority="0x0100" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Icon guid="guidExportData" id="bmpExportData" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Export Grid to Excel and Send Email</ButtonText>
+        </Strings>
+      </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" priority="0x0110" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
         <Icon guid="guidExportData" id="bmpExportData" />
@@ -215,8 +223,9 @@
 
       <IDSymbol name="AxialToolsSubMenu" value="0x1200" />
       <IDSymbol name="AxialToolsSubMenuGroup" value="0x1201" />
-      
+
       <IDSymbol name="AxialExportButtonGridToExcel" value="4133" />
+      <IDSymbol name="AxialExportButtonGridToExcelAndEmail" value="4139" />
       
       <IDSymbol name="AxialScriptCurrentObject" value="4134" />
       <IDSymbol name="AxialFindObjectInObjectExplorer" value="4135" />

@@ -4,12 +4,42 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace AxialSqlTools
 {
     class SettingsManager
     {
+
+        //private static byte[] Protect(byte[] data)
+        //{
+        //    try
+        //    {
+        //        // Use the current user scope to encrypt the data.
+        //        return ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser);
+        //    }
+        //    catch (CryptographicException e)
+        //    {
+        //        Console.WriteLine($"A cryptographic error occurred: {e.Message}");
+        //        return null;
+        //    }
+        //}
+
+        //private static byte[] Unprotect(byte[] data)
+        //{
+        //    try
+        //    {
+        //        // Decrypt the data using the current user scope.
+        //        return ProtectedData.Unprotect(data, null, DataProtectionScope.CurrentUser);
+        //    }
+        //    catch (CryptographicException e)
+        //    {
+        //        Console.WriteLine($"A cryptographic error occurred: {e.Message}");
+        //        return null;
+        //    }
+        //}
+
 
         private static RegistryKey GetRoot()
         {
@@ -51,6 +81,17 @@ namespace AxialSqlTools
                 return false;
             }
         }
+
+        // ----------------------------------------------------------------------
+        public static string GetMyEmail()
+        {
+            return GetRegisterValue("MyEmail");
+        }
+        public static bool SaveMyEmail(string myEmail)
+        {
+            return SaveRegisterValue("MyEmail", myEmail);
+        }
+
 
         public static string GetTemplatesFolder()
         {
