@@ -12,34 +12,41 @@ namespace AxialSqlTools
     class SettingsManager
     {
 
-        //private static byte[] Protect(byte[] data)
-        //{
-        //    try
-        //    {
-        //        // Use the current user scope to encrypt the data.
-        //        return ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser);
-        //    }
-        //    catch (CryptographicException e)
-        //    {
-        //        Console.WriteLine($"A cryptographic error occurred: {e.Message}");
-        //        return null;
-        //    }
-        //}
+        public class SmtpSettings
+        {
+            public string Username;
+            public string Password;
+            public string ServerName;
+            public int Port;
+        }
 
-        //private static byte[] Unprotect(byte[] data)
-        //{
-        //    try
-        //    {
-        //        // Decrypt the data using the current user scope.
-        //        return ProtectedData.Unprotect(data, null, DataProtectionScope.CurrentUser);
-        //    }
-        //    catch (CryptographicException e)
-        //    {
-        //        Console.WriteLine($"A cryptographic error occurred: {e.Message}");
-        //        return null;
-        //    }
-        //}
+        private static byte[] Protect(byte[] data)
+        {
+            try
+            {
+                // Use the current user scope to encrypt the data.
+                return ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser);
+            }
+            catch (CryptographicException e)
+            {
+                Console.WriteLine($"A cryptographic error occurred: {e.Message}");
+                return null;
+            }
+        }
 
+        private static byte[] Unprotect(byte[] data)
+        {
+            try
+            {
+                // Decrypt the data using the current user scope.
+                return ProtectedData.Unprotect(data, null, DataProtectionScope.CurrentUser);
+            }
+            catch (CryptographicException e)
+            {
+                Console.WriteLine($"A cryptographic error occurred: {e.Message}");
+                return null;
+            }
+        }
 
         private static RegistryKey GetRoot()
         {
@@ -91,7 +98,41 @@ namespace AxialSqlTools
         {
             return SaveRegisterValue("MyEmail", myEmail);
         }
+        // ----------------------------------------------------------------------
+        public static SmtpSettings GetSmtpSettings()
+        {
 
+            string encPassword = GetRegisterValue("SMTP_Password");
+
+            byte[] decryptedData = Unprotect(Convert.FromBase64String(encPassword));
+            string password = Encoding.UTF8.GetString(decryptedData);
+
+            SmtpSettings smtpSettings = new SmtpSettings();
+            smtpSettings.Username = GetRegisterValue("SMTP_Username");
+            smtpSettings.Password = password;
+            smtpSettings.ServerName = GetRegisterValue("SMTP_Server");
+
+            smtpSettings.Port = 587;
+            int savedPort;
+            bool success = int.TryParse(GetRegisterValue("SMTP_Port"), out savedPort);
+            if (success) smtpSettings.Port = savedPort;
+
+            return smtpSettings;
+        }
+
+        public static bool SaveSmtpSettings(SmtpSettings smtpSettings)
+        {
+
+            byte[] encPassword = Protect(Encoding.UTF8.GetBytes(smtpSettings.Password));
+
+            SaveRegisterValue("SMTP_Username", smtpSettings.Username);
+            SaveRegisterValue("SMTP_Password", Convert.ToBase64String(encPassword));
+            SaveRegisterValue("SMTP_Server", smtpSettings.ServerName);
+            SaveRegisterValue("SMTP_Port", smtpSettings.Port.ToString());
+
+            return true;
+
+        }
 
         public static string GetTemplatesFolder()
         {

@@ -21,21 +21,31 @@
             this.InitializeComponent();
 
             ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
+
+            MyEmailAddress.Text = SettingsManager.GetMyEmail();
+
+            SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
+
+            SMTP_Server.Text = smtpSettings.ServerName;
+            SMTP_Port.Text = smtpSettings.Port.ToString();
+            SMTP_UserName.Text = smtpSettings.Username;
+            SMTP_Password.Text = smtpSettings.Password;
+
         }
 
-        /// <summary>
-        /// Handles click on the button by displaying a message box.
-        /// </summary>
-        /// <param name="sender">The event sender.</param>
-        /// <param name="e">The event args.</param>
-        [SuppressMessage("Microsoft.Globalization", "CA1300:SpecifyMessageBoxOptions", Justification = "Sample code")]
-        [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Default event handler naming pattern")]
-        private void button1_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show(
-                string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Invoked '{0}'", this.ToString()),
-                "SettingsWindow");
-        }
+        ///// <summary>
+        ///// Handles click on the button by displaying a message box.
+        ///// </summary>
+        ///// <param name="sender">The event sender.</param>
+        ///// <param name="e">The event args.</param>
+        //[SuppressMessage("Microsoft.Globalization", "CA1300:SpecifyMessageBoxOptions", Justification = "Sample code")]
+        //[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Default event handler naming pattern")]
+        //private void button1_Click(object sender, RoutedEventArgs e)
+        //{
+        //    MessageBox.Show(
+        //        string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Invoked '{0}'", this.ToString()),
+        //        "SettingsWindow");
+        //}
 
         private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)
         {
@@ -117,6 +127,24 @@
             File.Delete(zipPath);
         }
 
-        
+        private void ButtonSaveSmtpSettings_Click(object sender, RoutedEventArgs e)
+        {
+            
+            SettingsManager.SmtpSettings smtpSettings = new SettingsManager.SmtpSettings()
+            {
+                ServerName = SMTP_Server.Text,
+                Username = SMTP_UserName.Text,
+                Password = SMTP_Password.Text
+            };
+
+            int smptPort = 587;
+            bool success = int.TryParse(SMTP_Port.Text, out smptPort);
+            smtpSettings.Port = smptPort;
+
+            SettingsManager.SaveSmtpSettings(smtpSettings);
+
+            SettingsManager.SaveMyEmail(MyEmailAddress.Text);
+
+        }
     }
 }

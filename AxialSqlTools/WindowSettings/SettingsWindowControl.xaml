@@ -5,16 +5,16 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              mc:Ignorable="d"
-             d:DesignHeight="300"
-             Name="MyToolWindow" Width="720.794">
+             Name="MyToolWindow" Width="800">
     <Grid>
         <StackPanel Orientation="Vertical">
             <TextBlock Margin="10" HorizontalAlignment="Left" FontFamily="Segoe UI Semibold" FontSize="18">Axial SQL Tools | Settings</TextBlock>
             
-            <GroupBox Header="Query Templates Location">
+            <GroupBox Header="Query Templates">
                 <StackPanel Orientation="Vertical">
                     
                     <StackPanel Orientation="Horizontal">
+                        <Label Margin="10">Templates Location:</Label>
                         <TextBox Margin="10" HorizontalAlignment="Left" TextWrapping="Wrap" Text=""  x:Name="ScriptFolder" Width="540" />
                         <Button Margin="10" Content="Save" x:Name="button_SaveScriptFolder" Click="Button_SaveScriptFolder_Click" Width="50" />
                     </StackPanel>
@@ -24,6 +24,33 @@
                     </StackPanel>
                 </StackPanel>
 
+            </GroupBox>
+            <GroupBox Header="SMTP Settings">
+                <StackPanel Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <Label Width="120">My email address:</Label>
+                        <TextBox  x:Name="MyEmailAddress" Width="500"   />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <Label Width="120">SMTP user name:</Label>
+                        <TextBox  x:Name="SMTP_UserName" Width="500"   />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <Label Width="120">SMTP password:</Label>
+                        <TextBox  x:Name="SMTP_Password" Width="500"   />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <Label Width="120">SMTP server:</Label>
+                        <TextBox  x:Name="SMTP_Server" Width="500"   />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <Label Width="120">SMTP port:</Label>
+                        <TextBox  x:Name="SMTP_Port" Width="500"   />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <Button Margin="5" Content="Save"  x:Name="buttonSaveSmtpSettings" Width="62" Click="ButtonSaveSmtpSettings_Click" />
+                    </StackPanel>
+                </StackPanel>
             </GroupBox>
 
         </StackPanel>

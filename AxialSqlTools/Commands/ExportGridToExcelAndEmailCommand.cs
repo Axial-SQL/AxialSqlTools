@@ -183,23 +183,15 @@ namespace AxialSqlTools
 
                 SaveDataTableToExcel(data, fileLocation);
 
-                
+
 
 
                 //---------------------------------------------------------
 
+                SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
 
-
-                // Sender's email address
                 var fromAddress = new MailAddress(SettingsManager.GetMyEmail());
-                // Receiver's email address
                 var toAddress = new MailAddress(SettingsManager.GetMyEmail());
-                // SMTP settings - for Gmail
-                const string smtpHost = "";
-                const int smtpPort = 587;
-                // Your email and password
-                const string smtpUsername = "";
-                const string smtpPassword = "";
 
                 // Email subject and body
                 const string subject = "Subject Here";
@@ -208,12 +200,12 @@ namespace AxialSqlTools
                 // Setting up the SMTP client
                 var smtp = new SmtpClient
                 {
-                    Host = smtpHost,
-                    Port = smtpPort,
+                    Host = smtpSettings.ServerName,
+                    Port = smtpSettings.Port,
                     EnableSsl = true,
                     DeliveryMethod = SmtpDeliveryMethod.Network,
                     UseDefaultCredentials = false,
-                    Credentials = new NetworkCredential(smtpUsername, smtpPassword)
+                    Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password)
                 };
 
                 // Creating the email message
