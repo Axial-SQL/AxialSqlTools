@@ -58,8 +58,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
-    <Compile Include="Commands\ExportGridToExcelAndEmailCommand.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
+    <Compile Include="GridToEmail\ToolWindowGridToEmail.cs" />
+    <Compile Include="GridToEmail\ToolWindowGridToEmailCommand.cs" />
+    <Compile Include="GridToEmail\ToolWindowGridToEmailControl.xaml.cs">
+      <DependentUpon>ToolWindowGridToEmailControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Modules\ExcelExport.cs" />
     <Compile Include="WindowAbout\AboutWindow.cs" />
     <Compile Include="WindowAbout\AboutWindowCommand.cs" />
     <Compile Include="WindowAbout\AboutWindowControl.xaml.cs">
@@ -84,7 +89,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="WindowSettings\SettingsManager.cs" />
+    <Compile Include="Modules\SettingsManager.cs" />
     <Compile Include="WindowSettings\SettingsWindow.cs" />
     <Compile Include="WindowSettings\SettingsWindowCommand.cs" />
     <Compile Include="WindowSettings\SettingsWindowControl.xaml.cs">
@@ -283,6 +288,10 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="GridToEmail\ToolWindowGridToEmailControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="WindowAbout\AboutWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

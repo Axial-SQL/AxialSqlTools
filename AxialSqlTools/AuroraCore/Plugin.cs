@@ -98,7 +98,8 @@ namespace Aurora
 
 		public CommandEvents FindCommandEvents(string commandName)
 		{
-			CommandEvents events = null;
+            ThreadHelper.ThrowIfNotOnUIThread();
+            CommandEvents events = null;
 			try
 			{
 				Command command = App.DTE.Commands.Item(commandName, -1);
@@ -254,7 +255,8 @@ namespace Aurora
 
 		public static void AddKeyboardBinding(Command command, string binding)
 		{
-			command.Bindings = binding;
+            ThreadHelper.ThrowIfNotOnUIThread();
+            command.Bindings = binding;
 		}
 	}
 }

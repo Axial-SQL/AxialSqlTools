@@ -56,6 +56,7 @@ namespace AxialSqlTools
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideToolWindow(typeof(SettingsWindow))]
     [ProvideToolWindow(typeof(AboutWindow))]
+    [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
@@ -119,11 +120,11 @@ namespace AxialSqlTools
             await FormatQueryCommand.InitializeAsync(this);
             await RefreshTemplatesCommand.InitializeAsync(this);
             await ExportGridToExcelCommand.InitializeAsync(this);
-            await ExportGridToExcelAndEmailCommand.InitializeAsync(this);
             await SettingsWindowCommand.InitializeAsync(this);
             await AboutWindowCommand.InitializeAsync(this);
             await ScriptSelectedObject.InitializeAsync(this);
             await ExportGridToAsInsertsCommand.InitializeAsync(this);
+            await ToolWindowGridToEmailCommand.InitializeAsync(this);
 
         }
 

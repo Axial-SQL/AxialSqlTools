@@ -36,8 +36,8 @@
                         <TextBox  x:Name="SMTP_UserName" Width="500"   />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="5">
-                        <Label Width="120">SMTP password:</Label>
-                        <TextBox  x:Name="SMTP_Password" Width="500"   />
+                        <Label Width="120">SMTP password:</Label>          
+                        <PasswordBox x:Name="SMTP_Password" Width="500" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="5">
                         <Label Width="120">SMTP server:</Label>

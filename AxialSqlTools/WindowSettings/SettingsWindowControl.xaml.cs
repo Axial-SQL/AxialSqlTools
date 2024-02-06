@@ -29,7 +29,7 @@
             SMTP_Server.Text = smtpSettings.ServerName;
             SMTP_Port.Text = smtpSettings.Port.ToString();
             SMTP_UserName.Text = smtpSettings.Username;
-            SMTP_Password.Text = smtpSettings.Password;
+            SMTP_Password.Password = smtpSettings.Password;
 
         }
 
@@ -134,7 +134,7 @@
             {
                 ServerName = SMTP_Server.Text,
                 Username = SMTP_UserName.Text,
-                Password = SMTP_Password.Text
+                Password = SMTP_Password.Password
             };
 
             int smptPort = 587;

@@ -8,10 +8,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.SqlServer.Management.UI.Grid;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
 using Microsoft.VisualStudio.Shell;
@@ -23,12 +19,12 @@ namespace AxialSqlTools
     /// <summary>
     /// Command handler
     /// </summary>
-    internal sealed class ExportGridToExcelCommand
+    internal sealed class ToolWindowGridToEmailCommand
     {
         /// <summary>
         /// Command ID.
         /// </summary>
-        public const int CommandId = 4133;
+        public const int CommandId = 4139;
 
         /// <summary>
         /// Command menu group (command set GUID).
@@ -41,12 +37,12 @@ namespace AxialSqlTools
         private readonly AsyncPackage package;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ExportGridToExcelCommand"/> class.
+        /// Initializes a new instance of the <see cref="ToolWindowGridToEmailCommand"/> class.
         /// Adds our command handlers for menu (commands must exist in the command table file)
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
         /// <param name="commandService">Command service to add command to, not null.</param>
-        private ExportGridToExcelCommand(AsyncPackage package, OleMenuCommandService commandService)
+        private ToolWindowGridToEmailCommand(AsyncPackage package, OleMenuCommandService commandService)
         {
             this.package = package ?? throw new ArgumentNullException(nameof(package));
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
@@ -59,7 +55,7 @@ namespace AxialSqlTools
         /// <summary>
         /// Gets the instance of the command.
         /// </summary>
-        public static ExportGridToExcelCommand Instance
+        public static ToolWindowGridToEmailCommand Instance
         {
             get;
             private set;
@@ -82,12 +78,12 @@ namespace AxialSqlTools
         /// <param name="package">Owner package, not null.</param>
         public static async Task InitializeAsync(AsyncPackage package)
         {
-            // Switch to the main thread - the call to AddCommand in ExportGridToExcelCommand's constructor requires
+            // Switch to the main thread - the call to AddCommand in ToolWindowGridToEmailCommand's constructor requires
             // the UI thread.
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
 
             OleMenuCommandService commandService = await package.GetServiceAsync((typeof(IMenuCommandService))) as OleMenuCommandService;
-            Instance = new ExportGridToExcelCommand(package, commandService);
+            Instance = new ToolWindowGridToEmailCommand(package, commandService);
         }
 
         public object GetNonPublicField(object obj, string field)
@@ -103,23 +99,19 @@ namespace AxialSqlTools
             return f;
         }
 
+
         /// <summary>
-        /// This function is the callback used to execute the command when the menu item is clicked.
-        /// See the constructor to see how the menu item is associated with this function using
-        /// OleMenuCommandService service and MenuCommand class.
+        /// Shows the tool window when the menu item is clicked.
         /// </summary>
-        /// <param name="sender">Event sender.</param>
-        /// <param name="e">Event args.</param>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event args.</param>
         private void Execute(object sender, EventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
 
-            string folderPath = ShowFolderBrowserDialog();
-            if (string.IsNullOrEmpty(folderPath))
-            {                
-                Console.WriteLine("No folder selected.");
-                return;
-            }
+            string fileLocation = "";
 
+            //-------------------------------------------------------------------
             var objType = ServiceCache.ScriptFactory.GetType();
             var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
             var Result = method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
@@ -139,51 +131,6 @@ namespace AxialSqlTools
                 var gridStorage = grid.GridStorage;
                 var schemaTable = GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
 
-                //// TEST----
-                //var gridColumns = GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
-                //if (gridColumns != null)
-                //{
-                //    //var gridColumnCollection = columnsProperty.GetValue(grid) as IEnumerable; // Replace IEnumerable with the actual type of the Columns collection
-
-                //    // Iterate through the gridColumnCollection to access individual GridColumn objects
-
-                //    grid.GridColumnsInfo.Clear();
-
-                //    foreach (GridColumnInfo gridColumn in grid.GridColumnsInfo)
-                //    {
-
-                //        //var textAlignField = GetNonPublicFieldInfo(gridColumn, "ColumnAlignment");
-                //        //if (textAlignField != null)
-                //        //{
-                //        //    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                //        //}
-                        
-                //        var id = grid.GridColumnsInfo.IndexOf(gridColumn);
-                //        grid.GridColumnsInfo.Remove(gridColumn);
-
-                //        gridColumn.ColumnAlignment = HorizontalAlignment.Right;                        
-
-                //        grid.GridColumnsInfo.Add(gridColumn);
-
-                //    }
-
-                //    //foreach (var gridColumn in gridColumns)
-                //    //{
-                //    //    var textAlignField = GetNonPublicFieldInfo(gridColumn, "TextAlign");
-                //    //    if (textAlignField != null)
-                //    //    {
-                //    //        textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                //    //    }
-                //    //    var textAlignField2 = GetNonPublicFieldInfo(gridColumn, "m_myAlign");
-                //    //    if (textAlignField2 != null)
-                //    //    {
-                //    //        textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                //    //    }
-                //    //}
-                //}
-                //grid.Refresh();
-                //// TEST----
-                               
                 var data = new DataTable();
 
                 for (long i = 0; i < gridStorage.NumRows(); i++)
@@ -226,41 +173,35 @@ namespace AxialSqlTools
 
                 data.AcceptChanges();
 
+                string folderPath = Path.GetTempPath();
                 string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-                string fileLocation = Path.Combine(folderPath, fileName);
+                fileLocation = Path.Combine(folderPath, fileName);
 
                 ExcelExport.SaveDataTableToExcel(data, fileLocation);
 
-                VsShellUtilities.ShowMessageBox(
-                    this.package,
-                    "Data has been exported to:\n" + fileLocation,
-                    "Done",
-                    OLEMSGICON.OLEMSGICON_INFO,
-                    OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-
             }
 
-        }
+            //\\-----------------------------------------------------------------
 
-        static string ShowFolderBrowserDialog()
-        {
-            using (FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog())
+
+            // Get the instance number 0 of this tool window. This window is single instance so this instance
+            // is actually the only one.
+            // The last flag is set to true so that if the tool window does not exists it will be created.
+            ToolWindowPane window = this.package.FindToolWindow(typeof(ToolWindowGridToEmail), 0, true);
+            if ((null == window) || (null == window.Frame))
             {
-                folderBrowserDialog.SelectedPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-
-                DialogResult result = folderBrowserDialog.ShowDialog();
-
-                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(folderBrowserDialog.SelectedPath))
-                {
-                    return folderBrowserDialog.SelectedPath;
-                }
-                else
-                {
-                    return null;
-                }
+                throw new NotSupportedException("Cannot create tool window");
             }
-        }
 
+            // pass the file name to the window
+            var myWindow = window as ToolWindowGridToEmail;
+            myWindow.InitializeWithParameter(fileLocation);
+
+            IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
+
+            windowFrame.SetProperty((int)__VSFPROPID.VSFPROPID_FrameMode, VSFRAMEMODE.VSFM_MdiChild);
+
+            Microsoft.VisualStudio.ErrorHandler.ThrowOnFailure(windowFrame.Show());
+        }
     }
 }
