@@ -113,72 +113,22 @@ namespace AxialSqlTools
             ThreadHelper.ThrowIfNotOnUIThread();
 
 
-            var objType = ServiceCache.ScriptFactory.GetType();
-            var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
-            var Result = method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
+            List<DataTable> dataTables = GridAccess.GetDataTables();
 
-            var objType2 = Result.GetType();
-            var field = objType2.GetField("m_sqlResultsControl", BindingFlags.NonPublic | BindingFlags.Instance);
-            var SQLResultsControl = field.GetValue(Result);
+            int jj = 0;
 
-            var m_gridResultsPage = GetNonPublicField(SQLResultsControl, "m_gridResultsPage");
-            CollectionBase gridContainers = GetNonPublicField(m_gridResultsPage, "m_gridContainers") as CollectionBase;
+            StringBuilder globalBuffer = new StringBuilder();
 
-            foreach (var gridContainer in gridContainers)
+            foreach (DataTable dataTable in dataTables)
             {
-                var grid = GetNonPublicField(gridContainer, "m_grid") as GridControl;
-                var gridStorage = grid.GridStorage;
-                var schemaTable = GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
-
-                var data = new DataTable();
-
-                for (long i = 0; i < gridStorage.NumRows(); i++)
-                {
-                    var rowItems = new List<object>();
-
-                    for (int c = 0; c < schemaTable.Rows.Count; c++)
-                    {
-                        var columnName = schemaTable.Rows[c][0].ToString();
-                        var columnType = schemaTable.Rows[c][12] as Type;
-
-                        if (!data.Columns.Contains(columnName))
-                        {
-                            data.Columns.Add(columnName, columnType);
-                        }
-
-                        var cellData = gridStorage.GetCellDataAsString(i, c + 1);
-
-                        if (cellData == "NULL")
-                        {
-                            rowItems.Add(null);
-
-                            continue;
-                        }
-
-                        if (columnType == typeof(bool))
-                        {
-                            cellData = cellData == "0" ? "False" : "True";
-                        }
-
-                        //Console.WriteLine($"Parsing {columnName} with '{cellData}'");
-
-                        var typedValue = Convert.ChangeType(cellData, columnType, CultureInfo.InvariantCulture);
-
-                        rowItems.Add(typedValue);
-                    }
-
-                    data.Rows.Add(rowItems.ToArray());
-                }
-
-                data.AcceptChanges();
-
-
 
                 StringBuilder buffer = new StringBuilder();
                 // Define new temp table
 
+                if (jj > 0) buffer.AppendLine("-------------------------------------------");
+
                 StringBuilder columnList = new StringBuilder();
-                for (int i = 0; i < data.Columns.Count; i++)
+                for (int i = 0; i < dataTable.Columns.Count; i++)
                 {
                     if (i > 0)
                     {
@@ -186,7 +136,7 @@ namespace AxialSqlTools
                         columnList.Append("         ");
                     }
                     // TODO - need proper types
-                    columnList.AppendFormat("[{0}] SQL_VARIANT", data.Columns[i].ColumnName);
+                    columnList.AppendFormat("[{0}] SQL_VARIANT", dataTable.Columns[i].ColumnName);
                 }
 
                 buffer.AppendLine("IF OBJECT_ID('tempdb..#tempBuffer') IS NOT NULL DROP TABLE #tempBuffer;");
@@ -200,15 +150,15 @@ namespace AxialSqlTools
 
                 // generate INSERT statements
                 int j = 1;
-                foreach (DataRow row in data.Rows)
+                foreach (DataRow row in dataTable.Rows)
                 {
                     StringBuilder values = new StringBuilder();
                     values.Append("(");
-                    for (int i = 0; i < data.Columns.Count; i++)
+                    for (int i = 0; i < dataTable.Columns.Count; i++)
                     {
                         if (i > 0) values.Append(", ");
 
-                        Type dataType = data.Columns[i].DataType;
+                        Type dataType = dataTable.Columns[i].DataType;
 
                         if (row.IsNull(i))
                         {
@@ -272,19 +222,23 @@ namespace AxialSqlTools
                     buffer.AppendLine("GO");
                 }
 
-
                 buffer.AppendLine("SELECT * FROM #tempBuffer;");
 
-                UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
+                globalBuffer.Append(buffer.ToString());
 
-                ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connection, null);
-
-                // insert SQL definition to document
-                EnvDTE.TextDocument doc = (EnvDTE.TextDocument)ServiceCache.ExtensibilityModel.Application.ActiveDocument.Object(null);
-
-                doc.EndPoint.CreateEditPoint().Insert(buffer.ToString());
+                jj += 1;
 
             }
+
+            UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
+
+            ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connection, null);
+
+            // insert SQL definition to document
+            EnvDTE.TextDocument doc = (EnvDTE.TextDocument)ServiceCache.ExtensibilityModel.Application.ActiveDocument.Object(null);
+
+            doc.EndPoint.CreateEditPoint().Insert(globalBuffer.ToString());
+
         }
     }
 }

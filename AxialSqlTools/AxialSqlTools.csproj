@@ -65,6 +65,7 @@
       <DependentUpon>ToolWindowGridToEmailControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Modules\ExcelExport.cs" />
+    <Compile Include="Modules\GridAccess.cs" />
     <Compile Include="WindowAbout\AboutWindow.cs" />
     <Compile Include="WindowAbout\AboutWindowCommand.cs" />
     <Compile Include="WindowAbout\AboutWindowControl.xaml.cs">

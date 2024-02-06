@@ -112,74 +112,14 @@ namespace AxialSqlTools
             string fileLocation = "";
 
             //-------------------------------------------------------------------
-            var objType = ServiceCache.ScriptFactory.GetType();
-            var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
-            var Result = method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
 
+            List<DataTable> dataTables = GridAccess.GetDataTables();
 
-            var objType2 = Result.GetType();
-            var field = objType2.GetField("m_sqlResultsControl", BindingFlags.NonPublic | BindingFlags.Instance);
-            var SQLResultsControl = field.GetValue(Result);
+            string folderPath = Path.GetTempPath();
+            string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            fileLocation = Path.Combine(folderPath, fileName);
 
-
-            var m_gridResultsPage = GetNonPublicField(SQLResultsControl, "m_gridResultsPage");
-            CollectionBase gridContainers = GetNonPublicField(m_gridResultsPage, "m_gridContainers") as CollectionBase;
-
-            foreach (var gridContainer in gridContainers)
-            {
-                var grid = GetNonPublicField(gridContainer, "m_grid") as GridControl;
-                var gridStorage = grid.GridStorage;
-                var schemaTable = GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
-
-                var data = new DataTable();
-
-                for (long i = 0; i < gridStorage.NumRows(); i++)
-                {
-                    var rowItems = new List<object>();
-
-                    for (int c = 0; c < schemaTable.Rows.Count; c++)
-                    {
-                        var columnName = schemaTable.Rows[c][0].ToString();
-                        var columnType = schemaTable.Rows[c][12] as Type;
-
-                        if (!data.Columns.Contains(columnName))
-                        {
-                            data.Columns.Add(columnName, columnType);
-                        }
-
-                        var cellData = gridStorage.GetCellDataAsString(i, c + 1);
-
-                        if (cellData == "NULL")
-                        {
-                            rowItems.Add(null);
-
-                            continue;
-                        }
-
-                        if (columnType == typeof(bool))
-                        {
-                            cellData = cellData == "0" ? "False" : "True";
-                        }
-
-                        //Console.WriteLine($"Parsing {columnName} with '{cellData}'");
-
-                        var typedValue = Convert.ChangeType(cellData, columnType, CultureInfo.InvariantCulture);
-
-                        rowItems.Add(typedValue);
-                    }
-
-                    data.Rows.Add(rowItems.ToArray());
-                }
-
-                data.AcceptChanges();
-
-                string folderPath = Path.GetTempPath();
-                string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-                fileLocation = Path.Combine(folderPath, fileName);
-
-                ExcelExport.SaveDataTableToExcel(data, fileLocation);
-
-            }
+            ExcelExport.SaveDataTableToExcel(dataTables, fileLocation); 
 
             //\\-----------------------------------------------------------------
 
