@@ -12,10 +12,12 @@ It streamlines daily routine tasks, making database management more efficient an
 So far we've developed these features:
 
 - **Format Query**: Beautify your SQL scripts with Microsoft internal TSQL parser, making them more readable and maintainable.
+- **Quick Query Templates**: Access a collection of query templates for common tasks, saving time and effort on routine queries.
 - **Export Grid to Excel**: Export result from the grid view directly into Excel file for further analysis or reporting.
+- **Export Grid to Excel and Send Email**: Similar to the previous feature, but with the added ability to send the file via email.
 - **Export Grid as Inserts**: Convert your grid result into insert statements.
 - **Script Selected Object Definition**: Quickly generate scripts for the definition of selected objects directly from the selected query text.
-- **Quick Query Templates**: Access a collection of query templates for common tasks, saving time and effort on routine queries.
+- **Health Dashboard - Server**: I am experimenting with the idea of displaying basic server health metrics in a single window.
 
 ## Query Templates
 
