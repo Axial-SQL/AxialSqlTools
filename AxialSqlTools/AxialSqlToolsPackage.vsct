@@ -199,17 +199,6 @@
           <ButtonText>About</ButtonText>
         </Strings>
       </Button>
-      
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialCheckNewVersion" priority="0x3000" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
-        <Icon guid="guidInfo" id="bmpInfo" />
-        <!--<CommandFlag>DefaultInvisible</CommandFlag>-->
-        <CommandFlag>DynamicVisibility</CommandFlag>
-        <Strings>
-          <ButtonText>New Version Available</ButtonText>
-        </Strings>
-      </Button>
-      
 
     </Buttons>
 
