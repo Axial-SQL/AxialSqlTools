@@ -20,16 +20,25 @@
         {
             this.InitializeComponent();
 
-            ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
+            try
+            {
 
-            MyEmailAddress.Text = SettingsManager.GetMyEmail();
+                ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
 
-            SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
+                MyEmailAddress.Text = SettingsManager.GetMyEmail();
 
-            SMTP_Server.Text = smtpSettings.ServerName;
-            SMTP_Port.Text = smtpSettings.Port.ToString();
-            SMTP_UserName.Text = smtpSettings.Username;
-            SMTP_Password.Password = smtpSettings.Password;
+                SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
+
+                SMTP_Server.Text = smtpSettings.ServerName;
+                SMTP_Port.Text = smtpSettings.Port.ToString();
+                SMTP_UserName.Text = smtpSettings.Username;
+                SMTP_Password.Password = smtpSettings.Password;
+            } catch (Exception ex)
+            {
+
+                string msg = $"Erorr message: {ex.Message} \nInnerException: {ex.InnerException}";
+                MessageBox.Show(msg, "Error");
+            }
 
         }
 

@@ -57,6 +57,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(SettingsWindow))]
     [ProvideToolWindow(typeof(AboutWindow))]
     [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
+    [ProvideToolWindow(typeof(HealthDashboard_Server))]
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
@@ -125,6 +126,7 @@ namespace AxialSqlTools
             await ScriptSelectedObject.InitializeAsync(this);
             await ExportGridToAsInsertsCommand.InitializeAsync(this);
             await ToolWindowGridToEmailCommand.InitializeAsync(this);
+            await HealthDashboard_ServerCommand.InitializeAsync(this);
 
         }
 

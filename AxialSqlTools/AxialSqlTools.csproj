@@ -64,6 +64,12 @@
     <Compile Include="GridToEmail\ToolWindowGridToEmailControl.xaml.cs">
       <DependentUpon>ToolWindowGridToEmailControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="HealthDashboards\HealthDashboard_Server.cs" />
+    <Compile Include="HealthDashboards\HealthDashboard_ServerCommand.cs" />
+    <Compile Include="HealthDashboards\HealthDashboard_ServerControl.xaml.cs">
+      <DependentUpon>HealthDashboard_ServerControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Modules\MetricsService.cs" />
     <Compile Include="Modules\ExcelExport.cs" />
     <Compile Include="Modules\GridAccess.cs" />
     <Compile Include="WindowAbout\AboutWindow.cs" />
@@ -290,6 +296,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="GridToEmail\ToolWindowGridToEmailControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="HealthDashboards\HealthDashboard_ServerControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

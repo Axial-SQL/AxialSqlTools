@@ -1,6 +1,6 @@
-# SSMS Productivity Addin SQL Server Management Studio 18/19
+# SSMS Productivity Addin SQL Server Management Studio 19
 
-This VSIX extension is created for SQL Server Management Studio versions 18 and 19, focusing on productivity improvements. 
+This VSIX extension is created for SQL Server Management Studio 19, focusing on productivity improvements. 
 It streamlines daily routine tasks, making database management more efficient and less time-consuming.
 
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/main.png?raw=true"/>
@@ -33,10 +33,13 @@ To install the addin, you have two options:
 
 After obtaining the compiled files (either by compiling from source or downloading from Releases), follow these steps to install the extension:
 
-- For SSMS 18, place the folder with the compiled files into the following directory:
-`C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions` 
-- For SSMS 19, use this directory instead:
-`C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions`
+- For SSMS 19, place the folder with the compiled files into the following directory:
+`C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions` 
+
+<!--
+- For SSMS 18, use this directory instead:
+`C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
+-->
 
 Restart SQL Server Management Studio after placing the files in the extensions directory.
 
@@ -72,5 +75,5 @@ The creators do not offer support and are not responsible for any damage or loss
 
 ---
 
-Thank you for using the SSMS Productivity Addin for SQL Server Management Studio 18/19. 
+Thank you for using the SSMS Productivity Addin for SQL Server Management Studio 19. 
 We hope it makes your work with SQL Server significantly more efficient!

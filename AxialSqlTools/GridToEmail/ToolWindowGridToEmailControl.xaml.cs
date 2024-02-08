@@ -1,6 +1,7 @@
 ﻿namespace AxialSqlTools
 {
     using Microsoft.VisualStudio.Shell;
+    using System;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Net;
@@ -52,43 +53,52 @@
         private void Button_SendAndClose(object sender, RoutedEventArgs e)
         {
 
-            SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
-
-            var fromAddress = new MailAddress(SettingsManager.GetMyEmail());
-            var toAddress = new MailAddress(EmailRecipient.Text);
-
-            // Setting up the SMTP client
-            var smtp = new SmtpClient
+            try
             {
-                Host = smtpSettings.ServerName,
-                Port = smtpSettings.Port,
-                EnableSsl = true,
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = false,
-                Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password)
-            };
+                SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
 
-            // Creating the email message
-            using (var message = new MailMessage(fromAddress, toAddress)
+                var fromAddress = new MailAddress(SettingsManager.GetMyEmail());
+                var toAddress = new MailAddress(EmailRecipient.Text);
+
+                // Setting up the SMTP client
+                var smtp = new SmtpClient
+                {
+                    Host = smtpSettings.ServerName,
+                    Port = smtpSettings.Port,
+                    EnableSsl = true,
+                    DeliveryMethod = SmtpDeliveryMethod.Network,
+                    UseDefaultCredentials = false,
+                    Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password)
+                };
+
+                // Creating the email message
+                using (var message = new MailMessage(fromAddress, toAddress)
+                {
+                    Subject = EmailSubject.Text,
+                    Body = EmailBody.Text,
+
+                })
+                {
+
+                    Attachment attachment = new Attachment(FullFileName.Text);
+                    message.Attachments.Add(attachment);
+
+                    smtp.Send(message);
+
+                    MessageBox.Show(
+                        string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Email to '{0}' has been sent!", toAddress),
+                        "Done");
+
+                }
+
+                File.Delete(FullFileName.Text);
+
+            } catch (Exception ex)
             {
-                Subject = EmailSubject.Text,
-                Body = EmailBody.Text,
-
-            })
-            {
-
-                Attachment attachment = new Attachment(FullFileName.Text);
-                message.Attachments.Add(attachment);
-
-                smtp.Send(message);
-
-                MessageBox.Show(
-                    string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Email to '{0}' has been sent!", toAddress),
-                    "Done");
-
-            }
-
-            File.Delete(FullFileName.Text);
+                string msg = $"Erorr message: {ex.Message} \nInnerException: {ex.InnerException}";
+                MessageBox.Show(msg, "Something went wrong");
+            }    
+            
         }
     }
 }

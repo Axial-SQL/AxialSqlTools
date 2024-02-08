@@ -102,10 +102,14 @@ namespace AxialSqlTools
         public static SmtpSettings GetSmtpSettings()
         {
 
-            string encPassword = GetRegisterValue("SMTP_Password");
-
-            byte[] decryptedData = Unprotect(Convert.FromBase64String(encPassword));
-            string password = Encoding.UTF8.GetString(decryptedData);
+            string password = "";
+            try
+            {
+                string encPassword = GetRegisterValue("SMTP_Password");
+                byte[] decryptedData = Unprotect(Convert.FromBase64String(encPassword));
+                password = Encoding.UTF8.GetString(decryptedData);
+            } catch {
+            }
 
             SmtpSettings smtpSettings = new SmtpSettings();
             smtpSettings.Username = GetRegisterValue("SMTP_Username");

@@ -40,9 +40,17 @@
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" priority="0x0000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbar" />
       </Group>
-      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" priority="0x0000">
+      
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" priority="0x1000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
       </Group>
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" priority="0x2000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
+      </Group>
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" priority="0x3000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
+      </Group>
+      
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" priority="0x0000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenu" />
       </Group>
@@ -102,7 +110,7 @@
       
       <!-- TOOLS Submenu buttons -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" priority="0x0100" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
         <Icon guid="guidExportData" id="bmpExportData" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
@@ -110,7 +118,7 @@
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcelAndEmail" priority="0x0100" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
         <Icon guid="guidExportData" id="bmpExportData" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
@@ -118,7 +126,7 @@
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" priority="0x0110" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
         <Icon guid="guidExportData" id="bmpExportData" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
@@ -126,7 +134,7 @@
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridToGoogleSheet" priority="0x0000" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
         <Icon guid="guidExportData" id="bmpExportData" />
         <CommandFlag>IconAndText</CommandFlag>
         <CommandFlag>DefaultInvisible</CommandFlag>
@@ -135,7 +143,7 @@
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" priority="0x0200" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
         <Icon guid="guidImagesTemplate" id="bmpTemplate" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
@@ -143,7 +151,7 @@
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialFindObjectInObjectExplorer" priority="0x0000" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
         <CommandFlag>IconAndText</CommandFlag>
         <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
@@ -151,11 +159,17 @@
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptResultIntoNewWindow" priority="0x0000" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup" />
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
         <CommandFlag>IconAndText</CommandFlag>        
         <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Script Result Into a New Window - TODO</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialHealthDashboardServerCommand" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
+        <Strings>
+          <ButtonText>Health Dashboard - Server</ButtonText>
         </Strings>
       </Button>
 
@@ -185,6 +199,7 @@
         </Strings>
       </Button>
       
+
     </Buttons>
 
     <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
@@ -200,7 +215,7 @@
       <Bitmap guid="guidInfo" href="Resources\info.png" usedList="bmpInfo" />
       <Bitmap guid="guidRefresh" href="Resources\refresh.png" usedList="bmpRefresh" />
       <Bitmap guid="guidExportData" href="Resources\export-data.png" usedList="bmpExportData" />
-    </Bitmaps>
+	</Bitmaps>
   </Commands>
 
   <Symbols>
@@ -222,7 +237,9 @@
       <IDSymbol name="AxialQueryTemplatesButtonRefresh" value="4132" />
 
       <IDSymbol name="AxialToolsSubMenu" value="0x1200" />
-      <IDSymbol name="AxialToolsSubMenuGroup" value="0x1201" />
+      <IDSymbol name="AxialToolsSubMenuGroup_Export" value="0x1201" />
+      <IDSymbol name="AxialToolsSubMenuGroup_Script" value="0x1202" />
+      <IDSymbol name="AxialToolsSubMenuGroup_Health" value="0x1203" />
 
       <IDSymbol name="AxialExportButtonGridToExcel" value="4133" />
       <IDSymbol name="AxialExportButtonGridToExcelAndEmail" value="4139" />
@@ -232,7 +249,9 @@
       <IDSymbol name="AxialScriptResultIntoNewWindow" value="4136" />
       <IDSymbol name="AxialExportGridToGoogleSheet" value="4137" />
       <IDSymbol name="AxialExportGridAsInserts" value="4138" />
-
+      
+      <IDSymbol name="AxialHealthDashboardServerCommand" value="4140" />
+      
     </GuidSymbol>
 
     <GuidSymbol name="guidImagesSettings" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c1}">

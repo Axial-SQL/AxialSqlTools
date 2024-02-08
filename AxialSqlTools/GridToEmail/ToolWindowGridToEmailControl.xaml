@@ -19,7 +19,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <Label Content="Recipient Email Address"/>
-                    <TextBox Height="22" TextWrapping="Wrap" Text="alex@axial-erp.co" x:Name="EmailRecipient"/>
+                    <TextBox Height="22" TextWrapping="Wrap" Text="" x:Name="EmailRecipient"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <Label Content="Subject"/>
