@@ -172,28 +172,38 @@
             if (metrics.BlockedRequestsCount > 0)
             {
                 Label_BlockedRequestCount.Foreground = Brushes.Red;
-                Label_BlockedRequestCount.FontWeight = FontWeights.Bold;
                 Label_BlockedRequestCount.Content = metrics.BlockedRequestsCount.ToString();
             }
             else {
                 Label_BlockedRequestCount.Foreground = Brushes.Black;
-                Label_BlockedRequestCount.FontWeight = FontWeights.Normal;
                 Label_BlockedRequestCount.Content = "-";
             }
 
             if (metrics.BlockingTotalWaitTime > 0)
             {
                 Label_BlockedTotalWaitTime.Foreground = Brushes.Red;
-                Label_BlockedTotalWaitTime.FontWeight = FontWeights.Bold;
                 Label_BlockedTotalWaitTime.Content = metrics.BlockingTotalWaitTime.ToString();
             }
             else
             {
                 Label_BlockedTotalWaitTime.Foreground = Brushes.Black;
-                Label_BlockedTotalWaitTime.FontWeight = FontWeights.Normal;
                 Label_BlockedTotalWaitTime.Content = "-";
             }
 
+            //-------------------------------------------------
+            Label_DatabaseStatus.Foreground = Brushes.Black;
+            if (metrics.CountUserDatabasesTotal == 0)
+                Label_DatabaseStatus.Content = "no user databases";
+            else if (metrics.CountUserDatabasesTotal == metrics.CountUserDatabasesOkay)
+            {
+                Label_DatabaseStatus.Content = $"OK - {metrics.CountUserDatabasesTotal} database(s)";
+            } else
+            {
+                Label_DatabaseStatus.Foreground = Brushes.Red;
+                Label_DatabaseStatus.Content = $"{metrics.CountUserDatabasesOkay} out of {metrics.CountUserDatabasesTotal} available";
+            }
+
+            //-------------------------------------------------
             if (metrics.AlwaysOn_Exists)
             {
                 string agStatus = "HEALTHY";
@@ -212,12 +222,10 @@
                 if (metrics.AlwaysOn_MaxLatency > 0)
                 {
                     TimeSpan agTimeSpan = TimeSpan.FromMilliseconds(metrics.AlwaysOn_MaxLatency);
-                    if (agTimeSpan.TotalMinutes > 0)
+                    if (agTimeSpan.TotalMinutes > 1)
                         agLatency = $"{(int)agTimeSpan.Minutes} minutes {agTimeSpan.Seconds} sec.";
-                    else if (agTimeSpan.TotalSeconds > 0)
-                        agLatency = $"{(int)agTimeSpan.TotalSeconds} seconds {agTimeSpan.Milliseconds} ms.";
-                    else
-                        agLatency = $"{agTimeSpan.Milliseconds} ms.";
+                    else 
+                        agLatency = $"{(int)agTimeSpan.TotalSeconds} sec. {agTimeSpan.Milliseconds} ms.";                   
                 }              
 
                 Label_AlwaysOnHealth.Content = $"{agStatus} (latency: {agLatency})";

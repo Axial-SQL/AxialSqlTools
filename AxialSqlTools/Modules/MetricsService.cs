@@ -19,6 +19,10 @@ namespace AxialSqlTools
         public int ConnectionCountTotal { get; set; }
         public int ConnectionCountEnc { get; set; }
 
+        public int CountUserDatabasesTotal { get; set; }
+        public int CountUserDatabasesOkay { get; set; }
+
+
         public int BlockedRequestsCount { get; set; }
         public int BlockingTotalWaitTime { get; set; }
 
@@ -249,6 +253,29 @@ namespace AxialSqlTools
                     ";
 
                     using (SqlCommand command = new SqlCommand(queryText_6, connection))
+                    { using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        { if (reader.HasRows)
+                            { while (await reader.ReadAsync())
+                                {
+                                    metrics.AlwaysOn_Exists = true;
+                                    metrics.AlwaysOn_Health = reader.GetInt32(0);
+                                    metrics.AlwaysOn_MaxLatency = reader.GetInt32(1);
+                                    metrics.AlwaysOn_TotalRedoQueueSize = reader.GetInt64(2);
+                                    metrics.AlwaysOn_TotalLogSentQueueSize = reader.GetInt64(3);
+                                }
+                            }
+                        }
+                    }
+
+                    string queryText_7 = @"                
+                    SELECT 
+                            (SELECT isnull(count(*), 0) FROM sys.databases WHERE database_id > 4) AS CountUserDatabasesTotal,
+                            (SELECT isnull(count(*), 0) FROM sys.databases WHERE database_id > 4
+                                                                              AND user_access_desc = 'MULTI_USER'
+                                                                              AND state_desc = 'ONLINE') AS CountUserDatabasesOkay;
+                    ";
+
+                    using (SqlCommand command = new SqlCommand(queryText_7, connection))
                     {
                         using (SqlDataReader reader = await command.ExecuteReaderAsync())
                         {
@@ -256,11 +283,8 @@ namespace AxialSqlTools
                             {
                                 while (await reader.ReadAsync())
                                 {
-                                    metrics.AlwaysOn_Exists = true;
-                                    metrics.AlwaysOn_Health = reader.GetInt32(0);
-                                    metrics.AlwaysOn_MaxLatency = reader.GetInt32(1);
-                                    metrics.AlwaysOn_TotalRedoQueueSize = reader.GetInt64(2);
-                                    metrics.AlwaysOn_TotalLogSentQueueSize = reader.GetInt64(3);
+                                    metrics.CountUserDatabasesTotal = reader.GetInt32(0);
+                                    metrics.CountUserDatabasesOkay = reader.GetInt32(1);
                                 }
                             }
                         }

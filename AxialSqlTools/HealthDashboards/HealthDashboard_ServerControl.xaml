@@ -18,68 +18,72 @@
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Server name:" Width="150"/>
-                        <Label Content="= server name =" x:Name="Label_ServerName"/>
+                        <Label Content="= server name =" x:Name="Label_ServerName" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Service name:" Width="150"/>
-                        <Label Content="= service name =" x:Name="Label_ServiceName"/>
+                        <Label Content="= service name =" x:Name="Label_ServiceName" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Uptime:" Width="150"/>
-                        <Label Content="= server uptime =" x:Name="Label_Uptime"/>
+                        <Label Content="= server uptime =" x:Name="Label_Uptime" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Response Time (ms):" Width="150"/>
-                        <Label Content="= response time =" x:Name="Label_ResponseTime"/>
+                        <Label Content="= response time =" x:Name="Label_ResponseTime" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="CPU %:" Width="150"/>
-                        <Label Content="= current CPU load=" x:Name="Label_CpuLoad"/>
+                        <Label Content="= current CPU load=" x:Name="Label_CpuLoad" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Active Connections:" Width="150"/>
-                        <Label Content="= open connections =" x:Name="Label_ConnectionCount"/>
+                        <Label Content="= open connections =" x:Name="Label_ConnectionCount" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Encrypted Connections:" Width="150"/>
-                        <Label Content="= enc connections =" x:Name="Label_ConnectionCountEnc"/>
+                        <Label Content="= enc connections =" x:Name="Label_ConnectionCountEnc" FontWeight="Bold"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="User Databases:" Width="150"/>
+                        <Label Content="= db status =" x:Name="Label_DatabaseStatus" FontWeight="Bold"/>
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Memory:" Width="150"/>
-                        <Label Content="500Gb / 600Gb / 700Gb" x:Name="Label_MemoryInfo"/>
+                        <Label Content="= used / total memory =" x:Name="Label_MemoryInfo" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="PLE (sec):" Width="150"/>
-                        <Label Content="650" x:Name="Label_PLE"/>
+                        <Label Content="= PLE =" x:Name="Label_PLE" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Blocked Requests:" Width="150"/>
-                        <Label Content="= blocked request =" x:Name="Label_BlockedRequestCount"/>
+                        <Label Content="= blocked request =" x:Name="Label_BlockedRequestCount" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Lock Wait Time (sec):" Width="150"/>
-                        <Label Content="= wait time =" x:Name="Label_BlockedTotalWaitTime"/>
+                        <Label Content="= wait time =" x:Name="Label_BlockedTotalWaitTime" FontWeight="Bold"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
                         <Label Content="AlwaysOn:" Width="150"/>
-                        <Label Content="= health =" x:Name="Label_AlwaysOnHealth"/>
+                        <Label Content="= health =" x:Name="Label_AlwaysOnHealth" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Queue Sizes (Gb):" Width="150"/>
-                        <Label Content="= log send queue =" x:Name="Label_AlwaysOnLogSendQueue"/>
-                        <Label Content="= redo queue =" x:Name="Label_AlwaysOnRedoQueue"/>
+                        <Label Content="= log send queue =" x:Name="Label_AlwaysOnLogSendQueue" FontWeight="Bold"/>
+                        <Label Content="= redo queue =" x:Name="Label_AlwaysOnRedoQueue" FontWeight="Bold"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Total Data File Size (Gb):" Width="150"/>
-                        <Label Content="= data file size =" x:Name="Label_DataFileSizeGb"/>
+                        <Label Content="= data file size =" x:Name="Label_DataFileSizeGb" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Total Log File Size (Gb):" Width="150"/>
-                        <Label Content="= log file size =" x:Name="Label_LogFileSizeGb"/>
+                        <Label Content="= log file size =" x:Name="Label_LogFileSizeGb" FontWeight="Bold"/>
                     </StackPanel>
 
 
