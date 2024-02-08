@@ -191,11 +191,22 @@
           <ButtonText>Settings</ButtonText>
         </Strings>
       </Button>
+      
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialAboutButton" priority="0x2000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
         <Icon guid="guidInfo" id="bmpInfo" />
         <Strings>
           <ButtonText>About</ButtonText>
+        </Strings>
+      </Button>
+      
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialCheckNewVersion" priority="0x3000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
+        <Icon guid="guidInfo" id="bmpInfo" />
+        <!--<CommandFlag>DefaultInvisible</CommandFlag>-->
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>New Version Available</ButtonText>
         </Strings>
       </Button>
       
@@ -231,6 +242,7 @@
       <IDSymbol name="AxialFormatQueryButton" value="4131" />
       <IDSymbol name="AxialSettingsButton" value="4130" />
       <IDSymbol name="AxialAboutButton" value="4129" />
+      <IDSymbol name="AxialCheckNewVersion" value="4041" />
       
       <IDSymbol name="AxialQueryTemplatesSubMenu" value="0x1100" />
       <IDSymbol name="AxialQueryTemplatesSubMenuGroup" value="0x1101" />
