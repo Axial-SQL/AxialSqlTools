@@ -17,7 +17,7 @@ So far we've developed these features:
 - **Export Grid to Excel and Send Email**: Similar to the previous feature, but with the added ability to send the file via email.
 - **Export Grid as Inserts**: Convert your grid result into insert statements.
 - **Script Selected Object Definition**: Quickly generate scripts for the definition of selected objects directly from the selected query text.
-- **Health Dashboard - Server**: I am experimenting with the idea of displaying basic server health metrics in a single window.
+- [**Health Dashboard - Server**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Health-Dashboards): I am experimenting with the idea of displaying basic server health metrics in a single window.
 
 ## Query Templates
 
