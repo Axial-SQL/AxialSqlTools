@@ -175,6 +175,7 @@
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialHealthDashboardServersCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
+        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Health Dashboard - Group of Servers</ButtonText>
         </Strings>

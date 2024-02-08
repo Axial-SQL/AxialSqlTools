@@ -14,22 +14,21 @@ namespace AxialSqlTools
 {
     public static class GridAccess
     {
-        private static object GetNonPublicField(object obj, string field)
+        public static object GetNonPublicField(object obj, string field)
         {
             FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
 
             return f.GetValue(obj);
         }
-        private static FieldInfo GetNonPublicFieldInfo(object obj, string field)
+        public static FieldInfo GetNonPublicFieldInfo(object obj, string field)
         {
             FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
 
             return f;
         }
 
-        public static List<DataTable> GetDataTables()
+        public static CollectionBase GetGridContainers()
         {
-            List<DataTable> dataTables = new List<DataTable>();
 
             var objType = ServiceCache.ScriptFactory.GetType();
             var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -44,55 +43,46 @@ namespace AxialSqlTools
             var m_gridResultsPage = GetNonPublicField(SQLResultsControl, "m_gridResultsPage");
             CollectionBase gridContainers = GetNonPublicField(m_gridResultsPage, "m_gridContainers") as CollectionBase;
 
+            return gridContainers;
+        }
+
+        public static List<DataTable> GetDataTables()
+        {
+            List<DataTable> dataTables = new List<DataTable>();
+
+            CollectionBase gridContainers = GetGridContainers();
+
             foreach (var gridContainer in gridContainers)
             {
                 var grid = GetNonPublicField(gridContainer, "m_grid") as GridControl;
                 var gridStorage = grid.GridStorage;
                 var schemaTable = GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
 
-                //// TEST----
+                //// TEST---- align text on the right 
+                /// it works!
                 //var gridColumns = GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
                 //if (gridColumns != null)
                 //{
-                //    //var gridColumnCollection = columnsProperty.GetValue(grid) as IEnumerable; // Replace IEnumerable with the actual type of the Columns collection
-
-                //    // Iterate through the gridColumnCollection to access individual GridColumn objects
-
-                //    grid.GridColumnsInfo.Clear();
-
-                //    foreach (GridColumnInfo gridColumn in grid.GridColumnsInfo)
+                //    foreach (GridColumn gridColumn in gridColumns)
                 //    {
-
-                //        //var textAlignField = GetNonPublicFieldInfo(gridColumn, "ColumnAlignment");
-                //        //if (textAlignField != null)
-                //        //{
-                //        //    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                //        //}
-
-                //        var id = grid.GridColumnsInfo.IndexOf(gridColumn);
-                //        grid.GridColumnsInfo.Remove(gridColumn);
-
-                //        gridColumn.ColumnAlignment = HorizontalAlignment.Right;                        
-
-                //        grid.GridColumnsInfo.Add(gridColumn);
-
+                //        var textAlignField = GetNonPublicFieldInfo(gridColumn, "TextAlign");
+                //        if (textAlignField != null)
+                //        {
+                //            textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                //        }
+                //        var textAlignField2 = GetNonPublicFieldInfo(gridColumn, "m_myAlign");
+                //        if (textAlignField2 != null)
+                //        {
+                //            textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                //        }
+                //        var textAlignField3 = GetNonPublicFieldInfo(gridColumn, "m_textFormat");
+                //        if (textAlignField3 != null)
+                //        {
+                //            System.Windows.Forms.TextFormatFlags flags = (System.Windows.Forms.TextFormatFlags)GetNonPublicField(gridColumn, "m_textFormat");
+                //            textAlignField3.SetValue(gridColumn, flags | System.Windows.Forms.TextFormatFlags.Right);
+                //        }
                 //    }
-
-                //    //foreach (var gridColumn in gridColumns)
-                //    //{
-                //    //    var textAlignField = GetNonPublicFieldInfo(gridColumn, "TextAlign");
-                //    //    if (textAlignField != null)
-                //    //    {
-                //    //        textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                //    //    }
-                //    //    var textAlignField2 = GetNonPublicFieldInfo(gridColumn, "m_myAlign");
-                //    //    if (textAlignField2 != null)
-                //    //    {
-                //    //        textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                //    //    }
-                //    //}
                 //}
-                //grid.Refresh();
                 //// TEST----
 
                 var data = new DataTable();
@@ -113,6 +103,7 @@ namespace AxialSqlTools
 
                         var cellData = gridStorage.GetCellDataAsString(i, c + 1);
 
+
                         if (cellData == "NULL")
                         {
                             rowItems.Add(null);
@@ -124,9 +115,7 @@ namespace AxialSqlTools
                         {
                             cellData = cellData == "0" ? "False" : "True";
                         }
-
-                        //Console.WriteLine($"Parsing {columnName} with '{cellData}'");
-
+                        
                         var typedValue = Convert.ChangeType(cellData, columnType, CultureInfo.InvariantCulture);
 
                         rowItems.Add(typedValue);

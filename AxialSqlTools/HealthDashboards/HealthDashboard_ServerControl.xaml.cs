@@ -24,6 +24,8 @@
         private bool _disposed = false;
         private bool _monitoringStarted = false;
 
+        public ToolWindowPane userControlOwner;
+
         public void Dispose(bool disposing)
         {
             _cancellationTokenSource?.Cancel();
@@ -253,6 +255,9 @@
 
 
             lastRefresh = DateTime.Now;
+
+            //TODO - atract user attention by blinking
+            //userControlOwner.Caption = "! " + DateTime.Now.ToString();
 
         }
 

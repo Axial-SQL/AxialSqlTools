@@ -33,6 +33,10 @@
             // we are not calling Dispose on this object. This is because ToolWindowPane calls Dispose on
             // the object returned by the Content property.
             this.Content = new HealthDashboard_ServerControl();
+
+            HealthDashboard_ServerControl control = (HealthDashboard_ServerControl)this.Content;
+            control.userControlOwner = this;
+
         }
 
         public int OnShow(int fShow)

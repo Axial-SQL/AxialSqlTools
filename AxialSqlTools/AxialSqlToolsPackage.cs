@@ -24,6 +24,8 @@ using System.IO;
 using AxialSqlTools.Properties;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Collections;
+using Microsoft.SqlServer.Management.UI.Grid;
 
 namespace AxialSqlTools
 {
@@ -58,6 +60,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(AboutWindow))]
     [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
     [ProvideToolWindow(typeof(HealthDashboard_Server))]
+    [ProvideToolWindow(typeof(AxialSqlTools.HealthDashboards.HealthDashboard_Servers))]
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
@@ -68,6 +71,8 @@ namespace AxialSqlTools
         private Plugin m_plugin = null;
         private CommandRegistry m_commandRegistry = null;
         private CommandBar m_commandBarQueryTemplates = null;
+
+        public CommandEvents m_queryExecuteEvent { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AxialSqlToolsPackage"/> class.
@@ -94,7 +99,6 @@ namespace AxialSqlTools
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-
 
             
             DTE2 application = GetGlobalService(typeof(DTE)) as DTE2;
@@ -127,6 +131,26 @@ namespace AxialSqlTools
             await ExportGridToAsInsertsCommand.InitializeAsync(this);
             await ToolWindowGridToEmailCommand.InitializeAsync(this);
             await HealthDashboard_ServerCommand.InitializeAsync(this);
+            await AxialSqlTools.HealthDashboards.HealthDashboard_ServersCommand.InitializeAsync(this);
+
+
+            //var command = application.Commands.Item("Query.Execute");
+            //m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
+            //m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
+            //m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
+
+        }
+
+        private void CommandEvents_BeforeExecute(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+        }
+
+        //it has been executed, but the Grid hasn't been created yet...
+        private void CommandEvents_AfterExecute(string Guid, int ID, object CustomIn, object CustomOut)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
 
         }
 
@@ -164,9 +188,7 @@ namespace AxialSqlTools
 
             //    if ((removeCommandBarResult == 1 && removeCommandResult == 1) || ii > 1000) {break;}                
             //}
-
-
-
+            
             Dictionary<string, string> fileNamesCache = new Dictionary<string, string>();
 
             string Folder = SettingsManager.GetTemplatesFolder();
