@@ -257,7 +257,7 @@
             lastRefresh = DateTime.Now;
 
             //TODO - atract user attention by blinking
-            //userControlOwner.Caption = "! " + DateTime.Now.ToString();
+            userControlOwner.Caption = metrics.ServerName + " - OK";
 
         }
 

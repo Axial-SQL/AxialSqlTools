@@ -88,19 +88,6 @@ namespace AxialSqlTools
             Instance = new ExportGridToAsInsertsCommand(package, commandService);
         }
 
-        public object GetNonPublicField(object obj, string field)
-        {
-            FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-
-            return f.GetValue(obj);
-        }
-        public FieldInfo GetNonPublicFieldInfo(object obj, string field)
-        {
-            FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-
-            return f;
-        }
-
         /// <summary>
         /// This function is the callback used to execute the command when the menu item is clicked.
         /// See the constructor to see how the menu item is associated with this function using
@@ -111,7 +98,6 @@ namespace AxialSqlTools
         private void Execute(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
 
             List<DataTable> dataTables = GridAccess.GetDataTables();
 
@@ -128,15 +114,25 @@ namespace AxialSqlTools
                 if (jj > 0) buffer.AppendLine("-------------------------------------------");
 
                 StringBuilder columnList = new StringBuilder();
-                for (int i = 0; i < dataTable.Columns.Count; i++)
+                int ii = 0;
+                foreach (DataColumn column in dataTable.Columns)
                 {
-                    if (i > 0)
+                    if (ii > 0)
                     {
                         columnList.Append(", \n");
                         columnList.Append("         ");
                     }
-                    // TODO - need proper types
-                    columnList.AppendFormat("[{0}] SQL_VARIANT", dataTable.Columns[i].ColumnName);
+                    string columnType = "SQL_VARIANT";
+                    if (column.ExtendedProperties.ContainsKey("sqlType"))
+                        columnType = (string)column.ExtendedProperties["sqlType"];
+
+                    string columnName = column.ColumnName;
+                    if (column.ExtendedProperties.ContainsKey("columnName"))
+                        columnName = (string)column.ExtendedProperties["columnName"];
+
+                    columnList.AppendFormat("[{0}] {1}", columnName, columnType);
+
+                    ii += 1;
                 }
 
                 buffer.AppendLine("IF OBJECT_ID('tempdb..#tempBuffer') IS NOT NULL DROP TABLE #tempBuffer;");

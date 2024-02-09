@@ -26,6 +26,9 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Collections;
 using Microsoft.SqlServer.Management.UI.Grid;
+using System.Linq;
+using System.Data;
+using Microsoft.SqlServer.Management.UI.VSIntegration;
 
 namespace AxialSqlTools
 {
@@ -73,6 +76,17 @@ namespace AxialSqlTools
         private CommandBar m_commandBarQueryTemplates = null;
 
         public CommandEvents m_queryExecuteEvent { get; private set; }
+
+        private int numberOfDashboardsOpen = 0;
+
+        public int GetNextToolWindowId()
+        {
+            numberOfDashboardsOpen += 1;
+
+            return numberOfDashboardsOpen;
+        }
+
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AxialSqlToolsPackage"/> class.
@@ -134,16 +148,98 @@ namespace AxialSqlTools
             await AxialSqlTools.HealthDashboards.HealthDashboard_ServersCommand.InitializeAsync(this);
 
 
-            //var command = application.Commands.Item("Query.Execute");
-            //m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
-            //m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
-            //m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
+            var command = application.Commands.Item("Query.Execute");
+            m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
+            m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
+            m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
 
         }
+
+        //----------------
+
+        public static void AddEventToSqlResultConrol_ScriptExecutionCompleted()
+        {
+            var SQLResultsControl = GridAccess.GetSQLResultsControl();
+
+            EventHandler eventHandler = SQLResultsControl_ScriptExecutionCompleted;
+
+            Type targetType = SQLResultsControl.GetType();
+
+            EventInfo eventInfo = targetType.GetEvent("ScriptExecutionCompleted");
+            if (eventInfo != null)
+            {
+                Delegate handlerDelegate = Delegate.CreateDelegate(eventInfo.EventHandlerType, eventHandler.Target, eventHandler.Method);
+                eventInfo.RemoveEventHandler(SQLResultsControl, handlerDelegate); 
+                eventInfo.AddEventHandler(SQLResultsControl, handlerDelegate);
+            }        
+
+        }
+        
+        // This method aligns all numeric values to the right
+        public static void SQLResultsControl_ScriptExecutionCompleted(object a, object b)
+        {
+            CollectionBase gridContainers = GridAccess.GetGridContainers();
+
+            foreach (var gridContainer in gridContainers)
+            {
+                var grid = GridAccess.GetNonPublicField(gridContainer, "m_grid") as GridControl;
+                var gridStorage = grid.GridStorage;
+                var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
+
+                var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
+                if (gridColumns != null)
+                {
+
+                    string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "decimal", "numeric" };
+
+                    List<int> columnsToAlignRight = new List<int> { };
+
+                    for (int c = 0; c < schemaTable.Rows.Count; c++)
+                    {
+                        int columnOrdinal = (int)schemaTable.Rows[c][1];
+                        var sqlDataTypeName = schemaTable.Rows[c][24];
+
+                        if (typeToAlignRight.Contains(sqlDataTypeName))
+                        {
+                            columnsToAlignRight.Add(columnOrdinal);
+                        }
+                    }
+
+                    foreach (GridColumn gridColumn in gridColumns)
+                    {
+                        
+                        if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
+                        {
+                            var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
+                            if (textAlignField != null)
+                            {
+                                textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                            }
+                            var textAlignField2 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_myAlign");
+                            if (textAlignField2 != null)
+                            {
+                                textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                            }
+                            var textAlignField3 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_textFormat");
+                            if (textAlignField3 != null)
+                            {
+                                System.Windows.Forms.TextFormatFlags flags = (System.Windows.Forms.TextFormatFlags)GridAccess.GetNonPublicField(gridColumn, "m_textFormat");
+                                textAlignField3.SetValue(gridColumn, flags | System.Windows.Forms.TextFormatFlags.Right);
+                            }
+                        }
+
+                    }
+                }
+            }
+
+        }
+
 
         private void CommandEvents_BeforeExecute(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+
+            AddEventToSqlResultConrol_ScriptExecutionCompleted();
 
         }
 

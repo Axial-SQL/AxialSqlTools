@@ -15,9 +15,11 @@ So far we've developed these features:
 - **Quick Query Templates**: Access a collection of query templates for common tasks, saving time and effort on routine queries.
 - **Export Grid to Excel**: Export result from the grid view directly into Excel file for further analysis or reporting.
 - **Export Grid to Excel and Send Email**: Similar to the previous feature, but with the added ability to send the file via email.
-- **Export Grid as Inserts**: Convert your grid result into insert statements.
+- [**Export Grid as Inserts**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-grid-results-as-a-temp-table): Convert the grid result(s) into temp table with insert statements.
 - **Script Selected Object Definition**: Quickly generate scripts for the definition of selected objects directly from the selected query text.
 - [**Health Dashboard - Server**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Health-Dashboards): I am experimenting with the idea of displaying basic server health metrics in a single window.
+- [**Right Alignment for Numeric Values in Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Align-numeric-values-in-the-grid-result-to-the-right): Automatically align numeric values in the grid result to the right.
+
 
 ## Query Templates
 
