@@ -25,6 +25,8 @@ namespace AxialSqlTools
             UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
 
             string databaseName = inMaster ? "master" : connection.AdvancedOptions["DATABASE"];
+            if (string.IsNullOrEmpty(databaseName))
+                databaseName = "master";
 
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
 

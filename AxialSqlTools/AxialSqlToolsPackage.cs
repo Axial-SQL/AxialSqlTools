@@ -78,13 +78,13 @@ namespace AxialSqlTools
 
         public CommandEvents m_queryExecuteEvent { get; private set; }
 
-        private int numberOfDashboardsOpen = 0;
+        private int numberOfWindowsOpen = 0;
 
         public int GetNextToolWindowId()
         {
-            numberOfDashboardsOpen += 1;
+            numberOfWindowsOpen += 1;
 
-            return numberOfDashboardsOpen;
+            return numberOfWindowsOpen;
         }
 
 
@@ -253,7 +253,6 @@ namespace AxialSqlTools
         private void CommandEvents_AfterExecute(string Guid, int ID, object CustomIn, object CustomOut)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
         }
 
         public void RefreshTemplatesList()
