@@ -1,4 +1,4 @@
-﻿namespace AxialSqlTools.HealthDashboards
+﻿namespace AxialSqlTools
 {
     using System;
     using System.Runtime.InteropServices;

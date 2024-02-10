@@ -63,7 +63,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(AboutWindow))]
     [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
     [ProvideToolWindow(typeof(HealthDashboard_Server))]
-    [ProvideToolWindow(typeof(AxialSqlTools.HealthDashboards.HealthDashboard_Servers))]
+    [ProvideToolWindow(typeof(HealthDashboard_Servers))]
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
@@ -112,15 +112,35 @@ namespace AxialSqlTools
         {
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
-            await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
+            await FormatQueryCommand.InitializeAsync(this);
+            await RefreshTemplatesCommand.InitializeAsync(this);
+            await ExportGridToExcelCommand.InitializeAsync(this);
+            await SettingsWindowCommand.InitializeAsync(this);
+            await AboutWindowCommand.InitializeAsync(this);
+            await ScriptSelectedObject.InitializeAsync(this);
+            await ExportGridToAsInsertsCommand.InitializeAsync(this);
+            await ToolWindowGridToEmailCommand.InitializeAsync(this);
+            await HealthDashboard_ServerCommand.InitializeAsync(this);
+            await HealthDashboard_ServersCommand.InitializeAsync(this);
+
+            await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             
             DTE2 application = GetGlobalService(typeof(DTE)) as DTE2;
             IVsProfferCommands3 profferCommands3 = await base.GetServiceAsync(typeof(SVsProfferCommands)) as IVsProfferCommands3;
             OleMenuCommandService oleMenuCommandService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
 
-            
-            ////\\------------------
+            var command = application.Commands.Item("Query.Execute");
+            m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
+            m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
+            m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
+
+            // "File.ConnectObjectExplorer"
+            // "Query.Connect"
+            // 
+
+            //---------------------------------------------------------------------------
+            // Query Templates
             string optionsFileName = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "AxialSqlTools.xml");
             Config options = Config.Load(optionsFileName);
 
@@ -135,23 +155,6 @@ namespace AxialSqlTools
             m_commandBarQueryTemplates = m_plugin.AddCommandBarMenu("Query Templates", MsoBarPosition.msoBarTop, null);
 
             RefreshTemplatesList();
-
-            await FormatQueryCommand.InitializeAsync(this);
-            await RefreshTemplatesCommand.InitializeAsync(this);
-            await ExportGridToExcelCommand.InitializeAsync(this);
-            await SettingsWindowCommand.InitializeAsync(this);
-            await AboutWindowCommand.InitializeAsync(this);
-            await ScriptSelectedObject.InitializeAsync(this);
-            await ExportGridToAsInsertsCommand.InitializeAsync(this);
-            await ToolWindowGridToEmailCommand.InitializeAsync(this);
-            await HealthDashboard_ServerCommand.InitializeAsync(this);
-            await AxialSqlTools.HealthDashboards.HealthDashboard_ServersCommand.InitializeAsync(this);
-
-
-            var command = application.Commands.Item("Query.Execute");
-            m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
-            m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
-            m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
 
         }
 

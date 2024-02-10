@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Task = System.Threading.Tasks.Task;
 
-namespace AxialSqlTools.HealthDashboards
+namespace AxialSqlTools
 {
     /// <summary>
     /// Command handler

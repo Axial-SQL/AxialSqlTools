@@ -24,6 +24,8 @@
         private bool _disposed = false;
         private bool _monitoringStarted = false;
 
+        private HealthDashboardServerMetric prev_metrics = new HealthDashboardServerMetric();
+
         public ToolWindowPane userControlOwner;
 
         public void Dispose(bool disposing)
@@ -91,11 +93,13 @@
                     while (!_cancellationTokenSource.IsCancellationRequested)
                     {
 
-                        var metrics = await MetricsService.FetchServerMetricsAsync(connectionString);
+                        var metrics = await MetricsService.FetchServerMetricsAsync(connectionString, prev_metrics);
 
                         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_cancellationTokenSource.Token);
 
                         UpdateUI(i, metrics, false);
+
+                        prev_metrics = metrics;
 
                         await System.Threading.Tasks.Task.Delay(3000, _cancellationTokenSource.Token); // Wait for 30 seconds before refreshing again
 
@@ -138,6 +142,8 @@
                     return;
                 }
             }
+
+            bool ServerHasIssues = false;
 
             LabelInternalException.Content = "";
 
@@ -203,6 +209,13 @@
             {
                 Label_DatabaseStatus.Foreground = Brushes.Red;
                 Label_DatabaseStatus.Content = $"{metrics.CountUserDatabasesOkay} out of {metrics.CountUserDatabasesTotal} available";
+                ServerHasIssues = true;
+            }
+
+            if (metrics.Iteration > 2)
+            {
+                Label_BatchRequestsSec.Content = metrics.PerfCounter_BatchRequestsSec;
+                Label_SQLCompilationsSec.Content = metrics.PerfCounter_SQLCompilationsSec;
             }
 
             //-------------------------------------------------
@@ -218,6 +231,8 @@
                     if (metrics.AlwaysOn_Health == 1)
                         agStatus = "PARTIALLY HEALTHY";
                     else agStatus = "NOT HEALTHY";
+
+                    ServerHasIssues = true;
                 }
 
                 string agLatency = "";
@@ -256,8 +271,15 @@
 
             lastRefresh = DateTime.Now;
 
-            //TODO - atract user attention by blinking
-            userControlOwner.Caption = metrics.ServerName + " - OK";
+            //Let user know that there is an issue by blinking the title
+            if (ServerHasIssues)
+            {
+                if (userControlOwner.Caption.EndsWith("(!)"))
+                    userControlOwner.Caption = metrics.ServerName + " - NOT OK";
+                else
+                    userControlOwner.Caption = "(!) " + metrics.ServerName + " - NOT OK (!)";
+            } else
+                userControlOwner.Caption = metrics.ServerName + " - OK";
 
         }
 

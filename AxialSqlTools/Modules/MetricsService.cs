@@ -10,8 +10,15 @@ namespace AxialSqlTools
 
     public class HealthDashboardServerMetric
     {
+
+        public HealthDashboardServerMetric ()
+        {
+            Iteration = 0;
+            PerfCounter_RefreshDateTime = DateTime.Now;
+        }
         // Example properties of the Metric class
-        public int Id { get; set; }
+        // public int Id { get; set; }
+        public int Iteration { get; set; }
         public string ServerName { get; set; }
         public string ServiceName { get; set; }
         public DateTime UtcStartTime { get; set; }
@@ -25,6 +32,12 @@ namespace AxialSqlTools
 
         public int BlockedRequestsCount { get; set; }
         public int BlockingTotalWaitTime { get; set; }
+
+        public DateTime PerfCounter_RefreshDateTime { get; set; }
+        public long PerfCounter_BatchRequestsSec_Total { get; set; }
+        public long PerfCounter_BatchRequestsSec { get; set; }
+        public long PerfCounter_SQLCompilationsSec_Total { get; set; }
+        public long PerfCounter_SQLCompilationsSec { get; set; }
 
         public long PerfCounter_PLE { get; set; }
         public long PerfCounter_DataFileSize { get; set; }
@@ -45,15 +58,19 @@ namespace AxialSqlTools
         public bool HasException { get; set; }
         public string ExecutionException { get; set; }
         // Add other properties or methods as needed
+
+
     }
     
     public static class MetricsService
     {
 
 
-        public static async Task<HealthDashboardServerMetric> FetchServerMetricsAsync(string connectionString)
+        public static async Task<HealthDashboardServerMetric> FetchServerMetricsAsync(string connectionString, HealthDashboardServerMetric prev_metrics)
         {
             var metrics = new HealthDashboardServerMetric {};
+
+            metrics.Iteration = prev_metrics.Iteration + 1;
 
             try
             {
@@ -157,7 +174,7 @@ namespace AxialSqlTools
                         }
                     }
 
-                    string queryText_5 = @"                
+                    string queryText_5a = @"                
                     SELECT [object_name], [counter_name], [cntr_value]
                     FROM sys.dm_os_performance_counters
                     WHERE [object_name] = 'SQLServer:Buffer Manager'
@@ -194,7 +211,7 @@ namespace AxialSqlTools
                           AND [instance_name] = '_Total';
                     ";
 
-                    using (SqlCommand command = new SqlCommand(queryText_5, connection))
+                    using (SqlCommand command = new SqlCommand(queryText_5a, connection))
                     {
                         using (SqlDataReader reader = await command.ExecuteReaderAsync())
                         {
@@ -234,6 +251,77 @@ namespace AxialSqlTools
                                             if (CounterName == "Log Send Queue")
                                                 metrics.PerfCounter_AlwaysOn_LogSendQueue = CounterValue;
                                             break;
+                                        default:
+                                            break;
+
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+
+                    string queryText_5b = @"                
+                    SELECT 
+                        [object_name], 
+                        [counter_name], 
+                        [cntr_value], 
+                        ([cntr_value] - @Prev_BatchRequestsSec) / (DATEDIFF(second, @LastRefresh, GETDATE())), 
+                        GETDATE()
+                    FROM sys.dm_os_performance_counters
+                    WHERE [object_name] = 'SQLServer:SQL Statistics'
+                          AND [counter_name] = 'Batch Requests/sec'
+                          AND [instance_name] = ''
+                    UNION ALL
+
+                    SELECT 
+                        [object_name], 
+                        [counter_name], 
+                        [cntr_value], 
+                        ([cntr_value] - @Prev_SQLCompilationsSec) / (DATEDIFF(second, @LastRefresh, GETDATE())), 
+                        GETDATE()
+                    FROM sys.dm_os_performance_counters
+                    WHERE [object_name] = 'SQLServer:SQL Statistics'
+                          AND [counter_name] = 'SQL Compilations/sec'
+                          AND [instance_name] = ''
+
+                    ";
+
+                    using (SqlCommand command = new SqlCommand(queryText_5b, connection))
+                    {
+                        command.Parameters.AddWithValue("@LastRefresh", prev_metrics.PerfCounter_RefreshDateTime);
+                        command.Parameters.AddWithValue("@Prev_BatchRequestsSec", prev_metrics.PerfCounter_BatchRequestsSec_Total);
+                        command.Parameters.AddWithValue("@Prev_SQLCompilationsSec", prev_metrics.PerfCounter_SQLCompilationsSec_Total);
+
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+
+                                    string CounterGroup = reader.GetString(0).Trim();
+                                    string CounterName = reader.GetString(1).Trim();
+                                    long CounterValueTotal = reader.GetInt64(2);
+                                    long CounterValue = reader.GetInt64(3);
+
+                                    metrics.PerfCounter_RefreshDateTime = reader.GetDateTime(4);
+
+                                    switch (CounterGroup)
+                                    {
+                                        case "SQLServer:SQL Statistics":
+                                            if (CounterName == "Batch Requests/sec")
+                                            {
+                                                metrics.PerfCounter_BatchRequestsSec_Total = CounterValueTotal;
+                                                metrics.PerfCounter_BatchRequestsSec = CounterValue;
+                                            }
+                                            else if (CounterName == "SQL Compilations/sec")
+                                            {
+                                                metrics.PerfCounter_SQLCompilationsSec_Total = CounterValueTotal;
+                                                metrics.PerfCounter_SQLCompilationsSec = CounterValue;
+                                            }
+                                            break;
+
                                         default:
                                             break;
 
