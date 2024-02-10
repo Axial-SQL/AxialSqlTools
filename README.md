@@ -1,4 +1,4 @@
-# SSMS Productivity Addin SQL Server Management Studio 19
+# Axial SQL Tools | SQL Server Management Studio 19 Productivity Addin
 
 This VSIX extension is created for SQL Server Management Studio 19, focusing on productivity improvements. 
 It streamlines daily routine tasks, making database management more efficient and less time-consuming.
