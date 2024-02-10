@@ -50,6 +50,9 @@
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" priority="0x3000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
       </Group>
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" priority="0x4000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
+      </Group>
       
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" priority="0x0000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenu" />
@@ -169,17 +172,28 @@
       
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialHealthDashboardServerCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
+        <Icon guid="guidServerHealth" id="bmpServerHealth" />
         <Strings>
           <ButtonText>Health Dashboard - Server</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialHealthDashboardServersCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
+        <Icon guid="guidServerHealth" id="bmpServerHealth" />
         <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Health Dashboard - Group of Servers</ButtonText>
         </Strings>
-      </Button>    
+      </Button>
+
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDataTransferCommand" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
+        <Icon guid="guidDataTransfer" id="bmpDataTransfer" />
+        <!--<CommandFlag>DefaultInvisible</CommandFlag>-->
+        <Strings>
+          <ButtonText>Data Transfer</ButtonText>
+        </Strings>
+      </Button>
 
       <!-- Query templates Submenu buttons -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesButtonRefresh" priority="0x9900" type="Button">
@@ -223,6 +237,8 @@
       <Bitmap guid="guidInfo" href="Resources\info.png" usedList="bmpInfo" />
       <Bitmap guid="guidRefresh" href="Resources\refresh.png" usedList="bmpRefresh" />
       <Bitmap guid="guidExportData" href="Resources\export-data.png" usedList="bmpExportData" />
+      <Bitmap guid="guidDataTransfer" href="Resources\data-source-target.png" usedList="bmpDataTransfer" />
+      <Bitmap guid="guidServerHealth" href="Resources\server-health.png" usedList="bmpServerHealth" />
 	</Bitmaps>
   </Commands>
 
@@ -249,6 +265,7 @@
       <IDSymbol name="AxialToolsSubMenuGroup_Export" value="0x1201" />
       <IDSymbol name="AxialToolsSubMenuGroup_Script" value="0x1202" />
       <IDSymbol name="AxialToolsSubMenuGroup_Health" value="0x1203" />
+      <IDSymbol name="AxialToolsSubMenuGroup_DataTransfer" value="0x1204" />
 
       <IDSymbol name="AxialExportButtonGridToExcel" value="4133" />
       <IDSymbol name="AxialExportButtonGridToExcelAndEmail" value="4139" />
@@ -261,6 +278,8 @@
 
       <IDSymbol name="AxialHealthDashboardServerCommand" value="4140" />
       <IDSymbol name="AxialHealthDashboardServersCommand" value="4142" />
+
+      <IDSymbol name="AxialDataTransferCommand" value="4143" />
       
     </GuidSymbol>
 
@@ -281,6 +300,12 @@
     </GuidSymbol>
     <GuidSymbol name="guidExportData" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c6}">
       <IDSymbol name="bmpExportData" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidDataTransfer" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c7}">
+      <IDSymbol name="bmpDataTransfer" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidServerHealth" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c8}">
+      <IDSymbol name="bmpServerHealth" value="1" />
     </GuidSymbol>
 
   </Symbols>

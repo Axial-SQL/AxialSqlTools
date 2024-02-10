@@ -272,13 +272,15 @@
             lastRefresh = DateTime.Now;
 
             //Let user know that there is an issue by blinking the title
-            if (ServerHasIssues)
+            if (ServerHasIssues && CheckBox_StopBlinking.IsChecked == false)
             {
                 if (userControlOwner.Caption.EndsWith("(!)"))
                     userControlOwner.Caption = metrics.ServerName + " - NOT OK";
                 else
                     userControlOwner.Caption = "(!) " + metrics.ServerName + " - NOT OK (!)";
-            } else
+            } else if (ServerHasIssues)
+                userControlOwner.Caption = metrics.ServerName + " - NOT OK";
+            else
                 userControlOwner.Caption = metrics.ServerName + " - OK";
 
         }

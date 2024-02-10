@@ -116,11 +116,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\data-source-target.png" />
     <Content Include="Resources\export-data.png" />
     <Content Include="Resources\info.png" />
     <Resource Include="Resources\logo.png" />
     <Content Include="Resources\refresh.png" />
     <None Include="Resources\script.png" />
+    <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />
     <VSCTCompile Include="AxialSqlToolsPackage.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
