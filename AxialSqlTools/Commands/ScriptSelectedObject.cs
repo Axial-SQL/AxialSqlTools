@@ -101,9 +101,6 @@ namespace AxialSqlTools
         private void Execute(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
-
-            ThreadHelper.ThrowIfNotOnUIThread();
             DTE dte = Package.GetGlobalService(typeof(DTE)) as DTE;
 
             if (dte?.ActiveDocument != null)
@@ -129,22 +126,9 @@ namespace AxialSqlTools
                     // script properly from a current connection
                     // display in a single window
 
-                    UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
+                    var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
-                    string databaseName = connection.AdvancedOptions["DATABASE"];
-
-                    SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
-
-                    builder.DataSource = connection.ServerName;
-                    builder.IntegratedSecurity = string.IsNullOrEmpty(connection.Password);
-                    builder.Password = connection.Password;
-                    builder.UserID = connection.UserName;
-                    builder.InitialCatalog = connection.AdvancedOptions["DATABASE"];
-                    builder.ApplicationName = "Axial SQL Tools";
-
-                    string connectionString = builder.ToString();
-
-                    SqlConnection currentServerConnection = new SqlConnection(connectionString);
+                    SqlConnection currentServerConnection = new SqlConnection(connectionInfo.FullConnectionString);
                     currentServerConnection.Open();
 
                     string command = $@"
@@ -183,11 +167,12 @@ namespace AxialSqlTools
                     }
 
                     ServerConnection SmoConnection = new ServerConnection();
-                    SmoConnection.ConnectionString = connectionString;
+                    SmoConnection.ConnectionString = connectionInfo.FullConnectionString;
                     Server server = new Server(SmoConnection);
 
                     Scripter scripter = new Scripter(server) { Options = new ScriptingOptions() };
 
+                    //TODO - configure all options
                     scripter.Options.ScriptData = false;
                     scripter.Options.ScriptForCreateOrAlter = true;
 
@@ -213,7 +198,7 @@ namespace AxialSqlTools
                     //};
 
                     //// Select the object to script
-                    Database db = server.Databases[databaseName];
+                    Database db = server.Databases[connectionInfo.Database];
 
                     SqlSmoObject dbObject = null;
 
@@ -263,7 +248,7 @@ namespace AxialSqlTools
                             }
                         }
 
-                        ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connection, null);
+                        ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connectionInfo.ActiveConnectionInfo, null);
 
                         // insert SQL definition to document
                         EnvDTE.TextDocument doc = (EnvDTE.TextDocument)ServiceCache.ExtensibilityModel.Application.ActiveDocument.Object(null);
@@ -271,11 +256,7 @@ namespace AxialSqlTools
                         doc.EndPoint.CreateEditPoint().Insert(fullScriptResult);
 
                     }
-                    //
-
-                    
-
-
+                   
 
                 }
                 catch (Exception ex)
@@ -293,18 +274,6 @@ namespace AxialSqlTools
                 }
             }
 
-
-            //string message = string.Format(CultureInfo.CurrentCulture, "Inside {0}.MenuItemCallback()", this.GetType().FullName);
-            //string title = "ScriptSelectedObject";
-
-            //// Show a message box to prove we were here
-            //VsShellUtilities.ShowMessageBox(
-            //    this.package,
-            //    message,
-            //    title,
-            //    OLEMSGICON.OLEMSGICON_INFO,
-            //    OLEMSGBUTTON.OLEMSGBUTTON_OK,
-            //    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
         }
     }
 }

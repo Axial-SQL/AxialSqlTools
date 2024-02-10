@@ -64,6 +64,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
     [ProvideToolWindow(typeof(HealthDashboard_Server))]
     [ProvideToolWindow(typeof(HealthDashboard_Servers))]
+    [ProvideToolWindow(typeof(DataTransferWindow))]
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
@@ -123,6 +124,7 @@ namespace AxialSqlTools
             await ToolWindowGridToEmailCommand.InitializeAsync(this);
             await HealthDashboard_ServerCommand.InitializeAsync(this);
             await HealthDashboard_ServersCommand.InitializeAsync(this);
+            await DataTransferWindowCommand.InitializeAsync(this);
 
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             
@@ -155,6 +157,7 @@ namespace AxialSqlTools
             m_commandBarQueryTemplates = m_plugin.AddCommandBarMenu("Query Templates", MsoBarPosition.msoBarTop, null);
 
             RefreshTemplatesList();
+            
 
         }
 

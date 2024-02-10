@@ -73,15 +73,8 @@
             if (ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo != null)
             {
 
-                UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
-                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
-                builder.DataSource = connection.ServerName;
-                builder.IntegratedSecurity = string.IsNullOrEmpty(connection.Password);
-                builder.Password = connection.Password;
-                builder.UserID = connection.UserName;
-                builder.InitialCatalog = "master";
-                builder.ApplicationName = "Axial SQL Tools";
-                connectionString = builder.ToString();
+                var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo(inMaster: true);
+                connectionString = connectionInfo.FullConnectionString;
 
                 _cancellationTokenSource = new CancellationTokenSource();
 
@@ -281,7 +274,10 @@
             } else if (ServerHasIssues)
                 userControlOwner.Caption = metrics.ServerName + " - NOT OK";
             else
-                userControlOwner.Caption = metrics.ServerName + " - OK";
+                if (string.IsNullOrEmpty(metrics.ServerName))
+                    userControlOwner.Caption = "Health Dashboard | Server";
+                else
+                    userControlOwner.Caption = metrics.ServerName + " - OK";
 
         }
 

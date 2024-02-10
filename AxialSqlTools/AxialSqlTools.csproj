@@ -59,6 +59,11 @@
   <ItemGroup>
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
+    <Compile Include="DataTransfer\DataTransferWindow.cs" />
+    <Compile Include="DataTransfer\DataTransferWindowCommand.cs" />
+    <Compile Include="DataTransfer\DataTransferWindowControl.xaml.cs">
+      <DependentUpon>DataTransferWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="GridToEmail\ToolWindowGridToEmail.cs" />
     <Compile Include="GridToEmail\ToolWindowGridToEmailCommand.cs" />
     <Compile Include="GridToEmail\ToolWindowGridToEmailControl.xaml.cs">
@@ -77,6 +82,7 @@
     <Compile Include="Modules\MetricsService.cs" />
     <Compile Include="Modules\ExcelExport.cs" />
     <Compile Include="Modules\GridAccess.cs" />
+    <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="WindowAbout\AboutWindow.cs" />
     <Compile Include="WindowAbout\AboutWindowCommand.cs" />
     <Compile Include="WindowAbout\AboutWindowControl.xaml.cs">
@@ -304,6 +310,10 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="DataTransfer\DataTransferWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="GridToEmail\ToolWindowGridToEmailControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

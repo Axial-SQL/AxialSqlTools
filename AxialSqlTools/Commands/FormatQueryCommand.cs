@@ -96,19 +96,6 @@ namespace AxialSqlTools
         private void Execute(object sender, EventArgs e)
         {
                        
-            //ThreadHelper.ThrowIfNotOnUIThread();
-            //string message = string.Format(CultureInfo.CurrentCulture, "Inside {0}.MenuItemCallback()", this.GetType().FullName);
-            //string title = "FormatQueryCommand";
-
-            //// Show a message box to prove we were here
-            //VsShellUtilities.ShowMessageBox(
-            //    this.package,
-            //    message,
-            //    title,
-            //    OLEMSGICON.OLEMSGICON_INFO,
-            //    OLEMSGBUTTON.OLEMSGBUTTON_OK,
-            //    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-
             ThreadHelper.ThrowIfNotOnUIThread();
             DTE dte = Package.GetGlobalService(typeof(DTE)) as DTE;
 
@@ -171,8 +158,6 @@ namespace AxialSqlTools
 
             TSql160Parser sqlParser = new TSql160Parser(false);
 
-            // var ci = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo;
-
             IList<ParseError> parseErrors = new List<ParseError>();
             TSqlFragment result = sqlParser.Parse(new StringReader(oldCode), out parseErrors);
 
@@ -184,7 +169,7 @@ namespace AxialSqlTools
                     errorStr += Environment.NewLine + strError.Message;
                 }
 
-                throw new Exception("TSqlParser unable format selected T-SQL due to a syntax error." + Environment.NewLine + errorStr);
+                throw new Exception($"TSqlParser unable to format selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
             //special case #1 - remove new line after JOIN
@@ -192,8 +177,9 @@ namespace AxialSqlTools
      
 
             Sql160ScriptGenerator gen = new Sql160ScriptGenerator();
-            gen.Options.AlignClauseBodies = false;
-            gen.Options.IncludeSemicolons = false;            
+            //gen.Options.AlignClauseBodies = false;
+            //gen.Options.IncludeSemicolons = false;     
+            gen.Options.SqlVersion = SqlVersion.Sql160;
             gen.GenerateScript(result, out resultCode);
 
 
