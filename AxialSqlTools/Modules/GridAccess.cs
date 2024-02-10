@@ -63,6 +63,16 @@ namespace AxialSqlTools
                 var gridStorage = grid.GridStorage;
                 var schemaTable = GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
 
+                List<int> columnSizes = new List<int> { };
+                var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
+                if (gridColumns != null)
+                {
+                    foreach (GridColumn gridColumn in gridColumns)
+                    {
+                        columnSizes.Add(gridColumn.WidthInPixels);
+                    }                        
+                }
+
                 var data = new DataTable();
 
                 for (int c = 0; c < schemaTable.Rows.Count; c++)
@@ -86,7 +96,8 @@ namespace AxialSqlTools
                         columnName = columnNameInt;
                     newColumn.ExtendedProperties.Add("columnName", columnName);
                     newColumn.ExtendedProperties.Add("sqlType", sqlDataTypeName);
-                    
+                    newColumn.ExtendedProperties.Add("columnWidthInPixels", columnSizes[c + 1]);
+
                 }
 
                 for (long i = 0; i < gridStorage.NumRows(); i++)

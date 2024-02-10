@@ -203,7 +203,26 @@ namespace AxialSqlTools
                 foreach (DataTable dataTable in dataTables)
                 {
                     WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-                    worksheetPart.Worksheet = new Worksheet(new SheetData());
+                    worksheetPart.Worksheet = new Worksheet();
+
+                    //------------------------------------------------------------------------------
+                    Columns columns = new Columns();
+                    uint ColumnNumber = 1;
+                    foreach (DataColumn column in dataTable.Columns)
+                    {
+                        Column firstColumn = new Column() { Min = ColumnNumber, Max = ColumnNumber };
+
+                        if (column.ExtendedProperties.ContainsKey("columnWidthInPixels"))
+                        {
+                            firstColumn.Width = Convert.ToDouble(column.ExtendedProperties["columnWidthInPixels"]) * 0.17;
+                            firstColumn.CustomWidth = true;
+                        }
+                        columns.Append(firstColumn);
+                        ColumnNumber += 1;
+                    }
+                    worksheetPart.Worksheet.AppendChild(columns);
+                    //------------------------------------------------------------------------------
+                    worksheetPart.Worksheet.AppendChild(new SheetData());
 
                     Sheet sheet = new Sheet()
                     {
@@ -215,18 +234,29 @@ namespace AxialSqlTools
 
                     SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
 
+                   
                     // Add column headers
                     Row headerRow = new Row();
                     foreach (DataColumn column in dataTable.Columns)
                     {
+
+                        string columnType = "SQL_VARIANT";
+                        if (column.ExtendedProperties.ContainsKey("sqlType"))
+                            columnType = (string)column.ExtendedProperties["sqlType"];
+
+                        string columnName = column.ColumnName;
+                        if (column.ExtendedProperties.ContainsKey("columnName"))
+                            columnName = (string)column.ExtendedProperties["columnName"];
+
                         Cell cell = new Cell
                         {
                             DataType = CellValues.String,
-                            CellValue = new CellValue(column.ColumnName),
+                            CellValue = new CellValue(columnName),
                             /*Index 4 - Bold Black Font, Dark Gray Fill, All Borders, Centered*/
                             StyleIndex = 4
                         };
                         headerRow.AppendChild(cell);
+
                     }
                     sheetData.AppendChild(headerRow);
 
@@ -237,18 +267,36 @@ namespace AxialSqlTools
                         foreach (DataColumn column in dataTable.Columns)
                         {
                             //TODO - do more types 
-                            var ColumnType = CellValues.String;
-                            if (dataTable.Columns[column.Ordinal].DataType == typeof(int) ||
-                                dataTable.Columns[column.Ordinal].DataType == typeof(long))
-                            { ColumnType = CellValues.Number; }
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(DateTime))
-                            { ColumnType = CellValues.Date; }
 
-                            Cell cell = new Cell
+                            Cell cell = new Cell();
+
+                            if (dataTable.Columns[column.Ordinal].DataType == typeof(int)) // || dataTable.Columns[column.Ordinal].DataType == typeof(long))
                             {
-                                DataType = ColumnType,
-                                CellValue = new CellValue(dataRow[column].ToString())
-                            };
+                                cell.DataType = CellValues.Number;
+                                cell.CellValue = new CellValue((int)dataRow[column]);
+
+                            } else if (dataTable.Columns[column.Ordinal].DataType == typeof(short)
+                                || dataTable.Columns[column.Ordinal].DataType == typeof(byte))
+                            {
+                                cell.DataType = CellValues.Number;
+                                cell.CellValue = new CellValue(Convert.ToInt32(dataRow[column]));
+                            }
+                            // Dates are more complex because you need to apply style first
+                            //else if (dataTable.Columns[column.Ordinal].DataType == typeof(DateTime))
+                            //{
+                            //    cell.DataType = CellValues.Date;
+                            //    cell.CellValue = new CellValue((DateTime)dataRow[column]);
+                            //}
+                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(bool))
+                            {
+                                cell.DataType = CellValues.Boolean;
+                                cell.CellValue = new CellValue((bool)dataRow[column]);
+                            }
+                            else {   
+                                cell.DataType = CellValues.String;
+                                cell.CellValue = new CellValue(dataRow[column].ToString());
+                            }
+
                             newRow.AppendChild(cell);
                         }
                         sheetData.AppendChild(newRow);
