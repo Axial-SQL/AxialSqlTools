@@ -270,12 +270,18 @@ namespace AxialSqlTools
 
                             Cell cell = new Cell();
 
-                            if (dataTable.Columns[column.Ordinal].DataType == typeof(int)) // || dataTable.Columns[column.Ordinal].DataType == typeof(long))
+                            if (dataRow[column] is System.DBNull)
+                            {
+                                cell.DataType = CellValues.String;
+                                cell.CellValue = new CellValue();
+                            }
+                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(int)) // || dataTable.Columns[column.Ordinal].DataType == typeof(long))
                             {
                                 cell.DataType = CellValues.Number;
                                 cell.CellValue = new CellValue((int)dataRow[column]);
 
-                            } else if (dataTable.Columns[column.Ordinal].DataType == typeof(short)
+                            }
+                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(short)
                                 || dataTable.Columns[column.Ordinal].DataType == typeof(byte))
                             {
                                 cell.DataType = CellValues.Number;
@@ -292,9 +298,15 @@ namespace AxialSqlTools
                                 cell.DataType = CellValues.Boolean;
                                 cell.CellValue = new CellValue((bool)dataRow[column]);
                             }
-                            else {   
+                            else {
+
+                                string value = dataRow[column].ToString(); 
+                                if (value.Length > 32767)
+                                {
+                                    value = value.Substring(0, 32767); // Truncate
+                                }
                                 cell.DataType = CellValues.String;
-                                cell.CellValue = new CellValue(dataRow[column].ToString());
+                                cell.CellValue = new CellValue(value);
                             }
 
                             newRow.AppendChild(cell);
