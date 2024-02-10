@@ -1,7 +1,12 @@
 # Axial SQL Tools | SQL Server Management Studio 19 Productivity Addin
 
-This VSIX extension is created for SQL Server Management Studio 19, focusing on productivity improvements. 
-It streamlines daily routine tasks, making database management more efficient and less time-consuming.
+As an engineer with over two decades of experience in SQL Server, I've encountered my fair share of inefficiencies and limitations within SSMS. Motivated by these challenges, I've started developing this SSMS extension. This project is a personal endeavor to solve the issues I've faced, but I would like to incorporate valuable community feedback and ideas as well.
+
+While I recognize that this extension may overlap with existing tools, both free and paid, my passion lies in coding and tackling problems in my own unique way. The aim isn't to overshadow other solutions but to provide a complementary tool that addresses gaps and simplifies processes for engineers like myself.
+
+I'm committed to keeping this tool free and openly available to the community. While formalized support won't be provided, I welcome feedback and suggestions to continually improve and evolve the tool based on user needs. 
+
+Check it out and let me know what you think!
 
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/main.png?raw=true"/>
 
