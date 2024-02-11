@@ -164,6 +164,8 @@ namespace AxialSqlTools
 
             //---------------------------------------------------------------------------
             // check for a new version
+            MenuCommand Cmd = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
+               
             try
             {
                 Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
@@ -171,12 +173,12 @@ namespace AxialSqlTools
 
                 var checker = new GitHubReleaseChecker();
 
+                //TODO - fails in SSMS18
                 bool isNewVersionAvailable = await checker.IsNewVersionAvailableAsync(currentVersionString);
 
-                MenuCommand Cmd = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
                 Cmd.Visible = isNewVersionAvailable;
 
-            } catch  {}          
+            } catch  { Cmd.Visible = false; }          
 
             
 
@@ -266,8 +268,12 @@ namespace AxialSqlTools
             {
                 // 2. Get open transaction info
                 int openTranCount = 0;
-                var connection = GridAccess.GetCurrentWindowSqlConnection();
 
+                var SQLResultsControl = GridAccess.GetSQLResultsControl();
+                var m_SqlExec = GridAccess.GetNonPublicField(SQLResultsControl, "m_sqlExec");
+
+#if SSMS19DLL
+                Microsoft.Data.SqlClient.SqlConnection connection = GridAccess.GetNonPublicField(m_SqlExec, "m_conn") as Microsoft.Data.SqlClient.SqlConnection;
                 if (connection.State == ConnectionState.Open)
                 {
                     using (Microsoft.Data.SqlClient.SqlCommand command = new Microsoft.Data.SqlClient.SqlCommand("SELECT @@TRANCOUNT", connection))
@@ -276,6 +282,18 @@ namespace AxialSqlTools
                         openTranCount = result != DBNull.Value ? Convert.ToInt32(result) : 0;
                     }
                 }
+#endif
+#if SSMS18DLL
+                System.Data.SqlClient.SqlConnection connection = GridAccess.GetNonPublicField(m_SqlExec, "m_conn") as System.Data.SqlClient.SqlConnection;
+                if (connection.State == ConnectionState.Open)
+                    {
+                        using (System.Data.SqlClient.SqlCommand command = new System.Data.SqlClient.SqlCommand("SELECT @@TRANCOUNT", connection))
+                    {
+                        var result = command.ExecuteScalar();
+                        openTranCount = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+                    }
+                }
+#endif
 
                 GridAccess.ChangeCurrentWindowTitle(openTranCount);
 
@@ -411,6 +429,6 @@ namespace AxialSqlTools
 
         }
        
-        #endregion
+#endregion
     }
 }

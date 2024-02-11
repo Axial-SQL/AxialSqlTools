@@ -52,16 +52,6 @@ namespace AxialSqlTools
             return gridContainers;
         }
 
-        public static Microsoft.Data.SqlClient.SqlConnection GetCurrentWindowSqlConnection()
-        {
-            var SQLResultsControl = GetSQLResultsControl();
-
-            var m_SqlExec = GetNonPublicField(SQLResultsControl, "m_sqlExec");
-            Microsoft.Data.SqlClient.SqlConnection m_conn = GetNonPublicField(m_SqlExec, "m_conn") as Microsoft.Data.SqlClient.SqlConnection;
-
-            return m_conn;
-        }
-
         public static void ChangeCurrentWindowTitle(int OpenTranCount)
         {
             // Can't express enough how much I don't like this...
