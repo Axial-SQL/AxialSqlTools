@@ -51,14 +51,43 @@ namespace AxialSqlTools
             return gridContainers;
         }
 
-        public static object GetCurrentWindowSqlConnection()
+        public static Microsoft.Data.SqlClient.SqlConnection GetCurrentWindowSqlConnection()
         {
             var SQLResultsControl = GetSQLResultsControl();
 
             var m_SqlExec = GetNonPublicField(SQLResultsControl, "m_sqlExec");
-            var m_conn = GetNonPublicField(m_SqlExec, "m_conn");
+            Microsoft.Data.SqlClient.SqlConnection m_conn = GetNonPublicField(m_SqlExec, "m_conn") as Microsoft.Data.SqlClient.SqlConnection;
 
             return m_conn;
+        }
+
+        public static void ChangeCurrentWindowTitle(string TransactionMsg)
+        {
+            var SQLResultsControl = GetSQLResultsControl();
+
+            var m_rawSP = GetNonPublicField(SQLResultsControl, "m_rawSP");
+            var frame = GetNonPublicField(m_rawSP, "frame");
+
+            //var rf = frame.GetType().GetProperty("RootFrame");
+            //var TitleObj = rv.GetType().GetProperty("Title");
+
+            // doesn't let me change those...
+            //var propertyInfo_ToolTip = frame.GetType().GetProperty("ToolTip");
+            //var ToolTip = propertyInfo_ToolTip.GetValue(frame, null);
+
+
+            //var propertyInfo_Title = rf.GetType().GetProperty("Title");
+            //var propertyInfo_Title = frame.GetType().GetProperty("AnnotatedTitle");
+
+            //string NewTitle = (string)ToolTip;
+            //if (!string.IsNullOrEmpty(TransactionMsg))
+            //{
+            //    NewTitle = TransactionMsg + NewTitle;
+            //}
+            //propertyInfo_Title.SetValue(frame, NewTitle);
+
+            var a = 0;
+
         }
 
         public static string GetColumnSqlType(DataRow schemaRow)

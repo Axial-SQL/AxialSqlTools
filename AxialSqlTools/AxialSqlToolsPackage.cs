@@ -184,6 +184,7 @@ namespace AxialSqlTools
         // This method aligns all numeric values to the right
         public static void SQLResultsControl_ScriptExecutionCompleted(object a, object b)
         {
+            
             CollectionBase gridContainers = GridAccess.GetGridContainers();
 
             foreach (var gridContainer in gridContainers)
@@ -238,14 +239,29 @@ namespace AxialSqlTools
                 }
             }
 
-            // 2. Get open transaction info
-            var connection = GridAccess.GetCurrentWindowSqlConnection();
+            try
+            {
+                // 2. Get open transaction info
+                int openTranCount = 0;
+                var connection = GridAccess.GetCurrentWindowSqlConnection();
 
-            //SqlCommand command = new SqlCommand("SELECT @@TRANCOUNT", connection);
-            //command.ExecuteNonQuery();
+                if (connection.State == ConnectionState.Open)
+                {
+                    using (Microsoft.Data.SqlClient.SqlCommand command = new Microsoft.Data.SqlClient.SqlCommand("SELECT @@TRANCOUNT", connection))
+                    {
+                        var result = command.ExecuteScalar();
+                        openTranCount = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+                    }
+                }
 
-            //var vv = 0;
+                // TODO - how to display it properly? 
+                // string msg = openTranCount == 0 ? "" : $"!{openTranCount}!";
+                // GridAccess.ChangeCurrentWindowTitle(msg); 
 
+            } catch (Exception ex)
+            {
+                var msg = ex.Message;
+            }            
 
         }
 
