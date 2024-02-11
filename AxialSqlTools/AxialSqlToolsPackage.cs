@@ -238,6 +238,15 @@ namespace AxialSqlTools
                 }
             }
 
+            // 2. Get open transaction info
+            var connection = GridAccess.GetCurrentWindowSqlConnection();
+
+            //SqlCommand command = new SqlCommand("SELECT @@TRANCOUNT", connection);
+            //command.ExecuteNonQuery();
+
+            //var vv = 0;
+
+
         }
 
 

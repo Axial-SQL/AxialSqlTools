@@ -51,6 +51,16 @@ namespace AxialSqlTools
             return gridContainers;
         }
 
+        public static object GetCurrentWindowSqlConnection()
+        {
+            var SQLResultsControl = GetSQLResultsControl();
+
+            var m_SqlExec = GetNonPublicField(SQLResultsControl, "m_sqlExec");
+            var m_conn = GetNonPublicField(m_SqlExec, "m_conn");
+
+            return m_conn;
+        }
+
         public static string GetColumnSqlType(DataRow schemaRow)
         {
 
