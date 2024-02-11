@@ -84,5 +84,5 @@ The creators do not offer support and are not responsible for any damage or loss
 
 ---
 
-Thank you for using the SSMS Productivity Addin for SQL Server Management Studio 19. 
+Thank you for using the Axial SQL Tools SSMS Addin! 
 We hope it makes your work with SQL Server significantly more efficient!
