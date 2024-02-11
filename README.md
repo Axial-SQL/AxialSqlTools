@@ -1,6 +1,8 @@
 # Axial SQL Tools | SQL Server Management Studio 19 Productivity Addin
 
-As an engineer with over two decades of experience in SQL Server, I've encountered my fair share of inefficiencies and limitations within SSMS. Motivated by these challenges, I've started developing this SSMS extension. This project is a personal endeavor to solve the issues I've faced, but I would like to incorporate valuable community feedback and ideas as well.
+As an engineer with over two decades of experience in SQL Server, I've encountered my fair share of inefficiencies and limitations within SSMS. 
+Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the third iteration of my work, tailored specifically for SSMS 19.
+This project is a personal endeavor to solve the issues I've faced, but I would like to incorporate valuable community feedback and ideas as well.
 
 While I recognize that this extension may overlap with existing tools, both free and paid, my passion lies in coding and tackling problems in my own unique way. The aim isn't to overshadow other solutions but to provide a complementary tool that addresses gaps and simplifies processes for engineers like myself.
 
