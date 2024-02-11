@@ -11,6 +11,7 @@
     using System.Windows;
     using System.Windows.Media; 
     using System.Windows.Controls;
+    using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
@@ -25,6 +26,8 @@
         private bool _monitoringStarted = false;
 
         private HealthDashboardServerMetric prev_metrics = new HealthDashboardServerMetric();
+
+        private SettingsManager.HealthDashboardServerQueryTexts QueryLibrary = new SettingsManager.HealthDashboardServerQueryTexts();
 
         public ToolWindowPane userControlOwner;
 
@@ -67,6 +70,8 @@
         public void StartMonitoring()
         {
             if (_monitoringStarted) return;
+
+
 
             UpdateUI(0, new HealthDashboardServerMetric { }, true);
 
@@ -322,6 +327,21 @@
             MessageBox.Show(
                 string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Invoked '{0}'", this.ToString()),
                 "HealthDashboard_Server");
+
+        }
+
+        private void buttonBlockedRequests_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
+            ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connectionInfo.ActiveConnectionInfo, null);
+
+            EnvDTE.TextDocument doc = (EnvDTE.TextDocument)ServiceCache.ExtensibilityModel.Application.ActiveDocument.Object(null);
+
+            doc.EndPoint.CreateEditPoint().Insert(QueryLibrary.BlockingRequests);
+
+            ServiceCache.ExtensibilityModel.Application.ActiveDocument.DTE.ExecuteCommand("Query.Execute");
 
         }
 

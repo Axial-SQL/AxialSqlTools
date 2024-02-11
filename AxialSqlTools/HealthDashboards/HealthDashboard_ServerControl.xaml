@@ -14,7 +14,7 @@
                 <Label  Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" Content="(have not been updated yet)" x:Name="LastUpdateLabel"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
-                <CheckBox Margin="5" x:Name="CheckBox_StopBlinking" Content="Stop blinking alert in title"/>
+                <CheckBox Margin="5" x:Name="CheckBox_StopBlinking" Content="Be quiet"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Vertical">
@@ -77,7 +77,8 @@
                         <Label Content="= SQL Compilations/sec =" x:Name="Label_SQLCompilationsSec" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <Label Content="Blocked Requests:" Width="150"/>
+                        <!--<Label Content="Blocked Requests:" Width="150"/>-->
+                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonBlockedRequests_Click">Blocked Requests:</Hyperlink></TextBlock>
                         <Label Content="= blocked request =" x:Name="Label_BlockedRequestCount" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
