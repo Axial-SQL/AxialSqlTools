@@ -280,6 +280,11 @@ namespace AxialSqlTools
                                 cell.DataType = CellValues.Number;
                                 cell.CellValue = new CellValue((int)dataRow[column]);
                             }
+                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(Double)) // || dataTable.Columns[column.Ordinal].DataType == typeof(long))
+                            {
+                                cell.DataType = CellValues.Number;
+                                cell.CellValue = new CellValue((Double)dataRow[column]);
+                            }
                             else if (dataTable.Columns[column.Ordinal].DataType == typeof(decimal)) 
                             {
                                 cell.DataType = CellValues.Number;

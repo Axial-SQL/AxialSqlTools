@@ -29,6 +29,7 @@ using Microsoft.SqlServer.Management.UI.Grid;
 using System.Linq;
 using System.Data;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
+using System.Drawing;
 
 namespace AxialSqlTools
 {
@@ -171,11 +172,9 @@ namespace AxialSqlTools
                 var checker = new GitHubReleaseChecker();
 
                 bool isNewVersionAvailable = await checker.IsNewVersionAvailableAsync(currentVersionString);
-                if (isNewVersionAvailable)
-                {
-                    MenuCommand Cmd = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
-                    Cmd.Visible = true;
-                } 
+
+                MenuCommand Cmd = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
+                Cmd.Visible = isNewVersionAvailable;
 
             } catch  {}          
 
@@ -206,7 +205,9 @@ namespace AxialSqlTools
         // This method aligns all numeric values to the right
         public static void SQLResultsControl_ScriptExecutionCompleted(object a, object b)
         {
-            
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            //1. Align numeric types to the right
             CollectionBase gridContainers = GridAccess.GetGridContainers();
 
             foreach (var gridContainer in gridContainers)
@@ -276,9 +277,7 @@ namespace AxialSqlTools
                     }
                 }
 
-                // TODO - how to display it properly? 
-                // string msg = openTranCount == 0 ? "" : $"!{openTranCount}!";
-                // GridAccess.ChangeCurrentWindowTitle(msg); 
+                GridAccess.ChangeCurrentWindowTitle(openTranCount);
 
             } catch (Exception ex)
             {

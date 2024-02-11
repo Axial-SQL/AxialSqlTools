@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Drawing;
 
 namespace AxialSqlTools
 {
@@ -61,32 +62,48 @@ namespace AxialSqlTools
             return m_conn;
         }
 
-        public static void ChangeCurrentWindowTitle(string TransactionMsg)
+        public static void ChangeCurrentWindowTitle(int OpenTranCount)
         {
+            // Can't express enough how much I don't like this...
+
             var SQLResultsControl = GetSQLResultsControl();
 
             var m_rawSP = GetNonPublicField(SQLResultsControl, "m_rawSP");
             var frame = GetNonPublicField(m_rawSP, "frame");
+            var doc = frame.GetType().GetProperty("DocumentObject", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(frame);
+            var windowPane = doc.GetType().GetProperty("WindowPane", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(doc);
 
-            //var rf = frame.GetType().GetProperty("RootFrame");
-            //var TitleObj = rv.GetType().GetProperty("Title");
+            var statusBarManager = GetNonPublicField(windowPane, "statusBarManager");
 
-            // doesn't let me change those...
-            //var propertyInfo_ToolTip = frame.GetType().GetProperty("ToolTip");
-            //var ToolTip = propertyInfo_ToolTip.GetValue(frame, null);
+            if (OpenTranCount > 0 )
+            {
+                var msg = "One transaction is still open!";
+                if (OpenTranCount > 1)
+                    msg = $"{OpenTranCount} transactions are still open!";
 
+                var statusBarManager_StatusText = statusBarManager.GetType().GetProperty("StatusText");
+                string currentText = statusBarManager_StatusText.GetValue(statusBarManager) as string;
+                currentText = currentText + " | " + msg;
+                statusBarManager_StatusText.SetValue(statusBarManager, currentText);
+            }
 
-            //var propertyInfo_Title = rf.GetType().GetProperty("Title");
-            //var propertyInfo_Title = frame.GetType().GetProperty("AnnotatedTitle");
+            var generalPanel = GetNonPublicField(statusBarManager, "generalPanel");
+            var generalPanel_ForeColorProperty = generalPanel.GetType().GetProperty("ForeColor");
+            if (OpenTranCount > 0)
+                generalPanel_ForeColorProperty.SetValue(generalPanel, Color.Red);
+            else
+                generalPanel_ForeColorProperty.SetValue(generalPanel, Color.Black);
 
-            //string NewTitle = (string)ToolTip;
-            //if (!string.IsNullOrEmpty(TransactionMsg))
-            //{
-            //    NewTitle = TransactionMsg + NewTitle;
-            //}
-            //propertyInfo_Title.SetValue(frame, NewTitle);
+            Font defaultFont = new Font("Segoe UI", 9);
+            Font boldFont = new Font("Segoe UI", 10, FontStyle.Bold);
 
-            var a = 0;
+            var statusStrip = GetNonPublicField(statusBarManager, "statusStrip");
+
+            var statusStrip_FontProperty = statusStrip.GetType().GetProperty("Font");
+            if (OpenTranCount > 0)
+                statusStrip_FontProperty.SetValue(statusStrip, boldFont);
+            else
+                statusStrip_FontProperty.SetValue(statusStrip, defaultFont);
 
         }
 
