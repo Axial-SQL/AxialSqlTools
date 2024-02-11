@@ -51,6 +51,38 @@ namespace AxialSqlTools
             return gridContainers;
         }
 
+        public static string GetColumnSqlType(DataRow schemaRow)
+        {
+
+            int sqlDataColumnSize = (int)schemaRow[2];
+            int? NumericPrecision = schemaRow[3] != DBNull.Value ? Convert.ToInt32(schemaRow[3]) : (int?)null;
+            int? NumericScale = schemaRow[4] != DBNull.Value ? Convert.ToInt32(schemaRow[4]) : (int?)null; 
+
+            string sqlDataTypeName = ((string)schemaRow[24]).ToUpper();
+
+            if (sqlDataTypeName == "NVARCHAR" || sqlDataTypeName == "NCHAR" 
+                || sqlDataTypeName == "VARCHAR" || sqlDataTypeName == "CHAR"
+                || sqlDataTypeName == "VARBINARY" || sqlDataTypeName == "BINARY")
+            {
+                sqlDataTypeName = sqlDataTypeName + "(" + (sqlDataColumnSize == 2147483647 ? "MAX" : sqlDataColumnSize.ToString()) + ")";
+            }
+            else if (sqlDataTypeName == "DECIMAL" || sqlDataTypeName == "DECIMAL")
+            {
+                sqlDataTypeName = sqlDataTypeName + "(" + NumericPrecision + "," + NumericScale + ")";
+            }
+            else if (sqlDataTypeName == "DATETIME2")
+            {
+                sqlDataTypeName = sqlDataTypeName + "(" + NumericScale + ")";
+            }
+
+
+            //else if (sqlDataTypeName == "DECIMAL")
+            //    sqlDataTypeName = sqlDataTypeName;
+            //TODO ... list all other types that need additional handling 
+
+            return sqlDataTypeName;
+        }
+
         public static List<DataTable> GetDataTables()
         {
             List<DataTable> dataTables = new List<DataTable>();
@@ -80,20 +112,21 @@ namespace AxialSqlTools
                     string columnNameInt = "Column_" + c.ToString();
                     var columnType = schemaTable.Rows[c][12] as Type;
 
-                    int sqlDataColumnSize = (int)schemaTable.Rows[c][2];
-                    string sqlDataTypeName = ((string)schemaTable.Rows[c][24]).ToUpper();
+                    if (columnType == typeof(Guid)
+                            || columnType == typeof(DateTime)
+                            || columnType == typeof(DateTimeOffset)
+                            || columnType == typeof(byte[])
+                            )
+                        columnType = typeof(string);
+
+                    string sqlDataTypeName = GetColumnSqlType(schemaTable.Rows[c]);
 
                     DataColumn newColumn = data.Columns.Add(columnNameInt, columnType);
-
-                    if (sqlDataTypeName == "NVARCHAR" || sqlDataTypeName == "NCHAR" || sqlDataTypeName == "VARCHAR" || sqlDataTypeName == "CHAR")
-                        sqlDataTypeName = sqlDataTypeName + "(" + sqlDataColumnSize + ")";
-                    //else if (sqlDataTypeName == "DECIMAL")
-                    //    sqlDataTypeName = sqlDataTypeName;
-                    //TODO ... list all other types that need additional handling 
 
                     var columnName = schemaTable.Rows[c][0].ToString();
                     if (string.IsNullOrEmpty(columnName))
                         columnName = columnNameInt;
+
                     newColumn.ExtendedProperties.Add("columnName", columnName);
                     newColumn.ExtendedProperties.Add("sqlType", sqlDataTypeName);
                     newColumn.ExtendedProperties.Add("columnWidthInPixels", columnSizes[c + 1]);
@@ -119,7 +152,11 @@ namespace AxialSqlTools
                             cellData = cellData == "0" ? "False" : "True";
 
                         // leave some types as strings because the conversation from string fails
-                        if (columnType == typeof(Guid) || columnType == typeof(DateTimeOffset))
+                        if (columnType == typeof(Guid) 
+                            || columnType == typeof(DateTime)
+                            || columnType == typeof(DateTimeOffset)
+                            || columnType == typeof(byte[])
+                            )
                             columnType = typeof(string);
 
                         var typedValue = Convert.ChangeType(cellData, columnType, CultureInfo.InvariantCulture);

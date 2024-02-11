@@ -105,6 +105,8 @@
                     TextRange textRange = new TextRange(RichTextBox_SourceQuery.Document.ContentStart, RichTextBox_SourceQuery.Document.ContentEnd);
                     string sourceQuery = textRange.Text;
 
+                    string targetTableName = TextBox_TargetTable.Text;
+
                     using (SqlConnection sourceConn = new SqlConnection(sourceConnectionString))
                     {
                         await sourceConn.OpenAsync();
@@ -113,25 +115,50 @@
                             using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
                             {
 
-                                var schema = reader.GetSchemaTable();
-                                // TODO - create target table
-
-                                // expose options
-                                //var options = new SqlBulkCopyOptions() { SqlBulkCopyOptions.};
-                                //options.
-
-                                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(targetConnectionString))
+                                using (SqlConnection targetConn = new SqlConnection(targetConnectionString))
                                 {
-                                    bulkCopy.DestinationTableName = TextBox_TargetTable.Text;
-                                    bulkCopy.BatchSize = batchSize;
-                                    bulkCopy.NotifyAfter = batchSize;
-                                    bulkCopy.SqlRowsCopied += SqlToSql_CopyData_UpdateStatusAsync;
+                                    await targetConn.OpenAsync();
+                                    //var targetTransaction = targetConn.BeginTransaction();
 
-                                    await bulkCopy.WriteToServerAsync(reader, _cancellationTokenSource.Token);
+                                    //-- Create target table
+                                    string targetColumns = "";
+                                    DataTable schemaTable = reader.GetSchemaTable();
+                                    foreach (DataRow schemaRow in schemaTable.Rows)
+                                    {
+                                        string columnName = schemaRow[0].ToString();
+                                        string sqlDataTypeName = GridAccess.GetColumnSqlType(schemaRow);
 
-                                    totalRowsCopied = SqlBulkCopyHelper.GetRowsCopied(bulkCopy);
+                                        targetColumns += (targetColumns == "" ? "" : ",\n");
+                                        targetColumns += columnName + " " + sqlDataTypeName;
+                                    }
 
-                                }
+                                    string targetTableCommand =
+                                        $"IF OBJECT_ID('{targetTableName}') IS NULL \n" +
+                                        $"CREATE TABLE {targetTableName} ({targetColumns})";
+
+                                    using (SqlCommand targetCmd = new SqlCommand(targetTableCommand, targetConn)) //, targetTransaction))
+                                    {
+                                        await targetCmd.ExecuteNonQueryAsync();
+                                    }
+
+                                    // TODO - expose options into UI settings
+                                    SqlBulkCopyOptions options = new SqlBulkCopyOptions() {};
+
+                                    using (SqlBulkCopy bulkCopy = new SqlBulkCopy(targetConn)) //, targetTransaction))
+                                    {
+                                        bulkCopy.DestinationTableName = targetTableName;
+                                        bulkCopy.BatchSize = batchSize;
+                                        bulkCopy.NotifyAfter = batchSize;
+                                        bulkCopy.SqlRowsCopied += SqlToSql_CopyData_UpdateStatusAsync;
+
+                                        await bulkCopy.WriteToServerAsync(reader, _cancellationTokenSource.Token);
+
+                                        totalRowsCopied = SqlBulkCopyHelper.GetRowsCopied(bulkCopy);
+                                    }
+
+                                    //targetTransaction.Commit();
+
+                                }                               
                             }
                         }
                     }

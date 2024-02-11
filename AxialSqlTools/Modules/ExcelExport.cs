@@ -279,7 +279,11 @@ namespace AxialSqlTools
                             {
                                 cell.DataType = CellValues.Number;
                                 cell.CellValue = new CellValue((int)dataRow[column]);
-
+                            }
+                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(decimal)) 
+                            {
+                                cell.DataType = CellValues.Number;
+                                cell.CellValue = new CellValue((decimal)dataRow[column]);
                             }
                             else if (dataTable.Columns[column.Ordinal].DataType == typeof(short)
                                 || dataTable.Columns[column.Ordinal].DataType == typeof(byte))
