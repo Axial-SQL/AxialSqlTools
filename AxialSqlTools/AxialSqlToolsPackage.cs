@@ -125,6 +125,7 @@ namespace AxialSqlTools
             await HealthDashboard_ServerCommand.InitializeAsync(this);
             await HealthDashboard_ServersCommand.InitializeAsync(this);
             await DataTransferWindowCommand.InitializeAsync(this);
+            await CheckAddinVersionCommand.InitializeAsync(this);
 
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             
@@ -137,6 +138,8 @@ namespace AxialSqlTools
             m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
             m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
 
+
+            
             // "File.ConnectObjectExplorer"
             // "Query.Connect"
             // 
@@ -157,6 +160,25 @@ namespace AxialSqlTools
             m_commandBarQueryTemplates = m_plugin.AddCommandBarMenu("Query Templates", MsoBarPosition.msoBarTop, null);
 
             RefreshTemplatesList();
+
+            //---------------------------------------------------------------------------
+            // check for a new version
+            try
+            {
+                Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                string currentVersionString = currentVersion.ToString();
+
+                var checker = new GitHubReleaseChecker();
+
+                bool isNewVersionAvailable = await checker.IsNewVersionAvailableAsync(currentVersionString);
+                if (isNewVersionAvailable)
+                {
+                    MenuCommand Cmd = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
+                    Cmd.Visible = true;
+                } 
+
+            } catch  {}          
+
             
 
         }

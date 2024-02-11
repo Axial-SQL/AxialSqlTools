@@ -58,6 +58,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
+    <Compile Include="Commands\CheckAddinVersionCommand.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
     <Compile Include="DataTransfer\DataTransferWindow.cs" />
     <Compile Include="DataTransfer\DataTransferWindowCommand.cs" />
@@ -79,6 +80,7 @@
     <Compile Include="HealthDashboards\HealthDashboard_ServersControl.xaml.cs">
       <DependentUpon>HealthDashboard_ServersControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Modules\GitHubReleaseChecker.cs" />
     <Compile Include="Modules\MetricsService.cs" />
     <Compile Include="Modules\ExcelExport.cs" />
     <Compile Include="Modules\GridAccess.cs" />
@@ -115,6 +117,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="Key.snk" />
     <None Include="packages.config" />
     <None Include="source.extension.vsixmanifest">
@@ -122,6 +125,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\attention.png" />
     <Content Include="Resources\data-source-target.png" />
     <Content Include="Resources\export-data.png" />
     <Content Include="Resources\info.png" />
@@ -241,6 +245,9 @@
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Validation, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.VisualStudio.Validation.15.0.82\lib\net45\Microsoft.VisualStudio.Validation.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
