@@ -1,4 +1,4 @@
-# Axial SQL Tools | SQL Server Management Studio 19 Productivity Addin
+# Axial SQL Tools | SQL Server Management Studio 18/19 Productivity Addin
 
 As an engineer with over two decades of experience in SQL Server, I've encountered my fair share of inefficiencies and limitations within SSMS. 
 Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the third iteration of my work, tailored specifically for SSMS 19.
@@ -49,20 +49,22 @@ These templates are designed to cover a wide range of scenarios, helping you to 
 
 To install the addin, you have two options:
 
-1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2017 for compatibility. After compiling, you will have a folder with the necessary files to proceed with the installation.
+1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2017 for compatibility. 
+Select either the SSMS18 or SSMS19 active configurations. 
+The build process will automatically copy all necessary files into the SSMS extension folder, and you will be ready to use it.
 
 2. **Download the Release:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository.
-
+Choose between the SSMS 18 and SSMS 19 versions.
 
 After obtaining the compiled files (either by compiling from source or downloading from Releases), follow these steps to install the extension:
 
 - For SSMS 19, place the folder with the compiled files into the following directory:
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions` 
 
-<!--
 - For SSMS 18, use this directory instead:
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
--->
+
+If your Windows security policy has blocked the `AxialSqlTools.dll` file, you may need to unlock it by using the checkbox in the file properties.
 
 Restart SQL Server Management Studio after placing the files in the extensions directory.
 
