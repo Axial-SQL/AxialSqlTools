@@ -21,6 +21,7 @@ namespace AxialSqlTools
         public int Iteration { get; set; }
         public string ServerName { get; set; }
         public string ServiceName { get; set; }
+        public string ServerVersion { get; set; }
         public DateTime UtcStartTime { get; set; }
         public int CpuUtilization { get; set; }
         public int ConnectionCountTotal { get; set; }
@@ -86,7 +87,9 @@ namespace AxialSqlTools
                     string queryText_1 = @"
                     SELECT @@SERVERNAME AS ServerName,
                            @@SERVICENAME AS ServiceName,
-                           DATEADD(hh, DATEDIFF(hh, GETDATE(), GETUTCDATE()), sqlserver_start_time) as UtcStartTime
+                           DATEADD(hh, DATEDIFF(hh, GETDATE(), GETUTCDATE()), sqlserver_start_time) as UtcStartTime,
+                           @@VERSION,
+                           SERVERPROPERTY('edition')
                     FROM sys.dm_os_sys_info;
                     ";
 
@@ -98,6 +101,15 @@ namespace AxialSqlTools
                                     metrics.ServerName = reader.GetString(0);
                                     metrics.ServiceName = reader.GetString(1);
                                     metrics.UtcStartTime = DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc);  
+
+                                    metrics.ServerVersion = reader.GetString(3);
+
+                                    int index = metrics.ServerVersion.IndexOf("Copyright");
+                                    if (index != -1)
+                                        metrics.ServerVersion = metrics.ServerVersion.Substring(0, index).Trim().Replace("\r", "").Replace("\n", "");
+
+                                    metrics.ServerVersion += " | " + reader.GetString(4);
+
                                 }
                             }
                         }

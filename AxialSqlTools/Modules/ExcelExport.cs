@@ -275,15 +275,20 @@ namespace AxialSqlTools
                                 cell.DataType = CellValues.String;
                                 cell.CellValue = new CellValue();
                             }
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(int)) // || dataTable.Columns[column.Ordinal].DataType == typeof(long))
+                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(int)) 
                             {
                                 cell.DataType = CellValues.Number;
                                 cell.CellValue = new CellValue((int)dataRow[column]);
                             }
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(Double)) // || dataTable.Columns[column.Ordinal].DataType == typeof(long))
+                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(long)) 
                             {
                                 cell.DataType = CellValues.Number;
-                                cell.CellValue = new CellValue((Double)dataRow[column]);
+                                cell.CellValue = new CellValue(dataRow[column].ToString());
+                            }
+                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(double))
+                            {
+                                cell.DataType = CellValues.Number;
+                                cell.CellValue = new CellValue((double)dataRow[column]);
                             }
                             else if (dataTable.Columns[column.Ordinal].DataType == typeof(decimal)) 
                             {

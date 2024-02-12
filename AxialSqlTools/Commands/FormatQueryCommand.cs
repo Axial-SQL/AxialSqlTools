@@ -172,18 +172,15 @@ namespace AxialSqlTools
                 throw new Exception($"TSqlParser unable to format selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
+            //TODO
             //special case #1 - remove new line after JOIN
             // ?
      
-
             Sql160ScriptGenerator gen = new Sql160ScriptGenerator();
-            //gen.Options.AlignClauseBodies = false;
+            gen.Options.AlignClauseBodies = false;
             //gen.Options.IncludeSemicolons = false;     
-            gen.Options.SqlVersion = SqlVersion.Sql160;
+            gen.Options.SqlVersion = SqlVersion.Sql160; //TODO - try to get from current connection
             gen.GenerateScript(result, out resultCode);
-
-
-
 
             //gen.GenerateTokens(resultCode);
 

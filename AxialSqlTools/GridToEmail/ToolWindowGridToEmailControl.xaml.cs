@@ -65,11 +65,13 @@
                 {
                     Host = smtpSettings.ServerName,
                     Port = smtpSettings.Port,
-                    EnableSsl = true,
+                    EnableSsl = smtpSettings.EnableSsl,
                     DeliveryMethod = SmtpDeliveryMethod.Network,
-                    UseDefaultCredentials = false,
-                    Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password)
+                    UseDefaultCredentials = false
                 };
+
+                if (!string.IsNullOrEmpty(smtpSettings.Username))
+                    smtp.Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password);
 
                 // Creating the email message
                 using (var message = new MailMessage(fromAddress, toAddress)
@@ -95,7 +97,7 @@
 
             } catch (Exception ex)
             {
-                string msg = $"Erorr message: {ex.Message} \nInnerException: {ex.InnerException}";
+                string msg = $"Error message: {ex.Message} \nInnerException: {ex.InnerException}";
                 MessageBox.Show(msg, "Something went wrong");
             }    
             

@@ -65,6 +65,7 @@ SELECT * FROM blocking WHERE spid IN (SELECT blocked FROM blocking WHERE blocked
             public string Password;
             public string ServerName;
             public int Port;
+            public bool EnableSsl;
         }
 
         private static byte[] Protect(byte[] data)
@@ -168,6 +169,11 @@ SELECT * FROM blocking WHERE spid IN (SELECT blocked FROM blocking WHERE blocked
             bool success = int.TryParse(GetRegisterValue("SMTP_Port"), out savedPort);
             if (success) smtpSettings.Port = savedPort;
 
+            smtpSettings.EnableSsl = true;
+            bool enableSsl;
+            success = bool.TryParse(GetRegisterValue("SMTP_EnableSSL"), out enableSsl);
+            if (success) smtpSettings.EnableSsl = enableSsl;
+
             return smtpSettings;
         }
 
@@ -180,6 +186,7 @@ SELECT * FROM blocking WHERE spid IN (SELECT blocked FROM blocking WHERE blocked
             SaveRegisterValue("SMTP_Password", Convert.ToBase64String(encPassword));
             SaveRegisterValue("SMTP_Server", smtpSettings.ServerName);
             SaveRegisterValue("SMTP_Port", smtpSettings.Port.ToString());
+            SaveRegisterValue("SMTP_EnableSSL", smtpSettings.EnableSsl.ToString());
 
             return true;
 

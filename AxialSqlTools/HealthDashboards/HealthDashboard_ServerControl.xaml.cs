@@ -147,6 +147,7 @@
 
             Label_ServerName.Content = metrics.ServerName;
             Label_ServiceName.Content = metrics.ServiceName;
+            Label_ServerVersion.Content = metrics.ServerVersion;
 
             //- Uptime
             TimeSpan difference = DateTime.Now - metrics.UtcStartTime.ToLocalTime();

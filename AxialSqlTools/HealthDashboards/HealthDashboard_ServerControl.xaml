@@ -17,6 +17,10 @@
                 <CheckBox Margin="5" x:Name="CheckBox_StopBlinking" Content="Be quiet"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
+                <Label Content="Version:" Width="150"/>
+                <Label Content="= SQL Server engine version =" x:Name="Label_ServerVersion" FontWeight="Bold"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Server name:" Width="150"/>
@@ -95,9 +99,6 @@
                         <Label Content="= log send queue =" x:Name="Label_AlwaysOnLogSendQueue" FontWeight="Bold"/>
                         <Label Content="= redo queue =" x:Name="Label_AlwaysOnRedoQueue" FontWeight="Bold"/>
                     </StackPanel>
-
-
-
 
                 </StackPanel>
             </StackPanel>

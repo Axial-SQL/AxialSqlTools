@@ -33,6 +33,8 @@
                 SMTP_Port.Text = smtpSettings.Port.ToString();
                 SMTP_UserName.Text = smtpSettings.Username;
                 SMTP_Password.Password = smtpSettings.Password;
+                SMTP_EnableSSL.IsChecked = smtpSettings.EnableSsl;
+
             } catch (Exception ex)
             {
 
@@ -143,7 +145,8 @@
             {
                 ServerName = SMTP_Server.Text,
                 Username = SMTP_UserName.Text,
-                Password = SMTP_Password.Password
+                Password = SMTP_Password.Password,
+                EnableSsl = SMTP_EnableSSL.IsChecked.GetValueOrDefault()
             };
 
             int smptPort = 587;

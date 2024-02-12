@@ -48,6 +48,9 @@
                         <TextBox  x:Name="SMTP_Port" Width="500"   />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="5">
+                        <CheckBox x:Name="SMTP_EnableSSL" Content="Enable SSL/TLS"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="5">
                         <Button Margin="5" Content="Save"  x:Name="buttonSaveSmtpSettings" Width="62" Click="ButtonSaveSmtpSettings_Click" />
                     </StackPanel>
                 </StackPanel>
