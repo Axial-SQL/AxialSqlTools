@@ -30,7 +30,8 @@
                     <TextBox Height="22" TextWrapping="Wrap" Text="Email Body" x:Name="EmailBody" MinLines="5"/>
 
                 </StackPanel>
-                <Button Content="Send and Close" Height="31" Margin="0,0,270,0" Click="Button_SendAndClose"/>
+                <Button Content="Send via my SMTP and Close" Height="31" Margin="0,0,270,0" Click="Button_SendAndClose"/>
+                <Button Content="Send via Server Public DBMail Profile and Close" Height="31" Margin="0,0,270,0" Click="Button_SendDbMailAndClose"/>
 
             </StackPanel>
         </StackPanel>

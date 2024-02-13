@@ -1,7 +1,9 @@
 ﻿namespace AxialSqlTools
 {
+    using System;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.Reflection;
     using System.Windows;
     using System.Windows.Controls;
 
@@ -16,6 +18,11 @@
         public AboutWindowControl()
         {
             this.InitializeComponent();
+
+            Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+            string currentVersionString = currentVersion.ToString();
+
+            TextBlock_CurrentVersion.Text = $"Axial SQL Tools | SSMS Addin Version {currentVersionString}";
         }
 
         /// <summary>

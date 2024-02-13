@@ -12,9 +12,10 @@
     <Grid>
         <StackPanel Orientation="Vertical">
             <Image Source="pack://application:,,,/AxialSqlTools;component/Resources/logo.png" Width="250" />
-            <Button Content="Visit our web-site at https://axial-sql.com/" Click="buttonAxialSqlWebsite_Click" Height="30" x:Name="buttonVisitWebsite" VerticalAlignment="Center" Margin="100,10,100,10"/>
-            <TextBlock Margin="10" HorizontalAlignment="Center">Expert SQL Server solutions</TextBlock>
+            <TextBlock Margin="10" HorizontalAlignment="Center" x:Name="TextBlock_CurrentVersion"></TextBlock>
+            <TextBlock Margin="186,10" HorizontalAlignment="Center"><Run Text="Expert SQL Server solutions"/></TextBlock>
             <TextBlock Margin="10" HorizontalAlignment="Center">info@axial-sql.com</TextBlock>
+            <Button Content="Visit our web-site at https://axial-sql.com/" Click="buttonAxialSqlWebsite_Click" Height="30" x:Name="buttonVisitWebsite" VerticalAlignment="Center" Margin="100,10,100,10"/>
             
             
         </StackPanel>

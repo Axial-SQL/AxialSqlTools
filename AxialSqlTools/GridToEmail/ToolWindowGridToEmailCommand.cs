@@ -86,20 +86,6 @@ namespace AxialSqlTools
             Instance = new ToolWindowGridToEmailCommand(package, commandService);
         }
 
-        public object GetNonPublicField(object obj, string field)
-        {
-            FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-
-            return f.GetValue(obj);
-        }
-        public FieldInfo GetNonPublicFieldInfo(object obj, string field)
-        {
-            FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-
-            return f;
-        }
-
-
         /// <summary>
         /// Shows the tool window when the menu item is clicked.
         /// </summary>
@@ -119,7 +105,9 @@ namespace AxialSqlTools
             string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             fileLocation = Path.Combine(folderPath, fileName);
 
-            ExcelExport.SaveDataTableToExcel(dataTables, fileLocation); 
+            ExcelExport.SaveDataTableToExcel(dataTables, fileLocation);
+
+            var currentConnectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo(inMaster : true);
 
             //\\-----------------------------------------------------------------
 
@@ -135,7 +123,7 @@ namespace AxialSqlTools
 
             // pass the file name to the window
             var myWindow = window as ToolWindowGridToEmail;
-            myWindow.InitializeWithParameter(fileLocation);
+            myWindow.InitializeWithParameter(fileLocation, currentConnectionInfo);
 
             IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
 

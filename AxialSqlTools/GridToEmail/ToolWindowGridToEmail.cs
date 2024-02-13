@@ -32,15 +32,18 @@
         }
 
 
-        public void InitializeWithParameter(string FileNameLocation)
+        public void InitializeWithParameter(string FileNameLocation, ScriptFactoryAccess.ConnectionInfo connectionInfo)
         {
             var control = this.Content as ToolWindowGridToEmailControl;
             if (control != null)
             {
-                control.FullFileName.Text = FileNameLocation;
+                control.exportedFilename = FileNameLocation;
+                control.connectionInfo = connectionInfo;
+                control.UpdateLabels();
+
             }
 
-            control.UpdateLabels();
+            
         }
     }
 }
