@@ -39,7 +39,7 @@
             {
                 control.exportedFilename = FileNameLocation;
                 control.connectionInfo = connectionInfo;
-                control.UpdateLabels();
+                control.PrepareFormParameters();
 
             }
 

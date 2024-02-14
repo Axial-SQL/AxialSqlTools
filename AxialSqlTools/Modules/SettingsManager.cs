@@ -61,6 +61,7 @@ SELECT * FROM blocking WHERE spid IN (SELECT blocked FROM blocking WHERE blocked
 
         public class SmtpSettings
         {
+            public bool hasBeenConfiguredAndTested;
             public string Username;
             public string Password;
             public string ServerName;
@@ -159,7 +160,8 @@ SELECT * FROM blocking WHERE spid IN (SELECT blocked FROM blocking WHERE blocked
             } catch {
             }
 
-            SmtpSettings smtpSettings = new SmtpSettings();
+            SmtpSettings smtpSettings = new SmtpSettings();            
+            smtpSettings.hasBeenConfiguredAndTested = true; //TODO
             smtpSettings.Username = GetRegisterValue("SMTP_Username");
             smtpSettings.Password = password;
             smtpSettings.ServerName = GetRegisterValue("SMTP_Server");

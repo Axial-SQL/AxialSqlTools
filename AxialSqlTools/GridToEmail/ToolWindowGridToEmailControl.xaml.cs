@@ -9,6 +9,7 @@
     using System.Net.Mail;
     using System.Windows;
     using System.Windows.Controls;
+    using System.Windows.Documents;
 
     /// <summary>
     /// Interaction logic for ToolWindowGridToEmailControl.
@@ -18,6 +19,49 @@
 
         public ScriptFactoryAccess.ConnectionInfo connectionInfo;
         public string exportedFilename;
+
+        public class MailConfigItem
+        {
+            //public int Id { get; set; }
+            //public string Name { get; }
+
+            public string EmailAddress { get; set; }
+            public string MailProfileName { get; set; }
+            public bool isSMTP { get; set; }
+            public bool isDatabaseMail { get; set; }
+
+            public MailConfigItem(string emailAddress)
+            {
+                isSMTP = true;
+                EmailAddress = emailAddress;
+            }
+
+            public MailConfigItem(string databaseMailProfileName, string emailAddress)
+            {
+                isDatabaseMail = true;
+                MailProfileName = databaseMailProfileName;
+                EmailAddress = emailAddress;
+            }
+
+            // Override the ToString method
+            public override string ToString()
+            {
+
+                string Name = "";
+
+                if (isSMTP)
+                {
+                    Name = "SMTP | " + EmailAddress;
+                }
+                else if (isDatabaseMail)
+                {
+                    Name = $"Database Mail Profile '{MailProfileName}' / {EmailAddress}";
+                }
+
+                return Name; 
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ToolWindowGridToEmailControl"/> class.
         /// </summary>
@@ -25,47 +69,134 @@
         {
             this.InitializeComponent();
 
+           
+
         }
 
-        public void UpdateLabels()
+        public void PrepareFormParameters()
         {
-            FullFileName.Text = exportedFilename;
+            FullFileNameLabel.Content = exportedFilename;
 
-            FileInfo fileInfo = new FileInfo(FullFileName.Text);
+            FileInfo fileInfo = new FileInfo(exportedFilename);
             double fileSizeInKilobytes = fileInfo.Length / 1024.0;
             string formattedSize = fileSizeInKilobytes.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + "KB";
 
-            MyEmailAddress.Content = "From: " + SettingsManager.GetMyEmail();
+            FullFileNameTitleLabel.Content = string.Format(System.Globalization.CultureInfo.CurrentUICulture, "File ({0}):", formattedSize);
 
-            FullFileNameLabel.Content = string.Format(System.Globalization.CultureInfo.CurrentUICulture, "File ({0}):", formattedSize);
+            EmailServerOptions.Items.Clear();
 
+         
+            //-------------------------------------------------------
+            string bodyText =
+                $"\n\n\n--------------------------\n" +
+                $"Data Export\n" +
+                $"Server: {connectionInfo.ServerName}\n" +
+                $"Database: {connectionInfo.Database}";
+
+            Paragraph para = new Paragraph();
+            para.LineHeight = 20; // Set the LineHeight to 20 units
+            para.Inlines.Add(new Run(bodyText));
+            EmailBody.Document.Blocks.Clear();
+            EmailBody.Document.Blocks.Add(para);
+
+
+            // email and SMTP must be set
+            string myEmail = SettingsManager.GetMyEmail();
+            SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
+
+            if (!string.IsNullOrEmpty(myEmail) && smtpSettings.hasBeenConfiguredAndTested)
+            {
+                EmailServerOptions.Items.Add(new MailConfigItem(myEmail)); 
+            }
+
+            // pull all email profiles from the server:
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(connectionInfo.FullConnectionString))
+                {
+                    // Open the connection
+                    connection.Open();
+
+                    string queryText = @"
+                    SELECT sp.[name] AS ProfileName,
+                           ma.email_address
+                    FROM [msdb].[dbo].[sysmail_profile] AS sp
+                         INNER JOIN [msdb].[dbo].[sysmail_profileaccount] AS pa
+                            ON sp.[profile_id] = pa.profile_id
+                         INNER JOIN [msdb].[dbo].[sysmail_account] AS ma
+                            ON pa.[account_id] = ma.[account_id];
+                    ";
+
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
+                    {
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                EmailServerOptions.Items.Add(new MailConfigItem(databaseMailProfileName: reader.GetString(0), emailAddress: reader.GetString(1)));
+                            }
+                        }
+                    }      
+                }
+            }
+            catch (Exception ex)
+            {
+                
+            }
+
+            if (EmailServerOptions.Items.Count > 0)
+            {
+                EmailServerOptions.SelectedIndex = 0;
+            }
+            else
+            {
+                SendWarningLabel.Content = "Unable to send the email because SMTP wasn't configured and no Database Mail Profiles have been found on the server.";                
+                ButtonSend.IsEnabled = false;
+            }
         }
 
-        /// <summary>
-        /// Handles click on the button by displaying a message box.
-        /// </summary>
-        /// <param name="sender">The event sender.</param>
-        /// <param name="e">The event args.</param>
-        [SuppressMessage("Microsoft.Globalization", "CA1300:SpecifyMessageBoxOptions", Justification = "Sample code")]
-        [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Default event handler naming pattern")]
-        private void button1_Click(object sender, RoutedEventArgs e)
+        static bool AreAllEmailsValid(string emails)
         {
-            MessageBox.Show(
-                string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Invoked '{0}'", this.ToString()),
-                "ToolWindowGridToEmail");
+            string[] emailArray = emails.Split(';');
+
+            foreach (var email in emailArray)
+            {
+                if (!IsValidEmail(email))
+                {
+                    // As soon as one invalid email is found, return false
+                    return false;
+                }
+            }
+
+            // If all emails pass validation, return true
+            return true;
         }
 
-        private void Button_SendAndClose(object sender, RoutedEventArgs e)
+        static bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            try
+            {
+                var mailAddress = new MailAddress(email);
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+
+        static void SendEmailViaSmtp(MailConfigItem mailConfig, string AllEmails, string Subject, 
+                string Body, string exportedFilename)
         {
 
             try
             {
+
                 SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
 
-                var fromAddress = new MailAddress(SettingsManager.GetMyEmail());
-                var toAddress = new MailAddress(EmailRecipient.Text);
-
-                // Setting up the SMTP client
                 var smtp = new SmtpClient
                 {
                     Host = smtpSettings.ServerName,
@@ -78,45 +209,49 @@
                 if (!string.IsNullOrEmpty(smtpSettings.Username))
                     smtp.Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password);
 
-                // Creating the email message
-                using (var message = new MailMessage(fromAddress, toAddress)
+
+                var emailMessage = new MailMessage()
                 {
-                    Subject = EmailSubject.Text,
-                    Body = EmailBody.Text,
+                    Subject = Subject,
+                    Body = Body
+                };
 
-                })
+                emailMessage.From = new MailAddress(SettingsManager.GetMyEmail());
+
+
+                string[] emailArray = AllEmails.Split(';');
+                foreach (var email in emailArray)
+                    emailMessage.To.Add(email);
+
+                emailMessage.Attachments.Add(new Attachment(exportedFilename));
+
+                smtp.Send(emailMessage);
+
+                MessageBox.Show($"Email to '{AllEmails}' has been sent!", "Done");
+
+                try
                 {
-
-                    Attachment attachment = new Attachment(FullFileName.Text);
-                    message.Attachments.Add(attachment);
-
-                    smtp.Send(message);
-
-                    MessageBox.Show(
-                        string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Email to '{0}' has been sent!", toAddress),
-                        "Done");
-
+                    File.Delete(exportedFilename);
                 }
+                catch (Exception exFile)
+                { }
 
-                File.Delete(FullFileName.Text);
-
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 string msg = $"Error message: {ex.Message} \nInnerException: {ex.InnerException}";
                 MessageBox.Show(msg, "Something went wrong");
-            }    
-            
+            }
+
         }
 
-        private void Button_SendDbMailAndClose(object sender, RoutedEventArgs e)
+        static void SendEmailViaDatabaseMail(ScriptFactoryAccess.ConnectionInfo connectionInfo, MailConfigItem mailConfig, 
+            string AllEmails, string Subject, string Body, string exportedFilename)
         {
 
             try
             {
-
-                string connectionString = connectionInfo.FullConnectionString;
-
-                using (SqlConnection connection = new SqlConnection(connectionString))
+                using (SqlConnection connection = new SqlConnection(connectionInfo.FullConnectionString))
                 {
                     // Open the connection
                     connection.Open();
@@ -126,12 +261,14 @@
 
                     BEGIN TRANSACTION;
 
+                    SET XACT_ABORT ON;
+
                     DECLARE @mailitem_id AS INT;
 
                     EXECUTE [dbo].[sp_send_dbmail] 
-                        --I don't know how service broker works and it respects open transaction
-                        --I want to avoid a case when email will be sent before attachment is inserted
-                        @recipients     = '< email placeholder >', 
+                        @profile_name = @ProfileName,
+                        --I don't know how service broker works and if it respects open transaction ...
+                        @recipients     = @Recipient, 
                         @subject        = @Subject, 
                         @body           = @Body, 
                         @body_format    = 'HTML', 
@@ -143,9 +280,9 @@
                            @FileSize,
                            @BinaryFile;
 
-                    UPDATE dbo.sysmail_mailitems
-                    SET    recipients = @Recipient
-                    WHERE  mailitem_id = @mailitem_id;
+                    --UPDATE dbo.sysmail_mailitems
+                    --SET    recipients = @Recipient
+                    --WHERE  mailitem_id = @mailitem_id;
 
                     COMMIT TRANSACTION;
                     ";
@@ -156,9 +293,10 @@
                         FileInfo fileInfo = new FileInfo(exportedFilename);
                         byte[] fileContents = File.ReadAllBytes(fileInfo.FullName);
 
-                        command.Parameters.AddWithValue("Recipient",    EmailRecipient.Text);
-                        command.Parameters.AddWithValue("Subject",      EmailSubject.Text);
-                        command.Parameters.AddWithValue("Body",         EmailBody.Text);
+                        command.Parameters.AddWithValue("ProfileName",  mailConfig.MailProfileName);
+                        command.Parameters.AddWithValue("Recipient",    AllEmails);
+                        command.Parameters.AddWithValue("Subject",      Subject);
+                        command.Parameters.AddWithValue("Body",         Body);
                         command.Parameters.AddWithValue("FileSize",     fileInfo.Length);
                         command.Parameters.AddWithValue("FileName",     fileInfo.Name);
                         command.Parameters.AddWithValue("BinaryFile",   fileContents);
@@ -167,6 +305,7 @@
 
                     }
 
+                    MessageBox.Show("Email has been queued via Database Mail!", "Done");
                 }
 
             }
@@ -176,6 +315,44 @@
                 MessageBox.Show(msg, "Something went wrong");
             }
         }
+
+
+        private void Button_SendAndClose(object sender, RoutedEventArgs e)
+        {
+
+            MailConfigItem mailConfig = (MailConfigItem)EmailServerOptions.SelectedItem;
+
+            bool allValid = AreAllEmailsValid(EmailRecipients.Text);
+
+            if (!allValid)
+            {
+                MessageBox.Show("Can't parse the recipient's email address.", "Invalid Email");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(EmailSubject.Text))
+            {
+                MessageBox.Show("Please provide the email subject.", "Subject Required");
+                return;
+            }
+
+            TextRange textRange = new TextRange(EmailBody.Document.ContentStart, EmailBody.Document.ContentEnd);
+            string EmailBodyContent = textRange.Text;
+
+            if (mailConfig.isSMTP)
+                SendEmailViaSmtp(mailConfig, EmailRecipients.Text, EmailSubject.Text, EmailBodyContent, exportedFilename);
+
+            else if (mailConfig.isDatabaseMail)
+                SendEmailViaDatabaseMail(connectionInfo, mailConfig, EmailRecipients.Text, EmailSubject.Text, EmailBodyContent, exportedFilename);
+            
+            else {
+                MessageBox.Show("Invalid mail config", "Error");
+            }
+
+            
+        }
+
+
 
     }
 }

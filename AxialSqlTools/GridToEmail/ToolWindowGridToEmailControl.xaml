@@ -4,36 +4,62 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
-             mc:Ignorable="d" Width="500"
-             Name="MyToolWindow">
-    <Grid>
-        <StackPanel Orientation="Vertical">
-            <TextBlock Margin="10" HorizontalAlignment="Center" FontSize="16" FontWeight="Bold">Export Grid to Excel file and sent it by email</TextBlock>
+             mc:Ignorable="d" 
+             Name="MyToolWindow"
+             FontSize="14">
+    <Grid >
+        <StackPanel Orientation="Vertical" >
+            <StackPanel Orientation="Horizontal" Background="#FFB4B4B4">
+                <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Export the grid to a file and send it via email</TextBlock>
+            </StackPanel>
             <StackPanel Orientation="Vertical">
-                <StackPanel Orientation="Vertical">
-                    <Label Content="File:" x:Name="FullFileNameLabel" />
-                    <TextBox Height="22" TextWrapping="Wrap" Text=""  x:Name="FullFileName" IsReadOnly="True"/>
+                <StackPanel Orientation="Horizontal" Margin="5,5,5,5">
+                    <Label Content="File:" x:Name="FullFileNameTitleLabel" Width="80" />
+                    <Label Content="" x:Name="FullFileNameLabel" FontWeight="Bold" />
                 </StackPanel>
-                <StackPanel Orientation="Vertical">
-                    <Label Content="From: " x:Name="MyEmailAddress"/>
-                </StackPanel>
-                <StackPanel Orientation="Vertical">
-                    <Label Content="Recipient Email Address"/>
-                    <TextBox Height="22" TextWrapping="Wrap" Text="" x:Name="EmailRecipient"/>
-                </StackPanel>
-                <StackPanel Orientation="Vertical">
-                    <Label Content="Subject"/>
-                    <TextBox Height="22" TextWrapping="Wrap" Text="Email Subject" x:Name="EmailSubject"/>
-                </StackPanel>
-                <StackPanel Orientation="Vertical">
-                    <Label Content="Body"/>
-                    <TextBox Height="22" TextWrapping="Wrap" Text="Email Body" x:Name="EmailBody" MinLines="5"/>
+                <StackPanel Orientation="Horizontal" Margin="5,5,5,5">
+                    <Label Content="From:" Width="80" />
+
+                    <!-- ComboBox declaration -->
+                    <ComboBox x:Name="EmailServerOptions"  FontWeight="Bold">
+                    </ComboBox>
 
                 </StackPanel>
-                <Button Content="Send via my SMTP and Close" Height="31" Margin="0,0,270,0" Click="Button_SendAndClose"/>
-                <Button Content="Send via Server Public DBMail Profile and Close" Height="31" Margin="0,0,270,0" Click="Button_SendDbMailAndClose"/>
+                <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                    <Label Content="Recipient Email Address(es). Use semicolons (;) to separate addresses."/>
+                    <TextBox Height="22" TextWrapping="Wrap" Text="" x:Name="EmailRecipients"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                    <Label Content="Subject"/>
+                    <TextBox Height="22" TextWrapping="Wrap" Text="" x:Name="EmailSubject"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                    <Label Content="Email Body:"/>
+
+                    <RichTextBox Height="200" x:Name="EmailBody">
+                        <RichTextBox.Resources>
+                            <Style TargetType="{x:Type Paragraph}">
+                                <Setter Property="LineHeight" Value="20"/>
+                            </Style>
+                        </RichTextBox.Resources>
+                        <FlowDocument>
+
+                        </FlowDocument>
+                    </RichTextBox>
+
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="5,5,5,5">
+                    <Button Content="Send" Name="ButtonSend" Height="31" Margin="5,5,0,5" Click="Button_SendAndClose" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="1" UseLayoutRounding="False" Width="94.591" FontWeight="Bold"/>
+                    <Label Content="" x:Name="SendWarningLabel" FontWeight="Bold" />
+
+                </StackPanel>
 
             </StackPanel>
         </StackPanel>
+
+
     </Grid>
+
+
 </UserControl>
