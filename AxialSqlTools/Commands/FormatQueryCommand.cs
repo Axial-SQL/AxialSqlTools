@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using EnvDTE;
@@ -169,44 +170,51 @@ namespace AxialSqlTools
                     errorStr += Environment.NewLine + strError.Message;
                 }
 
-                throw new Exception($"TSqlParser unable to format selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
+                throw new Exception($"TSqlParser unable to load selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
-            //TODO
-            //special case #1 - remove new line after JOIN
-            // ?
-     
+
             Sql160ScriptGenerator gen = new Sql160ScriptGenerator();
             gen.Options.AlignClauseBodies = false;
             //gen.Options.IncludeSemicolons = false;     
             gen.Options.SqlVersion = SqlVersion.Sql160; //TODO - try to get from current connection
             gen.GenerateScript(result, out resultCode);
 
-            //gen.GenerateTokens(resultCode);
 
-            //if (resultCode.EndsWith("...TSqlStandardFormatterOptions")) //TODO
+            //TODO
+            //special case #1 - remove new line after JOIN
+            // ?
+            ////-------------------------------------------
+            //// https://gist.github.com/philippwiddra/2ee47ac4f8a0248c3a0e
+            //// I can manually manipulate the result, but it is too complex :(
+            //string WhiteSpace = "";
+            //for (int i = 1; i < gen.Options.IndentationSize; i++)
+            //    WhiteSpace += " ";
+
+            //var Tokens = gen.GenerateTokens(result);
+
+            //StringBuilder sqlText = new StringBuilder();
+            //foreach (var Token in Tokens)
             //{
-
-            //    var formatter = new PoorMansTSqlFormatterLib.Formatters.TSqlStandardFormatter()
+            //    if (Token.TokenType == TSqlTokenType.Join)
+            //    { }
+            //    // One more Tab after ON. Mostly good for JOINs, but won't hur other statements 
+            //    else if (Token.TokenType == TSqlTokenType.On) 
             //    {
-            //        IndentString = "\t",
-            //        SpacesPerTab = 4,
-            //        MaxLineWidth = 999,
-            //        ExpandCommaLists = true,
-            //        TrailingCommas = true,
-            //        SpaceAfterExpandedComma = false,
-            //        ExpandBooleanExpressions = true,
-            //        ExpandCaseStatements = true,
-            //        ExpandBetweenConditions = false,
-            //        BreakJoinOnSections = false,
-            //        UppercaseKeywords = true,
-            //        HTMLColoring = false
-            //    };
+            //        sqlText.Append(WhiteSpace);
+            //    }
+            //    // One more Tab after ON. Mostly good for JOINs, but won't hur other statements 
+            //    else if (Token.TokenType == TSqlTokenType.On)
+            //    {
+            //        sqlText.Append(WhiteSpace);
+            //    }
 
-            //    var formatMgr = new PoorMansTSqlFormatterLib.SqlFormattingManager(formatter);
-            //    resultCode = formatMgr.Format(oldCode);
-
+            //    sqlText.Append(Token.Text);
             //}
+
+            //resultCode = sqlText.ToString();
+
+
 
             return resultCode;            
 
