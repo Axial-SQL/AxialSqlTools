@@ -50,7 +50,7 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Margin="5,5,5,5">
-                    <Button Content="Send" Name="ButtonSend" Height="31" Margin="5,5,0,5" Click="Button_SendAndClose" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="1" UseLayoutRounding="False" Width="94.591" FontWeight="Bold"/>
+                    <Button Content="Send" Name="ButtonSend" Height="35" Margin="5,5,0,5" Click="Button_SendAndClose" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="1" UseLayoutRounding="False" Width="94.591" FontWeight="Bold"/>
                     <Label Content="" x:Name="SendWarningLabel" FontWeight="Bold" />
 
                 </StackPanel>

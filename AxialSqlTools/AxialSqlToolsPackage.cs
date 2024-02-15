@@ -115,72 +115,87 @@ namespace AxialSqlTools
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
 
-            await FormatQueryCommand.InitializeAsync(this);
-            await RefreshTemplatesCommand.InitializeAsync(this);
-            await ExportGridToExcelCommand.InitializeAsync(this);
-            await SettingsWindowCommand.InitializeAsync(this);
-            await AboutWindowCommand.InitializeAsync(this);
-            await ScriptSelectedObject.InitializeAsync(this);
-            await ExportGridToAsInsertsCommand.InitializeAsync(this);
-            await ToolWindowGridToEmailCommand.InitializeAsync(this);
-            await HealthDashboard_ServerCommand.InitializeAsync(this);
-            await HealthDashboard_ServersCommand.InitializeAsync(this);
-            await DataTransferWindowCommand.InitializeAsync(this);
-            await CheckAddinVersionCommand.InitializeAsync(this);
-
-            await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            
-            DTE2 application = GetGlobalService(typeof(DTE)) as DTE2;
-            IVsProfferCommands3 profferCommands3 = await base.GetServiceAsync(typeof(SVsProfferCommands)) as IVsProfferCommands3;
-            OleMenuCommandService oleMenuCommandService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-
-            var command = application.Commands.Item("Query.Execute");
-            m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
-            m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
-            m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
-
-
-            
-            // "File.ConnectObjectExplorer"
-            // "Query.Connect"
-            // 
-
-            //---------------------------------------------------------------------------
-            // Query Templates
-            string optionsFileName = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "AxialSqlTools.xml");
-            Config options = Config.Load(optionsFileName);
-
-            ImageList icons = new ImageList();
-            icons.Images.Add(Resources.script);
-
-            m_plugin = new Plugin(application, profferCommands3, icons, oleMenuCommandService, "AxialSqlTools", "Aurora.Connect", options);
-
-            CommandBar commandBar = m_plugin.AddCommandBar("Axial SQL Tools", MsoBarPosition.msoBarTop);
-            m_commandRegistry = new CommandRegistry(m_plugin, commandBar, new Guid(PackageGuidString), new Guid(PackageGuidGroup));
-
-            m_commandBarQueryTemplates = m_plugin.AddCommandBarMenu("Query Templates", MsoBarPosition.msoBarTop, null);
-
-            RefreshTemplatesList();
-
-            //---------------------------------------------------------------------------
-            // check for a new version
-            MenuCommand Cmd = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
-               
             try
             {
-                Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
-                string currentVersionString = currentVersion.ToString();
+                await FormatQueryCommand.InitializeAsync(this);
+                await RefreshTemplatesCommand.InitializeAsync(this);
+                await ExportGridToExcelCommand.InitializeAsync(this);
+                await SettingsWindowCommand.InitializeAsync(this);
+                await AboutWindowCommand.InitializeAsync(this);
+                await ScriptSelectedObject.InitializeAsync(this);
+                await ExportGridToAsInsertsCommand.InitializeAsync(this);
+                await ToolWindowGridToEmailCommand.InitializeAsync(this);
+                await HealthDashboard_ServerCommand.InitializeAsync(this);
+                await HealthDashboard_ServersCommand.InitializeAsync(this);
+                await DataTransferWindowCommand.InitializeAsync(this);
+                await CheckAddinVersionCommand.InitializeAsync(this);
 
-                var checker = new GitHubReleaseChecker();
+                await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
-                //TODO - fails in SSMS18
-                bool isNewVersionAvailable = await checker.IsNewVersionAvailableAsync(currentVersionString);
+                DTE2 application = GetGlobalService(typeof(DTE)) as DTE2;
+                IVsProfferCommands3 profferCommands3 = await base.GetServiceAsync(typeof(SVsProfferCommands)) as IVsProfferCommands3;
+                OleMenuCommandService oleMenuCommandService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
 
-                Cmd.Visible = isNewVersionAvailable;
+                var command = application.Commands.Item("Query.Execute");
+                m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
+                m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
+                m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
 
-            } catch  { Cmd.Visible = false; }          
 
-            
+
+                // "File.ConnectObjectExplorer"
+                // "Query.Connect"
+                // 
+
+                //---------------------------------------------------------------------------
+                // Query Templates
+                string optionsFileName = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "AxialSqlTools.xml");
+                Config options = Config.Load(optionsFileName);
+
+                ImageList icons = new ImageList();
+                icons.Images.Add(Resources.script);
+
+                m_plugin = new Plugin(application, profferCommands3, icons, oleMenuCommandService, "AxialSqlTools", "Aurora.Connect", options);
+
+                CommandBar commandBar = m_plugin.AddCommandBar("Axial SQL Tools", MsoBarPosition.msoBarTop);
+                m_commandRegistry = new CommandRegistry(m_plugin, commandBar, new Guid(PackageGuidString), new Guid(PackageGuidGroup));
+
+                m_commandBarQueryTemplates = m_plugin.AddCommandBarMenu("Query Templates", MsoBarPosition.msoBarTop, null);
+
+                RefreshTemplatesList();
+
+                //---------------------------------------------------------------------------
+                // check for a new version
+                MenuCommand Cmd = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
+
+                try
+                {
+                    Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                    string currentVersionString = currentVersion.ToString();
+
+                    var checker = new GitHubReleaseChecker();
+
+                    //TODO - fails in SSMS18
+                    bool isNewVersionAvailable = await checker.IsNewVersionAvailableAsync(currentVersionString);
+
+                    Cmd.Visible = isNewVersionAvailable;
+
+                }
+                catch { Cmd.Visible = false; }
+            }
+            catch(Exception ex)
+            {
+
+                // Show a message box to prove we were here
+                VsShellUtilities.ShowMessageBox(
+                    this,
+                    ex.Message,
+                    "Something went wrong... Please report this to info@axial-sql.com!",
+                    OLEMSGICON.OLEMSGICON_WARNING,
+                    OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+
+            }
 
         }
 
@@ -209,59 +224,68 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            //1. Align numeric types to the right
-            CollectionBase gridContainers = GridAccess.GetGridContainers();
-
-            foreach (var gridContainer in gridContainers)
+            try
             {
-                var grid = GridAccess.GetNonPublicField(gridContainer, "m_grid") as GridControl;
-                var gridStorage = grid.GridStorage;
-                var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
 
-                var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
-                if (gridColumns != null)
+
+                //1. Align numeric types to the right
+                CollectionBase gridContainers = GridAccess.GetGridContainers();
+
+                foreach (var gridContainer in gridContainers)
                 {
+                    var grid = GridAccess.GetNonPublicField(gridContainer, "m_grid") as GridControl;
+                    var gridStorage = grid.GridStorage;
+                    var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
 
-                    string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "decimal", "numeric" };
-
-                    List<int> columnsToAlignRight = new List<int> { };
-
-                    for (int c = 0; c < schemaTable.Rows.Count; c++)
+                    var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
+                    if (gridColumns != null)
                     {
-                        int columnOrdinal = (int)schemaTable.Rows[c][1];
-                        var sqlDataTypeName = schemaTable.Rows[c][24];
 
-                        if (typeToAlignRight.Contains(sqlDataTypeName))
-                        {
-                            columnsToAlignRight.Add(columnOrdinal);
-                        }
-                    }
+                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "decimal", "numeric" };
 
-                    foreach (GridColumn gridColumn in gridColumns)
-                    {
-                        
-                        if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
+                        List<int> columnsToAlignRight = new List<int> { };
+
+                        for (int c = 0; c < schemaTable.Rows.Count; c++)
                         {
-                            var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
-                            if (textAlignField != null)
+                            int columnOrdinal = (int)schemaTable.Rows[c][1];
+                            var sqlDataTypeName = schemaTable.Rows[c][24];
+
+                            if (typeToAlignRight.Contains(sqlDataTypeName))
                             {
-                                textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                            }
-                            var textAlignField2 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_myAlign");
-                            if (textAlignField2 != null)
-                            {
-                                textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                            }
-                            var textAlignField3 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_textFormat");
-                            if (textAlignField3 != null)
-                            {
-                                System.Windows.Forms.TextFormatFlags flags = (System.Windows.Forms.TextFormatFlags)GridAccess.GetNonPublicField(gridColumn, "m_textFormat");
-                                textAlignField3.SetValue(gridColumn, flags | System.Windows.Forms.TextFormatFlags.Right);
+                                columnsToAlignRight.Add(columnOrdinal);
                             }
                         }
 
+                        foreach (GridColumn gridColumn in gridColumns)
+                        {
+
+                            if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
+                            {
+                                var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
+                                if (textAlignField != null)
+                                {
+                                    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                                }
+                                var textAlignField2 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_myAlign");
+                                if (textAlignField2 != null)
+                                {
+                                    textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                                }
+                                var textAlignField3 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_textFormat");
+                                if (textAlignField3 != null)
+                                {
+                                    System.Windows.Forms.TextFormatFlags flags = (System.Windows.Forms.TextFormatFlags)GridAccess.GetNonPublicField(gridColumn, "m_textFormat");
+                                    textAlignField3.SetValue(gridColumn, flags | System.Windows.Forms.TextFormatFlags.Right);
+                                }
+                            }
+
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+
             }
 
             try
@@ -309,7 +333,13 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            AddEventToSqlResultConrol_ScriptExecutionCompleted();
+            try
+            {
+                AddEventToSqlResultConrol_ScriptExecutionCompleted();
+            }
+            catch {
+
+            }
 
         }
 
