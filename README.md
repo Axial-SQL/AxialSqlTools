@@ -8,6 +8,8 @@ While I recognize that this extension may overlap with existing tools, both free
 
 I'm committed to keeping this tool free and openly available to the community. While formalized support won't be provided, I welcome feedback and suggestions to continually improve and evolve the tool based on user needs. 
 
+If you find this extension useful and it helps streamline your workflow in SSMS, please consider giving it a :star: star on the repository. Your support not only motivates me but also helps others in the community discover this tool. 
+
 Check it out and let me know what you think!
 
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/main.png?raw=true"/>
