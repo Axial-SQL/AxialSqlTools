@@ -95,23 +95,6 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            string fileLocation = "";
-
-            //-------------------------------------------------------------------
-
-            List<DataTable> dataTables = GridAccess.GetDataTables();
-
-            string folderPath = Path.GetTempPath();
-            string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-            fileLocation = Path.Combine(folderPath, fileName);
-
-            ExcelExport.SaveDataTableToExcel(dataTables, fileLocation);
-
-            var currentConnectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo(inMaster : true);
-
-            //\\-----------------------------------------------------------------
-
-
             // Get the instance number 0 of this tool window. This window is single instance so this instance
             // is actually the only one.
             // The last flag is set to true so that if the tool window does not exists it will be created.
@@ -123,7 +106,7 @@ namespace AxialSqlTools
 
             // pass the file name to the window
             var myWindow = window as ToolWindowGridToEmail;
-            myWindow.InitializeWithParameter(fileLocation, currentConnectionInfo);
+            myWindow.InitializeWithParameter();
 
             IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
 

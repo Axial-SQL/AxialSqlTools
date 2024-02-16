@@ -20,14 +20,16 @@
                 <StackPanel Orientation="Horizontal" Margin="5,5,5,5">
                     <Label Content="From:" Width="80" />
 
-                    <!-- ComboBox declaration -->
                     <ComboBox x:Name="EmailServerOptions"  FontWeight="Bold">
                     </ComboBox>
 
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Margin="5,5,5,5">
-                    <Label Content="Recipient Email Address(es). Use semicolons (;) to separate addresses."/>
-                    <TextBox Height="22" TextWrapping="Wrap" Text="" x:Name="EmailRecipients"/>
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox x:Name="RecipientAddressOptions" SelectionChanged="RecipientAddressOptions_SelectionChanged"/>
+                        <Label Content="Recipient Email Address(es). Use semicolons (;) to separate addresses."/>
+                    </StackPanel>
+                    <TextBox Height="22" TextWrapping="Wrap" Text="" x:Name="EmailRecipients" Width="Auto"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Margin="5,5,5,5">
                     <Label Content="Subject"/>

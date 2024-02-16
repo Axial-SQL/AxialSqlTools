@@ -2,14 +2,18 @@
 {
     using Microsoft.VisualStudio.Shell;
     using System;
+    using System.Collections.Generic;
+    using System.Data;
     using System.Data.SqlClient;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Net;
     using System.Net.Mail;
+    using System.Text;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Documents;
+
 
     /// <summary>
     /// Interaction logic for ToolWindowGridToEmailControl.
@@ -17,13 +21,79 @@
     public partial class ToolWindowGridToEmailControl : UserControl
     {
 
-        public ScriptFactoryAccess.ConnectionInfo connectionInfo;
-        public string exportedFilename;
+        private ScriptFactoryAccess.ConnectionInfo connectionInfo;
+        private string exportedFilename;
+        private List<DataTable> dataTables;
+        private bool gridToHtmlSupported = false;
 
-        public class MailConfigItem
+        private static string ConvertDataTableToHTML(DataTable dataTable)
         {
-            //public int Id { get; set; }
-            //public string Name { get; }
+            StringBuilder html = new StringBuilder();
+
+            html.Append("<table border='1' style='border-collapse: collapse;'>");
+
+            html.Append("<thead style='background-color: grey;'><tr>");
+            foreach (DataColumn column in dataTable.Columns)
+            {
+                string columnName = column.ColumnName;
+                if (column.ExtendedProperties.ContainsKey("columnName"))
+                    columnName = (string)column.ExtendedProperties["columnName"];
+
+                html.AppendFormat("<th style='text-align: left; font-weight: bold; padding: 8px;'>{0}</th>", columnName);
+            }
+            html.Append("</tr></thead>");
+
+            // Add the data rows.
+            html.Append("<tbody>");
+            foreach (DataRow row in dataTable.Rows)
+            {
+                html.Append("<tr>");
+                foreach (DataColumn column in dataTable.Columns)
+                {
+                    // Apply right alignment for numeric values.
+                    string align = column.DataType == typeof(string) ? "left" : "right";
+                    html.AppendFormat("<td style='text-align: {0}; padding: 8px;'>{1}</td>", align, row[column]);
+                }
+                html.Append("</tr>");
+            }
+            html.Append("</tbody>");
+
+            // End with the HTML table end tag.
+            html.Append("</table>");
+
+            return html.ToString();
+        }    
+
+        private string GetEmailBodyHtml()
+        {
+            TextRange textRange = new TextRange(EmailBody.Document.ContentStart, EmailBody.Document.ContentEnd);
+
+            //TODO - find how to convert it to proper HTML
+            var textWithNewLines = textRange.Text;
+
+            var htmlText = textWithNewLines.Replace("\r\n", "<br>");
+            htmlText = htmlText.Replace("\n", "<br>");
+
+            if (gridToHtmlSupported && htmlText.Contains("{GRID}"))
+            {
+                StringBuilder htmlTables = new StringBuilder();
+
+                foreach (DataTable dataTable in dataTables)
+                {
+                    htmlTables.AppendLine(ConvertDataTableToHTML(dataTable));
+                    htmlTables.AppendLine("<hr/>");
+                }
+
+                htmlText = htmlText.Replace("{GRID}", htmlTables.ToString());
+            }
+            else
+                htmlText = htmlText.Replace("{GRID}", "");
+
+            return htmlText;
+        }
+
+        private class MailConfigItem
+        {           
 
             public string EmailAddress { get; set; }
             public string MailProfileName { get; set; }
@@ -68,13 +138,40 @@
         public ToolWindowGridToEmailControl()
         {
             this.InitializeComponent();
-
-           
-
         }
 
         public void PrepareFormParameters()
         {
+
+            //-------------------------------------------------------------------
+            dataTables = GridAccess.GetDataTables();
+
+            gridToHtmlSupported = true;
+            foreach (DataTable dt in dataTables)
+            {
+                if (dt.Rows.Count > 50 || dt.Columns.Count > 10)
+                {
+                    gridToHtmlSupported = false;
+                    break;
+                }
+            }
+
+
+            string folderPath = Path.GetTempPath();
+            string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            exportedFilename = Path.Combine(folderPath, fileName);
+
+            ExcelExport.SaveDataTableToExcel(dataTables, exportedFilename);
+
+            connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo(inMaster: true);
+            //\\-----------------------------------------------------------------
+
+            string myEmail = SettingsManager.GetMyEmail();
+
+            RecipientAddressOptions.Items.Clear();
+            RecipientAddressOptions.Items.Add(myEmail);
+            //TODO - persist/restore common used emails
+
             FullFileNameLabel.Content = exportedFilename;
 
             FileInfo fileInfo = new FileInfo(exportedFilename);
@@ -88,7 +185,9 @@
          
             //-------------------------------------------------------
             string bodyText =
-                $"\n\n\n--------------------------\n" +
+                "\n\n" + 
+                (gridToHtmlSupported ? "{GRID}\n" : "\n") + 
+                $"<hr/>\n" +
                 $"Data Export\n" +
                 $"Server: {connectionInfo.ServerName}\n" +
                 $"Database: {connectionInfo.Database}";
@@ -99,9 +198,10 @@
             EmailBody.Document.Blocks.Clear();
             EmailBody.Document.Blocks.Add(para);
 
+            string emailSubject = $"Data Export | Server: {connectionInfo.ServerName} | Database: {connectionInfo.Database}";
+            EmailSubject.Text = emailSubject;
 
-            // email and SMTP must be set
-            string myEmail = SettingsManager.GetMyEmail();
+            // email and SMTP must be set            
             SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
 
             if (!string.IsNullOrEmpty(myEmail) && smtpSettings.hasBeenConfiguredAndTested)
@@ -161,10 +261,14 @@
 
             foreach (var email in emailArray)
             {
-                if (!IsValidEmail(email))
+                var trimmedEmail = email.Trim();
+                if (!string.IsNullOrEmpty(trimmedEmail))
                 {
-                    // As soon as one invalid email is found, return false
-                    return false;
+                    if (!IsValidEmail(trimmedEmail))
+                    {
+                        // As soon as one invalid email is found, return false
+                        return false;
+                    }
                 }
             }
 
@@ -188,7 +292,7 @@
             }
         }
 
-        static void SendEmailViaSmtp(MailConfigItem mailConfig, string AllEmails, string Subject, 
+        static void SendEmailViaSmtp(MailConfigItem mailConfig, List<String> AllEmails, string Subject, 
                 string Body, string exportedFilename)
         {
 
@@ -213,21 +317,20 @@
                 var emailMessage = new MailMessage()
                 {
                     Subject = Subject,
-                    Body = Body
+                    Body = Body,
+                    IsBodyHtml = true
                 };
 
                 emailMessage.From = new MailAddress(SettingsManager.GetMyEmail());
 
-
-                string[] emailArray = AllEmails.Split(';');
-                foreach (var email in emailArray)
+                foreach (var email in AllEmails)
                     emailMessage.To.Add(email);
 
                 emailMessage.Attachments.Add(new Attachment(exportedFilename));
 
                 smtp.Send(emailMessage);
 
-                MessageBox.Show($"Email to '{AllEmails}' has been sent!", "Done");
+                MessageBox.Show($"Email has been sent!", "Done");
 
                 try
                 {
@@ -245,7 +348,7 @@
 
         }
 
-        static void SendEmailViaDatabaseMail(ScriptFactoryAccess.ConnectionInfo connectionInfo, MailConfigItem mailConfig, 
+        static void SendEmailViaDatabaseMail(ScriptFactoryAccess.ConnectionInfo connectionInfo, MailConfigItem mailConfig,
             string AllEmails, string Subject, string Body, string exportedFilename)
         {
 
@@ -336,14 +439,24 @@
                 return;
             }
 
-            TextRange textRange = new TextRange(EmailBody.Document.ContentStart, EmailBody.Document.ContentEnd);
-            string EmailBodyContent = textRange.Text;
+            string EmailBodyContent = GetEmailBodyHtml();
+
+            List<String> emailClean = new List<string>();
+            string[] emailArray = EmailRecipients.Text.Split(';');
+            foreach (var email in emailArray)
+            {
+                var trimmedEmail = email.Trim();
+                if (!string.IsNullOrEmpty(trimmedEmail))
+                    emailClean.Add(trimmedEmail);
+            }
+            string allEmailsConcatenated = String.Join(";", emailClean);
+
 
             if (mailConfig.isSMTP)
-                SendEmailViaSmtp(mailConfig, EmailRecipients.Text, EmailSubject.Text, EmailBodyContent, exportedFilename);
+                SendEmailViaSmtp(mailConfig, emailClean, EmailSubject.Text, EmailBodyContent, exportedFilename);
 
             else if (mailConfig.isDatabaseMail)
-                SendEmailViaDatabaseMail(connectionInfo, mailConfig, EmailRecipients.Text, EmailSubject.Text, EmailBodyContent, exportedFilename);
+                SendEmailViaDatabaseMail(connectionInfo, mailConfig, allEmailsConcatenated, EmailSubject.Text, EmailBodyContent, exportedFilename);
             
             else {
                 MessageBox.Show("Invalid mail config", "Error");
@@ -352,6 +465,19 @@
             
         }
 
+        private void RecipientAddressOptions_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+            string email = RecipientAddressOptions.SelectedValue as string;
+
+            if (!EmailRecipients.Text.Contains(email))
+            {
+                if (!string.IsNullOrEmpty(EmailRecipients.Text))
+                    EmailRecipients.Text += "; ";
+                EmailRecipients.Text += email;
+            }
+
+        }
 
 
     }
