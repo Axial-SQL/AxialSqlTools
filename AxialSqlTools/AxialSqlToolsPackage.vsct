@@ -130,10 +130,10 @@
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" priority="0x0110" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
-        <Icon guid="guidExportData" id="bmpExportData" />
+        <Icon guid="guidExportGridToTempTable" id="bmpExportGridToTempTable" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
-          <ButtonText>Export Grid as INSERT to New Window</ButtonText>
+          <ButtonText>Export Grid as Temp Table</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridToGoogleSheet" priority="0x0000" type="Button">
@@ -252,6 +252,7 @@
       <Bitmap guid="guidServerHealth" href="Resources\server-health.png" usedList="bmpServerHealth" />
       <Bitmap guid="guidAttention" href="Resources\attention.png" usedList="bmpAttention" />
       <Bitmap guid="guidExportGridToEmail" href="Resources\grid-to-email.png" usedList="bmpExportGridToEmail" />
+      <Bitmap guid="guidExportGridToTempTable" href="Resources\grid-to-temp-table.png" usedList="bmpExportGridToTempTable" />
 	</Bitmaps>
   </Commands>
 
@@ -325,6 +326,9 @@
     </GuidSymbol>
     <GuidSymbol name="guidExportGridToEmail" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d0}">
       <IDSymbol name="bmpExportGridToEmail" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidExportGridToTempTable" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d1}">
+      <IDSymbol name="bmpExportGridToTempTable" value="1" />
     </GuidSymbol>
 
   </Symbols>

@@ -281,9 +281,12 @@ namespace AxialSqlTools
 
                         }
                     }
+
+                    grid.Refresh();
+
                 }
             }
-            catch (Exception ex)
+            catch // (Exception ex)
             {
 
             }

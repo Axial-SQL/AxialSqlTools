@@ -151,6 +151,7 @@
     <Content Include="Resources\data-source-target.png" />
     <Content Include="Resources\export-data.png" />
     <Content Include="Resources\grid-to-email.png" />
+    <Content Include="Resources\grid-to-temp-table.png" />
     <Content Include="Resources\info.png" />
     <Resource Include="Resources\logo.png" />
     <Content Include="Resources\refresh.png" />

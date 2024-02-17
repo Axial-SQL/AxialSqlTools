@@ -348,7 +348,8 @@ namespace AxialSqlTools
                     SELECT CAST(ISNULL(MIN(synchronization_health), 0) AS INT),
                            ISNULL(MAX(DATEDIFF(millisecond, last_commit_time, getdate())), 0) AS maxLatency,
                            ISNULL(SUM(drs.redo_queue_size), 0),
-                           ISNULL(SUM(drs.log_send_queue_size), 0)
+                           ISNULL(SUM(drs.log_send_queue_size), 0),
+                           COUNT(*)
                     FROM sys.dm_hadr_database_replica_states AS drs;
                     ";
 
@@ -357,11 +358,12 @@ namespace AxialSqlTools
                         { if (reader.HasRows)
                             { while (await reader.ReadAsync())
                                 {
-                                    metrics.AlwaysOn_Exists = true;
                                     metrics.AlwaysOn_Health = reader.GetInt32(0);
                                     metrics.AlwaysOn_MaxLatency = reader.GetInt32(1);
                                     metrics.AlwaysOn_TotalRedoQueueSize = reader.GetInt64(2);
                                     metrics.AlwaysOn_TotalLogSentQueueSize = reader.GetInt64(3);
+
+                                    metrics.AlwaysOn_Exists = (reader.GetInt32(4) > 0);
                                 }
                             }
                         }

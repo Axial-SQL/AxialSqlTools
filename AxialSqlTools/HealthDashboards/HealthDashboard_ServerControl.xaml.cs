@@ -62,9 +62,7 @@
         /// </summary>
         public HealthDashboard_ServerControl()
         {
-            this.InitializeComponent();
-
-            
+            this.InitializeComponent();            
         }
 
         public void StartMonitoring()
@@ -331,20 +329,41 @@
 
         }
 
-        private void buttonBlockedRequests_Click(object sender, RoutedEventArgs e)
+        void OpenNewQueryWindowAndExecute(string QueryText)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
             ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connectionInfo.ActiveConnectionInfo, null);
 
             EnvDTE.TextDocument doc = (EnvDTE.TextDocument)ServiceCache.ExtensibilityModel.Application.ActiveDocument.Object(null);
 
-            doc.EndPoint.CreateEditPoint().Insert(QueryLibrary.BlockingRequests);
+            doc.EndPoint.CreateEditPoint().Insert(QueryText);
 
             ServiceCache.ExtensibilityModel.Application.ActiveDocument.DTE.ExecuteCommand("Query.Execute");
-
         }
 
+        private void buttonBlockedRequests_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread(); // helps to suppress build warning
+            OpenNewQueryWindowAndExecute(QueryLibrary.BlockingRequests);
+        }
+
+        private void buttonDatabaseLogInfo_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            OpenNewQueryWindowAndExecute(QueryLibrary.DatabaseLogUsageInfo);
+        }
+
+        private void buttonUserDatabasesInfo_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            OpenNewQueryWindowAndExecute(QueryLibrary.DatabaseInfo);
+        }
+
+        private void buttonAlwaysOn_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            OpenNewQueryWindowAndExecute(QueryLibrary.AlwaysOnStatus);
+        }
     }
 }

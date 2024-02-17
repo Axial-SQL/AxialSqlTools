@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="1000"
+             d:DesignHeight="500" d:DesignWidth="1000"
              Name="MyToolWindow">
     <Grid>
         <StackPanel Orientation="Vertical">
@@ -51,15 +51,15 @@
                         <Label Content="= enc connections =" x:Name="Label_ConnectionCountEnc" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <Label Content="User Databases:" Width="150"/>
+                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonUserDatabasesInfo_Click">User Databases:</Hyperlink></TextBlock>
                         <Label Content="= db status =" x:Name="Label_DatabaseStatus" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Total Data File Size (Gb):" Width="150"/>
                         <Label Content="= data file size =" x:Name="Label_DataFileSizeGb" FontWeight="Bold"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Total Log File Size (Gb):" Width="150"/>
+                    <StackPanel Orientation="Horizontal">                        
+                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonDatabaseLogInfo_Click">Total Log File Size (Gb):</Hyperlink></TextBlock>
                         <Label Content="= log file size =" x:Name="Label_LogFileSizeGb" FontWeight="Bold"/>
                     </StackPanel>
                 </StackPanel>
@@ -91,7 +91,7 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
-                        <Label Content="AlwaysOn:" Width="150"/>
+                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonAlwaysOn_Click">AlwaysOn:</Hyperlink></TextBlock>
                         <Label Content="= health =" x:Name="Label_AlwaysOnHealth" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
