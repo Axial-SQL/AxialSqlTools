@@ -149,7 +149,7 @@
             gridToHtmlSupported = true;
             foreach (DataTable dt in dataTables)
             {
-                if (dt.Rows.Count * dt.Columns.Count < 1000)
+                if (dt.Rows.Count * dt.Columns.Count > 1000)
                 {
                     gridToHtmlSupported = false;
                     break;
@@ -167,10 +167,17 @@
             //\\-----------------------------------------------------------------
 
             string myEmail = SettingsManager.GetMyEmail();
+            CheckBox_CCMyself.IsChecked = true;
 
             RecipientAddressOptions.Items.Clear();
             RecipientAddressOptions.Items.Add(myEmail);
-            //TODO - persist/restore common used emails
+
+            List<SettingsManager.FrequentlyUsedEmail> FrequentEmaiss = SettingsManager.GetFrequentlyUsedEmails();
+            foreach (var FrequentEmais in FrequentEmaiss)
+            {
+                if (FrequentEmais.EmailAddress != myEmail)
+                    RecipientAddressOptions.Items.Add(FrequentEmais.EmailAddress);
+            }
 
             FullFileNameLabel.Content = exportedFilename;
 
@@ -292,7 +299,7 @@
             }
         }
 
-        static void SendEmailViaSmtp(MailConfigItem mailConfig, List<String> AllEmails, string Subject, 
+        static bool SendEmailViaSmtp(MailConfigItem mailConfig, List<String> AllEmails, string ccEmail, string Subject, 
                 string Body, string exportedFilename)
         {
 
@@ -326,6 +333,9 @@
                 foreach (var email in AllEmails)
                     emailMessage.To.Add(email);
 
+                if (!string.IsNullOrEmpty(ccEmail))
+                    emailMessage.CC.Add(ccEmail);
+
                 emailMessage.Attachments.Add(new Attachment(exportedFilename));
 
                 smtp.Send(emailMessage);
@@ -339,6 +349,8 @@
                 catch (Exception exFile)
                 { }
 
+                return true;
+
             }
             catch (Exception ex)
             {
@@ -346,10 +358,12 @@
                 MessageBox.Show(msg, "Something went wrong");
             }
 
+            return false;
+
         }
 
-        static void SendEmailViaDatabaseMail(ScriptFactoryAccess.ConnectionInfo connectionInfo, MailConfigItem mailConfig,
-            string AllEmails, string Subject, string Body, string exportedFilename)
+        static bool SendEmailViaDatabaseMail(ScriptFactoryAccess.ConnectionInfo connectionInfo, MailConfigItem mailConfig,
+            string AllEmails, string ccEmail, string Subject, string Body, string exportedFilename)
         {
 
             try
@@ -369,13 +383,14 @@
                     DECLARE @mailitem_id AS INT;
 
                     EXECUTE [dbo].[sp_send_dbmail] 
-                        @profile_name = @ProfileName,
+                        @profile_name       = @ProfileName,
                         --I don't know how service broker works and if it respects open transaction ...
-                        @recipients     = @Recipient, 
-                        @subject        = @Subject, 
-                        @body           = @Body, 
-                        @body_format    = 'HTML', 
-                        @mailitem_id    = @mailitem_id OUTPUT;
+                        @recipients         = @Recipient, 
+                        @copy_recipients    = @RecipientCC,
+                        @subject            = @Subject, 
+                        @body               = @Body, 
+                        @body_format        = 'HTML', 
+                        @mailitem_id        = @mailitem_id OUTPUT;
 
                     INSERT INTO sysmail_attachments (mailitem_id, filename, filesize, attachment)
                     SELECT @mailitem_id,
@@ -398,6 +413,7 @@
 
                         command.Parameters.AddWithValue("ProfileName",  mailConfig.MailProfileName);
                         command.Parameters.AddWithValue("Recipient",    AllEmails);
+                        command.Parameters.AddWithValue("RecipientCC",  ccEmail);
                         command.Parameters.AddWithValue("Subject",      Subject);
                         command.Parameters.AddWithValue("Body",         Body);
                         command.Parameters.AddWithValue("FileSize",     fileInfo.Length);
@@ -409,6 +425,8 @@
                     }
 
                     MessageBox.Show("Email has been queued via Database Mail!", "Done");
+
+                    return true;
                 }
 
             }
@@ -417,6 +435,8 @@
                 string msg = $"Error message: {ex.Message} \nInnerException: {ex.InnerException}";
                 MessageBox.Show(msg, "Something went wrong");
             }
+
+            return false;
         }
 
 
@@ -451,18 +471,26 @@
             }
             string allEmailsConcatenated = String.Join(";", emailClean);
 
+            string ccEmail = "";
+            if (CheckBox_CCMyself.IsChecked == true)
+                ccEmail = SettingsManager.GetMyEmail();
+
+            bool success = false;
 
             if (mailConfig.isSMTP)
-                SendEmailViaSmtp(mailConfig, emailClean, EmailSubject.Text, EmailBodyContent, exportedFilename);
+                success = SendEmailViaSmtp(mailConfig, emailClean, ccEmail, EmailSubject.Text, EmailBodyContent, exportedFilename);
 
             else if (mailConfig.isDatabaseMail)
-                SendEmailViaDatabaseMail(connectionInfo, mailConfig, allEmailsConcatenated, EmailSubject.Text, EmailBodyContent, exportedFilename);
+                success = SendEmailViaDatabaseMail(connectionInfo, mailConfig, allEmailsConcatenated, ccEmail, EmailSubject.Text, EmailBodyContent, exportedFilename);
             
             else {
                 MessageBox.Show("Invalid mail config", "Error");
             }
 
-            
+            if (success)
+                SettingsManager.SaveFrequentlyUsedEmails(emailClean);
+
+
         }
 
         private void RecipientAddressOptions_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -470,11 +498,14 @@
 
             string email = RecipientAddressOptions.SelectedValue as string;
 
-            if (!EmailRecipients.Text.Contains(email))
+            if (email != null)
             {
-                if (!string.IsNullOrEmpty(EmailRecipients.Text))
-                    EmailRecipients.Text += "; ";
-                EmailRecipients.Text += email;
+                if (!EmailRecipients.Text.Contains(email))
+                {
+                    if (!string.IsNullOrEmpty(EmailRecipients.Text))
+                        EmailRecipients.Text += "; ";
+                    EmailRecipients.Text += email;
+                }
             }
 
         }

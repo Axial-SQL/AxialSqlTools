@@ -22,7 +22,7 @@
 
                     <ComboBox x:Name="EmailServerOptions"  FontWeight="Bold">
                     </ComboBox>
-
+                    <CheckBox Name="CheckBox_CCMyself" VerticalAlignment="Center" HorizontalAlignment="Center" Content="CC myself" Margin="10,0,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Margin="5,5,5,5">
                     <StackPanel Orientation="Horizontal">

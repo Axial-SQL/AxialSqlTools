@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace AxialSqlTools
 {
@@ -167,6 +168,18 @@ OPTION (RECOMPILE);
             public bool EnableSsl;
         }
 
+        public class FrequentlyUsedEmail
+        {
+            public string EmailAddress;
+            public int UsedTimes;
+
+            public FrequentlyUsedEmail(string emailAddress, int usedTimes)
+            {
+                EmailAddress = emailAddress;
+                UsedTimes = usedTimes;
+            }
+        }
+
         private static byte[] Protect(byte[] data)
         {
             try
@@ -314,6 +327,56 @@ OPTION (RECOMPILE);
         public static bool SaveTemplatesFolder(string folder)
         {
             return SaveRegisterValue("ScriptTemplatesFolder", folder);
+        }
+
+        public static List<FrequentlyUsedEmail> GetFrequentlyUsedEmails()
+        {
+
+            try
+            {
+
+                string JsonString = GetRegisterValue("FrequentlyUsedEmails");
+                var deserializedEmailList = JsonConvert.DeserializeObject<List<FrequentlyUsedEmail>>(JsonString);
+
+                if (deserializedEmailList == null)
+                    return new List<FrequentlyUsedEmail>();
+
+                return deserializedEmailList;
+
+            } catch {}
+
+            return new List<FrequentlyUsedEmail>();
+
+        }
+
+        public static void SaveFrequentlyUsedEmails(List<string> UsedEmails)
+        {
+
+            List<FrequentlyUsedEmail> existingEmails = GetFrequentlyUsedEmails();
+
+            foreach (var email in UsedEmails)
+            {
+                var existingEmail = existingEmails.FirstOrDefault(e => e.EmailAddress == email);
+                if (existingEmail != null)
+                {
+                    existingEmail.UsedTimes++;
+                }
+                else
+                {
+                    existingEmails.Add(new FrequentlyUsedEmail(email, 1));
+                }
+            }
+
+            existingEmails.Sort((email1, email2) => email2.UsedTimes.CompareTo(email1.UsedTimes));
+
+            // Keep only the top 30 most frequently used emails
+            if (existingEmails.Count > 30)
+                existingEmails = existingEmails.Take(30).ToList();
+
+            string json = JsonConvert.SerializeObject(existingEmails);
+
+            SaveRegisterValue("FrequentlyUsedEmails", json);
+
         }
 
     }
