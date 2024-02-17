@@ -149,7 +149,7 @@
             gridToHtmlSupported = true;
             foreach (DataTable dt in dataTables)
             {
-                if (dt.Rows.Count > 50 || dt.Columns.Count > 10)
+                if (dt.Rows.Count * dt.Columns.Count < 1000)
                 {
                     gridToHtmlSupported = false;
                     break;
