@@ -182,8 +182,12 @@ namespace AxialSqlTools
 
                 }
                 catch { Cmd.Visible = false; }
+
+                
+
+
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
 
                 // Show a message box to prove we were here
@@ -199,6 +203,15 @@ namespace AxialSqlTools
 
         }
 
+        // TODO - might be needed for OxyPlot if I end up using it
+        //private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        //{
+        //    // add this into main module -> AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+
+        //    if (args.Name.Contains("OxyPlot"))
+        //        return AppDomain.CurrentDomain.Load(args.Name);
+        //    else return null; 
+        //}
         //----------------
 
         public static void AddEventToSqlResultConrol_ScriptExecutionCompleted()
