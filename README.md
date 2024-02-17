@@ -27,9 +27,9 @@ So far we've developed these features:
   
 - **Quick Query Templates**: Access a collection of query templates for common tasks, saving time and effort on routine queries.
   
-- **Export Grid to Excel**: Export result from the grid view directly into Excel file for further analysis or reporting.
+- [**Export Grid to Excel**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-To-Excel): Quickly export results from the grid view directly into Excel file.
   
-- **Export Grid to Excel and Send Email**: Similar to the previous feature, but with the added ability to send the file via email.
+- **Export Grid to Email**: Similar to the previous feature, but with the added ability to send the file via email.
   
 - [**Export Grid as Inserts**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-grid-results-as-a-temp-table): Convert the grid result(s) into temp table with insert statements.
   
