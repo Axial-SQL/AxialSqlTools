@@ -29,9 +29,9 @@ So far we've developed these features:
   
 - [**Export Grid to Excel**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-To-Excel): Quickly export results from the grid view directly into Excel file.
   
-- **Export Grid to Email**: Similar to the previous feature, but with the added ability to send the file via email.
+- [**Export Grid to Email**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-to-Email): Similar to the previous feature, but with the added ability to send the file via email directly from SSMS.
   
-- [**Export Grid as Inserts**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-grid-results-as-a-temp-table): Convert the grid result(s) into temp table with insert statements.
+- [**Export Grid as Temp Table**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-grid-results-as-a-temp-table): Convert the grid result(s) into temp table with insert statements.
   
 - **Script Selected Object Definition**: Quickly generate scripts for the definition of selected objects directly from the selected query text.
   
