@@ -20,7 +20,7 @@ SELECT
        i.HasClusteredIndex,
        i.PKisClustered,
        t.is_replicated as IsReplicated,
-       COALESCE (I.IndexCount, 0) AS IndexCount,
+       COALESCE (i.IndexCount, 0) AS IndexCount,
        t.create_date
 FROM sys.tables AS t
      LEFT OUTER JOIN
@@ -33,7 +33,7 @@ FROM sys.tables AS t
       FROM sys.indexes AS si
       GROUP BY si.object_id) AS i
      ON t.object_id = i.object_id
-WHERE t.is_ms_shipped = 0;
+WHERE (t.is_ms_shipped = 0 OR DB_NAME() = 'msdb');
 
 DECLARE @TableSizes AS TABLE (ObjectId INT, UsedSpaceMB NUMERIC (36, 2), UsedSpaceMB_Compressed NUMERIC (36, 2), UsedSpaceMB_LOB NUMERIC (36, 2), UsedSpaceMB_CS NUMERIC (36, 2), INDEX IDX CLUSTERED (ObjectId));
 INSERT INTO @TableSizes
@@ -67,30 +67,30 @@ GROUP BY ObjectID;
 SELECT DB_NAME() AS DatabaseName,
        ti.SchemaName,
        ti.TableName,
-       FORMAT(RS.RowsCount, 'N0') AS RowsCount,
-       FORMAT(TS.UsedSpaceMB, 'N0') AS UsedSpaceMB,
-       -- FORMAT(TS.UsedSpaceMB_LOB, 'N0') AS UsedSpaceMB_LOB,
-       -- FORMAT(TS.UsedSpaceMB_CS, 'N0') AS UsedSpaceMB_CS,
-       FORMAT(TS.UsedSpaceMB_Compressed, 'N0') AS UsedSpaceMB_ZIP,
-       RS.PartitionCount,
-       TI.IndexCount,
-       TI.HasPK,
-       TI.HasClusteredIndex,
-       TI.PKisClustered,
-       TI.IsReplicated,
-       L.LastWrite,
-       L.LastRead,
-       L.TotalReads,
-       L.TotalWrites,
+       FORMAT(rs.RowsCount, 'N0') AS RowsCount,
+       FORMAT(ts.UsedSpaceMB, 'N0') AS UsedSpaceMB,
+       -- FORMAT(ts.UsedSpaceMB_LOB, 'N0') AS UsedSpaceMB_LOB,
+       -- FORMAT(ts.UsedSpaceMB_CS, 'N0') AS UsedSpaceMB_CS,
+       FORMAT(ts.UsedSpaceMB_Compressed, 'N0') AS UsedSpaceMB_ZIP,
+       rs.PartitionCount,
+       ti.IndexCount,
+       ti.HasPK,
+       ti.HasClusteredIndex,
+       ti.PKisClustered,
+       ti.IsReplicated,
+       l.LastWrite,
+       l.LastRead,
+       l.TotalReads,
+       l.TotalWrites,
        ti.CreateDate,
-       RS.UnusedPagesPercent
+       rs.UnusedPagesPercent
 FROM @TableInfo AS ti
-	LEFT JOIN @RowsStatistics AS RS ON RS.ObjectId = TI.ObjectId
-	LEFT JOIN @LastReadWrites AS L ON L.ObjectId = RS.ObjectId
-	LEFT JOIN @TableSizes AS TS ON TS.ObjectId = TI.ObjectId
+	LEFT JOIN @RowsStatistics AS rs ON rs.ObjectId = ti.ObjectId
+	LEFT JOIN @LastReadWrites AS l ON l.ObjectId = rs.ObjectId
+	LEFT JOIN @TableSizes AS ts ON ts.ObjectId = ti.ObjectId
 WHERE 1 = 1
      --AND ti.TableName IN ('','')
      --AND ti.SchemaName = ''
-     --AND RS.RowsCount > 0
-ORDER BY TS.UsedSpaceMB DESC;
--- ORDER BY TS.UsedSpaceMB - TS.UsedSpaceMB_LOB DESC;
+     --AND rs.RowsCount > 0
+ORDER BY ts.UsedSpaceMB DESC;
+-- ORDER BY ts.UsedSpaceMB - ts.UsedSpaceMB_LOB DESC;
