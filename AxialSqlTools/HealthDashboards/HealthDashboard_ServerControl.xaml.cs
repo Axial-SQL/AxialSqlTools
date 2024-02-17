@@ -12,6 +12,7 @@
     using System.Windows.Media; 
     using System.Windows.Controls;
     using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
+    using System.Net.Http;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
@@ -142,6 +143,16 @@
             bool ServerHasIssues = false;
 
             LabelInternalException.Content = "";
+
+            if (metrics.spWhoIsActiveExists)
+            {
+                LinkRunSpWhoIsActive.Visibility = Visibility.Visible;
+                LinkDeploySpWhoIsActive.Visibility = Visibility.Collapsed;
+            } else
+            {
+                LinkRunSpWhoIsActive.Visibility = Visibility.Collapsed;
+                LinkDeploySpWhoIsActive.Visibility = Visibility.Visible;
+            }            
 
             Label_ServerName.Content = metrics.ServerName;
             Label_ServiceName.Content = metrics.ServiceName;
@@ -329,7 +340,7 @@
 
         }
 
-        void OpenNewQueryWindowAndExecute(string QueryText)
+        void OpenNewQueryWindowAndExecute(string QueryText, bool Execute = true)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
@@ -339,7 +350,8 @@
 
             doc.EndPoint.CreateEditPoint().Insert(QueryText);
 
-            ServiceCache.ExtensibilityModel.Application.ActiveDocument.DTE.ExecuteCommand("Query.Execute");
+            if (Execute)
+                ServiceCache.ExtensibilityModel.Application.ActiveDocument.DTE.ExecuteCommand("Query.Execute");
         }
 
         private void buttonBlockedRequests_Click(object sender, RoutedEventArgs e)
@@ -364,6 +376,39 @@
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             OpenNewQueryWindowAndExecute(QueryLibrary.AlwaysOnStatus);
+        }
+
+        private void buttonRunSpWhoIsActive_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            OpenNewQueryWindowAndExecute(QueryLibrary.spWhoIsActive);
+        }
+
+        private async void buttonDeploySpWhoIsActive_Click(object sender, RoutedEventArgs e)
+        {
+
+            string FullCode = "USE [master]\nGO\n";
+            bool error = false;
+
+            // sp_WhoIsActive source
+            string url = "https://raw.githubusercontent.com/amachanic/sp_whoisactive/master/sp_WhoIsActive.sql";
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    string content = await client.GetStringAsync(url);
+
+                    FullCode += content;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "An error occurred");
+                error = true;
+            }
+
+            if (!error)
+                OpenNewQueryWindowAndExecute(FullCode, Execute: false);
         }
     }
 }

@@ -65,6 +65,15 @@
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
+                        <Label Content="See Current Activity:" Width="150"/>
+                        <TextBlock Padding="5" Width="200" VerticalAlignment="Center" x:Name="LinkRunSpWhoIsActive"  Visibility="Collapsed">
+                            <Hyperlink  Click="buttonRunSpWhoIsActive_Click">Run [dbo].[sp_WhoIsActive]</Hyperlink>
+                        </TextBlock>
+                        <TextBlock Padding="5" Width="200" VerticalAlignment="Center" x:Name="LinkDeploySpWhoIsActive" Visibility="Collapsed">
+                            <Hyperlink Click="buttonDeploySpWhoIsActive_Click">Deploy [dbo].[sp_WhoIsActive] first</Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
                         <Label Content="Memory:" Width="150"/>
                         <Label Content="= used / total memory =" x:Name="Label_MemoryInfo" FontWeight="Bold"/>
                     </StackPanel>

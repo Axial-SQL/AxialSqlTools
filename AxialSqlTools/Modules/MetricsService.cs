@@ -54,6 +54,8 @@ namespace AxialSqlTools
         public long AlwaysOn_TotalRedoQueueSize { get; set; }
         public long AlwaysOn_TotalLogSentQueueSize { get; set; }
 
+        public bool spWhoIsActiveExists { get; set; }
+
         public int ServerResponseTimeMs { get; set; }
         public bool Completed { get; set; }
         public bool HasException { get; set; }
@@ -89,7 +91,8 @@ namespace AxialSqlTools
                            @@SERVICENAME AS ServiceName,
                            DATEADD(hh, DATEDIFF(hh, GETDATE(), GETUTCDATE()), sqlserver_start_time) as UtcStartTime,
                            @@VERSION,
-                           SERVERPROPERTY('edition')
+                           SERVERPROPERTY('edition'),
+                           CASE WHEN OBJECT_ID('dbo.sp_WhoIsActive') IS NULL THEN 0 ELSE 1 END AS spWhoIsActiveExists
                     FROM sys.dm_os_sys_info;
                     ";
 
@@ -109,6 +112,8 @@ namespace AxialSqlTools
                                         metrics.ServerVersion = metrics.ServerVersion.Substring(0, index).Trim().Replace("\r", "").Replace("\n", "");
 
                                     metrics.ServerVersion += " | " + reader.GetString(4);
+
+                                    metrics.spWhoIsActiveExists = (reader.GetInt32(5) == 1);
 
                                 }
                             }

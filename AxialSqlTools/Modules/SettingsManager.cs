@@ -144,10 +144,19 @@ OPTION (RECOMPILE);
 ";
             #endregion
 
+            #region m_spWhoIsActive
+            private const string m_spWhoIsActive = @"EXEC sp_WhoIsActive @show_sleeping_spids = 0
+	--,@get_plans = 1
+	--,@get_outer_command = 1
+	--,@get_locks = 1
+	--,@find_block_leaders = 1;";
+            #endregion
+
             public string BlockingRequests;
             public string DatabaseLogUsageInfo;
             public string DatabaseInfo;
             public string AlwaysOnStatus;
+            public string spWhoIsActive;
 
             public HealthDashboardServerQueryTexts()
             {
@@ -155,6 +164,7 @@ OPTION (RECOMPILE);
                 DatabaseLogUsageInfo = m_DatabaseLogUsageInfo;
                 DatabaseInfo = m_DatabaseInfo;
                 AlwaysOnStatus = m_AlwaysOnStatus;
+                spWhoIsActive = m_spWhoIsActive;
             }
         }
 
