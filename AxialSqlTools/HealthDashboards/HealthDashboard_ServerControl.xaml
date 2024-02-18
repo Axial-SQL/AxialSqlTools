@@ -10,11 +10,12 @@
     <Grid>
         <StackPanel Orientation="Vertical">
             <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}">
-                <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Health Dashboard | Server</TextBlock>
+                <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Server Health Dashboard</TextBlock>
                 <Label  Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" Content="(have not been updated yet)" x:Name="LastUpdateLabel"/>
+                <CheckBox Margin="5" x:Name="CheckBox_StopBlinking" Content="Be quiet" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
-                <CheckBox Margin="5" x:Name="CheckBox_StopBlinking" Content="Be quiet"/>
+                
             </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <Label Content="Version:" Width="150"/>
@@ -78,7 +79,7 @@
                         <Label Content="= used / total memory =" x:Name="Label_MemoryInfo" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <Label Content="PLE (sec):" Width="150"/>
+                        <Label Content="Page Life Expectancy:" Width="150"/>
                         <Label Content="= PLE =" x:Name="Label_PLE" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
