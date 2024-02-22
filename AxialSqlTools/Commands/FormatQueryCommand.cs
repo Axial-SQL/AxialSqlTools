@@ -153,6 +153,94 @@ namespace AxialSqlTools
 
         }
 
+        class OwnVisitor : TSqlFragmentVisitor
+        {
+            public List<QualifiedJoin> QualifiedJoins = new List<QualifiedJoin>();
+            public List<UnqualifiedJoin> UnqualifiedJoins = new List<UnqualifiedJoin>();
+            public List<SearchedCaseExpression> CaseExpressions = new List<SearchedCaseExpression>();
+
+            public override void ExplicitVisit(QualifiedJoin node)
+            {                
+                base.ExplicitVisit(node);
+
+                QualifiedJoins.Add(node);
+
+                // This is the source code from the Microsoft dll
+                //GenerateFragmentIfNotNull(node.FirstTableReference);
+
+                //GenerateNewLineOrSpace(_options.NewLineBeforeJoinClause);
+
+                //GenerateQualifiedJoinType(node.QualifiedJoinType);
+
+                //if (node.JoinHint != JoinHint.None)
+                //{
+                //    GenerateSpace();
+                //    JoinHintHelper.Instance.GenerateSourceForOption(_writer, node.JoinHint);
+                //}
+
+                //GenerateSpaceAndKeyword(TSqlTokenType.Join);
+
+                ////MarkClauseBodyAlignmentWhenNecessary(_options.NewlineBeforeJoinClause);
+
+                //NewLine(); 
+                //GenerateFragmentIfNotNull(node.SecondTableReference);
+
+                //NewLine();
+                //GenerateKeyword(TSqlTokenType.On);
+
+                //GenerateSpaceAndFragmentIfNotNull(node.SearchCondition);
+
+            }        
+
+            public override void ExplicitVisit(UnqualifiedJoin node)
+            {
+                base.ExplicitVisit(node);
+
+                UnqualifiedJoins.Add(node);
+
+                // This is the source code from the Microsoft dll
+                //GenerateFragmentIfNotNull(node.FirstTableReference);
+
+                //List<TokenGenerator> generators = GetValueForEnumKey(_unqualifiedJoinTypeGenerators, node.UnqualifiedJoinType);
+                //if (generators != null)
+                //{
+                //    GenerateSpace();
+                //    GenerateTokenList(generators);
+                //}
+
+                //GenerateSpaceAndFragmentIfNotNull(node.SecondTableReference);
+            }
+
+            public override void ExplicitVisit(SearchedCaseExpression node)
+            {
+                base.ExplicitVisit(node);
+
+                CaseExpressions.Add(node);
+
+                // This is the source code from the Microsoft dll
+                //GenerateKeyword(TSqlTokenType.Case);
+
+                //GenerateSpaceAndFragmentIfNotNull(node.InputExpression);
+
+                //foreach (SimpleWhenClause when in node.WhenClauses)
+                //{
+                //    GenerateSpaceAndFragmentIfNotNull(when);
+                //}
+
+                //if (node.ElseExpression != null)
+                //{
+                //    GenerateSpaceAndKeyword(TSqlTokenType.Else);
+                //    GenerateSpaceAndFragmentIfNotNull(node.ElseExpression);
+                //}
+
+                //GenerateSpaceAndKeyword(TSqlTokenType.End);
+
+                //GenerateSpaceAndCollation(node.Collation);
+            }
+
+        }
+
+
         private string FormatCode(string oldCode)
         {
             string resultCode = "";
@@ -180,46 +268,256 @@ namespace AxialSqlTools
             gen.Options.SqlVersion = SqlVersion.Sql160; //TODO - try to get from current connection
             gen.GenerateScript(result, out resultCode);
 
+            if (SettingsManager.GetApplyAdditionalCodeFormatting())
+            {
+                try
+                {
+                    resultCode = ApplySpecialFormat(resultCode, sqlParser);
+                }
+                catch
+                {
+                    //TODO - probably need to display the failure somehow
+                }
+            }
 
-            //TODO
-            //special case #1 - remove new line after JOIN
-            // ?
-            ////-------------------------------------------
-            //// https://gist.github.com/philippwiddra/2ee47ac4f8a0248c3a0e
-            //// I can manually manipulate the result, but it is too complex :(
-            //string WhiteSpace = "";
-            //for (int i = 1; i < gen.Options.IndentationSize; i++)
-            //    WhiteSpace += " ";
-
-            //var Tokens = gen.GenerateTokens(result);
-
-            //StringBuilder sqlText = new StringBuilder();
-            //foreach (var Token in Tokens)
-            //{
-            //    if (Token.TokenType == TSqlTokenType.Join)
-            //    { }
-            //    // One more Tab after ON. Mostly good for JOINs, but won't hur other statements 
-            //    else if (Token.TokenType == TSqlTokenType.On) 
-            //    {
-            //        sqlText.Append(WhiteSpace);
-            //    }
-            //    // One more Tab after ON. Mostly good for JOINs, but won't hur other statements 
-            //    else if (Token.TokenType == TSqlTokenType.On)
-            //    {
-            //        sqlText.Append(WhiteSpace);
-            //    }
-
-            //    sqlText.Append(Token.Text);
-            //}
-
-            //resultCode = sqlText.ToString();
-
-
-
-            return resultCode;            
+            return resultCode;           
 
         }
 
+
+        private string ApplySpecialFormat(string oldCode, TSql160Parser sqlParser)
+        {
+            IList<ParseError> parseErrors = new List<ParseError>();
+
+            TSqlFragment sqlFragment = sqlParser.Parse(new StringReader(oldCode), out parseErrors);
+
+            OwnVisitor visitor = new OwnVisitor();
+            sqlFragment.Accept(visitor);
+
+            // visitor.TokenJoinLocations.Sort((a, b) => b.CompareTo(a));
+
+            // special case #1 - remove new line after JOIN
+            foreach (QualifiedJoin QJoin in visitor.QualifiedJoins)
+            {
+
+                int NextTokenNumber = QJoin.SecondTableReference.FirstTokenIndex;
+
+                while (true)
+                {
+
+                    TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[NextTokenNumber - 1];
+
+                    if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
+                        if (NextToken.Text == "\r\n")
+                            NextToken.Text = " ";
+                        else if (NextToken.Text.Trim() == "")
+                            NextToken.Text = "";
+
+                    if (NextToken.TokenType == TSqlTokenType.Join)
+                        break;
+
+                    NextTokenNumber -= 1;
+
+                    //just in case
+                    if (NextTokenNumber < 0)
+                        break;
+
+                }
+
+            }
+
+            //special case #2 - JOIN .. ON -> add a tab before ON
+            foreach (QualifiedJoin QJoin in visitor.QualifiedJoins)
+            {
+
+                int NextTokenNumber = QJoin.SearchCondition.FirstTokenIndex;
+
+                while (true)
+                {
+
+                    TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[NextTokenNumber];
+
+                    if (NextToken.TokenType == TSqlTokenType.On)
+                    { // replace previos white-space with the new line and a number of spaces for offset
+
+                        TSqlParserToken PreviousToken = sqlFragment.ScriptTokenStream[NextTokenNumber - 1];
+                        if (PreviousToken.TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            PreviousToken.Text = PreviousToken.Text + new string(' ', 4);
+                            break;
+                        }
+
+                    }
+
+                    NextTokenNumber -= 1;
+
+                    //just in case
+                    if (NextTokenNumber < 0)
+                        break;
+
+                }
+            }
+
+            //special case #3 - CROSS should be on the new line
+            foreach (UnqualifiedJoin CrossJoin in visitor.UnqualifiedJoins)
+            {
+                int NextTokenNumber = CrossJoin.SecondTableReference.FirstTokenIndex;
+
+                while (true)
+                {
+
+                    TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[NextTokenNumber];
+
+                    if (NextToken.TokenType == TSqlTokenType.Cross)
+                    { // replace previos white-space with the new line and a number of spaces for offset
+
+                        TSqlParserToken PreviousToken = sqlFragment.ScriptTokenStream[NextTokenNumber - 1];
+                        if (PreviousToken.TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            PreviousToken.Text = "\r\n" + new string(' ', CrossJoin.StartColumn - 1);
+                            break;
+                        }
+
+                    }
+
+                    NextTokenNumber -= 1;
+
+                    //just in case
+                    if (NextTokenNumber < 0)
+                        break;
+
+                }
+
+            }
+
+            //special case #4 - CASE <new line + tab> WHEN <new line + tab + tab> THEN <new line + tab> ELSE <new line> END
+            foreach (SearchedCaseExpression CaseExpr in visitor.CaseExpressions)
+            {
+                // add new line and spaces+4 before WHEN
+                foreach (WhenClause WC in CaseExpr.WhenClauses)
+                {
+                    int FirstTokenNumber = WC.FirstTokenIndex;
+
+                    while (true)
+                    {
+                        TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[FirstTokenNumber];
+
+                        if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
+                        { // replace previos white-space with the new line and a number of spaces for offset
+                            NextToken.Text = "\r\n" + new string(' ', CaseExpr.StartColumn + 4);
+                            break;
+                        }
+
+                        FirstTokenNumber -= 1;
+
+                        //just in case
+                        if (FirstTokenNumber < 0)
+                            break;
+                    }
+                }
+
+                // add new line and spaces+8 before THEN
+                foreach (WhenClause WC in CaseExpr.WhenClauses)
+                {
+                    int FirstTokenNumber = WC.ThenExpression.FirstTokenIndex - 3;
+
+                    int ThenIdent = 0;
+
+                    while (true)
+                    {
+                        TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[FirstTokenNumber];
+
+                        if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
+                        { // replace previos white-space with the new line and a number of spaces for offset
+                            NextToken.Text = "\r\n" + new string(' ', CaseExpr.StartColumn + 8);
+
+                            ThenIdent = CaseExpr.StartColumn + 8;
+
+                            break;
+                        }
+
+                        FirstTokenNumber -= 1;
+
+                        //just in case
+                        if (FirstTokenNumber < 0)
+                            break;
+                    }
+
+                    //multi-line expression inside THEN might be too far to the right, more it left
+                    if (ThenIdent > 0 && ThenIdent != WC.ThenExpression.StartColumn)
+                    {
+
+                        var FirshThenToken = WC.ThenExpression.FirstTokenIndex;
+
+                        while (FirshThenToken < WC.ThenExpression.LastTokenIndex)
+                        {
+                            TSqlParserToken NextThenToken = sqlFragment.ScriptTokenStream[FirshThenToken];
+
+                            if (NextThenToken.TokenType == TSqlTokenType.WhiteSpace && NextThenToken.Column == 1)
+                            {
+                                NextThenToken.Text = new string(' ', ThenIdent + 5);
+                            }
+
+                            FirshThenToken += 1;
+                        }
+
+                    }
+                }
+
+                // add new line and spaces+4 before ELSE
+                if (CaseExpr.ElseExpression != null)
+                {
+                    int FirstTokenNumber = CaseExpr.ElseExpression.FirstTokenIndex - 3;
+                    while (true)
+                    {
+                        TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[FirstTokenNumber];
+
+                        if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
+                        { // replace previos white-space with the new line and a number of spaces for offset
+                            NextToken.Text = "\r\n" + new string(' ', CaseExpr.StartColumn + 4);
+                            break;
+                        }
+
+                        FirstTokenNumber -= 1;
+
+                        //just in case
+                        if (FirstTokenNumber < 0)
+                            break;
+                    }
+                }
+
+                // add new line and spaces before END
+                int LastTokenNumber = CaseExpr.LastTokenIndex;
+
+                while (true)
+                {
+
+                    TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[LastTokenNumber];
+
+                    if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
+                    { // replace previos white-space with the new line and a number of spaces for offset
+                        NextToken.Text = "\r\n" + new string(' ', CaseExpr.StartColumn - 1);
+                        break;
+                    }
+
+                    LastTokenNumber -= 1;
+
+                    //just in case
+                    if (LastTokenNumber < 0)
+                        break;
+                }
+
+            }
+            
+            // return full recompiled result
+            StringBuilder sqlText = new StringBuilder();
+            foreach (var Token in sqlFragment.ScriptTokenStream)
+            {
+                sqlText.Append(Token.Text);
+            }
+
+            return sqlText.ToString();
+        }
 
     }
 }

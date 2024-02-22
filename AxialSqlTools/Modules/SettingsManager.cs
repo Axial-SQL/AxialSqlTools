@@ -389,5 +389,37 @@ OPTION (RECOMPILE);
 
         }
 
+        public static bool GetApplyAdditionalCodeFormatting()
+        {
+            bool result = false;
+            bool success = bool.TryParse(GetRegisterValue("ApplyAdditionalCodeFormat"), out result);            
+            return result;
+        }
+        public static bool SaveApplyAdditionalCodeFormatting(bool ApplyAdditionalCodeFormatting)
+        {
+            return SaveRegisterValue("ApplyAdditionalCodeFormat", ApplyAdditionalCodeFormatting.ToString());
+        }
+
+        public static string GetOpenAiApiKey()
+        {
+            string key = "";
+            try
+            {
+                string encKey = GetRegisterValue("OpenAI_ApiKeyEnc");
+                byte[] decryptedData = Unprotect(Convert.FromBase64String(encKey));
+                key = Encoding.UTF8.GetString(decryptedData);
+            }
+            catch
+            {
+            }
+
+            return key;
+        }
+        public static bool SaveOpenAiApiKey(string ApiKey)
+        {
+            byte[] encKey = Protect(Encoding.UTF8.GetBytes(ApiKey));
+            return SaveRegisterValue("OpenAI_ApiKeyEnc", Convert.ToBase64String(encKey));
+        }
+
     }
 }

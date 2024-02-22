@@ -25,6 +25,12 @@
                 </StackPanel>
 
             </GroupBox>
+            <GroupBox Header="Code format">
+                <StackPanel Orientation="Horizontal" Margin="5">
+                    <CheckBox x:Name="ApplyCodeFormat" Content="Apply additional format on the parser output" VerticalAlignment="Center"/>
+                    <Button Margin="10" Content="Save" x:Name="button_SaveApplyAdditionalFormat" Click="Button_SaveApplyAdditionalFormat_Click" Width="50" />
+                </StackPanel>
+            </GroupBox>
             <GroupBox Header="SMTP Settings">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal" Margin="5">
@@ -52,6 +58,17 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="5">
                         <Button Margin="5" Content="Save"  x:Name="buttonSaveSmtpSettings" Width="62" Click="ButtonSaveSmtpSettings_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+            <GroupBox Header="OpenAI">
+                <StackPanel Orientation="Vertical" Margin="5">
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <Label Width="120">OpenAI API key</Label>
+                        <PasswordBox x:Name="OpenAiApiKey" Width="500" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" >
+                        <Button Margin="10" Content="Save" x:Name="button_SaveOpenAi" Click="Button_SaveOpenAi_Click" Width="50" />
                     </StackPanel>
                 </StackPanel>
             </GroupBox>

@@ -189,6 +189,9 @@
             {
                 Label_BlockedRequestCount.Foreground = Brushes.Red;
                 Label_BlockedRequestCount.Content = metrics.BlockedRequestsCount.ToString();
+
+                ServerHasIssues = true;
+
             }
             else {
                 Label_BlockedRequestCount.Foreground = Brushes.Black;
@@ -299,7 +302,7 @@
         public static string FormatBytesToMB(long bytes)
         {
             // Convert bytes to gigabytes (GB)
-            double megabytes = bytes / 1024.0 / 1024.0; // 1024^3
+            double megabytes = bytes / 1024.0 / 1024.0; 
 
             // Format the gigabytes to a string with one decimal place
             return $"{megabytes:#,0.0} MB";

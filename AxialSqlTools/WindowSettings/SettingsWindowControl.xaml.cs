@@ -35,6 +35,10 @@
                 SMTP_Password.Password = smtpSettings.Password;
                 SMTP_EnableSSL.IsChecked = smtpSettings.EnableSsl;
 
+                ApplyCodeFormat.IsChecked = SettingsManager.GetApplyAdditionalCodeFormatting();
+
+                OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
+
             } catch (Exception ex)
             {
 
@@ -157,6 +161,16 @@
 
             SettingsManager.SaveMyEmail(MyEmailAddress.Text);
 
+        }
+
+        private void Button_SaveApplyAdditionalFormat_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsManager.SaveApplyAdditionalCodeFormatting(ApplyCodeFormat.IsChecked.GetValueOrDefault());
+        }
+
+        private void Button_SaveOpenAi_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsManager.SaveOpenAiApiKey(OpenAiApiKey.Password);
         }
     }
 }
