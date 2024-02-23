@@ -398,6 +398,8 @@ namespace AxialSqlTools
                 {
                     int FirstTokenNumber = WC.FirstTokenIndex;
 
+                    int WhenIdent = 0;
+
                     while (true)
                     {
                         TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[FirstTokenNumber];
@@ -405,6 +407,9 @@ namespace AxialSqlTools
                         if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
                         { // replace previos white-space with the new line and a number of spaces for offset
                             NextToken.Text = "\r\n" + new string(' ', CaseExpr.StartColumn + 4);
+
+                            WhenIdent = CaseExpr.StartColumn + 4;
+
                             break;
                         }
 
@@ -414,6 +419,28 @@ namespace AxialSqlTools
                         if (FirstTokenNumber < 0)
                             break;
                     }
+
+                    //multi-line expression inside WHEN might be too far to the right, move it to the left
+                    if (WhenIdent > 0 && WhenIdent != WC.StartColumn)
+                    {
+
+                        var FirshWhenToken = WC.FirstTokenIndex;
+
+                        while (FirshWhenToken < WC.LastTokenIndex)
+                        {
+                            TSqlParserToken NextThenToken = sqlFragment.ScriptTokenStream[FirshWhenToken];
+
+                            if (NextThenToken.TokenType == TSqlTokenType.WhiteSpace && NextThenToken.Column == 1)
+                            {
+                                NextThenToken.Text = new string(' ', WhenIdent + 5);
+                            }
+
+                            FirshWhenToken += 1;
+                        }
+
+                    }
+
+
                 }
 
                 // add new line and spaces+8 before THEN
@@ -443,7 +470,7 @@ namespace AxialSqlTools
                             break;
                     }
 
-                    //multi-line expression inside THEN might be too far to the right, more it left
+                    //multi-line expression inside THEN might be too far to the right, move it to the left
                     if (ThenIdent > 0 && ThenIdent != WC.ThenExpression.StartColumn)
                     {
 
@@ -468,6 +495,9 @@ namespace AxialSqlTools
                 if (CaseExpr.ElseExpression != null)
                 {
                     int FirstTokenNumber = CaseExpr.ElseExpression.FirstTokenIndex - 3;
+
+                    int ElseIdent = 0;
+
                     while (true)
                     {
                         TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[FirstTokenNumber];
@@ -475,6 +505,7 @@ namespace AxialSqlTools
                         if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
                         { // replace previos white-space with the new line and a number of spaces for offset
                             NextToken.Text = "\r\n" + new string(' ', CaseExpr.StartColumn + 4);
+                            ElseIdent = CaseExpr.StartColumn + 4;
                             break;
                         }
 
@@ -484,6 +515,27 @@ namespace AxialSqlTools
                         if (FirstTokenNumber < 0)
                             break;
                     }
+
+                    //multi-line expression inside ELSE might be too far to the right, move it to the left
+                    if (ElseIdent > 0 && ElseIdent != CaseExpr.ElseExpression.StartColumn)
+                    {
+
+                        var FirshWhenToken = CaseExpr.ElseExpression.FirstTokenIndex;
+
+                        while (FirshWhenToken < CaseExpr.ElseExpression.LastTokenIndex)
+                        {
+                            TSqlParserToken NextThenToken = sqlFragment.ScriptTokenStream[FirshWhenToken];
+
+                            if (NextThenToken.TokenType == TSqlTokenType.WhiteSpace && NextThenToken.Column == 1)
+                            {
+                                NextThenToken.Text = new string(' ', ElseIdent + 5);
+                            }
+
+                            FirshWhenToken += 1;
+                        }
+
+                    }
+
                 }
 
                 // add new line and spaces before END
