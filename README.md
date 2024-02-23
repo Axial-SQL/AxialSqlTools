@@ -35,8 +35,9 @@ So far we've developed these features:
   
 - **Script Selected Object Definition**: Quickly generate scripts for the definition of selected objects directly from the selected query text.
   
-- [**Health Dashboard - Server**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): I am experimenting with the idea of displaying basic server health metrics in a single window.
-  
+- [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): I am experimenting with the idea of displaying basic server health metrics in a single window.
+![server-health](https://github.com/Axial-SQL/AxialSqlTools/assets/13791336/760dcb74-d73b-42c7-94fe-933e321d0044)
+
 - [**Right Alignment for Numeric Values in Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Align-numeric-values-in-the-grid-result-to-the-right): Automatically align numeric values in the grid result to the right. <br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-before.png?raw=true"/> -> <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-after.png?raw=true"/>
 
