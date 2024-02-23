@@ -53,6 +53,9 @@
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" priority="0x4000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
       </Group>
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Timelines" priority="0x4000">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
+      </Group>
       
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" priority="0x0000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenu" />
@@ -195,6 +198,15 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialBackupTimelineCommand" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Timelines" />
+        <!--<Icon guid="guidDataTransfer" id="bmpDataTransfer" />
+        <CommandFlag>DefaultInvisible</CommandFlag>-->
+        <Strings>
+          <ButtonText>Database Backup Timeline</ButtonText>
+        </Strings>
+      </Button>
+
       <!-- Query templates Submenu buttons -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesButtonRefresh" priority="0x9900" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" />
@@ -253,7 +265,7 @@
       <Bitmap guid="guidAttention" href="Resources\attention.png" usedList="bmpAttention" />
       <Bitmap guid="guidExportGridToEmail" href="Resources\grid-to-email.png" usedList="bmpExportGridToEmail" />
       <Bitmap guid="guidExportGridToTempTable" href="Resources\grid-to-temp-table.png" usedList="bmpExportGridToTempTable" />
-	</Bitmaps>
+ </Bitmaps>
   </Commands>
 
   <Symbols>
@@ -280,6 +292,7 @@
       <IDSymbol name="AxialToolsSubMenuGroup_Script" value="0x1202" />
       <IDSymbol name="AxialToolsSubMenuGroup_Health" value="0x1203" />
       <IDSymbol name="AxialToolsSubMenuGroup_DataTransfer" value="0x1204" />
+      <IDSymbol name="AxialToolsSubMenuGroup_Timelines" value="0x1205" />
 
       <IDSymbol name="AxialExportButtonGridToExcel" value="4133" />
       <IDSymbol name="AxialExportButtonGridToExcelAndEmail" value="4139" />
@@ -295,7 +308,9 @@
 
       <IDSymbol name="AxialDataTransferCommand" value="4143" />
       
-    </GuidSymbol>
+      <IDSymbol name="AxialBackupTimelineCommand" value="4144" />
+      
+  </GuidSymbol>
 
     <GuidSymbol name="guidImagesSettings" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c1}">
       <IDSymbol name="bmpSettings" value="1" />

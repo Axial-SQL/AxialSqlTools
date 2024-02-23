@@ -66,6 +66,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(HealthDashboard_Server))]
     [ProvideToolWindow(typeof(HealthDashboard_Servers))]
     [ProvideToolWindow(typeof(DataTransferWindow))]
+    [ProvideToolWindow(typeof(BackupTimelineToolWindow))]
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
@@ -129,6 +130,7 @@ namespace AxialSqlTools
                 await HealthDashboard_ServersCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await CheckAddinVersionCommand.InitializeAsync(this);
+                await BackupTimelineToolWindowCommand.InitializeAsync(this);
 
                 await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
@@ -201,17 +203,20 @@ namespace AxialSqlTools
 
             }
 
+            // needed for the AxyPlot library
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+
         }
 
-        // TODO - might be needed for OxyPlot if I end up using it
-        //private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-        //{
-        //    // add this into main module -> AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+        // I don't understand the purpose, but it works
+        private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            // add this into main module -> AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
 
-        //    if (args.Name.Contains("OxyPlot"))
-        //        return AppDomain.CurrentDomain.Load(args.Name);
-        //    else return null; 
-        //}
+            if (args.Name.Contains("OxyPlot"))
+                return AppDomain.CurrentDomain.Load(args.Name);
+            else return null; 
+        }
         //----------------
 
         public static void AddEventToSqlResultConrol_ScriptExecutionCompleted()

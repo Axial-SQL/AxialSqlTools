@@ -79,6 +79,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+      <Compile Include="WindowBackupTimeline\BackupTimelineToolWindow.cs" />
+    <Compile Include="WindowBackupTimeline\BackupTimelineToolWindowCommand.cs" />
+    <Compile Include="WindowBackupTimeline\BackupTimelineToolWindowControl.xaml.cs">
+      <DependentUpon>BackupTimelineToolWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
     <Compile Include="Commands\CheckAddinVersionCommand.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
@@ -372,6 +377,10 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+      <Page Include="WindowBackupTimeline\BackupTimelineToolWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataTransfer\DataTransferWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
