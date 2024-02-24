@@ -17,6 +17,8 @@
     using OxyPlot.Axes;
     using OxyPlot.Series;
     using System.Collections.Generic;
+    using System.Windows.Input;
+    using OxyPlot.Legends;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
@@ -67,7 +69,16 @@
         /// </summary>
         public HealthDashboard_ServerControl()
         {
-            this.InitializeComponent();            
+            this.InitializeComponent();
+
+            BackupTimelinePeriodNumberTextBox.Text = "1";
+            AgentJobsTimelinePeriodNumberTextBox.Text = "1";
+
+            AgentJobsUnsuccessfulOnly.IsChecked = true;
+
+            DatabaseBackupHistoryIncludeFULL.IsChecked = true;
+            DatabaseBackupHistoryIncludeDIFF.IsChecked = true;
+            DatabaseBackupHistoryIncludeLOG.IsChecked = true;
         }
 
         public void StartMonitoring()
@@ -418,32 +429,40 @@
                 OpenNewQueryWindowAndExecute(FullCode, Execute: false);
         }
 
+        private void buttonDetailedBackupInfo_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            OpenNewQueryWindowAndExecute(QueryLibrary.DatabaseBackupDetailedInfo);
+        }
+
+
 
         private void BackupTimelineModelRefresh_Click(object sender, RoutedEventArgs e)
         {
 
             //var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
-            string sourceQuery = @"SELECT 
+            int BackupHistoryPeriod = 1;
+            int.TryParse(BackupTimelinePeriodNumberTextBox.Text, out BackupHistoryPeriod);
+
+            string sourceQuery = @"
+            SELECT 
                 database_name, 
                 backup_start_date, 
                 backup_finish_date, 
                 CASE type
-                    WHEN 'D' THEN 'Data'
-                    WHEN 'L' THEN 'Log'
-                END AS BackupType, 
-                ROW_NUMBER() OVER (ORDER BY database_name, type) AS RN
-            FROM
-                msdb.dbo.backupset
-            WHERE
-                type IN('D', 'L') AND backup_start_date > GETDATE() - 7
+                    WHEN 'D' THEN 0.0
+                    WHEN 'I' THEN 0.1
+                    WHEN 'L' THEN 0.2
+                END AS BackupType
+            FROM msdb.dbo.backupset
+            WHERE 
+                backup_start_date > GETDATE() - @BackupHistoryPeriod
+                AND (@Include_Full = 1 OR type <> 'D')
+                AND (@Include_Diff = 1 OR type <> 'I')
+                AND (@Include_Log = 1 OR type <> 'L')
             ORDER BY
-                database_name DESC, backup_start_date;
-";
-
-
-            //var model = new PlotModel { Title = "SQL Server Backup History" };
-            //var series = new RectangleBarSeries();
+                database_name DESC, backup_start_date;";
 
             var MyModel = new PlotModel { Title = "Database Backups: Frequency and Durations Analysis" };
 
@@ -467,12 +486,17 @@
                 sourceConn.Open();
                 using (SqlCommand cmd = new SqlCommand(sourceQuery, sourceConn))
                 {
+                    cmd.Parameters.AddWithValue("BackupHistoryPeriod", BackupHistoryPeriod);
+                    cmd.Parameters.AddWithValue("Include_Full", DatabaseBackupHistoryIncludeFULL.IsChecked.GetValueOrDefault());
+                    cmd.Parameters.AddWithValue("Include_Diff", DatabaseBackupHistoryIncludeDIFF.IsChecked.GetValueOrDefault());
+                    cmd.Parameters.AddWithValue("Include_Log", DatabaseBackupHistoryIncludeLOG.IsChecked.GetValueOrDefault());
+                    
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
 
-                            var databaseName = reader.GetString(0);
+                            var databaseName = reader.GetString(0);                            
 
                             double dbIndex = -1;
                             if (!databaseIndex.TryGetValue(databaseName, out dbIndex))
@@ -482,18 +506,27 @@
                             }
 
                             if (!customLabels.ContainsKey(dbIndex))
-                            {
                                 customLabels.Add(dbIndex, databaseName);
-                            }
 
-                            var RN = reader.GetInt64(4);
-                            //var categoryIndex = reader.GetInt64(4);
+
                             var startDate = DateTimeAxis.ToDouble(reader.GetDateTime(1));
-                            var finishDate = DateTimeAxis.ToDouble(reader.GetDateTime(2)) + 0.25;
+                            var finishDate = DateTimeAxis.ToDouble(reader.GetDateTime(2));
 
-                            //series.Items.Add(new RectangleBarItem(startDate, categoryIndex, finishDate, categoryIndex + 0.8));
+                            var backupType = (double)reader.GetDecimal(3);
 
-                            var scatterSeries = new ScatterSeries { MarkerType = MarkerType.Circle, MarkerFill = OxyColors.Blue, MarkerStrokeThickness = 1 };
+                            var LineColor = OxyColors.Blue;
+                            if (backupType == 0.1)
+                                LineColor = OxyColors.Green;
+                            if (backupType == 0.2)
+                                LineColor = OxyColors.DeepPink;
+
+                            dbIndex = dbIndex + backupType;
+
+                            var scatterSeries = new ScatterSeries {
+                                MarkerType = MarkerType.Circle,
+                                MarkerFill = LineColor,
+                                MarkerStrokeThickness = 1
+                            };
 
                             // Add two points to the scatter series
                             scatterSeries.Points.Add(new ScatterPoint(startDate, dbIndex));
@@ -502,7 +535,7 @@
                             // Add a line series to connect the dots
                             var lineSeries = new LineSeries()
                             {
-                                Color = OxyColors.Blue,
+                                Color = LineColor,
                                 StrokeThickness = 2,
                                 LineStyle = LineStyle.Solid
                             };
@@ -525,6 +558,7 @@
                 MinorStep = 1,
                 IsZoomEnabled = false,
                 IsPanEnabled = false,
+                
                 LabelFormatter = value =>
                 {
                     // Return the custom label if it exists; otherwise, return the default string representation
@@ -541,11 +575,244 @@
 
             this.BackupTimelineModel.Model = MyModel;
 
+
+            //---------------------------------------------------
+            // Database Backup Sizes 
+
+            string sourceQuerySizes = @"
+            SELECT 
+                database_name, 
+                SUM(CAST(compressed_backup_size / 1024 / 1024 / 1024. AS NUMERIC (15, 2))) AS TotalBackupSize
+            FROM msdb.dbo.backupset
+            WHERE backup_start_date > GETDATE() - @BackupHistoryPeriod
+                AND (@Include_Full = 1 OR type <> 'D')
+                AND (@Include_Diff = 1 OR type <> 'I')
+                AND (@Include_Log = 1 OR type <> 'L')
+            GROUP BY database_name
+            ORDER BY 2 DESC";
+
+            var PieModel = new PlotModel { Title = "Database Backup Sizes"};
+
+            dynamic seriesP1 = new PieSeries { StrokeThickness = 2.0, InsideLabelPosition = 0.8, AngleSpan = 360, StartAngle = 0 };
+
+            using (SqlConnection sourceConn = new SqlConnection(connectionString))
+            {
+                sourceConn.Open();
+                using (SqlCommand cmd = new SqlCommand(sourceQuerySizes, sourceConn))
+                {
+                    cmd.Parameters.AddWithValue("BackupHistoryPeriod", BackupHistoryPeriod);
+                    cmd.Parameters.AddWithValue("Include_Full", DatabaseBackupHistoryIncludeFULL.IsChecked.GetValueOrDefault());
+                    cmd.Parameters.AddWithValue("Include_Diff", DatabaseBackupHistoryIncludeDIFF.IsChecked.GetValueOrDefault());
+                    cmd.Parameters.AddWithValue("Include_Log", DatabaseBackupHistoryIncludeLOG.IsChecked.GetValueOrDefault());
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+
+                            var databaseName = reader.GetString(0);
+                            var backupSize = (double)reader.GetDecimal(1);
+
+                            seriesP1.Slices.Add(new PieSlice(databaseName, backupSize) { IsExploded = true });
+
+                        }
+                    }
+                }
+            }
+
+
+            PieModel.Series.Add(seriesP1);
+
+            this.BackupSizeModel.Model = PieModel;
+
         }
 
         private void AgentJobsTimelineModelRefresh_Click(object sender, RoutedEventArgs e)
         {
 
+            int AgentJobHistoryPeriod = 1;
+            //TODO
+            int.TryParse(AgentJobsTimelinePeriodNumberTextBox.Text, out AgentJobHistoryPeriod);
+
+            string sourceQuery = @" 
+            SELECT 
+                j.name AS JobName,
+                CONVERT(datetime, 
+                    STUFF(STUFF(CAST(h.run_date AS varchar(8)), 5, 0, '-'), 8, 0, '-') + 
+                    ' ' + 
+                    STUFF(STUFF(RIGHT('000000' + CAST(h.run_time AS varchar(6)), 6), 3, 0, ':'), 6, 0, ':')
+                ) AS StartTime,
+                DATEADD(SECOND, h.run_duration / 10000 * 3600 + (h.run_duration / 100 % 100) * 60 + h.run_duration % 100, 
+                    CONVERT(datetime, 
+                        STUFF(STUFF(CAST(h.run_date AS varchar(8)), 5, 0, '-'), 8, 0, '-') + 
+                        ' ' + 
+                        STUFF(STUFF(RIGHT('000000' + CAST(h.run_time AS varchar(6)), 6), 3, 0, ':'), 6, 0, ':')
+                    )
+                ) AS EndTime,
+                h.run_status
+                --CASE h.run_status
+                --    WHEN 3 THEN 'StoppedManually'
+                --    WHEN 1 THEN 'Success'
+                --    WHEN 0 THEN 'Failure'
+                --    ELSE 'Unknown'
+                --END AS ExecutionStatus
+            FROM  msdb.dbo.sysjobs j
+                JOIN msdb.dbo.sysjobhistory h ON j.job_id = h.job_id and step_id = 0
+            WHERE 
+                h.run_date >= CONVERT(int, CONVERT(varchar(8), GETDATE() - @AgentJobsHistoryPeriod, 112))
+                AND h.run_date < CONVERT(int, CONVERT(varchar(8), GETDATE(), 112))
+                AND (@UnsuccessfulOnly = 0 
+                        OR h.run_status <> 1)
+            ORDER BY 
+                StartTime DESC;
+
+            /* CREATE INDEX IDX_sysjobhistory_1
+                ON sysjobhistory(job_id, step_id, run_date, run_time) 
+	            WITH (DATA_COMPRESSION = PAGE, ONLINE = ON, MAXDOP = 4); */
+            ";
+
+            var MyModel = new PlotModel { Title = "Agent Jobs: Frequency and Durations Analysis" };
+
+            MyModel.Axes.Add(new DateTimeAxis
+            {
+                Position = AxisPosition.Bottom,
+                StringFormat = "dd-MM-yyyy HH:mm",
+                Title = "Date",
+                IntervalType = DateTimeIntervalType.Hours,
+                MinorIntervalType = DateTimeIntervalType.Minutes,
+                IntervalLength = 80,
+                IsZoomEnabled = false,
+                IsPanEnabled = false
+            });
+
+            var customLabels = new Dictionary<double, string>();
+            var jobIndex = new Dictionary<string, double>();
+
+            using (SqlConnection sourceConn = new SqlConnection(connectionString))
+            {
+                sourceConn.Open();
+                using (SqlCommand cmd = new SqlCommand(sourceQuery, sourceConn))
+                {
+                    cmd.Parameters.AddWithValue("AgentJobsHistoryPeriod", AgentJobHistoryPeriod);
+                    cmd.Parameters.AddWithValue("UnsuccessfulOnly", AgentJobsUnsuccessfulOnly.IsChecked.GetValueOrDefault());
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+
+                            var jobName = reader.GetString(0);
+
+                            double jIndex = -1;
+                            if (!jobIndex.TryGetValue(jobName, out jIndex))
+                            {
+                                jIndex = jobIndex.Count;
+                                jobIndex.Add(jobName, jIndex);
+                            }
+
+                            if (!customLabels.ContainsKey(jIndex))
+                                customLabels.Add(jIndex, jobName);
+
+
+                            var startDate = DateTimeAxis.ToDouble(reader.GetDateTime(1));
+                            var finishDate = DateTimeAxis.ToDouble(reader.GetDateTime(2));
+
+                            var resultType = reader.GetInt32(3);
+
+                            var LineColor = OxyColors.DeepPink;
+                            if (resultType == 0) // Failure
+                                LineColor = OxyColors.Red;
+                            else if (resultType == 1) // Success
+                                LineColor = OxyColors.Green;
+                            else if (resultType == 2) // ??
+                                LineColor = OxyColors.DeepPink;
+                            else if (resultType == 3) // Stopped manually
+                                LineColor = OxyColors.Purple;
+                            
+                            var scatterSeries = new ScatterSeries
+                            {
+                                MarkerType = MarkerType.Circle,
+                                MarkerFill = LineColor,
+                                MarkerStrokeThickness = 1
+                            };
+
+                            // Add two points to the scatter series
+                            scatterSeries.Points.Add(new ScatterPoint(startDate, jIndex));
+                            scatterSeries.Points.Add(new ScatterPoint(finishDate, jIndex));
+
+                            // Add a line series to connect the dots
+                            var lineSeries = new LineSeries()
+                            {
+                                Color = LineColor,
+                                StrokeThickness = 2,
+                                LineStyle = LineStyle.Solid
+                            };
+                            lineSeries.Points.Add(new DataPoint(startDate, jIndex));
+                            lineSeries.Points.Add(new DataPoint(finishDate, jIndex));
+
+                            MyModel.Series.Add(lineSeries);
+                            MyModel.Series.Add(scatterSeries);
+
+                        }
+                    }
+                }
+            }
+
+            var yAxis = new LinearAxis
+            {
+                Position = AxisPosition.Left,
+                Title = "Job Duration",
+                MajorStep = 1,
+                MinorStep = 1,
+                IsZoomEnabled = false,
+                IsPanEnabled = false,
+                LabelFormatter = value =>
+                {
+                    // Return the custom label if it exists; otherwise, return the default string representation
+                    if (customLabels.TryGetValue(value, out var label))
+                    {
+                        return label;
+                    }
+                    return value.ToString();
+                }
+            };
+
+            MyModel.Axes.Add(yAxis);
+
+            this.AgentJobsTimelineModel.Model = MyModel;
+
+
         }
+
+        private void BackupTimelinePeriodNumberTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            // Allow only numbers
+            e.Handled = !int.TryParse(e.Text, out _);
+        }
+
+        private void BackupTimelinePeriodNumberTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            // Ensure the value stays within bounds
+            if (int.TryParse(BackupTimelinePeriodNumberTextBox.Text, out int value))
+            {
+                if (value < 1) BackupTimelinePeriodNumberTextBox.Text = "1";
+                else if (value > 14) BackupTimelinePeriodNumberTextBox.Text = "14";
+            }
+        }
+
+        private void AgentJobsTimelinePeriodNumberTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            // Allow only numbers
+            e.Handled = !int.TryParse(e.Text, out _);
+        }
+
+        private void AgentJobsTimelinePeriodNumberTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            // Ensure the value stays within bounds
+            if (int.TryParse(AgentJobsTimelinePeriodNumberTextBox.Text, out int value))
+            {
+                if (value < 1) AgentJobsTimelinePeriodNumberTextBox.Text = "1";
+                else if (value > 14) AgentJobsTimelinePeriodNumberTextBox.Text = "14";
+            }
+        }
+
     }
 }

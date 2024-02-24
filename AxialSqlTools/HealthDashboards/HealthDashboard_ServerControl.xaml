@@ -135,15 +135,44 @@
                     
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <!-- For the Button -->
                         <RowDefinition Height="*"/>
                         <!-- For the oxy:PlotView to take all remaining space -->
                     </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <!-- No ColumnDefinitions for the StackPanel row, as it spans the entire width -->
+                        <!-- ColumnDefinitions for the second row -->
+                        <ColumnDefinition Width="3*"/>
+                        <!-- Takes 3/4 of the space -->
+                        <ColumnDefinition Width="1*"/>
+                        <!-- Takes 1/4 of the space -->
+                    </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal"  Grid.Row="0">
                             <Button x:Name="BackupTimelineModelRefresh" Content="Refresh Graph" Click="BackupTimelineModelRefresh_Click" Margin="5"/>
+                                                <Label Content="For the past" VerticalAlignment="Center"/>
+                        <TextBox x:Name="BackupTimelinePeriodNumberTextBox" 
+                                 Width="30"  
+                                 TextAlignment="Right" 
+                                 VerticalContentAlignment="Center"
+                                 PreviewTextInput="BackupTimelinePeriodNumberTextBox_PreviewTextInput"
+                                 TextChanged="BackupTimelinePeriodNumberTextBox_TextChanged" VerticalAlignment="Center"/>
+                        <Label Content="days" VerticalAlignment="Center"/>
+
+                        <CheckBox Margin="5" Name="DatabaseBackupHistoryIncludeFULL"  Content="Include FULL" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <CheckBox Margin="5" Name="DatabaseBackupHistoryIncludeDIFF"  Content="Include DIFF" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <CheckBox Margin="5" Name="DatabaseBackupHistoryIncludeLOG"  Content="Include LOG" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal"  Grid.Row="1">
+                        
+
+                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonDetailedBackupInfo_Click">Last Backup Info</Hyperlink></TextBlock>
+
                     </StackPanel>
 
-                    <oxy:PlotView Grid.Row="1" Name="BackupTimelineModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                    <oxy:PlotView Grid.Row="2" Grid.Column="0" Name="BackupTimelineModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                    <oxy:PlotView Grid.Row="2"  Grid.Column="1" Name="BackupSizeModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
 
                 </Grid>
             </TabItem>
@@ -158,8 +187,17 @@
                         <RowDefinition Height="*"/>
                         <!-- For the oxy:PlotView to take all remaining space -->
                     </Grid.RowDefinitions>
+
                     <StackPanel Orientation="Horizontal"  Grid.Row="0">
                         <Button x:Name="AgentJobsTimelineModelRefresh" Content="Refresh Graph" Click="AgentJobsTimelineModelRefresh_Click" Margin="5"/>
+                        <Label Content="For the past" VerticalAlignment="Center"/>
+                        <TextBox x:Name="AgentJobsTimelinePeriodNumberTextBox"  
+                                 TextAlignment="Right" 
+                                 VerticalContentAlignment="Center"
+                                 PreviewTextInput="AgentJobsTimelinePeriodNumberTextBox_PreviewTextInput"
+                                 TextChanged="AgentJobsTimelinePeriodNumberTextBox_TextChanged" VerticalAlignment="Center" Width="30"/>
+                        <Label Content="days" VerticalAlignment="Center"/>
+                        <CheckBox Margin="5" Name="AgentJobsUnsuccessfulOnly"  Content="Unsuccessful executions only" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <oxy:PlotView Grid.Row="1" Name="AgentJobsTimelineModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>

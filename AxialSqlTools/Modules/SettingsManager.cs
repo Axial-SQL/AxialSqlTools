@@ -152,11 +152,80 @@ OPTION (RECOMPILE);
 	--,@find_block_leaders = 1;";
             #endregion
 
+            #region m_DatabaseBackupDetailedInfo
+            private const string m_DatabaseBackupDetailedInfo = @"
+WITH LastFullBackups
+AS (SELECT s.[database_name] AS DatabaseName,
+           MAX(s.backup_set_id) AS BackupSetId
+    FROM msdb.dbo.backupset AS s
+    WHERE s.[type] = 'D'
+    GROUP BY s.[database_name]),
+ LastDiffBackups
+AS (SELECT s.[database_name] AS DatabaseName,
+           MAX(s.backup_set_id) AS BackupSetId
+    FROM msdb.dbo.backupset AS s
+         INNER JOIN LastFullBackups AS f
+             ON s.[database_name] = f.DatabaseName
+            AND s.backup_set_id > f.BackupSetId
+    WHERE s.[type] = 'I'
+    GROUP BY s.[database_name]),
+ LastLogBackups
+AS (SELECT s.[database_name] AS DatabaseName,
+           s.backup_set_id AS BackupSetId
+    FROM msdb.dbo.backupset AS s
+         INNER JOIN (SELECT DatabaseName,
+                 MAX(BackupSetId) AS BackupSetId
+          FROM (SELECT DatabaseName,
+                       BackupSetId
+                FROM LastFullBackups
+                UNION ALL
+                SELECT DatabaseName,
+                       BackupSetId
+                FROM LastDiffBackups) AS a
+          GROUP BY DatabaseName) AS f
+             ON s.[database_name] = f.DatabaseName
+            AND s.backup_set_id > f.BackupSetId
+    WHERE s.[type] = 'L')
+SELECT sd.[name] AS DatabaseName,
+       sd.recovery_model_desc,
+       bsf.backup_finish_date AS FULL_lastFinishDate,
+       CAST (bsf.compressed_backup_size / 1024 / 1024 / 1024. AS NUMERIC (15, 2)) AS FULL_sizeGb,
+       bsd.backup_finish_date AS DIFF_lastFinishDate,
+       CAST (bsd.compressed_backup_size / 1024 / 1024 / 1024. AS NUMERIC (15, 2)) AS DIFF_sizeGb,
+       DATEDIFF(hour, COALESCE (bsd.backup_finish_date, bsf.backup_finish_date), GETDATE()) AS DATA_hoursSinceLastBackup,
+       l.backup_finish_date AS LOG_lastFinishDate,
+       DATEDIFF(minute, l.backup_finish_date, GETDATE()) AS LOG_minutesSinceLastBackup,
+       l.LogBackupCount AS LOG_backupCount,
+       CAST (l.compressed_backup_size / 1024 / 1024 / 1024. AS NUMERIC (15, 2)) AS LOG_sizeGb
+FROM sys.databases AS sd
+     LEFT OUTER JOIN LastFullBackups AS f
+     INNER JOIN msdb.dbo.backupset AS bsf
+         ON f.BackupSetId = bsf.backup_set_id
+         ON f.DatabaseName = sd.[name]
+     LEFT OUTER JOIN LastDiffBackups AS d
+     INNER JOIN msdb.dbo.backupset AS bsd
+         ON d.BackupSetId = bsd.backup_set_id
+         ON sd.[name] = d.DatabaseName
+     LEFT OUTER JOIN (SELECT l.DatabaseName,
+                             COUNT(*) AS LogBackupCount,
+                             MAX(bsl.backup_finish_date) AS backup_finish_date,
+                             SUM(compressed_backup_size) AS compressed_backup_size
+                      FROM LastLogBackups AS l
+                           INNER JOIN msdb.dbo.backupset AS bsl
+                               ON l.BackupSetId = bsl.backup_set_id
+                      GROUP BY l.DatabaseName) AS l
+         ON sd.[name] = l.DatabaseName
+WHERE sd.[name] <> 'tempdb'
+ORDER BY sd.[name];
+";
+            #endregion
+
             public string BlockingRequests;
             public string DatabaseLogUsageInfo;
             public string DatabaseInfo;
             public string AlwaysOnStatus;
             public string spWhoIsActive;
+            public string DatabaseBackupDetailedInfo;
 
             public HealthDashboardServerQueryTexts()
             {
@@ -165,6 +234,7 @@ OPTION (RECOMPILE);
                 DatabaseInfo = m_DatabaseInfo;
                 AlwaysOnStatus = m_AlwaysOnStatus;
                 spWhoIsActive = m_spWhoIsActive;
+                DatabaseBackupDetailedInfo = m_DatabaseBackupDetailedInfo;
             }
         }
 

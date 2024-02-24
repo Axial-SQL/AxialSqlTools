@@ -135,7 +135,8 @@ namespace AxialSqlTools
                     SELECT [type_desc],
                            SCHEMA_NAME([schema_id]),
                            [name],
-                           [object_id]
+                           [object_id], 
+                           DB_NAME()
                     FROM sys.objects
                     WHERE [object_id] = OBJECT_ID(@selectedObjectName)";
 
@@ -146,6 +147,7 @@ namespace AxialSqlTools
                     string object_schema = null;
                     string object_name = null;
                     int object_id = 0;
+                    string database_name = null;
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
@@ -155,16 +157,49 @@ namespace AxialSqlTools
                             object_schema = reader.GetString(1);
                             object_name = reader.GetString(2);
                             object_id = reader.GetInt32(3);
+                            database_name = reader.GetString(4);
 
                         }
                         reader.Close();
-                    }
-                    currentServerConnection.Close();
+                    }                    
 
                     if (object_id == 0)
                     {
-                        throw new Exception("Unable to find this object");
+                        //let's check master database too
+                        // can't do in a single query with UNION because could be a collation conflict
+                        string commandMaster = $@"USE [master];
+                        SELECT [type_desc],
+                               SCHEMA_NAME([schema_id]),
+                               [name],
+                               [object_id], 
+                               DB_NAME()
+                        FROM sys.objects
+                        WHERE [object_id] = OBJECT_ID(@selectedObjectName)";
+
+                        SqlCommand cmdMaster = new SqlCommand(commandMaster, currentServerConnection);
+                        cmdMaster.Parameters.Add(new SqlParameter("selectedObjectName", selectedObjectName));
+
+                        using (SqlDataReader reader = cmdMaster.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                object_type = reader.GetString(0);
+                                object_schema = reader.GetString(1);
+                                object_name = reader.GetString(2);
+                                object_id = reader.GetInt32(3);
+                                database_name = reader.GetString(4);
+                            }
+                            reader.Close();
+                        }
+                        currentServerConnection.Close();
+
+                        if (object_id == 0)
+                        {
+                            throw new Exception("Unable to find this object");
+                        }
                     }
+
+                    currentServerConnection.Close();
 
                     ServerConnection SmoConnection = new ServerConnection();
                     SmoConnection.ConnectionString = connectionInfo.FullConnectionString;
@@ -197,8 +232,8 @@ namespace AxialSqlTools
                     //    }
                     //};
 
-                    //// Select the object to script
-                    Database db = server.Databases[connectionInfo.Database];
+                    // Select the object to script
+                    Database db = server.Databases[database_name];
 
                     SqlSmoObject dbObject = null;
 
