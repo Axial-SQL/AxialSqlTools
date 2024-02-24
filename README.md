@@ -16,9 +16,7 @@ Check it out and let me know what you think!
 
 ***Very much work in progress. Please submit bugs/ideas in this repo.***
 
-## Features
-
-So far we've developed these features:
+## Main Features
 
 - **Transaction Warning**: See right away if you left any transaction open.<br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/transaction-warning.png?raw=true"/>
@@ -64,10 +62,10 @@ Choose between the SSMS 18 and SSMS 19 versions.
 
 After obtaining the compiled files (either by compiling from source or downloading from Releases), follow these steps to install the extension:
 
-- For SSMS 19, place the folder with the compiled files into the following directory:
+- For SSMS 19, place the folder with the compiled files into the following directory:<br/>
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions` 
 
-- For SSMS 18, use this directory instead:
+- For SSMS 18, use this directory instead:<br/>
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
 
 If your Windows security policy has blocked the `AxialSqlTools.dll` file, you may need to unlock it by using the checkbox in the file properties.
