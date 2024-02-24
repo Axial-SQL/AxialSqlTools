@@ -16,9 +16,7 @@ Check it out and let me know what you think!
 
 ***Very much work in progress. Please submit bugs/ideas in this repo.***
 
-## Features
-
-So far we've developed these features:
+## Main Features
 
 - **Transaction Warning**: See right away if you left any transaction open.<br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/transaction-warning.png?raw=true"/>
@@ -35,8 +33,11 @@ So far we've developed these features:
   
 - **Script Selected Object Definition**: Quickly generate scripts for the definition of selected objects directly from the selected query text.
   
-- [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): I am experimenting with the idea of displaying basic server health metrics in a single window.
+- [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics..
 ![server-health](https://github.com/Axial-SQL/AxialSqlTools/assets/13791336/760dcb74-d73b-42c7-94fe-933e321d0044)
+![agent-jobs](https://github.com/Axial-SQL/AxialSqlTools/assets/13791336/dda76216-be7f-4d1f-980c-8827342c0cc5)
+![backup-history](https://github.com/Axial-SQL/AxialSqlTools/assets/13791336/31270011-1b48-4b2f-b06a-7bf6134862c2)
+
 
 - [**Right Alignment for Numeric Values in Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Align-numeric-values-in-the-grid-result-to-the-right): Automatically align numeric values in the grid result to the right. <br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-before.png?raw=true"/> -> <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-after.png?raw=true"/>
@@ -61,10 +62,10 @@ Choose between the SSMS 18 and SSMS 19 versions.
 
 After obtaining the compiled files (either by compiling from source or downloading from Releases), follow these steps to install the extension:
 
-- For SSMS 19, place the folder with the compiled files into the following directory:
+- For SSMS 19, place the folder with the compiled files into the following directory:<br/>
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions` 
 
-- For SSMS 18, use this directory instead:
+- For SSMS 18, use this directory instead:<br/>
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
 
 If your Windows security policy has blocked the `AxialSqlTools.dll` file, you may need to unlock it by using the checkbox in the file properties.
