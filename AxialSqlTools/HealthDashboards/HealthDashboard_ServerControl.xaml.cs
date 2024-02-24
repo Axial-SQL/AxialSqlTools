@@ -13,6 +13,10 @@
     using System.Windows.Controls;
     using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
     using System.Net.Http;
+    using OxyPlot;
+    using OxyPlot.Axes;
+    using OxyPlot.Series;
+    using System.Collections.Generic;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
@@ -130,7 +134,7 @@
                 {
                     LabelInternalException.Content = metrics.ExecutionException;
                     LabelInternalException.Foreground = Brushes.Red;
-                    LabelInternalException.FontWeight = FontWeights.Bold;
+                    LabelInternalException.FontWeight = System.Windows.FontWeights.Bold;
 
                     return;
                 }
@@ -412,6 +416,136 @@
 
             if (!error)
                 OpenNewQueryWindowAndExecute(FullCode, Execute: false);
+        }
+
+
+        private void BackupTimelineModelRefresh_Click(object sender, RoutedEventArgs e)
+        {
+
+            //var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
+
+            string sourceQuery = @"SELECT 
+                database_name, 
+                backup_start_date, 
+                backup_finish_date, 
+                CASE type
+                    WHEN 'D' THEN 'Data'
+                    WHEN 'L' THEN 'Log'
+                END AS BackupType, 
+                ROW_NUMBER() OVER (ORDER BY database_name, type) AS RN
+            FROM
+                msdb.dbo.backupset
+            WHERE
+                type IN('D', 'L') AND backup_start_date > GETDATE() - 7
+            ORDER BY
+                database_name DESC, backup_start_date;
+";
+
+
+            //var model = new PlotModel { Title = "SQL Server Backup History" };
+            //var series = new RectangleBarSeries();
+
+            var MyModel = new PlotModel { Title = "Database Backups: Frequency and Durations Analysis" };
+
+            MyModel.Axes.Add(new DateTimeAxis
+            {
+                Position = AxisPosition.Bottom,
+                StringFormat = "dd-MM-yyyy HH:mm",
+                Title = "Date",
+                IntervalType = DateTimeIntervalType.Hours,
+                MinorIntervalType = DateTimeIntervalType.Minutes,
+                IntervalLength = 80,
+                IsZoomEnabled = false,
+                IsPanEnabled = false
+            });
+
+            var customLabels = new Dictionary<double, string>();
+            var databaseIndex = new Dictionary<string, double>();
+
+            using (SqlConnection sourceConn = new SqlConnection(connectionString))
+            {
+                sourceConn.Open();
+                using (SqlCommand cmd = new SqlCommand(sourceQuery, sourceConn))
+                {
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+
+                            var databaseName = reader.GetString(0);
+
+                            double dbIndex = -1;
+                            if (!databaseIndex.TryGetValue(databaseName, out dbIndex))
+                            {
+                                dbIndex = databaseIndex.Count;
+                                databaseIndex.Add(databaseName, dbIndex);
+                            }
+
+                            if (!customLabels.ContainsKey(dbIndex))
+                            {
+                                customLabels.Add(dbIndex, databaseName);
+                            }
+
+                            var RN = reader.GetInt64(4);
+                            //var categoryIndex = reader.GetInt64(4);
+                            var startDate = DateTimeAxis.ToDouble(reader.GetDateTime(1));
+                            var finishDate = DateTimeAxis.ToDouble(reader.GetDateTime(2)) + 0.25;
+
+                            //series.Items.Add(new RectangleBarItem(startDate, categoryIndex, finishDate, categoryIndex + 0.8));
+
+                            var scatterSeries = new ScatterSeries { MarkerType = MarkerType.Circle, MarkerFill = OxyColors.Blue, MarkerStrokeThickness = 1 };
+
+                            // Add two points to the scatter series
+                            scatterSeries.Points.Add(new ScatterPoint(startDate, dbIndex));
+                            scatterSeries.Points.Add(new ScatterPoint(finishDate, dbIndex));
+
+                            // Add a line series to connect the dots
+                            var lineSeries = new LineSeries()
+                            {
+                                Color = OxyColors.Blue,
+                                StrokeThickness = 2,
+                                LineStyle = LineStyle.Solid
+                            };
+                            lineSeries.Points.Add(new DataPoint(startDate, dbIndex));
+                            lineSeries.Points.Add(new DataPoint(finishDate, dbIndex));
+
+                            MyModel.Series.Add(lineSeries);
+                            MyModel.Series.Add(scatterSeries);
+
+                        }
+                    }
+                }
+            }
+
+            var yAxis = new LinearAxis
+            {
+                Position = AxisPosition.Left,
+                Title = "Backup Duration",
+                MajorStep = 1,
+                MinorStep = 1,
+                IsZoomEnabled = false,
+                IsPanEnabled = false,
+                LabelFormatter = value =>
+                {
+                    // Return the custom label if it exists; otherwise, return the default string representation
+                    if (customLabels.TryGetValue(value, out var label))
+                    {
+                        return label;
+                    }
+                    return value.ToString();
+                }
+            };
+
+            MyModel.Axes.Add(yAxis);
+
+
+            this.BackupTimelineModel.Model = MyModel;
+
+        }
+
+        private void AgentJobsTimelineModelRefresh_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }

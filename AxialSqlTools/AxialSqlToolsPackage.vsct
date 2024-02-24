@@ -53,7 +53,7 @@
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" priority="0x4000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
       </Group>
-      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Timelines" priority="0x4000">
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Timelines" priority="0x5000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
       </Group>
       
@@ -198,14 +198,14 @@
         </Strings>
       </Button>
 
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialBackupTimelineCommand" priority="0x0000" type="Button">
+      <!--<Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialBackupTimelineCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Timelines" />
-        <!--<Icon guid="guidDataTransfer" id="bmpDataTransfer" />
-        <CommandFlag>DefaultInvisible</CommandFlag>-->
+        <Icon guid="guidDataTransfer" id="bmpDataTransfer" />
+        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Database Backup Timeline</ButtonText>
         </Strings>
-      </Button>
+      </Button>-->
 
       <!-- Query templates Submenu buttons -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesButtonRefresh" priority="0x9900" type="Button">
@@ -308,7 +308,7 @@
 
       <IDSymbol name="AxialDataTransferCommand" value="4143" />
       
-      <IDSymbol name="AxialBackupTimelineCommand" value="4144" />
+      <!--<IDSymbol name="AxialBackupTimelineCommand" value="4144" />-->
       
   </GuidSymbol>
 

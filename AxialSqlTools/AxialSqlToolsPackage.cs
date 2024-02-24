@@ -66,7 +66,6 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(HealthDashboard_Server))]
     [ProvideToolWindow(typeof(HealthDashboard_Servers))]
     [ProvideToolWindow(typeof(DataTransferWindow))]
-    [ProvideToolWindow(typeof(BackupTimelineToolWindow))]
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
@@ -130,7 +129,6 @@ namespace AxialSqlTools
                 await HealthDashboard_ServersCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await CheckAddinVersionCommand.InitializeAsync(this);
-                await BackupTimelineToolWindowCommand.InitializeAsync(this);
 
                 await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 

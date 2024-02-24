@@ -4,117 +4,170 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:oxy="http://oxyplot.org/wpf"
              mc:Ignorable="d"
              d:DesignHeight="500" d:DesignWidth="1000"
              Name="MyToolWindow">
     <Grid>
-        <StackPanel Orientation="Vertical">
-            <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}">
-                <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Server Health Dashboard</TextBlock>
-                <Label  Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" Content="(have not been updated yet)" x:Name="LastUpdateLabel"/>
-                <CheckBox Margin="5" x:Name="CheckBox_StopBlinking" Content="Be quiet" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <Label Content="Version:" Width="150"/>
-                <Label Content="= SQL Server engine version =" x:Name="Label_ServerVersion" FontWeight="Bold"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <StackPanel Orientation="Vertical">
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Server name:" Width="150"/>
-                        <Label Content="= server name =" x:Name="Label_ServerName" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Service name:" Width="150"/>
-                        <Label Content="= service name =" x:Name="Label_ServiceName" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Uptime:" Width="150"/>
-                        <Label Content="= server uptime =" x:Name="Label_Uptime" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Response Time (ms):" Width="150"/>
-                        <Label Content="= response time =" x:Name="Label_ResponseTime" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="CPU %:" Width="150"/>
-                        <Label Content="= current CPU load=" x:Name="Label_CpuLoad" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Active Connections:" Width="150"/>
-                        <Label Content="= open connections =" x:Name="Label_ConnectionCount" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Encrypted Connections:" Width="150"/>
-                        <Label Content="= enc connections =" x:Name="Label_ConnectionCountEnc" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonUserDatabasesInfo_Click">User Databases:</Hyperlink></TextBlock>
-                        <Label Content="= db status =" x:Name="Label_DatabaseStatus" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Total Data File Size (Gb):" Width="150"/>
-                        <Label Content="= data file size =" x:Name="Label_DataFileSizeGb" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">                        
-                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonDatabaseLogInfo_Click">Total Log File Size (Gb):</Hyperlink></TextBlock>
-                        <Label Content="= log file size =" x:Name="Label_LogFileSizeGb" FontWeight="Bold"/>
-                    </StackPanel>
-                </StackPanel>
-                <StackPanel Orientation="Vertical">
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="See Current Activity:" Width="150"/>
-                        <TextBlock Padding="5" Width="200" VerticalAlignment="Center" x:Name="LinkRunSpWhoIsActive"  Visibility="Collapsed">
-                            <Hyperlink  Click="buttonRunSpWhoIsActive_Click">Run [dbo].[sp_WhoIsActive]</Hyperlink>
-                        </TextBlock>
-                        <TextBlock Padding="5" Width="200" VerticalAlignment="Center" x:Name="LinkDeploySpWhoIsActive" Visibility="Collapsed">
-                            <Hyperlink Click="buttonDeploySpWhoIsActive_Click">Deploy [dbo].[sp_WhoIsActive] first</Hyperlink>
-                        </TextBlock>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Memory:" Width="150"/>
-                        <Label Content="= used / total memory =" x:Name="Label_MemoryInfo" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Page Life Expectancy:" Width="150"/>
-                        <Label Content="= PLE =" x:Name="Label_PLE" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Batch Requests/sec:" Width="150"/>
-                        <Label Content="= Batch Requests/sec =" x:Name="Label_BatchRequestsSec" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="SQL Compilations/sec:" Width="150"/>
-                        <Label Content="= SQL Compilations/sec =" x:Name="Label_SQLCompilationsSec" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <!--<Label Content="Blocked Requests:" Width="150"/>-->
-                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonBlockedRequests_Click">Blocked Requests:</Hyperlink></TextBlock>
-                        <Label Content="= blocked request =" x:Name="Label_BlockedRequestCount" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Lock Wait Time (sec):" Width="150"/>
-                        <Label Content="= wait time =" x:Name="Label_BlockedTotalWaitTime" FontWeight="Bold"/>
-                    </StackPanel>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Size to content for the text -->
+            <RowDefinition Height="*"/>
+            <!-- Take the remaining space for the TabControl -->
+        </Grid.RowDefinitions>
 
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonAlwaysOn_Click">AlwaysOn:</Hyperlink></TextBlock>
-                        <Label Content="= health =" x:Name="Label_AlwaysOnHealth" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Queue Sizes (Gb):" Width="150"/>
-                        <Label Content="= log send queue =" x:Name="Label_AlwaysOnLogSendQueue" FontWeight="Bold"/>
-                        <Label Content="= redo queue =" x:Name="Label_AlwaysOnRedoQueue" FontWeight="Bold"/>
-                    </StackPanel>
-
-                </StackPanel>
-            </StackPanel>
-
-            <Label  HorizontalAlignment="Center" Content="" x:Name="LabelInternalException"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}">
+            <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Server Health Dashboard</TextBlock>
+            <Label  Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" Content="(have not been updated yet)" x:Name="LastUpdateLabel"/>
+            <CheckBox Margin="5" x:Name="CheckBox_StopBlinking" Content="Be quiet" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </StackPanel>
+
+        <TabControl Grid.Row="1" Margin="5">
+            <!-- First tab -->
+            <TabItem Header="Server Metrics Summary">
+                <Grid>
+                    <StackPanel Orientation="Vertical">
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Version:" Width="150"/>
+                            <Label Content="= SQL Server engine version =" x:Name="Label_ServerVersion" FontWeight="Bold"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Vertical">
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Server name:" Width="150"/>
+                                    <Label Content="= server name =" x:Name="Label_ServerName" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Service name:" Width="150"/>
+                                    <Label Content="= service name =" x:Name="Label_ServiceName" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Uptime:" Width="150"/>
+                                    <Label Content="= server uptime =" x:Name="Label_Uptime" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Response Time (ms):" Width="150"/>
+                                    <Label Content="= response time =" x:Name="Label_ResponseTime" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="CPU %:" Width="150"/>
+                                    <Label Content="= current CPU load=" x:Name="Label_CpuLoad" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Active Connections:" Width="150"/>
+                                    <Label Content="= open connections =" x:Name="Label_ConnectionCount" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Encrypted Connections:" Width="150"/>
+                                    <Label Content="= enc connections =" x:Name="Label_ConnectionCountEnc" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonUserDatabasesInfo_Click">User Databases:</Hyperlink></TextBlock>
+                                    <Label Content="= db status =" x:Name="Label_DatabaseStatus" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Total Data File Size (Gb):" Width="150"/>
+                                    <Label Content="= data file size =" x:Name="Label_DataFileSizeGb" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonDatabaseLogInfo_Click">Total Log File Size (Gb):</Hyperlink></TextBlock>
+                                    <Label Content="= log file size =" x:Name="Label_LogFileSizeGb" FontWeight="Bold"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel Orientation="Vertical">
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="See Current Activity:" Width="150"/>
+                                    <TextBlock Padding="5" Width="200" VerticalAlignment="Center" x:Name="LinkRunSpWhoIsActive"  Visibility="Collapsed">
+                                    <Hyperlink  Click="buttonRunSpWhoIsActive_Click">Run [dbo].[sp_WhoIsActive]</Hyperlink>
+                                    </TextBlock>
+                                    <TextBlock Padding="5" Width="200" VerticalAlignment="Center" x:Name="LinkDeploySpWhoIsActive" Visibility="Collapsed">
+                                    <Hyperlink Click="buttonDeploySpWhoIsActive_Click">Deploy [dbo].[sp_WhoIsActive] first</Hyperlink>
+                                    </TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Memory:" Width="150"/>
+                                    <Label Content="= used / total memory =" x:Name="Label_MemoryInfo" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Page Life Expectancy:" Width="150"/>
+                                    <Label Content="= PLE =" x:Name="Label_PLE" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Batch Requests/sec:" Width="150"/>
+                                    <Label Content="= Batch Requests/sec =" x:Name="Label_BatchRequestsSec" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="SQL Compilations/sec:" Width="150"/>
+                                    <Label Content="= SQL Compilations/sec =" x:Name="Label_SQLCompilationsSec" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <!--<Label Content="Blocked Requests:" Width="150"/>-->
+                                    <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonBlockedRequests_Click">Blocked Requests:</Hyperlink></TextBlock>
+                                    <Label Content="= blocked request =" x:Name="Label_BlockedRequestCount" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Lock Wait Time (sec):" Width="150"/>
+                                    <Label Content="= wait time =" x:Name="Label_BlockedTotalWaitTime" FontWeight="Bold"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Padding="5" Width="150" VerticalAlignment="Center"><Hyperlink Click="buttonAlwaysOn_Click">AlwaysOn:</Hyperlink></TextBlock>
+                                    <Label Content="= health =" x:Name="Label_AlwaysOnHealth" FontWeight="Bold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="Queue Sizes (Gb):" Width="150"/>
+                                    <Label Content="= log send queue =" x:Name="Label_AlwaysOnLogSendQueue" FontWeight="Bold"/>
+                                    <Label Content="= redo queue =" x:Name="Label_AlwaysOnRedoQueue" FontWeight="Bold"/>
+                                </StackPanel>
+
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Label  HorizontalAlignment="Center" Content="" x:Name="LabelInternalException"/>
+                    </StackPanel>
+
+
+                </Grid>
+            </TabItem>
+            <!-- Second tab -->
+            <TabItem Header="Database Backups">
+                <Grid>
+                    
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <!-- For the Button -->
+                        <RowDefinition Height="*"/>
+                        <!-- For the oxy:PlotView to take all remaining space -->
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal"  Grid.Row="0">
+                            <Button x:Name="BackupTimelineModelRefresh" Content="Refresh Graph" Click="BackupTimelineModelRefresh_Click" Margin="5"/>
+                    </StackPanel>
+
+                    <oxy:PlotView Grid.Row="1" Name="BackupTimelineModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
+                </Grid>
+            </TabItem>
+
+            <!-- Second tab -->
+            <TabItem Header="Agent Jobs">
+                <Grid>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <!-- For the Button -->
+                        <RowDefinition Height="*"/>
+                        <!-- For the oxy:PlotView to take all remaining space -->
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal"  Grid.Row="0">
+                        <Button x:Name="AgentJobsTimelineModelRefresh" Content="Refresh Graph" Click="AgentJobsTimelineModelRefresh_Click" Margin="5"/>
+                    </StackPanel>
+
+                    <oxy:PlotView Grid.Row="1" Name="AgentJobsTimelineModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
+                </Grid>
+            </TabItem>
+        </TabControl>
+
 
     </Grid>
 </UserControl>
