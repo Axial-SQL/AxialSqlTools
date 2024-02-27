@@ -426,7 +426,12 @@
   <Import Project="..\packages\Microsoft.VisualStudio.SDK.Analyzers.15.8.33\build\Microsoft.VisualStudio.SDK.Analyzers.targets" Condition="Exists('..\packages\Microsoft.VisualStudio.SDK.Analyzers.15.8.33\build\Microsoft.VisualStudio.SDK.Analyzers.targets')" />
   <Import Project="..\packages\Microsoft.VisualStudio.Threading.Analyzers.15.8.122\build\Microsoft.VisualStudio.Threading.Analyzers.targets" Condition="Exists('..\packages\Microsoft.VisualStudio.Threading.Analyzers.15.8.122\build\Microsoft.VisualStudio.Threading.Analyzers.targets')" />
   <PropertyGroup>
-    <PostBuildEvent>powershell -Command "Compress-Archive -Path 'C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions\AxialSqlTools\*' -DestinationPath '%25USERPROFILE%25\Desktop\AxialSqlTools_SSMS19.zip' -Force"
+    <PostBuildEvent>rem A really weird issue - the library isn't copied to target directiry. Probably an issue with VS 2017
+powershell -Command "Copy-Item -Path 'C:\Users\AlexBochkov\source\repos\AxialSqlTools\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll' -Destination 'C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions\AxialSqlTools'"
+powershell -Command "Copy-Item -Path 'C:\Users\AlexBochkov\source\repos\AxialSqlTools\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll' -Destination 'C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions\AxialSqlTools'"
+
+
+powershell -Command "Compress-Archive -Path 'C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions\AxialSqlTools\*' -DestinationPath '%25USERPROFILE%25\Desktop\AxialSqlTools_SSMS19.zip' -Force"
 powershell -Command "Compress-Archive -Path 'C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions\AxialSqlTools\*' -DestinationPath '%25USERPROFILE%25\Desktop\AxialSqlTools_SSMS18.zip' -Force"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
