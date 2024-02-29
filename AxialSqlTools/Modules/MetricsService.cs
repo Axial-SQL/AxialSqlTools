@@ -78,6 +78,8 @@ namespace AxialSqlTools
             try
             {
 
+                string perfCounterObjectName = "SQLServer";
+
                 Stopwatch stopwatch = Stopwatch.StartNew();
 
                 // Create and open a connection to SQL Server
@@ -103,6 +105,10 @@ namespace AxialSqlTools
                                 {
                                     metrics.ServerName = reader.GetString(0);
                                     metrics.ServiceName = reader.GetString(1);
+
+                                    if (metrics.ServiceName != "MSSQLSERVER")
+                                        perfCounterObjectName = "MSSQL$" + metrics.ServiceName;
+
                                     metrics.UtcStartTime = DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc);  
 
                                     metrics.ServerVersion = reader.GetString(3);
@@ -191,17 +197,17 @@ namespace AxialSqlTools
                         }
                     }
 
-                    string queryText_5a = @"                
+                    string queryText_5a = $@"                
                     SELECT [object_name], [counter_name], [cntr_value]
                     FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = 'SQLServer:Buffer Manager'
+                    WHERE [object_name] = '{perfCounterObjectName}:Buffer Manager'
                           AND [counter_name] = 'Page life expectancy'
                           AND [instance_name] = ''
                     UNION ALL
 
                     SELECT [object_name], [counter_name], SUM([cntr_value])
                     FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = 'SQLServer:Databases'
+                    WHERE [object_name] = '{perfCounterObjectName}:Databases'
                           AND [counter_name] = 'Log File(s) Used Size (KB)'
                           AND [instance_name] NOT IN ('_Total', 'tempdb', 'master', 'model', 'msdb', 'mssqlsystemresource')
                     GROUP BY [object_name], [counter_name]
@@ -209,7 +215,7 @@ namespace AxialSqlTools
 
                     SELECT [object_name], [counter_name], SUM([cntr_value])
                     FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = 'SQLServer:Databases'
+                    WHERE [object_name] = '{perfCounterObjectName}:Databases'
                           AND [counter_name] IN ('Data File(s) Size (KB)', 'Log File(s) Size (KB)')
                           AND [instance_name] NOT IN ('_Total', 'tempdb', 'master', 'model', 'msdb', 'mssqlsystemresource')
                     GROUP BY [object_name], [counter_name]
@@ -217,13 +223,13 @@ namespace AxialSqlTools
     
                     SELECT [object_name], [counter_name], [cntr_value]
                     FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = 'SQLServer:Memory Manager'
+                    WHERE [object_name] = '{perfCounterObjectName}:Memory Manager'
                           AND [counter_name] IN ('Total Server Memory (KB)', 'Target Server Memory (KB)')
                     UNION ALL
     
                     SELECT [object_name], [counter_name], [cntr_value]
                     FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = 'SQLServer:Database Replica'
+                    WHERE [object_name] = '{perfCounterObjectName}:Database Replica'
                           AND [counter_name] = 'Log Send Queue'
                           AND [instance_name] = '_Total';
                     ";
@@ -241,36 +247,31 @@ namespace AxialSqlTools
                                     string CounterName = reader.GetString(1).Trim();
                                     long CounterValue = reader.GetInt64(2);
 
-                                    switch (CounterGroup)
+                                    if (CounterGroup.EndsWith("Buffer Manager"))
                                     {
-                                        case "SQLServer:Buffer Manager":
-                                            if (CounterName == "Page life expectancy")
-                                                metrics.PerfCounter_PLE = CounterValue;
-                                            break;
-
-                                        case "SQLServer:Memory Manager":
-                                            if (CounterName == "Total Server Memory (KB)")
-                                                metrics.PerfCounter_TotalServerMemory = CounterValue;
-                                            else if (CounterName == "Target Server Memory (KB)")
-                                                metrics.PerfCounter_TargetServerMemory = CounterValue;
-                                            break;
-
-                                        case "SQLServer:Databases":
-                                            if (CounterName == "Data File(s) Size (KB)")
-                                                metrics.PerfCounter_DataFileSize = CounterValue;
-                                            else if (CounterName == "Log File(s) Size (KB)")
-                                                metrics.PerfCounter_LogFileSize = CounterValue;
-                                            else if (CounterName == "Log File(s) Used Size (KB)")
-                                                metrics.PerfCounter_UsedLogFileSize = CounterValue;
-                                            break;
-
-                                        case "SQLServer:Database Replica":
-                                            if (CounterName == "Log Send Queue")
-                                                metrics.PerfCounter_AlwaysOn_LogSendQueue = CounterValue;
-                                            break;
-                                        default:
-                                            break;
-
+                                        if (CounterName == "Page life expectancy")
+                                            metrics.PerfCounter_PLE = CounterValue;
+                                    }
+                                    else if (CounterGroup.EndsWith("Memory Manager"))
+                                    {
+                                        if (CounterName == "Total Server Memory (KB)")
+                                            metrics.PerfCounter_TotalServerMemory = CounterValue;
+                                        else if (CounterName == "Target Server Memory (KB)")
+                                            metrics.PerfCounter_TargetServerMemory = CounterValue;
+                                    }
+                                    else if (CounterGroup.EndsWith("Databases"))
+                                    {
+                                        if (CounterName == "Data File(s) Size (KB)")
+                                            metrics.PerfCounter_DataFileSize = CounterValue;
+                                        else if (CounterName == "Log File(s) Size (KB)")
+                                            metrics.PerfCounter_LogFileSize = CounterValue;
+                                        else if (CounterName == "Log File(s) Used Size (KB)")
+                                            metrics.PerfCounter_UsedLogFileSize = CounterValue;
+                                    }
+                                    else if (CounterGroup.EndsWith("Database Replica"))
+                                    {
+                                        if (CounterName == "Log Send Queue")
+                                            metrics.PerfCounter_AlwaysOn_LogSendQueue = CounterValue;
                                     }
 
                                 }
@@ -278,7 +279,7 @@ namespace AxialSqlTools
                         }
                     }
 
-                    string queryText_5b = @"                
+                    string queryText_5b = $@"                
                     SELECT 
                         [object_name], 
                         [counter_name], 
@@ -286,7 +287,7 @@ namespace AxialSqlTools
                         ([cntr_value] - @Prev_BatchRequestsSec) / (DATEDIFF(second, @LastRefresh, GETDATE())), 
                         GETDATE()
                     FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = 'SQLServer:SQL Statistics'
+                    WHERE [object_name] = '{perfCounterObjectName}:SQL Statistics'
                           AND [counter_name] = 'Batch Requests/sec'
                           AND [instance_name] = ''
                     UNION ALL
@@ -298,7 +299,7 @@ namespace AxialSqlTools
                         ([cntr_value] - @Prev_SQLCompilationsSec) / (DATEDIFF(second, @LastRefresh, GETDATE())), 
                         GETDATE()
                     FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = 'SQLServer:SQL Statistics'
+                    WHERE [object_name] = '{perfCounterObjectName}:SQL Statistics'
                           AND [counter_name] = 'SQL Compilations/sec'
                           AND [instance_name] = ''
 
@@ -323,26 +324,18 @@ namespace AxialSqlTools
                                     long CounterValue = reader.GetInt64(3);
 
                                     metrics.PerfCounter_RefreshDateTime = reader.GetDateTime(4);
-
-                                    switch (CounterGroup)
-                                    {
-                                        case "SQLServer:SQL Statistics":
-                                            if (CounterName == "Batch Requests/sec")
-                                            {
-                                                metrics.PerfCounter_BatchRequestsSec_Total = CounterValueTotal;
-                                                metrics.PerfCounter_BatchRequestsSec = CounterValue;
-                                            }
-                                            else if (CounterName == "SQL Compilations/sec")
-                                            {
-                                                metrics.PerfCounter_SQLCompilationsSec_Total = CounterValueTotal;
-                                                metrics.PerfCounter_SQLCompilationsSec = CounterValue;
-                                            }
-                                            break;
-
-                                        default:
-                                            break;
-
-                                    }
+                       
+                                    if (CounterGroup.EndsWith("SQL Statistics"))
+                                        if (CounterName == "Batch Requests/sec")
+                                        {
+                                            metrics.PerfCounter_BatchRequestsSec_Total = CounterValueTotal;
+                                            metrics.PerfCounter_BatchRequestsSec = CounterValue;
+                                        }
+                                        else if (CounterName == "SQL Compilations/sec")
+                                        {
+                                            metrics.PerfCounter_SQLCompilationsSec_Total = CounterValueTotal;
+                                            metrics.PerfCounter_SQLCompilationsSec = CounterValue;
+                                        }
 
                                 }
                             }
