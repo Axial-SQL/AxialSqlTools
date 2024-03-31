@@ -26,7 +26,14 @@
             <!-- First tab -->
             <TabItem Header="Server Metrics Summary">
                 <Grid>
-                    <StackPanel Orientation="Vertical">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <!-- This will take up the remaining space -->
+                        <RowDefinition Height="Auto" />
+                        <!-- This will size to the content -->
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
+                        <StackPanel Orientation="Vertical" >
                         <StackPanel Orientation="Horizontal">
                             <Label Content="Version:" Width="150"/>
                             <Label Content="= SQL Server engine version =" x:Name="Label_ServerVersion" FontWeight="Bold"/>
@@ -125,9 +132,24 @@
 
                         <Label  HorizontalAlignment="Center" Content="" x:Name="LabelInternalException"/>
                     </StackPanel>
+                        </Grid>
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="400" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <!-- Takes 3/4 of the space -->
+                            <ColumnDefinition Width="2*"/>
+                            <!-- Takes 1/4 of the space -->
+                        </Grid.ColumnDefinitions>
+                        
+                        <oxy:PlotView Grid.Row="1" Grid.Column="0" Name="WaitStatsModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                        <oxy:PlotView Grid.Row="1"  Grid.Column="1" Name="DiskInfoModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                   
+                    </Grid>
 
-
-                </Grid>
+                </Grid>                
             </TabItem>
             <!-- Second tab -->
             <TabItem Header="Database Backups">

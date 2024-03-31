@@ -19,6 +19,8 @@
     using System.Collections.Generic;
     using System.Windows.Input;
     using OxyPlot.Legends;
+    using System.Linq;
+    using static HealthDashboardServerMetric;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
@@ -26,11 +28,82 @@
     public partial class HealthDashboard_ServerControl : UserControl
     {
 
+        public class WaitsStatsAggregator
+        {
+            public List<WaitsInfo> previousWaitStats = new List<WaitsInfo>();
+            private Dictionary<DateTime, List<WaitsInfo>> aggregatedWaitStats = new Dictionary<DateTime, List<WaitsInfo>>();
+            private readonly Timer timer;
+
+            public WaitsStatsAggregator()
+            {
+                //// Set up a timer to reset the aggregation every minute
+                //timer = new Timer(60000); // 60 seconds interval
+                //timer.Elapsed += Timer_Elapsed;
+                //timer.Start();
+            }
+
+            //private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+            //{
+            //    // At the start of a new minute, reset the previousWaitStats
+            //    previousWaitStats.Clear();
+            //}
+
+            public void UpdateWaitStats(List<WaitsInfo> currentWaitStats)
+            {
+                var timestamp = DateTime.Now;
+
+                if (previousWaitStats.Count == 0)
+                {
+                    previousWaitStats = currentWaitStats;
+                    return;
+                }
+
+                // Calculate the difference from the previous result
+                var diff = currentWaitStats.Select(current => new WaitsInfo
+                {
+                    WaitName = current.WaitName,
+                    WaitSec = previousWaitStats.Any(p => p.WaitName == current.WaitName) ? current.WaitSec - previousWaitStats.FirstOrDefault(p => p.WaitName == current.WaitName)?.WaitSec ?? 0 : current.WaitSec
+                }).ToList();
+
+                // Update the previousWaitStats for the next comparison
+                previousWaitStats = currentWaitStats;
+
+                // Grouping the values into minutes
+                var minuteKey = new DateTime(timestamp.Year, timestamp.Month, timestamp.Day, timestamp.Hour, timestamp.Minute, 0);
+                if (!aggregatedWaitStats.ContainsKey(minuteKey))
+                {
+                    aggregatedWaitStats[minuteKey] = new List<WaitsInfo>();
+                }
+
+                foreach (var item in diff)
+                {
+                    if (aggregatedWaitStats[minuteKey].Any(x => x.WaitName == item.WaitName))
+                    {
+                        aggregatedWaitStats[minuteKey].First(x => x.WaitName == item.WaitName).WaitSec += item.WaitSec;
+                    }
+                    else
+                    {
+                        aggregatedWaitStats[minuteKey].Add(item);
+                    }
+                }
+            }
+
+            // Method to retrieve the aggregated data (you can call this method to get the data for visualization)
+            public Dictionary<DateTime, List<WaitsInfo>> GetAggregatedData()
+            {
+                return aggregatedWaitStats;
+            }
+        }
+
+
+
         public string connectionString = null;
         public DateTime lastRefresh = new DateTime(2000, 1, 1, 0, 0, 0);
         private CancellationTokenSource _cancellationTokenSource;
         private bool _disposed = false;
         private bool _monitoringStarted = false;
+
+        private WaitsStatsAggregator waitsStatsAggregator = new WaitsStatsAggregator();
 
         private HealthDashboardServerMetric prev_metrics = new HealthDashboardServerMetric();
 
@@ -85,7 +158,7 @@
         {
             if (_monitoringStarted) return;
 
-
+            waitsStatsAggregator = new WaitsStatsAggregator();
 
             UpdateUI(0, new HealthDashboardServerMetric { }, true);
 
@@ -293,8 +366,110 @@
 
             Label_LogFileSizeGb.Content = FormatBytesToGB(metrics.PerfCounter_LogFileSize * 1024) + " | " + usedLogFilePercent.ToString() + "% used";
 
+            //--------------------------------------------------------------------
+            //--------------------------------------------------------------------
+            // Wait Stats info graph
+
+            waitsStatsAggregator.UpdateWaitStats(metrics.WaitStatsInfo);
+
+            var aggrData = waitsStatsAggregator.GetAggregatedData();
+
+            var barModelWS = new PlotModel { Title = "Wait Stats Over Time" };
+
+            foreach (var previousWaitStat in waitsStatsAggregator.previousWaitStats)
+            {
+                var barSeriesWS = new BarSeries
+                {
+                    //LabelPlacement = LabelPlacement.Inside,
+                    //LabelFormatString = "{0:0}", // Adjust this to change how the labels are formatted
+                    StrokeColor = OxyColors.Black,
+                    StrokeThickness = 1,
+                    IsStacked = true
+                };
+
+                foreach (var aggValue in aggrData)
+                {
+                    foreach (WaitsInfo ws in aggValue.Value)
+                        if (ws.WaitName == previousWaitStat.WaitName)
+                            barSeriesWS.Items.Add(new BarItem { Value = (double)ws.WaitSec }); //, Color = OxyColors.LightPink });
+                }
+                barModelWS.Series.Add(barSeriesWS);
+            }
+                                      
+
+            barModelWS.Axes.Add(new CategoryAxis
+            {
+                Position = AxisPosition.Left,
+                Key = "DiskAxis"
+                //ItemsSource = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToList()
+            });
+
+            barModelWS.Axes.Add(new CategoryAxis
+            {
+                Position = AxisPosition.Bottom,
+                StringFormat = "yyyy-MM-dd",
+                Title = "Time",
+                MinimumPadding = 0.1,
+                MaximumPadding = 0.1
+                //IntervalType = DateTimeIntervalType.Auto
+            });
+
+            this.WaitStatsModel.Model = barModelWS;
 
 
+
+
+            //--------------------------------------------------------------------
+            //--------------------------------------------------------------------
+            // Disk info graph
+            var barModel = new PlotModel { Title = "Disk Capacities" };
+
+            var barSeries1 = new BarSeries
+            {
+                LabelPlacement = LabelPlacement.Inside,
+                LabelFormatString = "{0:0} Gb", // Adjust this to change how the labels are formatted
+                StrokeColor = OxyColors.Black,
+                StrokeThickness = 1,
+                IsStacked = true
+            };
+            foreach (var disk in metrics.DisksInfo)
+                barSeries1.Items.Add(new BarItem { Value = disk.UsedSpaceGb, Color = OxyColors.LightPink });
+            barModel.Series.Add(barSeries1);
+
+            var barSeries2 = new BarSeries
+            {
+                LabelPlacement = LabelPlacement.Inside,
+                LabelFormatString = "{0:0} Gb", // Adjust this to change how the labels are formatted
+                StrokeColor = OxyColors.Black,
+                StrokeThickness = 1,
+                IsStacked = true
+            };
+            foreach (var disk in metrics.DisksInfo)
+                barSeries2.Items.Add(new BarItem { Value = disk.FreeSpaceGb, Color = OxyColors.LightBlue });
+            barModel.Series.Add(barSeries2);
+
+
+            barModel.Axes.Add(new CategoryAxis
+            {
+                Position = AxisPosition.Left,
+                Key = "DiskAxis",
+                ItemsSource = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToList()
+            });
+
+            barModel.Axes.Add(new LinearAxis
+            {
+                Position = AxisPosition.Bottom,
+                MinimumPadding = 0.1,
+                MaximumPadding = 0.1,
+                AbsoluteMinimum = 0,
+                Title = "Gb"
+            });
+
+            this.DiskInfoModel.Model = barModel;
+
+
+            //--------------------------------------------------------------------
+            //--------------------------------------------------------------------
             lastRefresh = DateTime.Now;
 
             //Let user know that there is an issue by blinking the title

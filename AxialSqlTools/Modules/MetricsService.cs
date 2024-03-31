@@ -11,10 +11,57 @@ namespace AxialSqlTools
     public class HealthDashboardServerMetric
     {
 
+        public class DiskInfo
+        {
+            public string VolumeDescription { get; set; }
+            public long TotalCapacity { get; set; }
+            public long TotalCapacityGb { get; set; }
+            public long FreeSpace { get; set; }
+            public long FreeSpaceGb { get; set; }
+            public long UsedSpaceGb { get; set; }
+        }
+
+        public void AddDiskInfo(string volumeMountPoint, string volumeName, long Capacity, long FreeSpace)
+        {
+            DiskInfo diskInfo = new DiskInfo();
+
+            diskInfo.VolumeDescription = volumeMountPoint;
+            if (!string.IsNullOrEmpty(volumeName))
+                diskInfo.VolumeDescription += $" ({volumeName})";
+
+            diskInfo.TotalCapacity = Capacity;
+            diskInfo.FreeSpace = FreeSpace;
+
+            diskInfo.TotalCapacityGb = diskInfo.TotalCapacity / 1024 / 1024 / 1024;
+            diskInfo.FreeSpaceGb = diskInfo.FreeSpace / 1024 / 1024 / 1024;
+            diskInfo.UsedSpaceGb = (diskInfo.TotalCapacity - diskInfo.FreeSpace) / 1024 / 1024 / 1024;
+
+            DisksInfo.Add(diskInfo);
+        }
+
+        public class WaitsInfo
+        {
+            public string WaitName { get; set; }
+            public decimal WaitSec { get; set; }
+        }
+
+        public void AddWaitInfo(string WaitName, decimal WaitSec)
+        {
+            WaitsInfo waitsInfo = new WaitsInfo();
+            waitsInfo.WaitName = WaitName;
+            waitsInfo.WaitSec = WaitSec;
+
+            WaitStatsInfo.Add(waitsInfo);
+        }
+
         public HealthDashboardServerMetric ()
         {
             Iteration = 0;
             PerfCounter_RefreshDateTime = DateTime.Now;
+
+            DisksInfo = new List<DiskInfo>();
+            WaitStatsInfo = new List<WaitsInfo>();
+
         }
         // Example properties of the Metric class
         // public int Id { get; set; }
@@ -56,11 +103,17 @@ namespace AxialSqlTools
 
         public bool spWhoIsActiveExists { get; set; }
 
+
+        public DateTime SlowMetrics_RefreshDateTime { get; set; }
+        public List<DiskInfo> DisksInfo { get; set; }
+        public List<WaitsInfo> WaitStatsInfo { get; set; }
+
+        // infra
         public int ServerResponseTimeMs { get; set; }
         public bool Completed { get; set; }
         public bool HasException { get; set; }
         public string ExecutionException { get; set; }
-        // Add other properties or methods as needed
+
 
 
     }
@@ -74,6 +127,7 @@ namespace AxialSqlTools
             var metrics = new HealthDashboardServerMetric {};
 
             metrics.Iteration = prev_metrics.Iteration + 1;
+            metrics.SlowMetrics_RefreshDateTime = prev_metrics.SlowMetrics_RefreshDateTime;
 
             try
             {
@@ -388,6 +442,116 @@ namespace AxialSqlTools
                                 }
                             }
                         }
+                    }
+
+
+                    string queryText_71 = @"
+                    SELECT TOP 20 
+	                    wait_type,
+	                    wait_time_ms / 1000.0 AS [WaitS]
+	                    --ROW_NUMBER() OVER (ORDER BY wait_time_ms DESC) AS [RowNum]
+                    FROM sys.dm_os_wait_stats WITH (NOLOCK)
+                    WHERE [wait_type] NOT IN (N'BROKER_EVENTHANDLER', N'BROKER_RECEIVE_WAITFOR', N'BROKER_TASK_STOP', N'BROKER_TO_FLUSH', N'BROKER_TRANSMITTER',
+                                            N'CHECKPOINT_QUEUE', N'CHKPT', N'CLR_AUTO_EVENT', N'CLR_MANUAL_EVENT', N'CLR_SEMAPHORE', N'CXCONSUMER', N'DBMIRROR_DBM_EVENT', 
+                                            N'DBMIRROR_EVENTS_QUEUE', N'DBMIRROR_WORKER_QUEUE', N'DBMIRRORING_CMD', N'DIRTY_PAGE_POLL', N'DISPATCHER_QUEUE_SEMAPHORE', N'EXECSYNC',
+                                            N'FSAGENT', N'FT_IFTS_SCHEDULER_IDLE_WAIT', N'FT_IFTSHC_MUTEX', N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION',
+                                            N'HADR_LOGCAPTURE_WAIT', N'HADR_NOTIFICATION_DEQUEUE', N'HADR_TIMER_TASK', N'HADR_WORK_QUEUE', N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP',
+                                            N'LOGMGR_QUEUE', N'MEMORY_ALLOCATION_EXT', N'ONDEMAND_TASK_QUEUE', N'PARALLEL_REDO_DRAIN_WORKER', N'PARALLEL_REDO_LOG_CACHE',
+                                            N'PARALLEL_REDO_TRAN_LIST', N'PARALLEL_REDO_WORKER_SYNC', N'PARALLEL_REDO_WORKER_WAIT_WORK', N'PREEMPTIVE_COM_GETDATA', N'PREEMPTIVE_COM_QUERYINTERFACE',
+                                            N'PREEMPTIVE_HADR_LEASE_MECHANISM', N'PREEMPTIVE_SP_SERVER_DIAGNOSTICS', N'PREEMPTIVE_OS_LIBRARYOPS', N'PREEMPTIVE_OS_COMOPS', N'PREEMPTIVE_OS_CRYPTOPS',
+                                            N'PREEMPTIVE_OS_PIPEOPS', N'PREEMPTIVE_OS_AUTHENTICATIONOPS', N'PREEMPTIVE_OS_GENERICOPS', N'PREEMPTIVE_OS_VERIFYTRUST', N'PREEMPTIVE_OS_FILEOPS',
+                                            N'PREEMPTIVE_OS_DEVICEOPS', N'PREEMPTIVE_OS_QUERYREGISTRY', N'PREEMPTIVE_OS_WRITEFILE', N'PREEMPTIVE_OS_WRITEFILEGATHER', N'PREEMPTIVE_XE_CALLBACKEXECUTE',
+                                            N'PREEMPTIVE_XE_DISPATCHER', N'PREEMPTIVE_XE_GETTARGETSTATE', N'PREEMPTIVE_XE_SESSIONCOMMIT', N'PREEMPTIVE_XE_TARGETINIT', N'PREEMPTIVE_XE_TARGETFINALIZE',
+                                            N'PWAIT_ALL_COMPONENTS_INITIALIZED', N'PWAIT_DIRECTLOGCONSUMER_GETNEXT', N'PWAIT_EXTENSIBILITY_CLEANUP_TASK', N'QDS_PERSIST_TASK_MAIN_LOOP_SLEEP',
+                                            N'QDS_ASYNC_QUEUE', N'QDS_CLEANUP_STALE_QUERIES_TASK_MAIN_LOOP_SLEEP', N'REQUEST_FOR_DEADLOCK_SEARCH', N'RESOURCE_QUEUE', N'SERVER_IDLE_CHECK',
+                                            N'SLEEP_BPOOL_FLUSH', N'SLEEP_DBSTARTUP', N'SLEEP_DCOMSTARTUP', N'SLEEP_MASTERDBREADY', N'SLEEP_MASTERMDREADY', N'SLEEP_MASTERUPGRADED',
+                                            N'SLEEP_MSDBSTARTUP', N'SLEEP_SYSTEMTASK', N'SLEEP_TASK', N'SLEEP_TEMPDBSTARTUP', N'SNI_HTTP_ACCEPT', N'SOS_WORK_DISPATCHER',
+                                            N'SP_SERVER_DIAGNOSTICS_SLEEP', N'SOS_WORKER_MIGRATION', N'VDI_CLIENT_OTHER', N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
+                                            N'SQLTRACE_WAIT_ENTRIES', N'STARTUP_DEPENDENCY_MANAGER', N'WAIT_FOR_RESULTS', N'WAITFOR', N'WAITFOR_TASKSHUTDOWN', N'WAIT_XTP_HOST_WAIT',
+                                            N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG', N'WAIT_XTP_CKPT_CLOSE', N'WAIT_XTP_RECOVERY', N'XE_BUFFERMGR_ALLPROCESSED_EVENT', N'XE_DISPATCHER_JOIN',
+                                            N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT')
+	                    AND waiting_tasks_count > 0
+	                    AND wait_time_ms > 0
+                    ORDER BY wait_time_ms DESC;
+                    ";
+
+                    using (SqlCommand command = new SqlCommand(queryText_71, connection))
+                    {
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    metrics.AddWaitInfo(WaitName: reader.GetString(0), WaitSec: reader.GetDecimal(1));                                        
+                                }
+                            }
+                        }
+                    }
+
+                    //---------------------------------------------------------------------------
+                    // Slow metrics
+                    int diffMinutes = 0;
+                    if (metrics.SlowMetrics_RefreshDateTime != null)
+                    {
+                        TimeSpan SlowMetricDifference = DateTime.Now - metrics.SlowMetrics_RefreshDateTime;
+                        diffMinutes = (int)SlowMetricDifference.TotalMinutes;
+                    }
+
+                    if (metrics.SlowMetrics_RefreshDateTime == null || diffMinutes >= 1)
+                    {
+
+
+                        // Why so complex? 
+                        // Some databases have 100s of files, so the query can be slow, easier to find unique folders first
+                        string queryText_8 = @"WITH AllCatalogs
+                        AS (SELECT database_id,
+                                   file_id,
+                                   REVERSE(SUBSTRING(REVERSE(physical_name), CHARINDEX('\', REVERSE(physical_name)) + 1, LEN(physical_name))) AS FolderName
+                            FROM sys.master_files),
+                         NumberedCatalogs
+                        AS (SELECT database_id,
+                                   file_id,
+                                   FolderName,
+                                   ROW_NUMBER() OVER (PARTITION BY FolderName ORDER BY database_id, file_id) AS RN
+                            FROM AllCatalogs)
+                        SELECT DISTINCT vs.volume_mount_point,
+                                        vs.logical_volume_name,
+                                        vs.total_bytes,
+                                        vs.available_bytes
+                        FROM NumberedCatalogs AS f WITH (NOLOCK)
+                             CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.[file_id]) AS vs
+                        WHERE f.RN = 1
+                        ORDER BY vs.volume_mount_point
+                        OPTION (RECOMPILE);
+                        ";
+                        using (SqlCommand command = new SqlCommand(queryText_8, connection))
+                        {
+                            using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                            {
+                                if (reader.HasRows)
+                                {
+                                    while (await reader.ReadAsync())
+                                    {
+                                        metrics.AddDiskInfo(volumeMountPoint: reader.GetString(0), 
+                                                volumeName: reader.GetString(1), 
+                                                Capacity: reader.GetInt64(2), 
+                                                FreeSpace: reader.GetInt64(3));
+                                    }
+                                }
+                            }
+                        }
+
+
+
+
+
+
+                        metrics.SlowMetrics_RefreshDateTime = DateTime.Now;
+
+                    } else
+                    {
+                        metrics.DisksInfo = prev_metrics.DisksInfo;
                     }
 
                 }

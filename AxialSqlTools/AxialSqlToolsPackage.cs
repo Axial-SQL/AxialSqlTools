@@ -30,6 +30,9 @@ using System.Linq;
 using System.Data;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
 using System.Drawing;
+using System.Net.Http;
+using Newtonsoft.Json;
+using System.Net.Http.Headers;
 
 namespace AxialSqlTools
 {
@@ -172,18 +175,29 @@ namespace AxialSqlTools
                 {
                     Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
                     string currentVersionString = currentVersion.ToString();
+                    bool isNewVersionAvailable = false;
 
-                    var checker = new GitHubReleaseChecker();
+                    using (var client = new HttpClient())
+                    {
+                        // GitHub API versioning
+                        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Axial-SQL-Tools", "Latest"));
+                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
 
-                    //TODO - fails in SSMS18
-                    bool isNewVersionAvailable = await checker.IsNewVersionAvailableAsync(currentVersionString);
+                        // Request the latest release from GitHub API
+                        var url = $"https://api.github.com/repos/Axial-SQL/AxialSqlTools/releases/latest";
+                        var response = await client.GetStringAsync(url);
+
+                        dynamic latestRelease = JsonConvert.DeserializeObject(response);
+                        var latestVersion = (string)latestRelease.tag_name;
+                        
+                        isNewVersionAvailable = ( Version.Parse(latestVersion) > Version.Parse(currentVersionString));
+
+                    }
 
                     Cmd.Visible = isNewVersionAvailable;
 
                 }
-                catch { Cmd.Visible = false; }
-
-                
+                catch { Cmd.Visible = false; }               
 
 
             }
@@ -315,7 +329,7 @@ namespace AxialSqlTools
                 var SQLResultsControl = GridAccess.GetSQLResultsControl();
                 var m_SqlExec = GridAccess.GetNonPublicField(SQLResultsControl, "m_sqlExec");
 
-#if SSMS19DLL
+#if SSMS19DLL || SSMS20DLL
                 Microsoft.Data.SqlClient.SqlConnection connection = GridAccess.GetNonPublicField(m_SqlExec, "m_conn") as Microsoft.Data.SqlClient.SqlConnection;
                 if (connection.State == ConnectionState.Open)
                 {
