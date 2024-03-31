@@ -63,7 +63,7 @@ After obtaining the compiled files (either by compiling from source or downloadi
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Extensions` 
 
 - For SSMS 19, use this directory instead:<br/>
-`C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
+`C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions`
 
 - For SSMS 18, use this directory instead:<br/>
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
