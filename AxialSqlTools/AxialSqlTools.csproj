@@ -201,7 +201,7 @@
     <Reference Include="Microsoft.SqlServer.Management.Sdk.Sfc">
       <HintPath>Resources\ssms20dll\Microsoft.SqlServer.Management.Sdk.Sfc.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Data.SqlClient, Version=3.0.0.0, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5, processorArchitecture=MSIL">
+	<Reference Include="Microsoft.Data.SqlClient, Version=5.0.0.0, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Resources\ssms20dll\Microsoft.Data.SqlClient.dll</HintPath>
     </Reference>
