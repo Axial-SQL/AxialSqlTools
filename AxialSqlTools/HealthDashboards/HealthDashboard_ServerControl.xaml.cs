@@ -367,14 +367,39 @@
             Label_LogFileSizeGb.Content = FormatBytesToGB(metrics.PerfCounter_LogFileSize * 1024) + " | " + usedLogFilePercent.ToString() + "% used";
 
             //--------------------------------------------------------------------
-            //--------------------------------------------------------------------
             // Wait Stats info graph
 
             waitsStatsAggregator.UpdateWaitStats(metrics.WaitStatsInfo);
 
             var aggrData = waitsStatsAggregator.GetAggregatedData();
 
-            var barModelWS = new PlotModel { Title = "Wait Stats Over Time" };
+            var barModelWS = new PlotModel { Title = "Real-time Wait Stats" };
+
+            var categoryAxis = new CategoryAxis { Position = AxisPosition.Left };
+            var valueAxis = new LinearAxis { Position = AxisPosition.Bottom, MinimumPadding = 0, AbsoluteMinimum = 0 };
+
+            barModelWS.Axes.Add(categoryAxis);
+            barModelWS.Axes.Add(valueAxis);
+
+            foreach (var aggValue in aggrData)
+            {
+                categoryAxis.Labels.Add(aggValue.Key.ToString());
+            }
+                       
+            var LegendWS = new Legend
+            {
+                LegendTitle = "Wait Stats",
+                LegendPosition = LegendPosition.RightTop,
+                LegendPlacement = LegendPlacement.Outside,
+                LegendOrientation = LegendOrientation.Vertical,
+                LegendBackground = OxyColor.FromAColor(200, OxyColors.White),
+                LegendBorder = OxyColors.Black
+            };
+            LegendWS.LegendMaxWidth = 200;
+
+            // Legend configuration
+            barModelWS.IsLegendVisible = true; // Make the legend visible
+            barModelWS.Legends.Add(LegendWS);
 
             foreach (var previousWaitStat in waitsStatsAggregator.previousWaitStats)
             {
@@ -387,6 +412,8 @@
                     IsStacked = true
                 };
 
+                barSeriesWS.Title = previousWaitStat.WaitName;
+
                 foreach (var aggValue in aggrData)
                 {
                     foreach (WaitsInfo ws in aggValue.Value)
@@ -395,34 +422,13 @@
                 }
                 barModelWS.Series.Add(barSeriesWS);
             }
-                                      
-
-            barModelWS.Axes.Add(new CategoryAxis
-            {
-                Position = AxisPosition.Left,
-                Key = "DiskAxis"
-                //ItemsSource = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToList()
-            });
-
-            barModelWS.Axes.Add(new CategoryAxis
-            {
-                Position = AxisPosition.Bottom,
-                StringFormat = "yyyy-MM-dd",
-                Title = "Time",
-                MinimumPadding = 0.1,
-                MaximumPadding = 0.1
-                //IntervalType = DateTimeIntervalType.Auto
-            });
 
             this.WaitStatsModel.Model = barModelWS;
 
 
-
-
-            //--------------------------------------------------------------------
             //--------------------------------------------------------------------
             // Disk info graph
-            var barModel = new PlotModel { Title = "Disk Capacities" };
+            var barModel = new PlotModel { Title = "Volume(s) Utilization" };
 
             var barSeries1 = new BarSeries
             {

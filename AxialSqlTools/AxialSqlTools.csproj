@@ -38,13 +38,13 @@
     <CopyVsixExtensionLocation>C:\Program Files %28x86%29\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions\AxialSqlTools</CopyVsixExtensionLocation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'SSMS20|AnyCPU'">
-  <DebugSymbols>true</DebugSymbols>
+    <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\SSMS20\</OutputPath>
     <DefineConstants>TRACE;DEBUG;SSMS20DLL</DefineConstants>
-	<DebugType>full</DebugType>
+    <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-	<CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <CopyVsixExtensionFiles>True</CopyVsixExtensionFiles>
     <CopyVsixExtensionLocation>C:\Program Files %28x86%29\Microsoft SQL Server Management Studio 20\Common7\IDE\Extensions\AxialSqlTools</CopyVsixExtensionLocation>
   </PropertyGroup>
@@ -176,7 +176,7 @@
     <Content Include="Resources\wizard.png" />
     <Content Include="stylesheet.css" />
   </ItemGroup>
-    <ItemGroup Condition=" '$(Configuration)' == 'SSMS20' ">
+  <ItemGroup Condition=" '$(Configuration)' == 'SSMS20' ">
     <Reference Include="SqlPackageBase">
       <HintPath>Resources\ssms20dll\SqlPackageBase.dll</HintPath>
     </Reference>
@@ -201,7 +201,7 @@
     <Reference Include="Microsoft.SqlServer.Management.Sdk.Sfc">
       <HintPath>Resources\ssms20dll\Microsoft.SqlServer.Management.Sdk.Sfc.dll</HintPath>
     </Reference>
-	<Reference Include="Microsoft.Data.SqlClient, Version=5.0.0.0, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.Data.SqlClient, Version=5.0.0.0, Culture=neutral, PublicKeyToken=23ec7fc2d6eaa4a5, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Resources\ssms20dll\Microsoft.Data.SqlClient.dll</HintPath>
     </Reference>
@@ -263,11 +263,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="DocumentFormat.OpenXml, Version=3.0.1.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
-      <HintPath>..\packages\DocumentFormat.OpenXml.3.0.1\lib\net46\DocumentFormat.OpenXml.dll</HintPath>
+    <Reference Include="DocumentFormat.OpenXml, Version=3.0.2.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
+      <HintPath>..\packages\DocumentFormat.OpenXml.3.0.2\lib\net46\DocumentFormat.OpenXml.dll</HintPath>
     </Reference>
-    <Reference Include="DocumentFormat.OpenXml.Framework, Version=3.0.1.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
-      <HintPath>..\packages\DocumentFormat.OpenXml.Framework.3.0.1\lib\net46\DocumentFormat.OpenXml.Framework.dll</HintPath>
+    <Reference Include="DocumentFormat.OpenXml.Framework, Version=3.0.2.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
+      <HintPath>..\packages\DocumentFormat.OpenXml.Framework.3.0.2\lib\net46\DocumentFormat.OpenXml.Framework.dll</HintPath>
     </Reference>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <EmbedInteropTypes>False</EmbedInteropTypes>

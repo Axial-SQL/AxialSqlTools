@@ -37,6 +37,11 @@ namespace AxialSqlTools
             builder.InitialCatalog = databaseName;
             builder.ApplicationName = "Axial SQL Tools";
 
+            //I assume there is no harm in always encrypting these connections
+            //SSMS 20 connection fails without this
+            builder.Encrypt = true;
+            builder.TrustServerCertificate = true;
+
             ConnectionInfo ci = new ConnectionInfo();
             ci.FullConnectionString = builder.ToString();
             ci.Database = databaseName;

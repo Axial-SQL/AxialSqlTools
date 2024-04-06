@@ -128,25 +128,23 @@
                                 </StackPanel>
 
                             </StackPanel>
+                            <StackPanel Orientation="Vertical">
+                                <oxy:PlotView Name="DiskInfoModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="400" Height="250"/>
+                            </StackPanel>
                         </StackPanel>
-
                         <Label  HorizontalAlignment="Center" Content="" x:Name="LabelInternalException"/>
                     </StackPanel>
                         </Grid>
                     <Grid Grid.Row="1">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="400" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
-                            <!-- Takes 3/4 of the space -->
-                            <ColumnDefinition Width="2*"/>
-                            <!-- Takes 1/4 of the space -->
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
+
+                        <oxy:PlotView Name="WaitStatsModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="1000" Height="300"/>
                         
-                        <oxy:PlotView Grid.Row="1" Grid.Column="0" Name="WaitStatsModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-                        <oxy:PlotView Grid.Row="1"  Grid.Column="1" Name="DiskInfoModel" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-                   
                     </Grid>
 
                 </Grid>                
