@@ -1,7 +1,7 @@
-# Axial SQL Tools | SQL Server Management Studio 18/19 Productivity Addin
+# Axial SQL Tools | SQL Server Management Studio 18/19/20 Productivity Addin
 
 As an engineer with over two decades of experience in SQL Server, I've encountered my fair share of inefficiencies and limitations within SSMS. 
-Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the third iteration of my work, tailored specifically for SSMS 19.
+Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the third iteration of my work, tailored specifically for SSMS 18, 19 and 20.
 This project is a personal endeavor to solve the issues I've faced, but I would like to incorporate valuable community feedback and ideas as well.
 
 While I recognize that this extension may overlap with existing tools, both free and paid, my passion lies in coding and tackling problems in my own unique way. The aim isn't to overshadow other solutions but to provide a complementary tool that addresses gaps and simplifies processes for engineers like myself.
@@ -35,9 +35,6 @@ Check it out and let me know what you think!
   
 - [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics..
 ![server-health](https://github.com/Axial-SQL/AxialSqlTools/assets/13791336/760dcb74-d73b-42c7-94fe-933e321d0044)
-![agent-jobs](https://github.com/Axial-SQL/AxialSqlTools/assets/13791336/dda76216-be7f-4d1f-980c-8827342c0cc5)
-![backup-history](https://github.com/Axial-SQL/AxialSqlTools/assets/13791336/31270011-1b48-4b2f-b06a-7bf6134862c2)
-
 
 - [**Right Alignment for Numeric Values in Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Align-numeric-values-in-the-grid-result-to-the-right): Automatically align numeric values in the grid result to the right. <br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-before.png?raw=true"/> -> <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-after.png?raw=true"/>
@@ -54,16 +51,19 @@ These templates are designed to cover a wide range of scenarios, helping you to 
 To install the addin, you have two options:
 
 1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2017 for compatibility. 
-Select either the SSMS18 or SSMS19 active configurations. 
+Select either the SSMS18, SSMS19 or SSMS20 active configurations. 
 The build process will automatically copy all necessary files into the SSMS extension folder, and you will be ready to use it.
 
 2. **Download the Release:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository.
-Choose between the SSMS 18 and SSMS 19 versions.
+Choose between the SSMS 18, 19 and 20 versions.
 
 After obtaining the compiled files (either by compiling from source or downloading from Releases), follow these steps to install the extension:
 
-- For SSMS 19, place the folder with the compiled files into the following directory:<br/>
-`C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions` 
+- For SSMS 20, place the folder with the compiled files into the following directory:<br/>
+`C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Extensions` 
+
+- For SSMS 19, use this directory instead:<br/>
+`C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions`
 
 - For SSMS 18, use this directory instead:<br/>
 `C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
