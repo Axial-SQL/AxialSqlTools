@@ -177,6 +177,9 @@
     <Content Include="stylesheet.css" />
   </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)' == 'SSMS20' ">
+  	<Reference Include="SQLEditors">
+      <HintPath>Resources\ssms20dll\SQLEditors.dll</HintPath>
+    </Reference>
     <Reference Include="SqlPackageBase">
       <HintPath>Resources\ssms20dll\SqlPackageBase.dll</HintPath>
     </Reference>
@@ -207,6 +210,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)' == 'SSMS19' ">
+	<Reference Include="SQLEditors">
+      <HintPath>Resources\ssms19dll\SQLEditors.dll</HintPath>
+    </Reference>
     <Reference Include="SqlPackageBase">
       <HintPath>Resources\ssms19dll\SqlPackageBase.dll</HintPath>
     </Reference>
@@ -237,6 +243,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)' == 'SSMS18' ">
+  	<Reference Include="SQLEditors">
+      <HintPath>Resources\ssms18dll\SQLEditors.dll</HintPath>
+    </Reference>
     <Reference Include="SqlPackageBase">
       <HintPath>Resources\ssms18dll\SqlPackageBase.dll</HintPath>
     </Reference>

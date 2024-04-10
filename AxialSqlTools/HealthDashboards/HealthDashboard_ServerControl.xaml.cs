@@ -704,7 +704,7 @@
                             dbIndex = dbIndex + backupType;
 
                             var scatterSeries = new ScatterSeries {
-                                MarkerType = MarkerType.Circle,
+                                MarkerType = OxyPlot.MarkerType.Circle,
                                 MarkerFill = LineColor,
                                 MarkerStrokeThickness = 1
                             };
@@ -910,7 +910,7 @@
                             
                             var scatterSeries = new ScatterSeries
                             {
-                                MarkerType = MarkerType.Circle,
+                                MarkerType = OxyPlot.MarkerType.Circle,
                                 MarkerFill = LineColor,
                                 MarkerStrokeThickness = 1
                             };

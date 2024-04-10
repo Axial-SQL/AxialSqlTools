@@ -352,7 +352,10 @@ namespace AxialSqlTools
                 }
 #endif
 
-                GridAccess.ChangeCurrentWindowTitle(openTranCount);
+                var editorProperties = GridAccess.GetNonPublicField(m_SqlExec, "editorProperties");
+                var editorProperties_ElapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
+
+                GridAccess.ChangeStatusBarContent(openTranCount, editorProperties_ElapsedTime);
 
             } catch (Exception ex)
             {

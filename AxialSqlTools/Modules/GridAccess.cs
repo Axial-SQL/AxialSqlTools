@@ -1,5 +1,6 @@
 ﻿using Microsoft.SqlServer.Management.UI.Grid;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
+using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,31 +16,43 @@ namespace AxialSqlTools
 {
     public static class GridAccess
     {
+        public static void SetPropertyValue(object targetObj, string fieldName, object fieldValue)
+        {                       
+           targetObj.GetType().GetProperty(fieldName).SetValue(targetObj, fieldValue); 
+        }
+        public static object GetProperty(object obj, string field)
+        {
+            return obj.GetType().GetProperty(field, BindingFlags.Public | BindingFlags.Instance).GetValue(obj);
+        }
         public static object GetNonPublicField(object obj, string field)
         {
-            FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-
-            return f.GetValue(obj);
+            return obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance).GetValue(obj);
         }
         public static FieldInfo GetNonPublicFieldInfo(object obj, string field)
         {
-            FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-
-            return f;
+            return obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
         public static object GetSQLResultsControl()
         {
             var objType = ServiceCache.ScriptFactory.GetType();
             var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
-            var Result = method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
-
+            var Result = (SqlScriptEditorControl)method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
 
             var objType2 = Result.GetType();
             var field = objType2.GetField("m_sqlResultsControl", BindingFlags.NonPublic | BindingFlags.Instance);
             var SQLResultsControl = field.GetValue(Result);
 
             return SQLResultsControl;
+        }
+
+        public static QEStatusBarManager GetStatusBarManager()
+        {
+            var objType = ServiceCache.ScriptFactory.GetType();
+            var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
+            var Result = (SqlScriptEditorControl)method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
+
+            return Result.StatusBarManager;
         }
 
         public static CollectionBase GetGridContainers()
@@ -52,18 +65,9 @@ namespace AxialSqlTools
             return gridContainers;
         }
 
-        public static void ChangeCurrentWindowTitle(int OpenTranCount)
+        public static void ChangeStatusBarContent(int OpenTranCount, string ActualElapsedTime)
         {
-            // Can't express enough how much I don't like this...
-
-            var SQLResultsControl = GetSQLResultsControl();
-
-            var m_rawSP = GetNonPublicField(SQLResultsControl, "m_rawSP");
-            var frame = GetNonPublicField(m_rawSP, "frame");
-            var doc = frame.GetType().GetProperty("DocumentObject", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(frame);
-            var windowPane = doc.GetType().GetProperty("WindowPane", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(doc);
-
-            var statusBarManager = GetNonPublicField(windowPane, "statusBarManager");
+            QEStatusBarManager statusBarManager = GetStatusBarManager();
 
             if (OpenTranCount > 0 )
             {
@@ -71,30 +75,34 @@ namespace AxialSqlTools
                 if (OpenTranCount > 1)
                     msg = $"{OpenTranCount} transactions are still open!";
 
-                var statusBarManager_StatusText = statusBarManager.GetType().GetProperty("StatusText");
-                string currentText = statusBarManager_StatusText.GetValue(statusBarManager) as string;
-                currentText = currentText + " | " + msg;
-                statusBarManager_StatusText.SetValue(statusBarManager, currentText);
+                var currentMsg = statusBarManager.StatusText;
+                statusBarManager.SetKnownState(QEStatusBarKnownStates.Executing);
+                statusBarManager.StatusText = currentMsg + " | " + msg;                
+
             }
 
-            var generalPanel = GetNonPublicField(statusBarManager, "generalPanel");
-            var generalPanel_ForeColorProperty = generalPanel.GetType().GetProperty("ForeColor");
-            if (OpenTranCount > 0)
-                generalPanel_ForeColorProperty.SetValue(generalPanel, Color.Red);
-            else
-                generalPanel_ForeColorProperty.SetValue(generalPanel, Color.Black);
+            var statusBarManager_executionTimePanel = GetNonPublicField(statusBarManager, "executionTimePanel");
+            SetPropertyValue(statusBarManager_executionTimePanel, "Text", ActualElapsedTime);
 
+            var statusBarManager_completedTimePanel = GetNonPublicField(statusBarManager, "completedTimePanel");
+            //statusBarManager_completedTimePanel.Visible = true;
+
+            // Can't express enough how much I don't like this...
+            var generalPanel = GetNonPublicField(statusBarManager, "generalPanel");
+            if (OpenTranCount > 0)
+                SetPropertyValue(generalPanel, "ForeColor", Color.Red);
+            else
+                SetPropertyValue(generalPanel, "ForeColor", Color.Black);
+                        
+            //TODO - need to contract font from existing property..
             Font defaultFont = new Font("Segoe UI", 9);
             Font boldFont = new Font("Segoe UI", 10, FontStyle.Bold);
 
             var statusStrip = GetNonPublicField(statusBarManager, "statusStrip");
-
-            var statusStrip_FontProperty = statusStrip.GetType().GetProperty("Font");
             if (OpenTranCount > 0)
-                statusStrip_FontProperty.SetValue(statusStrip, boldFont);
+                SetPropertyValue(statusStrip, "Font", boldFont);
             else
-                statusStrip_FontProperty.SetValue(statusStrip, defaultFont);
-
+                SetPropertyValue(statusStrip, "Font", defaultFont);            
         }
 
         public static string GetColumnSqlType(DataRow schemaRow)
