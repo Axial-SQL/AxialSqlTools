@@ -21,6 +21,9 @@ Check it out and let me know what you think!
 - **Transaction Warning**: See right away if you left any transaction open.<br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/transaction-warning.png?raw=true"/>
 
+- **Precise Execution Time**: See milliseconds on the status bar.<br/>
+<img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/query-duration.png?raw=true"/>
+
 - [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Validate and format your TSQL code with Microsoft TSQL parser, making it more readable and maintainable.
   
 - **Quick Query Templates**: Access a collection of query templates for common tasks, saving time and effort on routine queries.
