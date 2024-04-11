@@ -33,6 +33,7 @@ using System.Drawing;
 using System.Net.Http;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
+using Microsoft.VisualStudio.TextManager.Interop;
 
 namespace AxialSqlTools
 {
@@ -91,8 +92,8 @@ namespace AxialSqlTools
             return numberOfWindowsOpen;
         }
 
-
-
+        public Dictionary<string, string> globalSnippets = new Dictionary<string, string>();
+  
         /// <summary>
         /// Initializes a new instance of the <see cref="AxialSqlToolsPackage"/> class.
         /// </summary>
@@ -102,7 +103,7 @@ namespace AxialSqlTools
             // any Visual Studio service because at this point the package object is created but
             // not sited yet inside Visual Studio environment. The place to do all the other
             // initialization is the Initialize method.
-        }
+        }        
 
         #region Package Members
 
@@ -139,13 +140,18 @@ namespace AxialSqlTools
                 IVsProfferCommands3 profferCommands3 = await base.GetServiceAsync(typeof(SVsProfferCommands)) as IVsProfferCommands3;
                 OleMenuCommandService oleMenuCommandService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
 
+                /*
                 var command = application.Commands.Item("Query.Execute");
                 m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
                 m_queryExecuteEvent.BeforeExecute += this.CommandEvents_BeforeExecute;
                 m_queryExecuteEvent.AfterExecute += this.CommandEvents_AfterExecute;
+                */
 
+                EnvDTE80.Events2 events = (EnvDTE80.Events2)application.Events;
+                EnvDTE.WindowEvents windowEvents = events.WindowEvents;
 
-
+                windowEvents.WindowCreated += new _dispWindowEvents_WindowCreatedEventHandler(WindowCreated_Event);
+                
                 // "File.ConnectObjectExplorer"
                 // "Query.Connect"
                 // 
@@ -165,6 +171,10 @@ namespace AxialSqlTools
 
                 m_commandBarQueryTemplates = m_plugin.AddCommandBarMenu("Query Templates", MsoBarPosition.msoBarTop, null);
 
+                //---------------------------------------------------------------------------
+                LoadGlobalSnippets();
+
+                //---------------------------------------------------------------------------
                 RefreshTemplatesList();
 
                 //---------------------------------------------------------------------------
@@ -197,8 +207,8 @@ namespace AxialSqlTools
                     Cmd.Visible = isNewVersionAvailable;
 
                 }
-                catch { Cmd.Visible = false; }               
-
+                catch { Cmd.Visible = false; }   
+                
 
             }
             catch (Exception ex)
@@ -220,6 +230,55 @@ namespace AxialSqlTools
 
         }
 
+        private void WindowCreated_Event(EnvDTE.Window Window)
+        {
+
+            ThreadHelper.ThrowIfNotOnUIThread();
+            
+            // snippet processor 
+            var DocData = GridAccess.GetProperty(Window.Object, "DocData");
+            var txtMgr = (IVsTextManager)GridAccess.GetProperty(DocData, "TextManager");
+
+            IVsTextView textView;
+            if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
+            {
+                //seems that you don't need to keep the object in memory
+                var CommandFilter = new KeypressCommandFilter(this, textView);
+                CommandFilter.AddToChain();
+            }
+
+            // subscribe to the execution completed event
+            try
+            {
+
+                var SQLResultsControl = GridAccess.GetNonPublicField(Window.Object, "m_sqlResultsControl");
+
+                EventHandler eventHandler = SQLResultsControl_ScriptExecutionCompleted;
+
+                Type targetType = SQLResultsControl.GetType();
+
+                EventInfo eventInfo = targetType.GetEvent("ScriptExecutionCompleted");
+                if (eventInfo != null)
+                {
+                    Delegate handlerDelegate = Delegate.CreateDelegate(eventInfo.EventHandlerType, eventHandler.Target, eventHandler.Method);
+                    eventInfo.RemoveEventHandler(SQLResultsControl, handlerDelegate);
+                    eventInfo.AddEventHandler(SQLResultsControl, handlerDelegate);
+                }
+                
+            }
+            catch
+            {
+
+            }
+        }
+
+        public void LoadGlobalSnippets()
+        {
+            //TODO - where to store it? 
+            //globalSnippets.Add("envrestore", "... select 1 ...");
+            //globalSnippets.Add("who", "... select 1, {{SELECT @@SERVERNAME}}...");
+        }
+
         // I don't understand the purpose, but it works
         private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {
@@ -231,33 +290,15 @@ namespace AxialSqlTools
         }
         //----------------
 
-        public static void AddEventToSqlResultConrol_ScriptExecutionCompleted()
-        {
-            var SQLResultsControl = GridAccess.GetSQLResultsControl();
-
-            EventHandler eventHandler = SQLResultsControl_ScriptExecutionCompleted;
-
-            Type targetType = SQLResultsControl.GetType();
-
-            EventInfo eventInfo = targetType.GetEvent("ScriptExecutionCompleted");
-            if (eventInfo != null)
-            {
-                Delegate handlerDelegate = Delegate.CreateDelegate(eventInfo.EventHandlerType, eventHandler.Target, eventHandler.Method);
-                eventInfo.RemoveEventHandler(SQLResultsControl, handlerDelegate); 
-                eventInfo.AddEventHandler(SQLResultsControl, handlerDelegate);
-            }        
-
-        }
         
         // This method aligns all numeric values to the right
         public static void SQLResultsControl_ScriptExecutionCompleted(object a, object b)
         {
+
             ThreadHelper.ThrowIfNotOnUIThread();
 
             try
             {
-
-
                 //1. Align numeric types to the right
                 CollectionBase gridContainers = GridAccess.GetGridContainers();
 
@@ -363,26 +404,16 @@ namespace AxialSqlTools
             }            
 
         }
-
-
+        
         private void CommandEvents_BeforeExecute(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            try
-            {
-                AddEventToSqlResultConrol_ScriptExecutionCompleted();
-            }
-            catch {
-
-            }
-
+            //ThreadHelper.ThrowIfNotOnUIThread();            
         }
 
         //it has been executed, but the Grid hasn't been created yet...
         private void CommandEvents_AfterExecute(string Guid, int ID, object CustomIn, object CustomOut)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            //ThreadHelper.ThrowIfNotOnUIThread();
         }
 
         public void RefreshTemplatesList()
