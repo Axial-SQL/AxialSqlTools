@@ -25,6 +25,9 @@
 
                 ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
 
+                UseSnippets.IsChecked = SettingsManager.GetUseSnippets();
+                SnippetFolder.Text = SettingsManager.GetSnippetFolder();
+
                 MyEmailAddress.Text = SettingsManager.GetMyEmail();
 
                 SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
@@ -41,7 +44,6 @@
 
             } catch (Exception ex)
             {
-
                 string msg = $"Erorr message: {ex.Message} \nInnerException: {ex.InnerException}";
                 MessageBox.Show(msg, "Error");
             }
@@ -65,6 +67,12 @@
         private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveTemplatesFolder(ScriptFolder.Text);
+        }
+
+
+        private void Button_SaveSnippetFolder_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsManager.SaveSnippetUse(UseSnippets.IsChecked.GetValueOrDefault(), SnippetFolder.Text);
         }
 
         private void buttonDownloadAxialScripts_Click(object sender, RoutedEventArgs e)
@@ -172,5 +180,6 @@
         {
             SettingsManager.SaveOpenAiApiKey(OpenAiApiKey.Password);
         }
+
     }
 }

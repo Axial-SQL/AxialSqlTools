@@ -92,6 +92,7 @@
   <ItemGroup>
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
     <Compile Include="Commands\CheckAddinVersionCommand.cs" />
+    <Compile Include="Commands\ResultGridCommands.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
     <Compile Include="DataTransfer\DataTransferWindow.cs" />
     <Compile Include="DataTransfer\DataTransferWindowCommand.cs" />

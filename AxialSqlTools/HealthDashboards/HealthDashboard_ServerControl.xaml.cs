@@ -86,6 +86,16 @@
                         aggregatedWaitStats[minuteKey].Add(item);
                     }
                 }
+
+                // Clean up entries older than 15 minutes
+                var threshold = DateTime.Now.AddMinutes(-15);
+                var keysToRemove = aggregatedWaitStats.Keys.Where(k => k < threshold).ToList();
+                foreach (var key in keysToRemove)
+                {
+                    aggregatedWaitStats.Remove(key);
+                }
+
+
             }
 
             // Method to retrieve the aggregated data (you can call this method to get the data for visualization)

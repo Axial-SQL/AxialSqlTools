@@ -492,5 +492,44 @@ ORDER BY sd.[name];
             return SaveRegisterValue("OpenAI_ApiKeyEnc", Convert.ToBase64String(encKey));
         }
 
+
+        public static bool GetUseSnippets()
+        {
+            bool result = false;
+            bool success = bool.TryParse(GetRegisterValue("UseSnippets"), out result);
+            return result;
+        }
+        public static string GetSnippetFolder()
+        {
+            var folder = GetRegisterValue("SnippetFolder");
+            /*
+            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+            {
+                folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "AxialSqlToolsTemplates");
+
+                SaveTemplatesFolder(folder);
+
+                if (!Directory.Exists(folder))
+                {
+                    Directory.CreateDirectory(folder);
+                }
+            }
+            */
+            return folder;
+        }
+        public static bool SaveSnippetUse(bool UseSnippets, string SnippetFolder)
+        {
+            return SaveUseSnippets(UseSnippets) && SaveSnippetFolder(SnippetFolder);
+        }
+        public static bool SaveUseSnippets(bool UseSnippets)
+        {
+            return SaveRegisterValue("UseSnippets", UseSnippets.ToString());
+        }
+        public static bool SaveSnippetFolder(string folder)
+        {
+            return SaveRegisterValue("SnippetFolder", folder);
+        }
+
+
     }
 }

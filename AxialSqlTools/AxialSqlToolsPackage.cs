@@ -134,6 +134,8 @@ namespace AxialSqlTools
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await CheckAddinVersionCommand.InitializeAsync(this);
 
+                await ResultGridCopyAsInsertCommand.InitializeAsync(this);
+
                 await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
                 DTE2 application = GetGlobalService(typeof(DTE)) as DTE2;
@@ -234,17 +236,27 @@ namespace AxialSqlTools
         {
 
             ThreadHelper.ThrowIfNotOnUIThread();
-            
-            // snippet processor 
-            var DocData = GridAccess.GetProperty(Window.Object, "DocData");
-            var txtMgr = (IVsTextManager)GridAccess.GetProperty(DocData, "TextManager");
 
-            IVsTextView textView;
-            if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
+            if (SettingsManager.GetUseSnippets())
             {
-                //seems that you don't need to keep the object in memory
-                var CommandFilter = new KeypressCommandFilter(this, textView);
-                CommandFilter.AddToChain();
+                try
+                {
+                    // snippet processor 
+                    var DocData = GridAccess.GetProperty(Window.Object, "DocData");
+                    var txtMgr = (IVsTextManager)GridAccess.GetProperty(DocData, "TextManager");
+
+                    IVsTextView textView;
+                    if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
+                    {
+                        //seems that you don't need to keep the object in memory
+                        var CommandFilter = new KeypressCommandFilter(this, textView);
+                        CommandFilter.AddToChain();
+                    }
+                }
+                catch
+                {
+
+                }
             }
 
             // subscribe to the execution completed event
@@ -274,9 +286,37 @@ namespace AxialSqlTools
 
         public void LoadGlobalSnippets()
         {
-            //TODO - where to store it? 
-            //globalSnippets.Add("envrestore", "... select 1 ...");
-            //globalSnippets.Add("who", "... select 1, {{SELECT @@SERVERNAME}}...");
+
+            if (SettingsManager.GetUseSnippets())
+            {
+
+                var snippetFolder = SettingsManager.GetSnippetFolder();
+
+                if (Directory.Exists(snippetFolder))
+                {
+                    var allFiles = Directory.EnumerateFiles(snippetFolder, "*.sql");
+
+                    foreach (var file in allFiles)
+                    {
+
+                        FileInfo fi = new FileInfo(file);
+
+                        if (fi.Length < 1024 * 1024)
+                        {
+                            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fi.Name);
+
+                            globalSnippets.Add(fileNameWithoutExtension, System.IO.File.ReadAllText(fi.FullName));
+                        }
+
+                    }
+
+                   
+                }
+
+            }
+           
+
+        
         }
 
         // I don't understand the purpose, but it works
