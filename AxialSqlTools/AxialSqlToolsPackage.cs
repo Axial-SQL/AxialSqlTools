@@ -34,6 +34,8 @@ using System.Net.Http;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using Microsoft.VisualStudio.TextManager.Interop;
+using System.Collections.Concurrent;
+using Microsoft.Data.SqlClient;
 
 namespace AxialSqlTools
 {
@@ -73,6 +75,90 @@ namespace AxialSqlTools
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
+        #region QueryHistory
+        private class QueryHistoryEntry
+        {
+            public DateTime StartTime;
+            public DateTime FinishTime;
+            public string ElapsedTime;
+            public long TotalRowsReturned;
+            public string ExecResult;
+            public string QueryText;
+            public string DataSource;
+            public string DatabaseName;
+            public string LoginName;
+            public string WorkstationId;
+        }
+
+        private static ConcurrentQueue<QueryHistoryEntry> _queryHistoryQueue = new ConcurrentQueue<QueryHistoryEntry>();
+
+        private static void EnqueueDataForProcessing(QueryHistoryEntry data)
+        {
+            _queryHistoryQueue.Enqueue(data);
+            Task.Run(() => ProcessDataAsync());
+        }
+
+        private static async Task ProcessDataAsync()
+        {
+            while (_queryHistoryQueue.TryDequeue(out QueryHistoryEntry data))
+            {
+                await PersistDataAsync(data);
+            }
+        }
+
+        private static async Task PersistDataAsync(QueryHistoryEntry data)
+        {
+            string connectionString = SettingsManager.GetQueryHistoryConnectionString();
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                string sql = @"
+                IF OBJECT_ID('[dbo].[QueryHistory]') IS NULL
+                BEGIN
+                    CREATE TABLE [dbo].[QueryHistory] (
+                        [QueryID]           INT            IDENTITY (1, 1) NOT NULL,
+                        [StartTime]         DATETIME       NOT NULL,
+                        [FinishTime]        DATETIME       NOT NULL,
+                        [ElapsedTime]       VARCHAR (15)   NOT NULL,
+                        [TotalRowsReturned] BIGINT         NOT NULL,
+                        [ExecResult]        VARCHAR (100)  NOT NULL,
+                        [QueryText]         NVARCHAR (MAX) NOT NULL,
+                        [DataSource]        NVARCHAR (128) NOT NULL,
+                        [DatabaseName]      NVARCHAR (128) NOT NULL,
+                        [LoginName]         NVARCHAR (128) NOT NULL,
+                        [WorkstationId]     NVARCHAR (128) NOT NULL,
+                        CONSTRAINT [PK_QueryHistory] PRIMARY KEY CLUSTERED ([QueryID]),
+                        INDEX [IDX_QueryHistory_1] ([StartTime]),
+                        INDEX [IDX_QueryHistory_2] ([FinishTime]),
+                        INDEX [IDX_QueryHistory_3] ([DataSource]),
+                        INDEX [IDX_QueryHistory_4] ([DatabaseName])
+                    );
+                END
+
+                INSERT INTO [dbo].[QueryHistory] 
+                    (StartTime, FinishTime, ElapsedTime, TotalRowsReturned, 
+                        ExecResult, QueryText, DataSource, DatabaseName, LoginName, WorkstationId) 
+                VALUES (@StartTime, @FinishTime, @ElapsedTime, @TotalRowsReturned, 
+                            @ExecResult, @QueryText, @DataSource, @DatabaseName, @LoginName, @WorkstationId)
+
+                ";
+                using (SqlCommand command = new SqlCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@StartTime", data.StartTime);
+                    command.Parameters.AddWithValue("@FinishTime", data.FinishTime);
+                    command.Parameters.AddWithValue("@ElapsedTime", data.ElapsedTime);
+                    command.Parameters.AddWithValue("@TotalRowsReturned", data.TotalRowsReturned);
+                    command.Parameters.AddWithValue("@ExecResult", data.ExecResult);
+                    command.Parameters.AddWithValue("@QueryText", data.QueryText);
+                    command.Parameters.AddWithValue("@DataSource", data.DataSource);
+                    command.Parameters.AddWithValue("@DatabaseName", data.DatabaseName);
+                    command.Parameters.AddWithValue("@LoginName", data.LoginName);
+                    command.Parameters.AddWithValue("@WorkstationId", data.WorkstationId);
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+        }
+        #endregion
 
         public const string PackageGuidString = "82ff597d-c4bc-469f-b990-637219074984";
         public const string PackageGuidGroup = "d8ef26a8-e88c-4ad1-85fd-ddc48a207530";
@@ -332,7 +418,7 @@ namespace AxialSqlTools
 
         
         // This method aligns all numeric values to the right
-        public static void SQLResultsControl_ScriptExecutionCompleted(object a, object b)
+        public static void SQLResultsControl_ScriptExecutionCompleted(object QEOLESQLExec, object b)
         {
 
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -441,10 +527,43 @@ namespace AxialSqlTools
             } catch (Exception ex)
             {
                 var msg = ex.Message;
-            }            
+            }
+
+            // query history
+            try
+            {
+
+                var editorProperties = GridAccess.GetNonPublicField(QEOLESQLExec, "editorProperties");
+
+                var textSpan = GridAccess.GetNonPublicField(QEOLESQLExec, "textSpan");
+
+                var mConn = GridAccess.GetNonPublicField(QEOLESQLExec, "m_conn");
+
+                var QueryHistoryObj = new QueryHistoryEntry();
+                QueryHistoryObj.StartTime = (DateTime)GridAccess.GetNonPublicField(editorProperties, "startTime");
+                QueryHistoryObj.FinishTime = (DateTime)GridAccess.GetNonPublicField(editorProperties, "finishTime");
+                QueryHistoryObj.ElapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
+                QueryHistoryObj.TotalRowsReturned = (long)GridAccess.GetProperty(editorProperties, "TotalRowsReturned");
+
+                // Success, Failure -> not really clear how to track batch execution results...
+                QueryHistoryObj.ExecResult = GridAccess.GetNonPublicField(QEOLESQLExec, "m_execResult").ToString();
+
+                QueryHistoryObj.QueryText = (string)GridAccess.GetProperty(textSpan, "Text");
+                QueryHistoryObj.DataSource = (string)GridAccess.GetProperty(mConn, "DataSource");
+                QueryHistoryObj.DatabaseName = (string)GridAccess.GetProperty(mConn, "Database");
+                QueryHistoryObj.LoginName = (string)GridAccess.GetProperty(editorProperties, "ChildLoginName");
+                QueryHistoryObj.WorkstationId = (string)GridAccess.GetProperty(mConn, "WorkstationId");
+
+                EnqueueDataForProcessing(QueryHistoryObj);
+
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message;
+            }
+
 
         }
-        
         private void CommandEvents_BeforeExecute(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
         {
             //ThreadHelper.ThrowIfNotOnUIThread();            

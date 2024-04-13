@@ -28,6 +28,8 @@
                 UseSnippets.IsChecked = SettingsManager.GetUseSnippets();
                 SnippetFolder.Text = SettingsManager.GetSnippetFolder();
 
+                QueryHistoryConnectionString.Text = SettingsManager.GetQueryHistoryConnectionString();
+
                 MyEmailAddress.Text = SettingsManager.GetMyEmail();
 
                 SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
@@ -181,5 +183,9 @@
             SettingsManager.SaveOpenAiApiKey(OpenAiApiKey.Password);
         }
 
+        private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsManager.SaveQueryHistoryConnectionString(QueryHistoryConnectionString.Text);
+        }
     }
 }

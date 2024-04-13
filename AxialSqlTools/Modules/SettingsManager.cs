@@ -531,5 +531,26 @@ ORDER BY sd.[name];
         }
 
 
+        public static string GetQueryHistoryConnectionString()
+        {
+            string key = "";
+            try
+            {
+                string encKey = GetRegisterValue("QueryHistoryConnectionString");
+                byte[] decryptedData = Unprotect(Convert.FromBase64String(encKey));
+                key = Encoding.UTF8.GetString(decryptedData);
+            }
+            catch
+            {
+            }
+
+            return key;
+        }
+        public static bool SaveQueryHistoryConnectionString(string connectionString)
+        {
+            byte[] encKey = Protect(Encoding.UTF8.GetBytes(connectionString));
+            return SaveRegisterValue("QueryHistoryConnectionString", Convert.ToBase64String(encKey));
+        }
+
     }
 }
