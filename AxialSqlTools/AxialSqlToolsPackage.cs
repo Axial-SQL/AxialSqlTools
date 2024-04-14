@@ -219,6 +219,7 @@ namespace AxialSqlTools
                 await HealthDashboard_ServersCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await CheckAddinVersionCommand.InitializeAsync(this);
+                await QueryHistoryCommand.InitializeAsync(this);
 
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
 
@@ -315,6 +316,7 @@ namespace AxialSqlTools
 
             // needed for the AxyPlot library
             AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+           
 
         }
 

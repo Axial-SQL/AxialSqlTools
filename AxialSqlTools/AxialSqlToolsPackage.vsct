@@ -171,8 +171,17 @@
         <Strings>
           <ButtonText>Script Result Into a New Window - TODO</ButtonText>
         </Strings>
-      </Button>    
-      
+      </Button>
+
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryHistoryCommand" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
+        <Icon guid="guidQueryHistory" id="bmpQueryHistory" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Query History</ButtonText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialHealthDashboardServerCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidServerHealth" id="bmpServerHealth" />
@@ -265,6 +274,7 @@
       <Bitmap guid="guidAttention" href="Resources\attention.png" usedList="bmpAttention" />
       <Bitmap guid="guidExportGridToEmail" href="Resources\grid-to-email.png" usedList="bmpExportGridToEmail" />
       <Bitmap guid="guidExportGridToTempTable" href="Resources\grid-to-temp-table.png" usedList="bmpExportGridToTempTable" />
+      <Bitmap guid="guidQueryHistory" href="Resources\query-history.png" usedList="bmpQueryHistory" />
  </Bitmaps>
   </Commands>
 
@@ -308,7 +318,7 @@
 
       <IDSymbol name="AxialDataTransferCommand" value="4143" />
       
-      <!--<IDSymbol name="AxialBackupTimelineCommand" value="4144" />-->
+      <IDSymbol name="AxialQueryHistoryCommand" value="4144" />      
       
   </GuidSymbol>
 
@@ -344,6 +354,9 @@
     </GuidSymbol>
     <GuidSymbol name="guidExportGridToTempTable" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d1}">
       <IDSymbol name="bmpExportGridToTempTable" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidQueryHistory" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d2}">
+      <IDSymbol name="bmpQueryHistory" value="1" />
     </GuidSymbol>
 
   </Symbols>
