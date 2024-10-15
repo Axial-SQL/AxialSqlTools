@@ -10,7 +10,7 @@ FROM sys.dm_db_partition_stats AS ps
 WHERE ps.index_id < 2
 GROUP BY ps.object_id;
 
-DECLARE @TableInfo AS TABLE (SchemaName SYSNAME, TableName SYSNAME, ObjectId INT, HasPK INT, HasClusteredIndex INT, PKisClustered INT, IsReplicated INT, IndexCount INT, CreateDate DATETIME, LastIdentityValue SQL_VARIANT, INDEX IDX CLUSTERED (ObjectId));
+DECLARE @TableInfo AS TABLE (SchemaName SYSNAME, TableName SYSNAME, ObjectId INT, HasPK INT, HasClusteredIndex INT, PKisClustered INT, IsReplicated INT, IndexCount INT, CreateDate DATETIME, LastIdentityValue SQL_VARIANT NULL, IdentityType SYSNAME NULL, INDEX IDX CLUSTERED (ObjectId));
 INSERT INTO @TableInfo
 SELECT 
        OBJECT_SCHEMA_NAME(t.object_id) AS SchemaName,
@@ -22,7 +22,8 @@ SELECT
        t.is_replicated as IsReplicated,
        COALESCE (i.IndexCount, 0) AS IndexCount,
        t.create_date,
-       ic.last_value
+       ic.last_value,
+       st.name
 FROM sys.tables AS t
      LEFT OUTER JOIN
      (SELECT si.object_id,
@@ -35,6 +36,7 @@ FROM sys.tables AS t
       GROUP BY si.object_id) AS i
      ON t.object_id = i.object_id
      LEFT JOIN sys.identity_columns ic ON t.object_id = ic.object_id
+     LEFT JOIN sys.types st ON ic.system_type_id = st.system_type_id
 WHERE t.is_ms_shipped = 0;
 
 DECLARE @TableSizes AS TABLE (ObjectId INT, UsedSpaceMB NUMERIC (36, 2), UsedSpaceMB_Compressed NUMERIC (36, 2), UsedSpaceMB_LOB NUMERIC (36, 2), UsedSpaceMB_CS NUMERIC (36, 2), INDEX IDX CLUSTERED (ObjectId));
@@ -86,7 +88,8 @@ SELECT DB_NAME() AS DatabaseName,
        L.TotalWrites,
        ti.CreateDate,
        RS.UnusedPagesPercent,
-       ti.LastIdentityValue
+       ti.LastIdentityValue,
+       ti.IdentityType
 FROM @TableInfo AS ti
 	LEFT JOIN @RowsStatistics AS RS ON RS.ObjectId = ti.ObjectId
 	LEFT JOIN @LastReadWrites AS L ON L.ObjectId = RS.ObjectId
