@@ -6,11 +6,11 @@ SELECT ps.object_id AS ObjectId,
        SUM(ps.row_count) AS RowsCount,
        CASE WHEN SUM(ps.reserved_page_count) = 0 THEN 0 ELSE (SUM(ps.reserved_page_count) - SUM(ps.used_page_count)) * 100 / SUM(ps.reserved_page_count) END AS UnusedPagesPercent
 FROM sys.dm_db_partition_stats AS ps
-     INNER JOIN sys.objects AS so ON ps.OBJECT_ID = so.object_id
+     INNER JOIN sys.objects AS so ON ps.object_id = so.object_id
 WHERE ps.index_id < 2
 GROUP BY ps.object_id;
 
-DECLARE @TableInfo AS TABLE (SchemaName SYSNAME, TableName SYSNAME, ObjectId INT, HasPK INT, HasClusteredIndex INT, PKisClustered INT, IsReplicated INT, IndexCount INT, CreateDate DATETIME, INDEX IDX CLUSTERED (ObjectId));
+DECLARE @TableInfo AS TABLE (SchemaName SYSNAME, TableName SYSNAME, ObjectId INT, HasPK INT, HasClusteredIndex INT, PKisClustered INT, IsReplicated INT, IndexCount INT, CreateDate DATETIME, LastIdentityValue SQL_VARIANT, INDEX IDX CLUSTERED (ObjectId));
 INSERT INTO @TableInfo
 SELECT 
        OBJECT_SCHEMA_NAME(t.object_id) AS SchemaName,
@@ -21,7 +21,8 @@ SELECT
        i.PKisClustered,
        t.is_replicated as IsReplicated,
        COALESCE (i.IndexCount, 0) AS IndexCount,
-       t.create_date
+       t.create_date,
+       ic.last_value
 FROM sys.tables AS t
      LEFT OUTER JOIN
      (SELECT si.object_id,
@@ -33,7 +34,8 @@ FROM sys.tables AS t
       FROM sys.indexes AS si
       GROUP BY si.object_id) AS i
      ON t.object_id = i.object_id
-WHERE (t.is_ms_shipped = 0 OR DB_NAME() = 'msdb');
+     LEFT JOIN sys.identity_columns ic ON t.object_id = ic.object_id
+WHERE t.is_ms_shipped = 0;
 
 DECLARE @TableSizes AS TABLE (ObjectId INT, UsedSpaceMB NUMERIC (36, 2), UsedSpaceMB_Compressed NUMERIC (36, 2), UsedSpaceMB_LOB NUMERIC (36, 2), UsedSpaceMB_CS NUMERIC (36, 2), INDEX IDX CLUSTERED (ObjectId));
 INSERT INTO @TableSizes
@@ -67,30 +69,31 @@ GROUP BY ObjectID;
 SELECT DB_NAME() AS DatabaseName,
        ti.SchemaName,
        ti.TableName,
-       FORMAT(rs.RowsCount, 'N0') AS RowsCount,
-       FORMAT(ts.UsedSpaceMB, 'N0') AS UsedSpaceMB,
-       -- FORMAT(ts.UsedSpaceMB_LOB, 'N0') AS UsedSpaceMB_LOB,
-       -- FORMAT(ts.UsedSpaceMB_CS, 'N0') AS UsedSpaceMB_CS,
-       FORMAT(ts.UsedSpaceMB_Compressed, 'N0') AS UsedSpaceMB_ZIP,
-       rs.PartitionCount,
+       FORMAT(RS.RowsCount, 'N0') AS RowsCount,
+       FORMAT(TS.UsedSpaceMB, 'N0') AS UsedSpaceMB,
+       -- FORMAT(TS.UsedSpaceMB_LOB, 'N0') AS UsedSpaceMB_LOB,
+       -- FORMAT(TS.UsedSpaceMB_CS, 'N0') AS UsedSpaceMB_CS,
+       FORMAT(TS.UsedSpaceMB_Compressed, 'N0') AS UsedSpaceMB_ZIP,
+       RS.PartitionCount,
        ti.IndexCount,
        ti.HasPK,
        ti.HasClusteredIndex,
        ti.PKisClustered,
        ti.IsReplicated,
-       l.LastWrite,
-       l.LastRead,
-       l.TotalReads,
-       l.TotalWrites,
+       L.LastWrite,
+       L.LastRead,
+       L.TotalReads,
+       L.TotalWrites,
        ti.CreateDate,
-       rs.UnusedPagesPercent
+       RS.UnusedPagesPercent,
+       ti.LastIdentityValue
 FROM @TableInfo AS ti
-	LEFT JOIN @RowsStatistics AS rs ON rs.ObjectId = ti.ObjectId
-	LEFT JOIN @LastReadWrites AS l ON l.ObjectId = rs.ObjectId
-	LEFT JOIN @TableSizes AS ts ON ts.ObjectId = ti.ObjectId
+	LEFT JOIN @RowsStatistics AS RS ON RS.ObjectId = ti.ObjectId
+	LEFT JOIN @LastReadWrites AS L ON L.ObjectId = RS.ObjectId
+	LEFT JOIN @TableSizes AS TS ON TS.ObjectId = ti.ObjectId
 WHERE 1 = 1
      --AND ti.TableName IN ('','')
      --AND ti.SchemaName = ''
-     --AND rs.RowsCount > 0
-ORDER BY ts.UsedSpaceMB DESC;
--- ORDER BY ts.UsedSpaceMB - ts.UsedSpaceMB_LOB DESC;
+     --AND RS.RowsCount > 0
+ORDER BY TS.UsedSpaceMB DESC;
+-- ORDER BY TS.UsedSpaceMB - TS.UsedSpaceMB_LOB DESC;
