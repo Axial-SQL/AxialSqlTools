@@ -36,7 +36,7 @@ FROM sys.tables AS t
       GROUP BY si.object_id) AS i
      ON t.object_id = i.object_id
      LEFT JOIN sys.identity_columns ic ON t.object_id = ic.object_id
-     LEFT JOIN sys.types st ON ic.system_type_id = st.system_type_id
+     LEFT JOIN sys.types st ON ic.system_type_id = st.system_type_id AND ic.user_type_id = st.user_type_id
 WHERE t.is_ms_shipped = 0;
 
 DECLARE @TableSizes AS TABLE (ObjectId INT, UsedSpaceMB NUMERIC (36, 2), UsedSpaceMB_Compressed NUMERIC (36, 2), UsedSpaceMB_LOB NUMERIC (36, 2), UsedSpaceMB_CS NUMERIC (36, 2), INDEX IDX CLUSTERED (ObjectId));
