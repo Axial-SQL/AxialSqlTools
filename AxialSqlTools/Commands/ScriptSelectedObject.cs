@@ -215,6 +215,8 @@ namespace AxialSqlTools
 
                     scripter.Options.Indexes = true;
                     scripter.Options.Triggers = true;
+                    scripter.Options.Default = true;
+                    scripter.Options.DriAll = true;
 
                     scripter.Options.ScriptDataCompression = true;
                     scripter.Options.NoCollation = true;

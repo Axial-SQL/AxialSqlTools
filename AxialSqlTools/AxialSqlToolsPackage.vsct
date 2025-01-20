@@ -225,6 +225,15 @@
           <ButtonText>Refresh Templates</ButtonText>
         </Strings>
       </Button>
+
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesButtonOpenFolder" priority="0x9910" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" />
+        <Icon guid="guidOpenFolder" id="bmpOpenFolder" />
+        <!--<CommandFlag>IconAndText</CommandFlag>-->
+        <Strings>
+          <ButtonText>Open Templates Folder</ButtonText>
+        </Strings>
+      </Button>
             
       
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSettingsButton" priority="0x1000" type="Button">
@@ -275,6 +284,7 @@
       <Bitmap guid="guidExportGridToEmail" href="Resources\grid-to-email.png" usedList="bmpExportGridToEmail" />
       <Bitmap guid="guidExportGridToTempTable" href="Resources\grid-to-temp-table.png" usedList="bmpExportGridToTempTable" />
       <Bitmap guid="guidQueryHistory" href="Resources\query-history.png" usedList="bmpQueryHistory" />
+      <Bitmap guid="guidOpenFolder" href="Resources\open-folder.png" usedList="bmpOpenFolder" />
  </Bitmaps>
   </Commands>
 
@@ -296,6 +306,7 @@
       <IDSymbol name="AxialQueryTemplatesSubMenu" value="0x1100" />
       <IDSymbol name="AxialQueryTemplatesSubMenuGroup" value="0x1101" />
       <IDSymbol name="AxialQueryTemplatesButtonRefresh" value="4132" />
+      <IDSymbol name="AxialQueryTemplatesButtonOpenFolder" value="4145" />   
 
       <IDSymbol name="AxialToolsSubMenu" value="0x1200" />
       <IDSymbol name="AxialToolsSubMenuGroup_Export" value="0x1201" />
@@ -357,6 +368,9 @@
     </GuidSymbol>
     <GuidSymbol name="guidQueryHistory" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d2}">
       <IDSymbol name="bmpQueryHistory" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidOpenFolder" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d3}">
+      <IDSymbol name="bmpOpenFolder" value="1" />
     </GuidSymbol>
 
   </Symbols>

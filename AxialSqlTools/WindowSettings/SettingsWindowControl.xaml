@@ -45,8 +45,8 @@
                     </StackPanel>
                     <StackPanel Orientation="Vertical">
                         <Label Content="Examples:"/>
-                        <TextBox Text="Data Source=[server name];Initial Catalog=[database name];User ID=sa;"  IsReadOnly="True"/>
-                        <TextBox Text="Data Source=[server name];Initial Catalog=[database name];Integrated Security=True;" IsReadOnly="True" />
+                        <TextBox Text="Data Source=[server name];Initial Catalog=[database name];User ID=[login];Password=[password];TrustServerCertificate=True;"  IsReadOnly="True"/>
+                        <TextBox Text="Data Source=[server name];Initial Catalog=[database name];Integrated Security=True;TrustServerCertificate=True;" IsReadOnly="True" />
                     </StackPanel>
             </StackPanel>
 

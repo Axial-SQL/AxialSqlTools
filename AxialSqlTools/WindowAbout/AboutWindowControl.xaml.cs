@@ -1,6 +1,7 @@
 ﻿namespace AxialSqlTools
 {
     using System;
+    using System.IO;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Reflection;
@@ -40,6 +41,23 @@
 
         }
 
+        private void ButtonOpenLogFolder_Click(object sender, RoutedEventArgs e)
+        {
 
+
+            var logDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "AxialSQL",
+                        "AxialSQLToolsLog"
+                );
+
+            if (!Directory.Exists(logDirectory))
+            {
+                Directory.CreateDirectory(logDirectory);
+            }
+
+            // Open the folder in Windows Explorer
+            Process.Start("explorer.exe", logDirectory);
+        }
     }
 }

@@ -36,6 +36,8 @@ using System.Net.Http.Headers;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System.Collections.Concurrent;
 using Microsoft.Data.SqlClient;
+using NLog;
+using NLog.Targets;
 
 namespace AxialSqlTools
 {
@@ -91,6 +93,48 @@ namespace AxialSqlTools
         }
 
         private static ConcurrentQueue<QueryHistoryEntry> _queryHistoryQueue = new ConcurrentQueue<QueryHistoryEntry>();
+        public static Logger _logger;
+
+        private void InitializeLogging()
+        {
+
+            var logDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "AxialSQL",
+                        "AxialSQLToolsLog"
+                );
+            Directory.CreateDirectory(logDirectory);
+
+            // If using the NLog.config approach:
+            LogManager.Setup()
+                  .LoadConfiguration(builder =>
+                  {
+                      // Create a file target
+                      var fileTarget = new FileTarget("fileLog")
+                      {
+                          FileName = Path.Combine(logDirectory, "log_${shortdate}.log"),
+                          Layout = "${longdate}|${level}|${logger}|${message}${exception:format=ToString}",
+
+                          // Optionally, configure archive settings, etc.
+                          ArchiveFileName = Path.Combine(logDirectory, "archive/log.{###}.txt"),
+                          ArchiveNumbering = ArchiveNumberingMode.Rolling,
+                          ArchiveAboveSize = 1024 * 1024 * 5, // 5 MB, for example
+                          MaxArchiveFiles = 5
+                      };
+
+                      // Add the file target to the builder
+                      // builder.AddTarget(fileTarget);
+
+                      // Create a rule: "Write all logs from Info to Fatal to fileTarget"
+                      builder.ForLogger()
+                             .FilterMinLevel(LogLevel.Info)
+                             .WriteTo(fileTarget);
+                  });
+
+            _logger = LogManager.GetCurrentClassLogger();
+            // If needed, create directories here if they do not exist
+            // Or do nothing if the config is specifying a folder that NLog will create automatically
+        }
 
         private static void EnqueueDataForProcessing(QueryHistoryEntry data)
         {
@@ -104,15 +148,18 @@ namespace AxialSqlTools
             {
                 await PersistDataAsync(data);
             }
+
         }
 
         private static async Task PersistDataAsync(QueryHistoryEntry data)
         {
-            string connectionString = SettingsManager.GetQueryHistoryConnectionString();
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            try
             {
-                await connection.OpenAsync();
-                string sql = @"
+                string connectionString = SettingsManager.GetQueryHistoryConnectionString();
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+                    string sql = @"
                 IF OBJECT_ID('[dbo].[QueryHistory]') IS NULL
                 BEGIN
                     CREATE TABLE [dbo].[QueryHistory] (
@@ -142,21 +189,27 @@ namespace AxialSqlTools
                             @ExecResult, @QueryText, @DataSource, @DatabaseName, @LoginName, @WorkstationId)
 
                 ";
-                using (SqlCommand command = new SqlCommand(sql, connection))
-                {
-                    command.Parameters.AddWithValue("@StartTime", data.StartTime);
-                    command.Parameters.AddWithValue("@FinishTime", data.FinishTime);
-                    command.Parameters.AddWithValue("@ElapsedTime", data.ElapsedTime);
-                    command.Parameters.AddWithValue("@TotalRowsReturned", data.TotalRowsReturned);
-                    command.Parameters.AddWithValue("@ExecResult", data.ExecResult);
-                    command.Parameters.AddWithValue("@QueryText", data.QueryText);
-                    command.Parameters.AddWithValue("@DataSource", data.DataSource);
-                    command.Parameters.AddWithValue("@DatabaseName", data.DatabaseName);
-                    command.Parameters.AddWithValue("@LoginName", data.LoginName);
-                    command.Parameters.AddWithValue("@WorkstationId", data.WorkstationId);
-                    await command.ExecuteNonQueryAsync();
+                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    {
+                        command.Parameters.AddWithValue("@StartTime", data.StartTime);
+                        command.Parameters.AddWithValue("@FinishTime", data.FinishTime);
+                        command.Parameters.AddWithValue("@ElapsedTime", data.ElapsedTime);
+                        command.Parameters.AddWithValue("@TotalRowsReturned", data.TotalRowsReturned);
+                        command.Parameters.AddWithValue("@ExecResult", data.ExecResult);
+                        command.Parameters.AddWithValue("@QueryText", data.QueryText);
+                        command.Parameters.AddWithValue("@DataSource", data.DataSource);
+                        command.Parameters.AddWithValue("@DatabaseName", data.DatabaseName);
+                        command.Parameters.AddWithValue("@LoginName", data.LoginName);
+                        command.Parameters.AddWithValue("@WorkstationId", data.WorkstationId);
+                        await command.ExecuteNonQueryAsync();
+                    }
                 }
             }
+            catch (Exception ex)
+            {               
+                _logger.Error(ex, "[QueryHistory-PersistDataAsync]: An exception occurred");
+            }   
+           
         }
         #endregion
 
@@ -205,10 +258,13 @@ namespace AxialSqlTools
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
 
+            InitializeLogging();
+
             try
             {
                 await FormatQueryCommand.InitializeAsync(this);
                 await RefreshTemplatesCommand.InitializeAsync(this);
+                await OpenTemplatesFolderCommand.InitializeAsync(this);
                 await ExportGridToExcelCommand.InitializeAsync(this);
                 await SettingsWindowCommand.InitializeAsync(this);
                 await AboutWindowCommand.InitializeAsync(this);
@@ -220,8 +276,16 @@ namespace AxialSqlTools
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await CheckAddinVersionCommand.InitializeAsync(this);
                 await QueryHistoryCommand.InitializeAsync(this);
-
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An exception occurred");
+            }
+
+            try
+            {
+                
 
                 await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
@@ -303,11 +367,13 @@ namespace AxialSqlTools
             catch (Exception ex)
             {
 
+                _logger.Error(ex, "An exception occurred");            
+
                 // Show a message box to prove we were here
                 VsShellUtilities.ShowMessageBox(
                     this,
                     ex.Message,
-                    "Something went wrong... Please report this to info@axial-sql.com!",
+                    "Oops! Something went wrong. Please report this issue on our GitHub repository and attach error log.",
                     OLEMSGICON.OLEMSGICON_WARNING,
                     OLEMSGBUTTON.OLEMSGBUTTON_OK,
                     OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
@@ -615,17 +681,47 @@ namespace AxialSqlTools
             Dictionary<string, string> fileNamesCache = new Dictionary<string, string>();
 
             string Folder = SettingsManager.GetTemplatesFolder();
-            int i = 1;
+            int i = 2;
             CreateCommands(ref i, ref fileNamesCache, Folder, m_commandRegistry, m_commandBarQueryTemplates);
 
-            foreach (CommandBarControl control in m_commandBarQueryTemplates.Controls)
+            // CleaupTemplatesControls(m_commandBarQueryTemplates, fileNamesCache);
+
+            UpdateRenamedTemplatesControls(m_commandBarQueryTemplates, fileNamesCache);
+
+        }
+
+        private void CleaupTemplatesControls (CommandBar commandBarFolder, Dictionary<string, string> fileNamesCache)
+        {
+            //Delete controls where the file no longer exists
+            for (int idx = commandBarFolder.Controls.Count; idx >= 1; idx--)
+            {
+                CommandBarControl control = commandBarFolder.Controls[idx];
+                if (control == null) continue;
+
+                string tagKey = control.Tag as string;
+                if (!string.IsNullOrEmpty(tagKey))
+                {
+                    // If the Tag is missing from the fileNamesCache, this means its file/folder 
+                    // was removed or renamed, so delete this control.
+                    if (!fileNamesCache.ContainsKey(tagKey))
+                    {
+                        control.Delete();
+                    }
+                }
+            }
+        }
+
+        private void UpdateRenamedTemplatesControls(CommandBar commandBarFolder, Dictionary<string, string> fileNamesCache)
+        {
+            foreach (CommandBarControl control in commandBarFolder.Controls)
             {
                 string keyToFind = control.Caption;
-                if (fileNamesCache.TryGetValue(keyToFind, out string value1))
+                if (fileNamesCache.TryGetValue(keyToFind, out string value))
                 {
-                    control.Caption = value1;
+                    control.Caption = value;
                     control.Tag = keyToFind;
-                } else if (fileNamesCache.TryGetValue(control.Tag, out string value2)) //This is the case when the file was renamed
+                }
+                else if (fileNamesCache.TryGetValue(control.Tag, out string value2)) //This is the case when the file was renamed
                 {
                     control.Caption = value2;
                 }
@@ -652,7 +748,6 @@ namespace AxialSqlTools
                 CreateCommands(ref i, ref fileNamesCache, Path.Combine(Folder, dirStr), m_commandRegistry, commandBarFolderNext);
 
             }
-
             
             var files = Directory.GetFiles(Folder);
 
@@ -672,18 +767,9 @@ namespace AxialSqlTools
 
             }
 
-            foreach (CommandBarControl control in commandBarFolder.Controls)
-            {
-                string keyToFind = control.Caption;
-                if (fileNamesCache.TryGetValue(keyToFind, out string value))
-                {
-                    control.Caption = value;
-                    control.Tag = keyToFind;
-                } else if (fileNamesCache.TryGetValue(control.Tag, out string value2)) //This is the case when the file was renamed
-                {
-                    control.Caption = value2;
-                }
-            }
+            // CleaupTemplatesControls(commandBarFolder, fileNamesCache);
+
+            UpdateRenamedTemplatesControls(commandBarFolder, fileNamesCache);
 
         }
        

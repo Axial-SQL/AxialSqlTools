@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.34320.172
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AxialSqlTools", "AxialSqlTools\AxialSqlTools.csproj", "{67EF838E-C834-482E-B8A4-53F24C9E914E}"
 EndProject
@@ -12,10 +12,11 @@ Global
 		SSMS18|Any CPU = SSMS18|Any CPU
 		SSMS19|Any CPU = SSMS19|Any CPU
 		SSMS20|Any CPU = SSMS20|Any CPU
+		SSMS21|Any CPU = SSMS21|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{67EF838E-C834-482E-B8A4-53F24C9E914E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{67EF838E-C834-482E-B8A4-53F24C9E914E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67EF838E-C834-482E-B8A4-53F24C9E914E}.Debug|Any CPU.ActiveCfg = SSMS20|Any CPU
+		{67EF838E-C834-482E-B8A4-53F24C9E914E}.Debug|Any CPU.Build.0 = SSMS20|Any CPU
 		{67EF838E-C834-482E-B8A4-53F24C9E914E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67EF838E-C834-482E-B8A4-53F24C9E914E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{67EF838E-C834-482E-B8A4-53F24C9E914E}.SSMS18|Any CPU.ActiveCfg = SSMS18|Any CPU
@@ -24,6 +25,8 @@ Global
 		{67EF838E-C834-482E-B8A4-53F24C9E914E}.SSMS19|Any CPU.Build.0 = SSMS19|Any CPU
 		{67EF838E-C834-482E-B8A4-53F24C9E914E}.SSMS20|Any CPU.ActiveCfg = SSMS20|Any CPU
 		{67EF838E-C834-482E-B8A4-53F24C9E914E}.SSMS20|Any CPU.Build.0 = SSMS20|Any CPU
+		{67EF838E-C834-482E-B8A4-53F24C9E914E}.SSMS21|Any CPU.ActiveCfg = SSMS21|Any CPU
+		{67EF838E-C834-482E-B8A4-53F24C9E914E}.SSMS21|Any CPU.Build.0 = SSMS21|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
