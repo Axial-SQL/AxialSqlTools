@@ -187,5 +187,14 @@
         {
             SettingsManager.SaveQueryHistoryConnectionString(QueryHistoryConnectionString.Text);
         }
+
+        private void Button_SelectDatabaseFromObjectExplorer_Click(object sender, RoutedEventArgs e)
+        {
+
+            var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
+
+            QueryHistoryConnectionString.Text = ci.FullConnectionString;
+
+        }
     }
 }
