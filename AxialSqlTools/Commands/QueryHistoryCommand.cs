@@ -3,12 +3,16 @@ using System.ComponentModel.Design;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Smo.RegSvrEnum;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
 using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Task = System.Threading.Tasks.Task;
+
+
 
 namespace AxialSqlTools
 {
@@ -82,6 +86,62 @@ namespace AxialSqlTools
             Instance = new QueryHistoryCommand(package, commandService);
         }
 
+        private UIConnectionInfo CreateUIConnectionInfo(string connectionString)
+        {
+            var builder = new SqlConnectionStringBuilder(connectionString);
+            var connInfo = new UIConnectionInfo();
+
+            // SSMS expects these keys in AdvancedOptions (the name is case-sensitive):
+            // "Server", "Database", "UserName", "Password", "AuthenticationType", etc.
+
+            connInfo.ApplicationName = "AxialSQLTools";
+            connInfo.ServerName = builder.DataSource;
+            connInfo.PersistPassword = false;
+            connInfo.OtherParams = null;
+
+            // We usually store the database name under "DATABASE" or "Initial Catalog" in AdvancedOptions.
+            connInfo.AdvancedOptions["DATABASE"] = builder.InitialCatalog;
+
+            // Decide if integrated (Windows) auth or SQL auth:
+            if (builder.IntegratedSecurity)
+            {
+                connInfo.AuthenticationType = 0;  // 0 => Windows
+            }
+            else
+            {
+                connInfo.AuthenticationType = 1;  // 1 => SQL Server auth
+                connInfo.UserName = builder.UserID;
+                connInfo.Password = builder.Password;
+            }
+
+            // Optionally set advanced options (e.g., connection timeout, etc.) if needed:
+            // connInfo.AdvancedOptions["Connect Timeout"] = builder.ConnectTimeout.ToString();
+
+            // Encrypt
+            // (true => "YES", false => "NO"—SSMS uses strings here)
+            if (builder.Encrypt)
+            {
+                connInfo.AdvancedOptions["ENCRYPT_CONNECTION"] = "True";
+            }
+            else
+            {
+                connInfo.AdvancedOptions["ENCRYPT_CONNECTION"] = "False";
+            }
+
+            // TrustServerCertificate
+            // (true => "YES", false => "NO")
+            if (builder.TrustServerCertificate)
+            {
+                connInfo.AdvancedOptions["TRUST_SERVER_CERTIFICATE"] = "True";
+            }
+            else
+            {
+                connInfo.AdvancedOptions["TRUST_SERVER_CERTIFICATE"] = "False";
+            }
+
+            return connInfo;
+        }
+
         /// <summary>
         /// This function is the callback used to execute the command when the menu item is clicked.
         /// See the constructor to see how the menu item is associated with this function using
@@ -96,8 +156,7 @@ namespace AxialSqlTools
             try
             {
                 //TODO - properly connect to the source database... 
-
-                //UIConnectionInfo connection = New UIConnectionInfo();
+                // UIConnectionInfo uiConn = CreateUIConnectionInfo(SettingsManager.GetQueryHistoryConnectionString());
 
                 string QueryText = @"SELECT TOP (1000) [QueryID]
       ,[StartTime]
@@ -114,7 +173,8 @@ FROM [dbo].[QueryHistory]
 WHERE 1 = 1
 ORDER BY [QueryId] DESC;";
 
-                ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql); //, connectionInfo.ActiveConnectionInfo, null);
+                // it doesn't accept the conn info I generate...
+                object newScript = ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql); //, uiConn, null);                
 
                 // insert SQL definition to document
                 EnvDTE.TextDocument doc = (EnvDTE.TextDocument)ServiceCache.ExtensibilityModel.Application.ActiveDocument.Object(null);
