@@ -155,8 +155,26 @@ namespace AxialSqlTools
 
             try
             {
-                //TODO - properly connect to the source database... 
-                // UIConnectionInfo uiConn = CreateUIConnectionInfo(SettingsManager.GetQueryHistoryConnectionString());
+
+                /* - needs more work. XML approach works but the password is not persisted.
+                 * 
+                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(SettingsManager.GetQueryHistoryConnectionString());
+
+                var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
+
+                var conn = ci.ActiveConnectionInfo.Copy();
+                conn.ServerType = Guid.NewGuid();
+
+                string xmlConnInfo = ScriptFactoryAccess.GetXmlFromUIConnectionInfo(conn);
+
+                var uiConn = ScriptFactoryAccess.CreateConnectionInfoFromXml(xmlConnInfo);
+                uiConn.ApplicationName = conn.ApplicationName;
+                if (!string.IsNullOrEmpty(builder.Password))
+                {
+                    uiConn.Password = builder.Password;
+                    uiConn.PersistPassword = true;
+                }   
+                */
 
                 string QueryText = @"SELECT TOP (1000) [QueryID]
       ,[StartTime]
@@ -181,7 +199,10 @@ ORDER BY [QueryId] DESC;";
 
                 doc.EndPoint.CreateEditPoint().Insert(QueryText);
 
-            } catch (Exception ex)
+                // ServiceCache.ExtensibilityModel.Application.ExecuteCommand("Query.Execute");
+
+            }
+            catch (Exception ex)
             {
 
                 string title = "Query History Command";
