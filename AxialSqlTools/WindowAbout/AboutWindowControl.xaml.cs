@@ -13,6 +13,8 @@
     /// </summary>
     public partial class AboutWindowControl : UserControl
     {
+
+        private string _logFolder;
         /// <summary>
         /// Initializes a new instance of the <see cref="AboutWindowControl"/> class.
         /// </summary>
@@ -24,6 +26,14 @@
             string currentVersionString = currentVersion.ToString();
 
             TextBlock_CurrentVersion.Text = $"Axial SQL Tools | SSMS Addin Version {currentVersionString}";
+
+            _logFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "AxialSQL",
+                        "AxialSQLToolsLog"
+                );
+
+            TextBlock_LogFolder.Text = _logFolder;
         }
 
         /// <summary>
@@ -44,20 +54,13 @@
         private void ButtonOpenLogFolder_Click(object sender, RoutedEventArgs e)
         {
 
-
-            var logDirectory = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                        "AxialSQL",
-                        "AxialSQLToolsLog"
-                );
-
-            if (!Directory.Exists(logDirectory))
+            if (!Directory.Exists(_logFolder))
             {
-                Directory.CreateDirectory(logDirectory);
+                Directory.CreateDirectory(_logFolder);
             }
 
             // Open the folder in Windows Explorer
-            Process.Start("explorer.exe", logDirectory);
+            Process.Start("explorer.exe", _logFolder);
         }
     }
 }

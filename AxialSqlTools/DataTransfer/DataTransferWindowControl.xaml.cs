@@ -141,11 +141,35 @@
                                         await targetCmd.ExecuteNonQueryAsync();
                                     }
 
-                                    // TODO - expose options into UI settings
-                                    SqlBulkCopyOptions options = new SqlBulkCopyOptions() {};
+                                    SqlBulkCopyOptions options = SqlBulkCopyOptions.Default;
 
-                                    using (SqlBulkCopy bulkCopy = new SqlBulkCopy(targetConn)) //, targetTransaction))
+                                    // Combine options based on checkbox states
+                                    if (KeepIdentityOption.IsChecked == true)
+                                        options |= SqlBulkCopyOptions.KeepIdentity;
+
+                                    if (CheckConstraintsOption.IsChecked == true)
+                                        options |= SqlBulkCopyOptions.CheckConstraints;
+
+                                    if (TableLockOption.IsChecked == true)
+                                        options |= SqlBulkCopyOptions.TableLock;
+
+                                    if (KeepNullsOption.IsChecked == true)
+                                        options |= SqlBulkCopyOptions.KeepNulls;
+
+                                    if (FireTriggersOption.IsChecked == true)
+                                        options |= SqlBulkCopyOptions.FireTriggers;
+
+                                    //if (UseInternalTransactionOption.IsChecked == true)
+                                    //    options |= SqlBulkCopyOptions.UseInternalTransaction;
+
+                                    if (AllowEncryptedValueModificationsOption.IsChecked == true)
+                                        options |= SqlBulkCopyOptions.AllowEncryptedValueModifications;
+
+
+                                    using (SqlBulkCopy bulkCopy = new SqlBulkCopy(targetConn, options, null))
                                     {
+
+                                      
                                         bulkCopy.DestinationTableName = targetTableName;
                                         bulkCopy.BatchSize = batchSize;
                                         bulkCopy.NotifyAfter = batchSize;

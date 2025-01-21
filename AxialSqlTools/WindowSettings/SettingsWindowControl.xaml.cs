@@ -83,12 +83,16 @@
         private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveTemplatesFolder(ScriptFolder.Text);
+
+            SavedMessage();
         }
 
 
         private void Button_SaveSnippetFolder_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveSnippetUse(UseSnippets.IsChecked.GetValueOrDefault(), SnippetFolder.Text);
+
+            SavedMessage();
         }
 
         private void buttonDownloadAxialScripts_Click(object sender, RoutedEventArgs e)
@@ -166,6 +170,13 @@
             File.Delete(zipPath);
         }
 
+        private void SavedMessage()
+        {
+            MessageBox.Show(
+                string.Format(System.Globalization.CultureInfo.CurrentUICulture, "The change has been saved", this.ToString()),
+                "Setting saved");
+        }
+
         private void ButtonSaveSmtpSettings_Click(object sender, RoutedEventArgs e)
         {
             
@@ -185,21 +196,29 @@
 
             SettingsManager.SaveMyEmail(MyEmailAddress.Text);
 
+            SavedMessage();
+
         }
 
         private void Button_SaveApplyAdditionalFormat_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveApplyAdditionalCodeFormatting(ApplyCodeFormat.IsChecked.GetValueOrDefault());
+
+            SavedMessage();
         }
 
         private void Button_SaveOpenAi_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveOpenAiApiKey(OpenAiApiKey.Password);
+
+            SavedMessage();
         }
 
         private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveQueryHistoryConnectionString(QueryHistoryConnectionString.Text);
+
+            SavedMessage();
         }
 
         private void Button_SelectDatabaseFromObjectExplorer_Click(object sender, RoutedEventArgs e)

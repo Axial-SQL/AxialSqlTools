@@ -7,16 +7,16 @@
              Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
              Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              mc:Ignorable="d"
-             Name="MyToolWindow" Width="516.974" Height="341.695">
+             Name="MyToolWindow" Width="516.974" Height="400">
     <Grid>
-        <StackPanel Orientation="Vertical" Margin="0,0,0,-40">
+        <StackPanel Orientation="Vertical" Margin="0,0,0,0">
             <Image Source="pack://application:,,,/AxialSqlTools;component/Resources/logo.png" Width="250" />
             <TextBlock Margin="10" HorizontalAlignment="Center" x:Name="TextBlock_CurrentVersion"></TextBlock>
             <TextBlock Margin="186,10" HorizontalAlignment="Center"><Run Text="Expert SQL Server solutions"/></TextBlock>
             <TextBlock Margin="10" HorizontalAlignment="Center">info@axial-sql.com</TextBlock>
             <Button Content="Visit our web-site at https://axial-sql.com/" Click="buttonAxialSqlWebsite_Click" Height="30" x:Name="buttonVisitWebsite" VerticalAlignment="Center" Margin="100,10,100,10"/>
             <Button Content="Open AddIn Log folder" Click="ButtonOpenLogFolder_Click" Height="30" x:Name="buttonOpenLogFolder" VerticalAlignment="Center" Margin="180,10,180,10"/>
-
+            <TextBlock Margin="10" HorizontalAlignment="Center" x:Name="TextBlock_LogFolder"></TextBlock>
 
         </StackPanel>
     </Grid>
