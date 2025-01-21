@@ -156,7 +156,7 @@ namespace AxialSqlTools
             try
             {
 
-                /* - needs more work. XML approach works but the password is not persisted.
+                /* - needs more work... nothing works when you recreate UIConnectionInfo manually...
                  * 
                 SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(SettingsManager.GetQueryHistoryConnectionString());
 
