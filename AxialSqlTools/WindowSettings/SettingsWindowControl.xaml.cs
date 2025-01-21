@@ -20,6 +20,19 @@
         {
             this.InitializeComponent();
 
+            LoadSavedSettings();
+
+            this.Loaded += UserControl_Loaded;
+
+        }
+
+        private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
+        {
+            LoadSavedSettings();
+        }
+
+        private void LoadSavedSettings()
+        {
             try
             {
 
@@ -44,7 +57,8 @@
 
                 OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
 
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 string msg = $"Erorr message: {ex.Message} \nInnerException: {ex.InnerException}";
                 MessageBox.Show(msg, "Error");
@@ -195,6 +209,38 @@
 
             QueryHistoryConnectionString.Text = ci.FullConnectionString;
 
+        }
+
+        private void BrowseButton_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            {
+                dialog.Description = "Select templates folder";
+                dialog.ShowNewFolderButton = true;
+
+                // Show the dialog and check if the user selected a folder
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    // Set the selected folder path to the TextBox
+                    ScriptFolder.Text = dialog.SelectedPath;
+                }
+            }
+        }
+
+        private void SnippetsBrowseButton_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            {
+                dialog.Description = "Select snippets folder";
+                dialog.ShowNewFolderButton = true;
+
+                // Show the dialog and check if the user selected a folder
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    // Set the selected folder path to the TextBox
+                    SnippetFolder.Text = dialog.SelectedPath;
+                }
+            }
         }
     }
 }

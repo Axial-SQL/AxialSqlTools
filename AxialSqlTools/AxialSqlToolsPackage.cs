@@ -74,6 +74,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(HealthDashboard_Server))]
     [ProvideToolWindow(typeof(HealthDashboard_Servers))]
     [ProvideToolWindow(typeof(DataTransferWindow))]
+    [ProvideToolWindow(typeof(AskChatGptWindow))]
 
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
@@ -277,6 +278,7 @@ namespace AxialSqlTools
                 await CheckAddinVersionCommand.InitializeAsync(this);
                 await QueryHistoryCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
+                await AskChatGptCommand.InitializeAsync(this);
             }
             catch (Exception ex)
             {
@@ -382,6 +384,7 @@ namespace AxialSqlTools
 
             // needed for the AxyPlot library
             AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+            
            
 
         }

@@ -103,6 +103,11 @@
     <CopyVsixExtensionFiles>True</CopyVsixExtensionFiles>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AskChatGPT\AskChatGptWindow.cs" />
+    <Compile Include="AskChatGPT\AskChatGptCommand.cs" />
+    <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
+      <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
     <Compile Include="Commands\CheckAddinVersionCommand.cs" />
     <Compile Include="Commands\QueryHistoryCommand.cs" />
@@ -175,6 +180,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\attention.png" />
+    <Content Include="Resources\chat.png" />
     <Content Include="Resources\data-source-target.png" />
     <Content Include="Resources\export-data.png" />
     <Content Include="Resources\grid-to-email.png" />
@@ -485,6 +491,10 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="AskChatGPT\AskChatGptWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataTransfer\DataTransferWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

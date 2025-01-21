@@ -13,6 +13,7 @@
             <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" >
                 <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Data Transfer</TextBlock>
             </StackPanel>
+            <Label Content="Connect to the instance in the Object Explorer, click on the source or target database, and then use the buttons below to automatically select that connection." />
 
             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                 <Button Height="35" Content="Select Source" Click="Button_SelectSource_Click" x:Name="Button_SelectSource" Width="120" FontWeight="Bold"/>
