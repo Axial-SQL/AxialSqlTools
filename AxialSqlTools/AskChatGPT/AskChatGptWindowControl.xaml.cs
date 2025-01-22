@@ -1,5 +1,8 @@
 ﻿namespace AxialSqlTools
 {
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+    using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Net.Http;
     using System.Text;
@@ -17,6 +20,8 @@
         public AskChatGptWindowControl()
         {
             this.InitializeComponent();
+
+            PromptTextBox.Text = "What is the capital of France?";
         }
 
         /// <summary>
@@ -33,8 +38,11 @@
                 "AskChatGptWindow");
         }
 
-        private void buttonAskChatGpt_Click(object sender, RoutedEventArgs e)
+        async private void buttonAskChatGpt_Click(object sender, RoutedEventArgs e)
         {
+
+            buttonSend.IsEnabled = false;
+            ResponseResult.Text = "";
 
             string apiKey = SettingsManager.GetOpenAiApiKey();
 
@@ -46,25 +54,33 @@
             {
                 // Set the headers
                 client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-
-                // The request body
-                string json = @"
+                
+                var jsonObject = new
+                {
+                    model = "gpt-4o",
+                    messages = new List<object>
                     {
-                        ""model"": ""gpt-4o"",
-                        ""messages"": [
-                            {""role"": ""system"", ""content"": ""You are a helpful assistant.""},
-                            {""role"": ""user"", ""content"": ""What is the capital of France?""}
-                        ]
-                    }";
+                        new { role = "system", content = "You are a helpful assistant." },
+                        new { role = "user", content = PromptTextBox.Text }
+                    }
+                };
+
+                string json = JsonConvert.SerializeObject(jsonObject, Formatting.Indented);
 
                 // Send the request
                 StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
-                HttpResponseMessage response = client.PostAsync(url, content).GetAwaiter().GetResult();
+                HttpResponseMessage response = await client.PostAsync(url, content);
 
                 // Get the response as JSON
-                string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                string result = await response.Content.ReadAsStringAsync();
 
-                ResponseResult.Text = result;
+                var jsonResult = JObject.Parse(result);
+
+                string contentResult = jsonResult["choices"]?[0]?["message"]?["content"]?.ToString();
+
+                ResponseResult.Text = contentResult;
+
+                buttonSend.IsEnabled = true;
 
             }
 

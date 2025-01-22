@@ -6,16 +6,20 @@
              xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
              Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
-             mc:Ignorable="d"
-             d:DesignHeight="500" d:DesignWidth="300"
+             mc:Ignorable="d" FontSize="14"
              Name="MyToolWindow">
     <Grid>
         <StackPanel Orientation="Vertical">
-            <TextBlock Margin="10" HorizontalAlignment="Center">AskChatGptWindow</TextBlock>
-            <TextBox Margin="5" HorizontalAlignment="Left" TextWrapping="Wrap" Text=""  x:Name="InputText" Width="200" Height="100" />
-            <TextBox Margin="5" HorizontalAlignment="Left" TextWrapping="Wrap" Text=""  x:Name="Prompt" Width="200" Height="100" />
-            <Button Content="Ask ChatGPT!" Click="buttonAskChatGpt_Click" Width="120" Height="40" Name="buttonAskChatGpt"/>
-            <TextBox Margin="5" HorizontalAlignment="Left" TextWrapping="Wrap" Text=""  x:Name="ResponseResult" Width="200" Height="100" />
+            <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" >
+                <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Ask ChatGPT</TextBlock>
+            </StackPanel>
+            <TextBox Margin="5" TextWrapping="Wrap" Text=""  x:Name="InputTextTextBox" Height="100" />
+            <TextBox Margin="5" TextWrapping="Wrap" Text=""  x:Name="PromptTextBox" Height="100" />
+            <Button Content="Send" Click="buttonAskChatGpt_Click"  Height="40" Width="100" Name="buttonSend" FontWeight="Bold"/>
+            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                <Label Content="Response" FontWeight="Bold"/>
+                <TextBox TextWrapping="Wrap" Text=""  x:Name="ResponseResult" Height="200" />
+            </StackPanel>
         </StackPanel>
     </Grid>
 </UserControl>
