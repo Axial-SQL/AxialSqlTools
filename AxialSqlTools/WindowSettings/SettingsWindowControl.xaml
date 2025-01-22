@@ -21,7 +21,7 @@
                         <Button Margin="5" Content="Save" x:Name="button_SaveScriptFolder" Click="Button_SaveScriptFolder_Click" Width="50" FontWeight="Bold" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <Button Margin="5" Content="Download Axial SQL Query Library from GitHub" Click="buttonDownloadAxialScripts_Click" x:Name="buttonDownloadDefaultAxialScripts" FontWeight="Bold"/>
+                        <Button Margin="5" Content=" Download Axial SQL Query Library from GitHub " Click="buttonDownloadAxialScripts_Click" x:Name="buttonDownloadDefaultAxialScripts" FontWeight="Bold"/>
                         <TextBlock Margin="5" HorizontalAlignment="Left">https://github.com/Axial-SQL/AxialSqlTools/tree/main/query-library</TextBlock>
                     </StackPanel>
                 </StackPanel>
@@ -41,7 +41,8 @@
             <GroupBox Header="Query History">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
-                        <Button Margin="5" Content="Select the database from the Object Explorer" x:Name="button_SelectDatabaseFromObjectExplorer" Click="Button_SelectDatabaseFromObjectExplorer_Click" FontWeight="Bold"/>
+                        <Button Margin="5" Content=" Select the database from the Object Explorer " x:Name="button_SelectDatabaseFromObjectExplorer" Click="Button_SelectDatabaseFromObjectExplorer_Click" FontWeight="Bold"/>
+                        <Button Margin="5" Content=" Disable Query History " x:Name="button_DisableQueryHistory" Click="Button_DisableQueryHistory_Click" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">                        
                         <Label Margin="5">Target Connection String:</Label>

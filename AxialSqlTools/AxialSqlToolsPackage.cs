@@ -157,10 +157,13 @@ namespace AxialSqlTools
             try
             {
                 string connectionString = SettingsManager.GetQueryHistoryConnectionString();
-                using (SqlConnection connection = new SqlConnection(connectionString))
+
+                if (!string.IsNullOrEmpty(connectionString))
                 {
-                    await connection.OpenAsync();
-                    string sql = @"
+                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    {
+                        await connection.OpenAsync();
+                        string sql = @"
                 IF OBJECT_ID('[dbo].[QueryHistory]') IS NULL
                 BEGIN
                     CREATE TABLE [dbo].[QueryHistory] (
@@ -190,24 +193,25 @@ namespace AxialSqlTools
                             @ExecResult, @QueryText, @DataSource, @DatabaseName, @LoginName, @WorkstationId)
 
                 ";
-                    using (SqlCommand command = new SqlCommand(sql, connection))
-                    {
-                        command.Parameters.AddWithValue("@StartTime", data.StartTime);
-                        command.Parameters.AddWithValue("@FinishTime", data.FinishTime);
-                        command.Parameters.AddWithValue("@ElapsedTime", data.ElapsedTime);
-                        command.Parameters.AddWithValue("@TotalRowsReturned", data.TotalRowsReturned);
-                        command.Parameters.AddWithValue("@ExecResult", data.ExecResult);
-                        command.Parameters.AddWithValue("@QueryText", data.QueryText);
-                        command.Parameters.AddWithValue("@DataSource", data.DataSource);
-                        command.Parameters.AddWithValue("@DatabaseName", data.DatabaseName);
-                        command.Parameters.AddWithValue("@LoginName", data.LoginName);
-                        command.Parameters.AddWithValue("@WorkstationId", data.WorkstationId);
-                        await command.ExecuteNonQueryAsync();
+                        using (SqlCommand command = new SqlCommand(sql, connection))
+                        {
+                            command.Parameters.AddWithValue("@StartTime", data.StartTime);
+                            command.Parameters.AddWithValue("@FinishTime", data.FinishTime);
+                            command.Parameters.AddWithValue("@ElapsedTime", data.ElapsedTime);
+                            command.Parameters.AddWithValue("@TotalRowsReturned", data.TotalRowsReturned);
+                            command.Parameters.AddWithValue("@ExecResult", data.ExecResult);
+                            command.Parameters.AddWithValue("@QueryText", data.QueryText);
+                            command.Parameters.AddWithValue("@DataSource", data.DataSource);
+                            command.Parameters.AddWithValue("@DatabaseName", data.DatabaseName);
+                            command.Parameters.AddWithValue("@LoginName", data.LoginName);
+                            command.Parameters.AddWithValue("@WorkstationId", data.WorkstationId);
+                            await command.ExecuteNonQueryAsync();
+                        }
                     }
                 }
             }
             catch (Exception ex)
-            {               
+            {
                 _logger.Error(ex, "[QueryHistory-PersistDataAsync]: An exception occurred");
             }   
            

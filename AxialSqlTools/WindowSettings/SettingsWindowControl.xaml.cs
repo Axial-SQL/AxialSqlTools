@@ -261,5 +261,10 @@
                 }
             }
         }
+
+        private void Button_DisableQueryHistory_Click(object sender, RoutedEventArgs e)
+        {
+            QueryHistoryConnectionString.Text = "";
+        }
     }
 }
