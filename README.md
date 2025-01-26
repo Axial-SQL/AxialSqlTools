@@ -26,7 +26,7 @@ Check it out and let me know what you think!
 
 - [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Validate and format your TSQL code with Microsoft TSQL parser, making it more readable and maintainable.
   
-- **Quick Query Templates**: Access a collection of query templates for common tasks, saving time and effort on routine queries.
+- **Query Templates and Snippets**: Access a collection of query templates for common tasks, saving time and effort on routine queries.
   
 - [**Export Grid to Excel**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-To-Excel): Quickly export results from the grid view directly into Excel file.
   
@@ -42,7 +42,7 @@ Check it out and let me know what you think!
 - [**Right Alignment for Numeric Values in Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Align-numeric-values-in-the-grid-result-to-the-right): Automatically align numeric values in the grid result to the right. <br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-before.png?raw=true"/> -> <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-after.png?raw=true"/>
 
-- **Quick Data Transfer Between Two Open Connections**: Select source/target in one click and copy data quickly.
+- **BULK Data Transfer Between Two Open Connections**: Select source/target in one click and copy data quickly.
 
 ## Query Library
 
