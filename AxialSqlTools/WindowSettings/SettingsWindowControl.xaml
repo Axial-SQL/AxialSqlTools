@@ -88,7 +88,7 @@
                     </StackPanel>
                 </StackPanel>
             </GroupBox>
-            <GroupBox Header="OpenAI - ChatGPT integration">
+            <GroupBox Header="OpenAI - ChatGPT integration" Visibility="Hidden">
                 <StackPanel Orientation="Vertical" Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Width="120">API key</Label>

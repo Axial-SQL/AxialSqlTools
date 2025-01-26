@@ -213,7 +213,7 @@
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialAskChatGptCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_AI" />
         <Icon guid="guidChat" id="bmpChat" />
-        <!--<CommandFlag>DefaultInvisible</CommandFlag>-->
+        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Ask ChatGPT</ButtonText>
         </Strings>
