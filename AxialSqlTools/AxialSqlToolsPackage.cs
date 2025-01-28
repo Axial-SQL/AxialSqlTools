@@ -1,43 +1,32 @@
-﻿using System;
-using System.ComponentModel.Design;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.VisualStudio;
-using Microsoft.VisualStudio.OLE.Interop;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.Win32;
-using Task = System.Threading.Tasks.Task;
-
+﻿using Aurora;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.CommandBars;
-using System.Windows.Forms;
-using Aurora;
-using System.Reflection;
-using System.IO;
-
-using AxialSqlTools.Properties;
-using System.Text.RegularExpressions;
-using System.Collections.Generic;
-using System.Collections;
-using Microsoft.SqlServer.Management.UI.Grid;
-using System.Linq;
-using System.Data;
-using Microsoft.SqlServer.Management.UI.VSIntegration;
-using System.Drawing;
-using System.Net.Http;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Newtonsoft.Json;
-using System.Net.Http.Headers;
-using Microsoft.VisualStudio.TextManager.Interop;
+using System;
 using System.Collections.Concurrent;
-using Microsoft.Data.SqlClient;
+using System.Collections.Generic;
+using System.ComponentModel.Design;
+using System.IO;
+using System.Net.Http.Headers;
+using System.Net.Http;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Windows.Forms;
+using Task = System.Threading.Tasks.Task;
+using Microsoft.SqlServer.Management.UI.Grid;
+using Microsoft.VisualStudio.TextManager.Interop;
+using Microsoft.VisualStudio;
+using System.Collections;
 using NLog;
 using NLog.Targets;
+using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Linq;
+using AxialSqlTools.Properties;
 
 namespace AxialSqlTools
 {
@@ -59,10 +48,7 @@ namespace AxialSqlTools
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)] // Info on this package for Help/About
     [Guid(AxialSqlToolsPackage.PackageGuidString)]
-    [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "pkgdef, VS and vsixmanifest are valid VS terms")]
-
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasMultipleProjects_string, PackageAutoLoadFlags.BackgroundLoad)]
@@ -75,7 +61,6 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(HealthDashboard_Servers))]
     [ProvideToolWindow(typeof(DataTransferWindow))]
     [ProvideToolWindow(typeof(AskChatGptWindow))]
-
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
         #region QueryHistory
@@ -213,8 +198,8 @@ namespace AxialSqlTools
             catch (Exception ex)
             {
                 _logger.Error(ex, "[QueryHistory-PersistDataAsync]: An exception occurred");
-            }   
-           
+            }
+
         }
         #endregion
 
@@ -237,17 +222,6 @@ namespace AxialSqlTools
         }
 
         public Dictionary<string, string> globalSnippets = new Dictionary<string, string>();
-  
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AxialSqlToolsPackage"/> class.
-        /// </summary>
-        public AxialSqlToolsPackage()
-        {
-            // Inside this method you can place any initialization code that does not require
-            // any Visual Studio service because at this point the package object is created but
-            // not sited yet inside Visual Studio environment. The place to do all the other
-            // initialization is the Initialize method.
-        }        
 
         #region Package Members
 
@@ -262,6 +236,7 @@ namespace AxialSqlTools
         {
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
+            await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
             InitializeLogging();
 
@@ -291,9 +266,6 @@ namespace AxialSqlTools
 
             try
             {
-                
-
-                await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
                 DTE2 application = GetGlobalService(typeof(DTE)) as DTE2;
                 IVsProfferCommands3 profferCommands3 = await base.GetServiceAsync(typeof(SVsProfferCommands)) as IVsProfferCommands3;
@@ -310,7 +282,7 @@ namespace AxialSqlTools
                 EnvDTE.WindowEvents windowEvents = events.WindowEvents;
 
                 windowEvents.WindowCreated += new _dispWindowEvents_WindowCreatedEventHandler(WindowCreated_Event);
-                
+
                 // "File.ConnectObjectExplorer"
                 // "Query.Connect"
                 // 
@@ -358,22 +330,22 @@ namespace AxialSqlTools
 
                         dynamic latestRelease = JsonConvert.DeserializeObject(response);
                         var latestVersion = (string)latestRelease.tag_name;
-                        
-                        isNewVersionAvailable = ( Version.Parse(latestVersion) > Version.Parse(currentVersionString));
+
+                        isNewVersionAvailable = (Version.Parse(latestVersion) > Version.Parse(currentVersionString));
 
                     }
 
                     Cmd.Visible = isNewVersionAvailable;
 
                 }
-                catch { Cmd.Visible = false; }   
-                
+                catch { Cmd.Visible = false; }
+
 
             }
             catch (Exception ex)
             {
 
-                _logger.Error(ex, "An exception occurred");            
+                _logger.Error(ex, "An exception occurred");
 
                 // Show a message box to prove we were here
                 VsShellUtilities.ShowMessageBox(
@@ -388,10 +360,10 @@ namespace AxialSqlTools
 
             // needed for the AxyPlot library
             AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
-            
-           
 
         }
+
+        #endregion
 
         private void WindowCreated_Event(EnvDTE.Window Window)
         {
@@ -437,7 +409,7 @@ namespace AxialSqlTools
                     eventInfo.RemoveEventHandler(SQLResultsControl, handlerDelegate);
                     eventInfo.AddEventHandler(SQLResultsControl, handlerDelegate);
                 }
-                
+
             }
             catch
             {
@@ -471,13 +443,13 @@ namespace AxialSqlTools
 
                     }
 
-                   
+
                 }
 
             }
-           
 
-        
+
+
         }
 
         // I don't understand the purpose, but it works
@@ -487,11 +459,11 @@ namespace AxialSqlTools
 
             if (args.Name.Contains("OxyPlot"))
                 return AppDomain.CurrentDomain.Load(args.Name);
-            else return null; 
+            else return null;
         }
         //----------------
 
-        
+
         // This method aligns all numeric values to the right
         public static void SQLResultsControl_ScriptExecutionCompleted(object QEOLESQLExec, object b)
         {
@@ -571,7 +543,6 @@ namespace AxialSqlTools
                 var SQLResultsControl = GridAccess.GetSQLResultsControl();
                 var m_SqlExec = GridAccess.GetNonPublicField(SQLResultsControl, "m_sqlExec");
 
-#if SSMS19DLL || SSMS20DLL
                 Microsoft.Data.SqlClient.SqlConnection connection = GridAccess.GetNonPublicField(m_SqlExec, "m_conn") as Microsoft.Data.SqlClient.SqlConnection;
                 if (connection.State == ConnectionState.Open)
                 {
@@ -581,25 +552,14 @@ namespace AxialSqlTools
                         openTranCount = result != DBNull.Value ? Convert.ToInt32(result) : 0;
                     }
                 }
-#endif
-#if SSMS18DLL
-                System.Data.SqlClient.SqlConnection connection = GridAccess.GetNonPublicField(m_SqlExec, "m_conn") as System.Data.SqlClient.SqlConnection;
-                if (connection.State == ConnectionState.Open)
-                    {
-                        using (System.Data.SqlClient.SqlCommand command = new System.Data.SqlClient.SqlCommand("SELECT @@TRANCOUNT", connection))
-                    {
-                        var result = command.ExecuteScalar();
-                        openTranCount = result != DBNull.Value ? Convert.ToInt32(result) : 0;
-                    }
-                }
-#endif
 
                 var editorProperties = GridAccess.GetNonPublicField(m_SqlExec, "editorProperties");
                 var editorProperties_ElapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
 
                 GridAccess.ChangeStatusBarContent(openTranCount, editorProperties_ElapsedTime);
 
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 var msg = ex.Message;
             }
@@ -689,7 +649,7 @@ namespace AxialSqlTools
             }
         }
 
-        private void CreateCommands(ref int i, ref Dictionary<string, string> fileNamesCache, string Folder, 
+        private void CreateCommands(ref int i, ref Dictionary<string, string> fileNamesCache, string Folder,
                 CommandRegistry m_commandRegistry, CommandBar commandBarFolder)
         {
 
@@ -709,7 +669,7 @@ namespace AxialSqlTools
                 CreateCommands(ref i, ref fileNamesCache, Path.Combine(Folder, dirStr), m_commandRegistry, commandBarFolderNext);
 
             }
-            
+
             var files = Directory.GetFiles(Folder);
 
             foreach (var file in files)
@@ -727,11 +687,11 @@ namespace AxialSqlTools
                 i = i + 1;
 
             }
-            
+
             UpdateRenamedTemplatesControls(commandBarFolder, fileNamesCache);
 
         }
-       
-#endregion
+
+
     }
 }
