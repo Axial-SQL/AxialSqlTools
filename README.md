@@ -43,6 +43,8 @@ Check it out and let me know what you think!
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-before.png?raw=true"/> -> <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-after.png?raw=true"/>
 
 - **BULK Data Transfer Between Two Open Connections**: Select source/target in one click and copy data quickly.
+  
+- **Query History**: A detailed log of executed queries, enabling auditing, tracking, and easy retrieval of past executions.
 
 ## Query Library
 
