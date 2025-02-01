@@ -44,7 +44,7 @@ Check it out and let me know what you think!
 
 - **BULK Data Transfer Between Two Open Connections**: Select source/target in one click and copy data quickly.
   
-- **Query History**: A detailed log of executed queries, enabling auditing, tracking, and easy retrieval of past executions.
+- [**Query History**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-History): A detailed log of executed queries, enabling auditing, tracking, and easy retrieval of past executions.
 
 ## Query Library
 
