@@ -10,65 +10,131 @@
              Name="MyToolWindow">
     <Grid>
         <StackPanel Orientation="Vertical" >
+
             <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" >
                 <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Data Transfer</TextBlock>
             </StackPanel>
+
             <Label Content="High-performance data transfer through bulk-load of the active result set." FontWeight="Bold"/>
 
             <Label Content="Connect to the instance in the Object Explorer, click on the source or target database, and then use the buttons below to automatically select that connection." />
 
-            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                <Button Height="35" Content="Select Source" Click="Button_SelectSource_Click" x:Name="Button_SelectSource" Width="120" FontWeight="Bold"/>
-                <Label Content="Source Description" x:Name="Label_SourceDescription" VerticalAlignment="Center"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                <Button Height="35" Content="Select Target" x:Name="Button_SelectTarget" Click="Button_SelectTarget_Click" Width="120" FontWeight="Bold"/>
-                <Label Content="Target Description" x:Name="Label_TargetDescription" VerticalAlignment="Center"/>
-            </StackPanel>
+            <TabControl >
+                <TabItem Header="SQL Server -> SQL Server">
+                    <Grid>
 
-            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
-                <Label Content="Source Query" FontWeight="Bold"/>
-                <RichTextBox Height="100" x:Name="RichTextBox_SourceQuery">
-                    <FlowDocument>
-                        <Paragraph>
-                            <Run Text=""/>
-                        </Paragraph>
-                    </FlowDocument>
-                </RichTextBox>
-            </StackPanel>
-
-            <Expander Header="Additional SqlBulkCopy Options" IsExpanded="False" Margin="0,0,0,0">
-                <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                    <!-- Checkboxes for each option -->
-                    <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
-                        
-                        <CheckBox Content="KeepIdentity" Name="KeepIdentityOption" />
-                        <CheckBox Content="CheckConstraints" Name="CheckConstraintsOption" />
-                        <CheckBox Content="TableLock" Name="TableLockOption" />
-                    </StackPanel>
-                    <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
-                        <CheckBox Content="KeepNulls" Name="KeepNullsOption" />
-                        <CheckBox Content="FireTriggers" Name="FireTriggersOption" />
-                        <!--<CheckBox Content="UseInternalTransaction" Name="UseInternalTransactionOption" />-->
-                        <CheckBox Content="AllowEncryptedValueModifications" Name="AllowEncryptedValueModificationsOption" />
-                    </StackPanel>
+                        <StackPanel Orientation="Vertical" >
 
 
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Source" Click="Button_SelectSource_Click" x:Name="Button_SelectSource" Width="120" FontWeight="Bold"/>
+                                <Label Content="Source Description" x:Name="Label_SourceDescription" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Target" x:Name="Button_SelectTarget" Click="Button_SelectTarget_Click" Width="120" FontWeight="Bold"/>
+                                <Label Content="Target Description" x:Name="Label_TargetDescription" VerticalAlignment="Center"/>
+                            </StackPanel>
 
-                </StackPanel>
-            </Expander>
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Source Query" FontWeight="Bold"/>
+                                <RichTextBox Height="100" x:Name="RichTextBox_SourceQuery">
+                                    <FlowDocument>
+                                        <Paragraph>
+                                            <Run Text=""/>
+                                        </Paragraph>
+                                    </FlowDocument>
+                                </RichTextBox>
+                            </StackPanel>
 
-            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
-                <Label Content="Target Table" FontWeight="Bold"/>
-                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTable"/>
-            </StackPanel>
+                            <Expander Header="Additional SqlBulkCopy Options" IsExpanded="False" Margin="0,0,0,0">
+                                <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                    <!-- Checkboxes for each option -->
+                                    <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
 
-            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                <Button Height="35" Content="Copy Data" Click="ButtonCopyData_Click"  Name="Button_CopyData" Margin="5" Width="96" FontWeight="Bold" />
-                <Button Height="35" Content="Cancel" Click="ButtonCancel_Click"  Name="Button_Cancel" Margin="5" Width="76" FontWeight="Bold" />
-                <Label Content="(copy progress)" x:Name="Label_CopyProgress" FontWeight="Bold" VerticalAlignment="Center"/>
-            </StackPanel>
+                                        <CheckBox Content="KeepIdentity" Name="KeepIdentityOption" />
+                                        <CheckBox Content="CheckConstraints" Name="CheckConstraintsOption" />
+                                        <CheckBox Content="TableLock" Name="TableLockOption" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                        <CheckBox Content="KeepNulls" Name="KeepNullsOption" />
+                                        <CheckBox Content="FireTriggers" Name="FireTriggersOption" />
+                                        <!--<CheckBox Content="UseInternalTransaction" Name="UseInternalTransactionOption" />-->
+                                        <CheckBox Content="AllowEncryptedValueModifications" Name="AllowEncryptedValueModificationsOption" />
+                                    </StackPanel>
+
+
+
+                                </StackPanel>
+                            </Expander>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Target Table" FontWeight="Bold"/>
+                                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTable"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Copy Data" Click="ButtonCopyData_Click"  Name="Button_CopyData" Margin="5" Width="96" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonCancel_Click"  Name="Button_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Label Content="(copy progress)" x:Name="Label_CopyProgress" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="SQL Server -> PostgreSQL (WIP)">
+                    <Grid>
+
+                        <StackPanel Orientation="Vertical" >
+
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Source" Click="Button_SelectSourceToPsql_Click" x:Name="Button_SelectSourceToPsql" Width="120" FontWeight="Bold"/>
+                                <Label Content="Source Description" x:Name="Label_SourceDescriptionToPsql" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <DockPanel>
+                                <Label Content="Target Connection String" x:Name="Label_TargetDescriptionToPsql" VerticalAlignment="Center"/>
+                                <TextBox Height="23" x:Name="TextBox_TargetConnectionToPsql"/>
+                            </DockPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Source Query" FontWeight="Bold"/>
+                                <RichTextBox Height="100" x:Name="RichTextBox_SourceQueryToPsql">
+                                    <FlowDocument>
+                                        <Paragraph>
+                                            <Run Text=""/>
+                                        </Paragraph>
+                                    </FlowDocument>
+                                </RichTextBox>
+                            </StackPanel>
+
+                            
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Target Table" FontWeight="Bold"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableToPsql" Content="Truncate Table"/>
+                                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableToPsql"/>
+                            </StackPanel>
+                            
+                            
+                            
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Copy Data" Click="ButtonToPsql_CopyData_Click"  Name="ButtonToPsql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonToPsql_Cancel_Click"  Name="ButtonToPsql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Label Content="(copy progress)" x:Name="Label_CopyProgressToPsql" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Grid>
+                </TabItem>
+            </TabControl>
 
         </StackPanel>
+
+
+
     </Grid>
+
+
 </UserControl>

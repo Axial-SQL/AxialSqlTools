@@ -1,12 +1,16 @@
 ﻿namespace AxialSqlTools
 {
     using Microsoft.VisualStudio.Shell;
+    using Npgsql;
+    using NpgsqlTypes;
     using System;
     using System.Data;
     using System.Data.SqlClient;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.Diagnostics.Tracing;
     using System.Reflection;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Windows;
@@ -24,6 +28,9 @@
 
         private string sourceConnectionString = "";
         private string targetConnectionString = "";
+
+        private string sourceConnectionStringPsql = "";
+
 
         static class SqlBulkCopyHelper
         {
@@ -54,6 +61,8 @@
 
             Button_CopyData.IsEnabled = false;
             Button_Cancel.Visibility = System.Windows.Visibility.Collapsed;
+
+            CheckBox_TruncateTargetTableToPsql.IsChecked = true;
 
         }
 
@@ -244,6 +253,160 @@
             }
         }
 
+        string MapSqlServerToPostgresType(string sqlServerType)
+        {
+            switch (sqlServerType)
+            {
+                case "System.Int32": return "INTEGER";
+                case "System.Int64": return "BIGINT";
+                case "System.Int16": return "SMALLINT";
+                case "System.Decimal": return "NUMERIC";
+                case "System.Double": return "DOUBLE PRECISION";
+                case "System.Single": return "REAL";
+                case "System.String": return "TEXT";
+                case "System.Boolean": return "BOOLEAN";
+                case "System.DateTime": return "TIMESTAMP";
+                case "System.Guid": return "UUID";
+                case "System.Byte[]": return "BYTEA";
+                default: return "TEXT"; // Default to TEXT for unknown types
+            }
+        }
 
+        private void ButtonToPsql_CopyData_Click(object sender, RoutedEventArgs e)
+        {
+
+            stopwatch = Stopwatch.StartNew();
+
+            try
+            {                
+                
+                string postgresConnString = TextBox_TargetConnectionToPsql.Text;
+
+                TextRange textRange = new TextRange(RichTextBox_SourceQueryToPsql.Document.ContentStart, RichTextBox_SourceQueryToPsql.Document.ContentEnd);
+                string sqlQuery = textRange.Text;
+
+                string targetTable = TextBox_TargetTableToPsql.Text;
+                
+                // Open SQL Server connection and execute the query.
+                using (var sqlConn = new SqlConnection(sourceConnectionStringPsql))
+                {
+                    sqlConn.Open();
+                    using (var sqlCmd = new SqlCommand(sqlQuery, sqlConn))
+                    {
+                        // Using CommandBehavior.SequentialAccess can help with large data streams.
+                        using (var reader = sqlCmd.ExecuteReader(System.Data.CommandBehavior.SequentialAccess))
+                        {
+
+                            DataTable schemaTable = reader.GetSchemaTable();
+                            if (schemaTable == null)
+                            {
+                                throw new Exception("Failed to retrieve schema from SQL Server.");
+                            }
+
+                            StringBuilder createTableQuery = new StringBuilder($"CREATE TABLE IF NOT EXISTS {targetTable} (");
+
+                            string AllTargetColumns = "";
+
+                            foreach (DataRow row in schemaTable.Rows)
+                            {
+                                string columnName = row["ColumnName"].ToString();
+                                string sqlServerType = row["DataType"].ToString();
+                                string postgresType = MapSqlServerToPostgresType(sqlServerType);
+
+                                createTableQuery.Append($"{columnName} {postgresType}, ");
+
+                                AllTargetColumns += columnName + ",";
+                            }
+
+                            createTableQuery.Length -= 2; // Remove last comma
+                            createTableQuery.Append(");");
+
+                            AllTargetColumns = AllTargetColumns.Substring(0, AllTargetColumns.Length - 1); // Remove last comma
+
+                            // PostgreSQL COPY command. Make sure the columns match the source order.
+                            string copyCommand = $"COPY {targetTable} ({AllTargetColumns}) FROM STDIN (FORMAT BINARY)";
+
+
+                            // Open PostgreSQL connection.
+                            using (var pgConn = new NpgsqlConnection(postgresConnString))
+                            {
+                                pgConn.Open();
+
+                                using (var pgCmd = new NpgsqlCommand(createTableQuery.ToString(), pgConn))
+                                {
+                                    pgCmd.ExecuteNonQuery();
+                                }
+
+                                if (CheckBox_TruncateTargetTableToPsql.IsChecked == true)
+                                {
+                                    using (var pgCmd = new NpgsqlCommand($"TRUNCATE TABLE {targetTable} RESTART IDENTITY;", pgConn))
+                                    {
+                                        pgCmd.ExecuteNonQuery();
+                                    }
+                                }
+
+
+                                // Begin the binary import into PostgreSQL.
+                                using (var importer = pgConn.BeginBinaryImport(copyCommand))
+                                {
+
+                                    int j = 0;
+                                    while (reader.Read())
+                                    {
+                                        // Start a new row in the PostgreSQL COPY stream.
+                                        importer.StartRow();
+
+                                        for (int i = 0; i < reader.FieldCount; i++)
+                                        {
+                                            var value = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
+                                            importer.Write(value);
+                                        }
+
+                                        j += 1;
+
+                                        if (j % 1000 == 0)
+                                        {
+                                            TimeSpan tsj = stopwatch.Elapsed;
+
+                                            Label_CopyProgressToPsql.Content = $"Rows copied: {j:#,0} in {(int)tsj.TotalSeconds:#,0} sec.";
+                                        }
+
+                                    }
+                                    // Complete the import.
+                                    importer.Complete();
+
+                                    TimeSpan ts = stopwatch.Elapsed;
+
+                                    Label_CopyProgressToPsql.Content = $"Completed | Total rows copied: {j:#,0} in {(int)ts.TotalSeconds:#,0} sec.";
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Something went wrong: {ex.Message}", "DataTransferWindow");
+            }    
+
+            stopwatch.Stop();
+
+
+        }
+
+        private void ButtonToPsql_Cancel_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void Button_SelectSourceToPsql_Click(object sender, RoutedEventArgs e)
+        {
+            var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
+
+            sourceConnectionStringPsql = ci.FullConnectionString;
+
+            Label_SourceDescriptionToPsql.Content = $"Server: [{ci.ServerName}] / Database: [{ci.Database}]";
+        }
     }
 }
