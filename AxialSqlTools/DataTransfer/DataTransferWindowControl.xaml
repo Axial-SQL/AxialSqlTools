@@ -106,16 +106,15 @@
                                         </Paragraph>
                                     </FlowDocument>
                                 </RichTextBox>
-                            </StackPanel>
-
-                            
+                            </StackPanel>                            
 
                             <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
                                 <Label Content="Target Table" FontWeight="Bold"/>
-                                <CheckBox Name="CheckBox_TruncateTargetTableToPsql" Content="Truncate Table"/>
+                                <CheckBox Name="CheckBox_CreateTargetTableToPsql" Content="Create table if not exists"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableToPsql" Content="Truncate table"/>
+                                <CheckBox Name="CheckBox_SkipDataCopyToPsql" Content="Create target table only without copying data"/>
                                 <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableToPsql"/>
-                            </StackPanel>
-                            
+                            </StackPanel>                          
                             
                             
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">

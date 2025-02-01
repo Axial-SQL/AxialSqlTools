@@ -274,6 +274,10 @@
 
         private void ButtonToPsql_CopyData_Click(object sender, RoutedEventArgs e)
         {
+            if (string.IsNullOrEmpty(TextBox_TargetTableToPsql.Text))
+            {
+                TextBox_TargetTableToPsql.Text = string.Format("data_export_{0}", DateTime.Now.ToString("yyyyddMMHHmmss"));
+            }
 
             stopwatch = Stopwatch.StartNew();
 
@@ -301,7 +305,7 @@
                             if (schemaTable == null)
                             {
                                 throw new Exception("Failed to retrieve schema from SQL Server.");
-                            }
+                            }                     
 
                             StringBuilder createTableQuery = new StringBuilder($"CREATE TABLE IF NOT EXISTS {targetTable} (");
 
@@ -332,9 +336,12 @@
                             {
                                 pgConn.Open();
 
-                                using (var pgCmd = new NpgsqlCommand(createTableQuery.ToString(), pgConn))
+                                if (CheckBox_CreateTargetTableToPsql.IsChecked == true)
                                 {
-                                    pgCmd.ExecuteNonQuery();
+                                    using (var pgCmd = new NpgsqlCommand(createTableQuery.ToString(), pgConn))
+                                    {
+                                        pgCmd.ExecuteNonQuery();
+                                    }
                                 }
 
                                 if (CheckBox_TruncateTargetTableToPsql.IsChecked == true)
@@ -345,41 +352,39 @@
                                     }
                                 }
 
-
-                                // Begin the binary import into PostgreSQL.
-                                using (var importer = pgConn.BeginBinaryImport(copyCommand))
+                                int j = 0;
+                                if (CheckBox_SkipDataCopyToPsql.IsChecked == false)
                                 {
-
-                                    int j = 0;
-                                    while (reader.Read())
+                                    using (var importer = pgConn.BeginBinaryImport(copyCommand))
                                     {
-                                        // Start a new row in the PostgreSQL COPY stream.
-                                        importer.StartRow();
-
-                                        for (int i = 0; i < reader.FieldCount; i++)
+                                        while (reader.Read())
                                         {
-                                            var value = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
-                                            importer.Write(value);
+                                            // Start a new row in the PostgreSQL COPY stream.
+                                            importer.StartRow();
+
+                                            for (int i = 0; i < reader.FieldCount; i++)
+                                            {
+                                                var value = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
+                                                importer.Write(value);
+                                            }
+
+                                            j += 1;
+
+                                            if (j % 1000 == 0)
+                                            {
+                                                TimeSpan tsj = stopwatch.Elapsed;
+
+                                                Label_CopyProgressToPsql.Content = $"Rows copied: {j:#,0} in {(int)tsj.TotalSeconds:#,0} sec.";
+                                            }
+
                                         }
-
-                                        j += 1;
-
-                                        if (j % 1000 == 0)
-                                        {
-                                            TimeSpan tsj = stopwatch.Elapsed;
-
-                                            Label_CopyProgressToPsql.Content = $"Rows copied: {j:#,0} in {(int)tsj.TotalSeconds:#,0} sec.";
-                                        }
-
+                                        importer.Complete();
                                     }
-                                    // Complete the import.
-                                    importer.Complete();
-
-                                    TimeSpan ts = stopwatch.Elapsed;
-
-                                    Label_CopyProgressToPsql.Content = $"Completed | Total rows copied: {j:#,0} in {(int)ts.TotalSeconds:#,0} sec.";
-
                                 }
+
+                                TimeSpan ts = stopwatch.Elapsed;
+
+                                Label_CopyProgressToPsql.Content = $"Completed | Total rows copied: {j:#,0} in {(int)ts.TotalSeconds:#,0} sec.";
                             }
                         }
                     }
