@@ -1,7 +1,7 @@
-# Axial SQL Tools | SQL Server Management Studio 20 Productivity Addin
+# Axial SQL Tools | SQL Server Management Studio 21 Productivity Addin
 
 As an engineer with over two decades of experience in SQL Server, I've encountered my fair share of inefficiencies and limitations within SSMS. 
-Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the third iteration of my work, tailored specifically for SSMS 18 (no longer supported), 19 (no longer supported) and 20.
+Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the forth iteration of my work, tailored specifically for SSMS 21.
 This project is a personal endeavor to solve the issues I've faced, but I would like to incorporate valuable community feedback and ideas as well.
 
 While I recognize that this extension may overlap with existing tools, both free and paid, my passion lies in coding and tackling problems in my own unique way. The aim isn't to overshadow other solutions but to provide a complementary tool that addresses gaps and simplifies processes for engineers like myself.
@@ -55,23 +55,21 @@ These templates are designed to cover a wide range of scenarios, helping you to 
 
 To install the addin, you have two options:
 
-1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2017 for compatibility. 
-Select either the SSMS18, SSMS19 or SSMS20 active configurations. 
+1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2022 for compatibility. 
 The build process will automatically copy all necessary files into the SSMS extension folder, and you will be ready to use it.
 
 2. **Download the Release:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository.
-Choose between the SSMS 18, 19 and 20 versions.
+Older releases have compiled addins for SSMS 18, 19 and 20 but those are no longer supported.
 
-After obtaining the compiled files (either by compiling from source or downloading from Releases), follow these steps to install the extension:
+After obtaining the compiled files (either by compiling from source or downloading from Releases), place the folder with the compiled files into the following directory:
+`C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Extensions`
 
-- For SSMS 20, place the folder with the compiled files into the following directory:<br/>
-`C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Extensions` 
+For older releases:
+- For SSMS 20: `C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Extensions` 
 
-- For SSMS 19, use this directory instead:<br/>
-`C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions`
+- For SSMS 19: `C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions`
 
-- For SSMS 18, use this directory instead:<br/>
-`C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
+- For SSMS 18: `C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
 
 If your Windows security policy has blocked the `AxialSqlTools.dll` file, you may need to unlock it by using the checkbox in the file properties.
 
