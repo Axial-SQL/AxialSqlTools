@@ -1,5 +1,6 @@
 ﻿namespace AxialSqlTools
 {
+    using Microsoft.Data.SqlClient;
     using System;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
@@ -13,6 +14,8 @@
     /// </summary>
     public partial class SettingsWindowControl : UserControl
     {
+
+        private string _queryHistoryConnectionString;
         /// <summary>
         /// Initializes a new instance of the <see cref="SettingsWindowControl"/> class.
         /// </summary>
@@ -41,8 +44,10 @@
                 UseSnippets.IsChecked = SettingsManager.GetUseSnippets();
                 SnippetFolder.Text = SettingsManager.GetSnippetFolder();
 
-                QueryHistoryConnectionString.Text = SettingsManager.GetQueryHistoryConnectionString();
+                _queryHistoryConnectionString = SettingsManager.GetQueryHistoryConnectionString();
                 QueryHistoryTableName.Text = SettingsManager.GetQueryHistoryTableName();
+                UpdateQueryHistoryConnectionDetails();
+
 
                 MyEmailAddress.Text = SettingsManager.GetMyEmail();
 
@@ -65,6 +70,32 @@
                 MessageBox.Show(msg, "Error");
             }
 
+        }
+
+        private void UpdateQueryHistoryConnectionDetails()
+        {
+
+            if (string.IsNullOrWhiteSpace(_queryHistoryConnectionString))
+            {
+                Label_QueryHistoryConnectionInfo.Content = " < not configured > ";
+            }
+            else
+            {
+                try
+                {
+
+                    SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(_queryHistoryConnectionString);
+
+                    string msg = string.Format("Server: {0}; Database: {1}; User ID: {2}", builder.DataSource, builder.InitialCatalog, builder.UserID);
+
+                    Label_QueryHistoryConnectionInfo.Content = msg;
+
+                }
+                catch (Exception ex)
+                {
+                    Label_QueryHistoryConnectionInfo.Content = ex.Message;
+                }
+            }
         }
 
         ///// <summary>
@@ -217,7 +248,7 @@
 
         private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)
         {
-            SettingsManager.SaveQueryHistoryConnectionString(QueryHistoryConnectionString.Text);
+            SettingsManager.SaveQueryHistoryConnectionString(_queryHistoryConnectionString);
             SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text); 
 
             SavedMessage();
@@ -228,7 +259,9 @@
 
             var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
-            QueryHistoryConnectionString.Text = ci.FullConnectionString;
+            _queryHistoryConnectionString = ci.FullConnectionString;
+
+            UpdateQueryHistoryConnectionDetails();
 
         }
 
@@ -266,7 +299,11 @@
 
         private void Button_DisableQueryHistory_Click(object sender, RoutedEventArgs e)
         {
-            QueryHistoryConnectionString.Text = "";
+
+            _queryHistoryConnectionString = "";
+
+            UpdateQueryHistoryConnectionDetails();
+
         }
     }
 }

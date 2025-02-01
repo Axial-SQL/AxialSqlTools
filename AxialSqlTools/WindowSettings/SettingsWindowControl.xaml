@@ -50,13 +50,13 @@
                 </GroupBox.Header>
                 <StackPanel Orientation="Vertical">
                     <DockPanel HorizontalAlignment="Left">
-                        <Button Margin="5" Content=" Select the database from the Object Explorer " 
+                        <Button Margin="5" Content="Use connection from Object Explorer" 
                             x:Name="button_SelectDatabaseFromObjectExplorer" Click="Button_SelectDatabaseFromObjectExplorer_Click" 
-                             Width="300" FontWeight="Bold"/>
+                             Width="250" FontWeight="Bold"/>
                     </DockPanel>
                     <DockPanel>
-                        <Label Margin="5" Width="150">Target Connection String:</Label>
-                        <TextBox Margin="5" x:Name="QueryHistoryConnectionString" IsReadOnly="True" Background="#FFE6E6E6" />
+                        <Label Margin="5" Width="150" >Connection Info:</Label>
+                        <Label Margin="5" Name="Label_QueryHistoryConnectionInfo"> &lt; not configured &gt; </Label>
                     </DockPanel>
                     <DockPanel>
                         <Label Margin="5" Width="150" >Target Table Name:</Label>
@@ -74,7 +74,7 @@
                     <TextBlock Text="Code Format" FontWeight="Bold"/>
                 </GroupBox.Header>
                 <StackPanel Orientation="Horizontal" Margin="5">
-                    <CheckBox x:Name="ApplyCodeFormat" Content="Apply additional format on the parser output" VerticalAlignment="Center"/>
+                    <CheckBox x:Name="ApplyCodeFormat" Content="Apply additional format on the TSQL parser output" VerticalAlignment="Center"/>
                     <Button Margin="5" Content="Save" x:Name="button_SaveApplyAdditionalFormat" Click="Button_SaveApplyAdditionalFormat_Click" Width="50" FontWeight="Bold"/>
                 </StackPanel>
             </GroupBox>
