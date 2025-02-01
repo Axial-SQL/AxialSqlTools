@@ -12,12 +12,15 @@
                 <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Axial SQL Tools | Settings</TextBlock>
             </StackPanel>
 
-            <GroupBox Header="Query Templates">
+            <GroupBox>
+                <GroupBox.Header>
+                    <TextBlock Text="Query Templates" FontWeight="Bold"/>
+                </GroupBox.Header>
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <Label Margin="5">Templates Folder:</Label>
                         <TextBox Margin="5" HorizontalAlignment="Left" TextWrapping="Wrap" Text=""  x:Name="ScriptFolder" Width="540" />
-                        <Button Margin="5" Name="button_Browse" Content="Browse..." Click="BrowseButton_Click" FontWeight="Bold"/>
+                        <Button Margin="5" Name="button_Browse" Content="Select..." Click="BrowseButton_Click" FontWeight="Bold"/>
                         <Button Margin="5" Content="Save" x:Name="button_SaveScriptFolder" Click="Button_SaveScriptFolder_Click" Width="50" FontWeight="Bold" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
@@ -27,38 +30,58 @@
                 </StackPanel>
 
             </GroupBox>            
-            <GroupBox Header="Code Snippets">
+            <GroupBox>
+                <GroupBox.Header>
+                    <TextBlock Text="Code Snippets" FontWeight="Bold"/>
+                </GroupBox.Header>
                 <StackPanel Orientation="Vertical">
                     <CheckBox Margin="5" x:Name="UseSnippets" Content="Use code snippets (SSMS restart required)"/>
                     <StackPanel Orientation="Horizontal">
                         <Label Margin="5">Snippets Location:</Label>
                         <TextBox Margin="5" HorizontalAlignment="Left" TextWrapping="Wrap" Text=""  x:Name="SnippetFolder" Width="540" />
-                        <Button Margin="5" Name="button_SnippetsBrowse" Content="Browse..." Click="SnippetsBrowseButton_Click" FontWeight="Bold"/>
+                        <Button Margin="5" Name="button_SnippetsBrowse" Content="Select..." Click="SnippetsBrowseButton_Click" FontWeight="Bold"/>
                         <Button Margin="5" Content="Save" x:Name="button_SaveSnippetFolder" Click="Button_SaveSnippetFolder_Click" Width="50" FontWeight="Bold"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>
-            <GroupBox Header="Query History">
+            <GroupBox>
+                <GroupBox.Header>
+                    <TextBlock Text="Query History" FontWeight="Bold"/>
+                </GroupBox.Header>
                 <StackPanel Orientation="Vertical">
-                    <StackPanel Orientation="Horizontal">
-                        <Button Margin="5" Content=" Select the database from the Object Explorer " x:Name="button_SelectDatabaseFromObjectExplorer" Click="Button_SelectDatabaseFromObjectExplorer_Click" FontWeight="Bold"/>
-                        <Button Margin="5" Content=" Disable Query History " x:Name="button_DisableQueryHistory" Click="Button_DisableQueryHistory_Click" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">                        
-                        <Label Margin="5">Target Connection String:</Label>
-                        <TextBox Margin="5" HorizontalAlignment="Left" TextWrapping="Wrap" Text=""  x:Name="QueryHistoryConnectionString" Width="540" IsReadOnly="True" Background="#FFE6E6E6" />
+                    <DockPanel HorizontalAlignment="Left">
+                        <Button Margin="5" Content=" Select the database from the Object Explorer " 
+                            x:Name="button_SelectDatabaseFromObjectExplorer" Click="Button_SelectDatabaseFromObjectExplorer_Click" 
+                             Width="300" FontWeight="Bold"/>
+                    </DockPanel>
+                    <DockPanel>
+                        <Label Margin="5" Width="150">Target Connection String:</Label>
+                        <TextBox Margin="5" x:Name="QueryHistoryConnectionString" IsReadOnly="True" Background="#FFE6E6E6" />
+                    </DockPanel>
+                    <DockPanel>
+                        <Label Margin="5" Width="150" >Target Table Name:</Label>
+                        <TextBox Margin="5" Height="23" x:Name="QueryHistoryTableName" ToolTip="Leave empty to use the default [QueryHistory] table name as a target"/>                        
+                    </DockPanel>                    
+                    <DockPanel HorizontalAlignment="Left">
+                        <Button Margin="5" Content="Disable Query History" x:Name="button_DisableQueryHistory" Click="Button_DisableQueryHistory_Click" Width="150" FontWeight="Bold"/>
                         <Button Margin="5" Content="Save" x:Name="button_SaveQueryHistory" Click="Button_SaveQueryHistory_Click" Width="50" FontWeight="Bold"/>
-                    </StackPanel>
-            </StackPanel>
+                    </DockPanel>
+                </StackPanel>
 
             </GroupBox>
-            <GroupBox Header="Code format">
+            <GroupBox>
+                <GroupBox.Header>
+                    <TextBlock Text="Code Format" FontWeight="Bold"/>
+                </GroupBox.Header>
                 <StackPanel Orientation="Horizontal" Margin="5">
                     <CheckBox x:Name="ApplyCodeFormat" Content="Apply additional format on the parser output" VerticalAlignment="Center"/>
                     <Button Margin="5" Content="Save" x:Name="button_SaveApplyAdditionalFormat" Click="Button_SaveApplyAdditionalFormat_Click" Width="50" FontWeight="Bold"/>
                 </StackPanel>
             </GroupBox>
-            <GroupBox Header="SMTP Settings">
+            <GroupBox>
+                <GroupBox.Header>
+                    <TextBlock Text="SMTP Settings" FontWeight="Bold"/>
+                </GroupBox.Header>
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal" Margin="5">
                         <Label Width="120">My email address:</Label>

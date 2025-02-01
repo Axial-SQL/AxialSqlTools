@@ -176,7 +176,9 @@ namespace AxialSqlTools
                 }   
                 */
 
-                string QueryText = @"SELECT TOP (1000) [QueryID]
+                string qhTableName = SettingsManager.GetQueryHistoryTableNameOrDefault();
+
+                string QueryText = $@"SELECT TOP (1000) [QueryID]
       ,[StartTime]
       ,[FinishTime]
       ,[ElapsedTime]
@@ -187,9 +189,9 @@ namespace AxialSqlTools
       ,[DatabaseName]
       ,[LoginName]
       ,[WorkstationId]
-FROM [dbo].[QueryHistory]
+FROM {qhTableName}
 WHERE 1 = 1
-ORDER BY [QueryId] DESC;";
+ORDER BY [QueryID] DESC;";
 
                 // it doesn't accept the conn info I generate...
                 object newScript = ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql); //, uiConn, null);                

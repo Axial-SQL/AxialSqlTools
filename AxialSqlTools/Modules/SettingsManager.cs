@@ -552,5 +552,25 @@ ORDER BY sd.[name];
             return SaveRegisterValue("QueryHistoryConnectionString", Convert.ToBase64String(encKey));
         }
 
+        public static string GetQueryHistoryTableNameOrDefault()
+        {
+            string qhTable = GetRegisterValue("QueryHistoryTableName");
+
+            if (string.IsNullOrEmpty(qhTable))
+            {
+                qhTable = "QueryHistory";
+            }
+            return qhTable;
+        }
+
+        public static string GetQueryHistoryTableName()
+        {
+            return GetRegisterValue("QueryHistoryTableName");
+        }
+        public static bool SaveQueryHistoryTableName(string qhTableName)
+        {
+            return SaveRegisterValue("QueryHistoryTableName", qhTableName);
+        }
+
     }
 }

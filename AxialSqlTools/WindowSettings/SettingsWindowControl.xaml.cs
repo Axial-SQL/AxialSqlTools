@@ -42,6 +42,7 @@
                 SnippetFolder.Text = SettingsManager.GetSnippetFolder();
 
                 QueryHistoryConnectionString.Text = SettingsManager.GetQueryHistoryConnectionString();
+                QueryHistoryTableName.Text = SettingsManager.GetQueryHistoryTableName();
 
                 MyEmailAddress.Text = SettingsManager.GetMyEmail();
 
@@ -217,6 +218,7 @@
         private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveQueryHistoryConnectionString(QueryHistoryConnectionString.Text);
+            SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text); 
 
             SavedMessage();
         }
