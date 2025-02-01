@@ -11,6 +11,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
+using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio;
+using System.Windows.Forms;
 
 namespace AxialSqlTools
 {
@@ -135,6 +138,20 @@ namespace AxialSqlTools
             //TODO ... list all other types that need additional handling 
 
             return sqlDataTypeName;
+        }
+
+
+
+        public static IGridControl GetFocusGridControl()
+        {
+            object outVsWindowFrame = null;
+            ServiceCache.VSMonitorSelection.GetCurrentElementValue((int)VSConstants.VSSELELEMID.SEID_WindowFrame, out outVsWindowFrame);
+
+            var vsWindowFrame = outVsWindowFrame as IVsWindowFrame;
+            vsWindowFrame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out var outControl);
+
+            var control = (Control)outControl;
+            return (GridControl)((ContainerControl)((ContainerControl)control).ActiveControl).ActiveControl;
         }
 
         public static List<DataTable> GetDataTables()

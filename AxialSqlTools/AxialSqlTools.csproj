@@ -91,6 +91,7 @@
     <Compile Include="HealthDashboards\HealthDashboard_ServersControl.xaml.cs">
       <DependentUpon>HealthDashboard_ServersControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Modules\ResultGridControlAdaptor.cs" />
     <Compile Include="Modules\ExcelExport.cs" />
     <Compile Include="Modules\GridAccess.cs" />
     <Compile Include="Modules\KeypressCommandFilter.cs" />
