@@ -222,7 +222,7 @@
 
         private void Button_SelectSource_Click(object sender, RoutedEventArgs e)
         {
-            var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
+            var ci = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer();
 
             sourceConnectionString = ci.FullConnectionString;
 
@@ -233,7 +233,7 @@
 
         private void Button_SelectTarget_Click(object sender, RoutedEventArgs e)
         {
-            var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
+            var ci = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer();
 
             targetConnectionString = ci.FullConnectionString;
 
@@ -407,7 +407,7 @@
 
         private void Button_SelectSourceToPsql_Click(object sender, RoutedEventArgs e)
         {
-            var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
+            var ci = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer();
 
             sourceConnectionStringPsql = ci.FullConnectionString;
 

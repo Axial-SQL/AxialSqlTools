@@ -1,5 +1,8 @@
-﻿using Microsoft.SqlServer.Management.Smo.RegSvrEnum;
+﻿using Microsoft.SqlServer.Management.Smo;
+using Microsoft.SqlServer.Management.Smo.RegSvrEnum;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
+using Microsoft.SqlServer.Management.UI.VSIntegration.ObjectExplorer;
+using Microsoft.SqlServer.Management.Common;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -8,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Text.RegularExpressions;
 
 namespace AxialSqlTools
 {
@@ -19,6 +23,55 @@ namespace AxialSqlTools
             public string Database { get; set; }            
             public string ServerName { get; set; }            
             public UIConnectionInfo ActiveConnectionInfo { get; set; }
+        }
+
+        private static INodeInformation GetSelectedNode(IObjectExplorerService _objectExplorerService)
+        {
+            INodeInformation[] nodes;
+            int nodeCount;
+            _objectExplorerService.GetSelectedNodes(out nodeCount, out nodes);
+
+            return (nodeCount > 0 ? nodes[0] : null);
+        }
+
+        public static ConnectionInfo GetCurrentConnectionInfoFromObjectExplorer(bool inMaster = false)
+        {
+
+            var oeService = (IObjectExplorerService)ServiceCache.ServiceProvider.GetService(typeof(IObjectExplorerService));
+            if (oeService == null)
+                return null;
+
+            // Get the currently selected nodes in Object Explorer.
+            var selectedNode = GetSelectedNode(oeService);
+
+            if (selectedNode == null)
+                return null;
+
+            string databaseName = "master";
+
+            Match match = Regex.Match(selectedNode.Context, @"Database\[@Name='(.*?)'\]");
+            if (match.Success)
+            {
+                databaseName = match.Groups[1].Value;
+            }
+
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
+            builder.DataSource = selectedNode.Connection.ServerName;
+            builder.InitialCatalog = databaseName;
+            builder.UserID = selectedNode.Connection.UserName;
+            builder.IntegratedSecurity = string.IsNullOrEmpty(selectedNode.Connection.Password);
+            builder.Password = selectedNode.Connection.Password;
+            builder.ApplicationName = "Axial SQL Tools";
+            builder.Encrypt = ((SqlConnectionInfo)selectedNode.Connection).EncryptConnection;
+            builder.TrustServerCertificate = ((SqlConnectionInfo)selectedNode.Connection).TrustServerCertificate;
+
+
+            ConnectionInfo ci = new ConnectionInfo();
+            ci.FullConnectionString = builder.ToString();
+            ci.Database = databaseName;
+            ci.ServerName = builder.DataSource;
+
+            return ci;
         }
 
         public static ConnectionInfo GetCurrentConnectionInfo(bool inMaster = false)
@@ -39,10 +92,14 @@ namespace AxialSqlTools
             builder.InitialCatalog = databaseName;
             builder.ApplicationName = "Axial SQL Tools";
 
-            //I assume there is no harm in always encrypting these connections
-            //SSMS 20 connection fails without this
-            builder.Encrypt = true; // TODO - take from advance options
-            builder.TrustServerCertificate = true; // TODO - take from advance options
+            if (connection.AdvancedOptions["ENCRYPT_CONNECTION"] == "True")          
+            {
+                builder.Encrypt = true;
+            }
+            if (connection.AdvancedOptions["TRUST_SERVER_CERTIFICATE"] == "True")
+            {
+                builder.TrustServerCertificate = true;
+            }
 
             ConnectionInfo ci = new ConnectionInfo();
             ci.FullConnectionString = builder.ToString();
