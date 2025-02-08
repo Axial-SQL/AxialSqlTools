@@ -16,7 +16,7 @@ Check it out and let me know what you think!
 
 ***Very much work in progress. Please submit bugs/ideas in this repo.***
 
-## Main Features
+## Main Features - (see Wiki for more details)
 
 - **Transaction Warning**: See right away if you left any transaction open.<br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/transaction-warning.png?raw=true"/>
@@ -26,7 +26,7 @@ Check it out and let me know what you think!
 
 - [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Validate and format your TSQL code with Microsoft TSQL parser, making it more readable and maintainable.
   
-- **Query Templates and Snippets**: Access a collection of query templates for common tasks, saving time and effort on routine queries.
+- [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access your personal collection of query templates for common tasks, reducing the time and effort required for routine work.
   
 - [**Export Grid to Excel**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-To-Excel): Quickly export results from the grid view directly into Excel file.
   
