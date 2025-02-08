@@ -63,6 +63,9 @@
             Button_Cancel.Visibility = System.Windows.Visibility.Collapsed;
 
             CheckBox_TruncateTargetTableToPsql.IsChecked = true;
+            CheckBox_CreateTargetTableToPsql.IsChecked = true;
+
+            TextBox_TargetConnectionToPsql.Text = "Server=127.0.0.1;Port=5432;Database=postgres;User Id=postgres;Password=<password>;";
 
         }
 
@@ -121,6 +124,8 @@
                         await sourceConn.OpenAsync();
                         using (SqlCommand cmd = new SqlCommand(sourceQuery, sourceConn))
                         {
+                            cmd.CommandTimeout = 0;
+
                             using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
                             {
 
@@ -272,44 +277,51 @@
             }
         }
 
-        private void ButtonToPsql_CopyData_Click(object sender, RoutedEventArgs e)
+        private async void ButtonToPsql_CopyData_Click(object sender, RoutedEventArgs e)
         {
+            // Ensure a target table name is provided.
             if (string.IsNullOrEmpty(TextBox_TargetTableToPsql.Text))
             {
-                TextBox_TargetTableToPsql.Text = string.Format("data_export_{0}", DateTime.Now.ToString("yyyyddMMHHmmss"));
+                TextBox_TargetTableToPsql.Text = $"data_export_{DateTime.Now:yyyyddMMHHmmss}";
             }
+
+            // Create a cancellation token for the async operations.
+            _cancellationTokenSource = new CancellationTokenSource();
+            CancellationToken cancellationToken = _cancellationTokenSource.Token;
 
             stopwatch = Stopwatch.StartNew();
 
             try
-            {                
-                
+            {
+                // Update UI: hide the copy button and show the cancel button.
+                ButtonToPsql_CopyData.Visibility = System.Windows.Visibility.Collapsed;
+                ButtonToPsql_Cancel.Visibility = System.Windows.Visibility.Visible;
+
                 string postgresConnString = TextBox_TargetConnectionToPsql.Text;
-
-                TextRange textRange = new TextRange(RichTextBox_SourceQueryToPsql.Document.ContentStart, RichTextBox_SourceQueryToPsql.Document.ContentEnd);
+                // Get the SQL query from the rich text box.
+                TextRange textRange = new TextRange(RichTextBox_SourceQueryToPsql.Document.ContentStart,
+                                                    RichTextBox_SourceQueryToPsql.Document.ContentEnd);
                 string sqlQuery = textRange.Text;
-
                 string targetTable = TextBox_TargetTableToPsql.Text;
-                
-                // Open SQL Server connection and execute the query.
+
+                // Open SQL Server connection and execute the query asynchronously.
                 using (var sqlConn = new SqlConnection(sourceConnectionStringPsql))
                 {
-                    sqlConn.Open();
+                    await sqlConn.OpenAsync(cancellationToken);
                     using (var sqlCmd = new SqlCommand(sqlQuery, sqlConn))
                     {
-                        // Using CommandBehavior.SequentialAccess can help with large data streams.
-                        using (var reader = sqlCmd.ExecuteReader(System.Data.CommandBehavior.SequentialAccess))
+                        sqlCmd.CommandTimeout = 0;
+                        // Use SequentialAccess for large data streams.
+                        using (var reader = await sqlCmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken))
                         {
-
+                            // Get the schema information.
                             DataTable schemaTable = reader.GetSchemaTable();
                             if (schemaTable == null)
-                            {
                                 throw new Exception("Failed to retrieve schema from SQL Server.");
-                            }                     
 
+                            // Build the CREATE TABLE command for PostgreSQL.
                             StringBuilder createTableQuery = new StringBuilder($"CREATE TABLE IF NOT EXISTS {targetTable} (");
-
-                            string AllTargetColumns = "";
+                            StringBuilder allTargetColumns = new StringBuilder();
 
                             foreach (DataRow row in schemaTable.Rows)
                             {
@@ -318,91 +330,107 @@
                                 string postgresType = MapSqlServerToPostgresType(sqlServerType);
 
                                 createTableQuery.Append($"{columnName} {postgresType}, ");
-
-                                AllTargetColumns += columnName + ",";
+                                allTargetColumns.Append($"{columnName},");
                             }
 
-                            createTableQuery.Length -= 2; // Remove last comma
+                            // Remove the trailing comma and space.
+                            createTableQuery.Length -= 2;
                             createTableQuery.Append(");");
 
-                            AllTargetColumns = AllTargetColumns.Substring(0, AllTargetColumns.Length - 1); // Remove last comma
+                            // Remove trailing comma from column list.
+                            allTargetColumns.Length--;
+                            string copyCommand = $"COPY {targetTable} ({allTargetColumns}) FROM STDIN (FORMAT BINARY)";
 
-                            // PostgreSQL COPY command. Make sure the columns match the source order.
-                            string copyCommand = $"COPY {targetTable} ({AllTargetColumns}) FROM STDIN (FORMAT BINARY)";
-
-
-                            // Open PostgreSQL connection.
+                            // Open PostgreSQL connection asynchronously.
                             using (var pgConn = new NpgsqlConnection(postgresConnString))
                             {
-                                pgConn.Open();
+                                await pgConn.OpenAsync(cancellationToken);
 
+                                // Optionally create the target table.
                                 if (CheckBox_CreateTargetTableToPsql.IsChecked == true)
                                 {
                                     using (var pgCmd = new NpgsqlCommand(createTableQuery.ToString(), pgConn))
                                     {
-                                        pgCmd.ExecuteNonQuery();
+                                        await pgCmd.ExecuteNonQueryAsync(cancellationToken);
                                     }
                                 }
 
+                                // Optionally truncate the target table.
                                 if (CheckBox_TruncateTargetTableToPsql.IsChecked == true)
                                 {
                                     using (var pgCmd = new NpgsqlCommand($"TRUNCATE TABLE {targetTable} RESTART IDENTITY;", pgConn))
                                     {
-                                        pgCmd.ExecuteNonQuery();
+                                        await pgCmd.ExecuteNonQueryAsync(cancellationToken);
                                     }
                                 }
 
-                                int j = 0;
+                                int rowCount = 0;
+                                // Optionally perform the data copy.
                                 if (CheckBox_SkipDataCopyToPsql.IsChecked == false)
                                 {
-                                    using (var importer = pgConn.BeginBinaryImport(copyCommand))
+                                    // Begin the PostgreSQL binary import asynchronously.
+                                    using (var importer = await pgConn.BeginBinaryImportAsync(copyCommand, cancellationToken))
                                     {
-                                        while (reader.Read())
+                                        while (await reader.ReadAsync(cancellationToken))
                                         {
-                                            // Start a new row in the PostgreSQL COPY stream.
+                                            // Start a new row in the COPY stream.
                                             importer.StartRow();
 
                                             for (int i = 0; i < reader.FieldCount; i++)
                                             {
-                                                var value = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
-                                                importer.Write(value);
+                                                bool isNull = await reader.IsDBNullAsync(i, cancellationToken);
+                                                var value = isNull ? DBNull.Value : reader.GetValue(i);
+                                                // Write each column value asynchronously.
+                                                await importer.WriteAsync(value, cancellationToken);
                                             }
 
-                                            j += 1;
+                                            rowCount++;
 
-                                            if (j % 1000 == 0)
+                                            // Update progress every 1000 rows.
+                                            if (rowCount % 1000 == 0)
                                             {
-                                                TimeSpan tsj = stopwatch.Elapsed;
-
-                                                Label_CopyProgressToPsql.Content = $"Rows copied: {j:#,0} in {(int)tsj.TotalSeconds:#,0} sec.";
+                                                TimeSpan elapsed = stopwatch.Elapsed;
+                                                Label_CopyProgressToPsql.Content =
+                                                    $"Rows copied: {rowCount:#,0} in {(int)elapsed.TotalSeconds:#,0} sec.";
                                             }
 
+                                            // Check for cancellation.
+                                            cancellationToken.ThrowIfCancellationRequested();
                                         }
-                                        importer.Complete();
+                                        await importer.CompleteAsync(cancellationToken);
                                     }
                                 }
 
-                                TimeSpan ts = stopwatch.Elapsed;
-
-                                Label_CopyProgressToPsql.Content = $"Completed | Total rows copied: {j:#,0} in {(int)ts.TotalSeconds:#,0} sec.";
+                                // Final status update.
+                                TimeSpan totalElapsed = stopwatch.Elapsed;
+                                Label_CopyProgressToPsql.Content =
+                                    $"Completed | Total rows copied: {rowCount:#,0} in {(int)totalElapsed.TotalSeconds:#,0} sec.";
                             }
                         }
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Data transfer has been cancelled.", "DataTransferWindow");
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Something went wrong: {ex.Message}", "DataTransferWindow");
-            }    
-
-            stopwatch.Stop();
-
-
+            }
+            finally
+            {
+                // Restore the buttons and stop the stopwatch.
+                ButtonToPsql_CopyData.Visibility = System.Windows.Visibility.Visible;
+                ButtonToPsql_Cancel.Visibility = System.Windows.Visibility.Collapsed;
+                stopwatch.Stop();
+            }
         }
+
 
         private void ButtonToPsql_Cancel_Click(object sender, RoutedEventArgs e)
         {
-
+            _cancellationTokenSource.Cancel();
         }
 
         private void Button_SelectSourceToPsql_Click(object sender, RoutedEventArgs e)

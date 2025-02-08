@@ -81,11 +81,10 @@
                         </StackPanel>
                     </Grid>
                 </TabItem>
-                <TabItem Header="SQL Server -> PostgreSQL (WIP)">
+                <TabItem Header="SQL Server -> PostgreSQL">
                     <Grid>
 
                         <StackPanel Orientation="Vertical" >
-
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                                 <Button Height="35" Content="Select Source" Click="Button_SelectSourceToPsql_Click" x:Name="Button_SelectSourceToPsql" Width="120" FontWeight="Bold"/>
@@ -110,9 +109,9 @@
 
                             <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
                                 <Label Content="Target Table" FontWeight="Bold"/>
-                                <CheckBox Name="CheckBox_CreateTargetTableToPsql" Content="Create table if not exists"/>
-                                <CheckBox Name="CheckBox_TruncateTargetTableToPsql" Content="Truncate table"/>
-                                <CheckBox Name="CheckBox_SkipDataCopyToPsql" Content="Create target table only without copying data"/>
+                                <CheckBox Name="CheckBox_CreateTargetTableToPsql" Content="Create table if it does not exist"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableToPsql" Content="Clear target table before inserting new records"/>
+                                <CheckBox Name="CheckBox_SkipDataCopyToPsql" Content="Create table structure only (skip data copying)"/>
                                 <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableToPsql"/>
                             </StackPanel>                          
                             
