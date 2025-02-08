@@ -388,9 +388,9 @@ namespace AxialSqlTools
                         CommandFilter.AddToChain();
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-
+                    _logger.Error(ex, "An exception occurred");
                 }
             }
 
@@ -413,9 +413,9 @@ namespace AxialSqlTools
                 }
 
             }
-            catch
+            catch (Exception ex) 
             {
-
+                _logger.Error(ex, "An exception occurred");
             }
         }
 
@@ -532,9 +532,9 @@ namespace AxialSqlTools
 
                 }
             }
-            catch // (Exception ex)
+            catch (Exception ex)
             {
-
+                _logger.Error(ex, "An exception occurred");
             }
 
             try
@@ -563,7 +563,7 @@ namespace AxialSqlTools
             }
             catch (Exception ex)
             {
-                var msg = ex.Message;
+                _logger.Error(ex, "An exception occurred");
             }
 
             // query history
@@ -596,7 +596,7 @@ namespace AxialSqlTools
             }
             catch (Exception ex)
             {
-                var msg = ex.Message;
+                _logger.Error(ex, "An exception occurred");
             }
 
 

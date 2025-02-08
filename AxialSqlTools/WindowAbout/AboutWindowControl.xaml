@@ -15,8 +15,13 @@
             <TextBlock Margin="186,10" HorizontalAlignment="Center"><Run Text="Expert SQL Server solutions"/></TextBlock>
             <TextBlock Margin="10" HorizontalAlignment="Center">info@axial-sql.com</TextBlock>
             <Button Content="Visit our web-site at https://axial-sql.com/" Click="buttonAxialSqlWebsite_Click" Height="30" x:Name="buttonVisitWebsite" VerticalAlignment="Center" Margin="100,10,100,10"/>
-            <Button Content="Open AddIn Log folder" Click="ButtonOpenLogFolder_Click" Height="30" x:Name="buttonOpenLogFolder" VerticalAlignment="Center" Margin="180,10,180,10"/>
-            <TextBlock Margin="10" HorizontalAlignment="Center" x:Name="TextBlock_LogFolder"></TextBlock>
+
+            <TextBlock Margin="20" HorizontalAlignment="Center">
+            <Run Text="AddIn Log Folder:" />
+            <Hyperlink Click="HyperlinkLogFolder_Click">
+                <Run x:Name="HyperlinkText_LogFolder" Text="Open" />
+            </Hyperlink>
+            </TextBlock>
 
         </StackPanel>
     </Grid>

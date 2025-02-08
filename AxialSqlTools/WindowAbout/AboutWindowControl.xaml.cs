@@ -33,7 +33,7 @@
                         "AxialSQLToolsLog"
                 );
 
-            TextBlock_LogFolder.Text = _logFolder;
+            HyperlinkText_LogFolder.Text = _logFolder;
         }
 
         /// <summary>
@@ -51,7 +51,7 @@
 
         }
 
-        private void ButtonOpenLogFolder_Click(object sender, RoutedEventArgs e)
+        private void HyperlinkLogFolder_Click(object sender, RoutedEventArgs e)
         {
 
             if (!Directory.Exists(_logFolder))
