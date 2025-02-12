@@ -758,7 +758,7 @@ namespace AxialSqlTools
                 excelBytes = webClient.DownloadData(excelUrl);
             }
 
-            List<string> sheetNames = new List<string> { "2022", "2019", "2017", "2016", "2014", "2012"}; // not going for older versions...
+            List<string> sheetNames = new List<string> { "2025", "2022", "2019", "2017", "2016", "2014", "2012"}; // not going for older versions...
 
             // Load the Excel file into a MemoryStream.
             using (MemoryStream stream = new MemoryStream(excelBytes))
