@@ -109,8 +109,6 @@
             }
         }
 
-        public AxialSqlToolsPackage _axialSqlToolsPackage { get; set; }
-
         public string connectionString = null;
         public DateTime lastRefresh = new DateTime(2000, 1, 1, 0, 0, 0);
         private CancellationTokenSource _cancellationTokenSource;
