@@ -17,10 +17,10 @@
             <Button Content="Visit our web-site at https://axial-sql.com/" Click="buttonAxialSqlWebsite_Click" Height="30" x:Name="buttonVisitWebsite" VerticalAlignment="Center" Margin="100,10,100,10"/>
 
             <TextBlock Margin="20" HorizontalAlignment="Center">
-            <Run Text="AddIn Log Folder:" />
-            <Hyperlink Click="HyperlinkLogFolder_Click">
-                <Run x:Name="HyperlinkText_LogFolder" Text="Open" />
-            </Hyperlink>
+                <Run Text="AddIn Log Folder:" />
+                <Hyperlink Click="HyperlinkLogFolder_Click">
+                    <Run x:Name="HyperlinkText_LogFolder" Text="Open" />
+                </Hyperlink>
             </TextBlock>
 
         </StackPanel>

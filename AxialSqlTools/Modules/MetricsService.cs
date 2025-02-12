@@ -69,6 +69,7 @@ namespace AxialSqlTools
         public string ServerName { get; set; }
         public string ServiceName { get; set; }
         public string ServerVersion { get; set; }
+        public string ServerVersionShort { get; set; }
         public DateTime UtcStartTime { get; set; }
         public int CpuUtilization { get; set; }
         public int ConnectionCountTotal { get; set; }
@@ -145,10 +146,15 @@ namespace AxialSqlTools
                     string queryText_1 = @"
                     SELECT @@SERVERNAME AS ServerName,
                            @@SERVICENAME AS ServiceName,
-                           DATEADD(hh, DATEDIFF(hh, GETDATE(), GETUTCDATE()), sqlserver_start_time) as UtcStartTime,
+                           DATEADD(hh, DATEDIFF(hh, GETDATE(), GETUTCDATE()), sqlserver_start_time) AS UtcStartTime,
                            @@VERSION,
                            SERVERPROPERTY('edition'),
-                           CASE WHEN OBJECT_ID('dbo.sp_WhoIsActive') IS NULL THEN 0 ELSE 1 END AS spWhoIsActiveExists
+                           CASE
+                                WHEN OBJECT_ID('dbo.sp_WhoIsActive') IS NULL
+                                    THEN 0
+                                ELSE 1
+                           END AS spWhoIsActiveExists,
+                           SERVERPROPERTY('productversion') 
                     FROM sys.dm_os_sys_info;
                     ";
 
@@ -166,6 +172,7 @@ namespace AxialSqlTools
                                     metrics.UtcStartTime = DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc);  
 
                                     metrics.ServerVersion = reader.GetString(3);
+                                    metrics.ServerVersionShort = reader.GetString(6);
 
                                     int index = metrics.ServerVersion.IndexOf("Copyright");
                                     if (index != -1)

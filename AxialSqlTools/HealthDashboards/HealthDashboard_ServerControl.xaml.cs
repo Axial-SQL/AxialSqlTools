@@ -21,6 +21,10 @@
     using OxyPlot.Legends;
     using System.Linq;
     using static HealthDashboardServerMetric;
+    using System.Diagnostics;
+    using static AxialSqlTools.AxialSqlToolsPackage;
+    using DocumentFormat.OpenXml.Bibliography;
+    using DocumentFormat.OpenXml.Spreadsheet;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
@@ -105,13 +109,16 @@
             }
         }
 
-
+        public AxialSqlToolsPackage _axialSqlToolsPackage { get; set; }
 
         public string connectionString = null;
         public DateTime lastRefresh = new DateTime(2000, 1, 1, 0, 0, 0);
         private CancellationTokenSource _cancellationTokenSource;
         private bool _disposed = false;
         private bool _monitoringStarted = false;
+        private bool _versionCheckCompleted = false;
+        private bool _newVersionAvailable = false;
+        private string _newVersionURL;
 
         private WaitsStatsAggregator waitsStatsAggregator = new WaitsStatsAggregator();
 
@@ -162,6 +169,7 @@
             DatabaseBackupHistoryIncludeFULL.IsChecked = true;
             DatabaseBackupHistoryIncludeDIFF.IsChecked = true;
             DatabaseBackupHistoryIncludeLOG.IsChecked = true;
+           
         }
 
         public void StartMonitoring()
@@ -502,6 +510,68 @@
                     userControlOwner.Caption = "Health Dashboard | Server";
                 else
                     userControlOwner.Caption = metrics.ServerName + " - OK";
+
+
+            //-------------------------------------------------------------------
+            if (!_versionCheckCompleted && !string.IsNullOrEmpty( metrics.ServerVersionShort))
+            {
+
+                try
+                {
+                    SQLBuildsData sqlBuilds = AxialSqlToolsPackage.PackageInstance.SQLBuildsDataInfo;
+
+                    if (System.Version.TryParse(metrics.ServerVersionShort, out System.Version currentBuildVersion))
+                    {
+
+                        string targetSqlVersion = "";
+                        switch (currentBuildVersion.Major)
+                        {
+                            case 17: targetSqlVersion = "2025"; break;
+                            case 16: targetSqlVersion = "2022"; break;
+                            case 15: targetSqlVersion = "2019"; break;
+                            case 14: targetSqlVersion = "2017"; break;
+                            case 13: targetSqlVersion = "2016"; break;
+                            case 12: targetSqlVersion = "2014"; break;
+                            case 11: targetSqlVersion = "2012"; break;
+                        }
+
+                        if (!string.IsNullOrEmpty(targetSqlVersion))
+                        {
+                            if (sqlBuilds.Builds.TryGetValue(targetSqlVersion, out List<SQLVersionInfo> builds))
+                            {
+
+                                SQLVersionInfo latestVersionInfo = builds.OrderByDescending(info => info.BuildNumber).FirstOrDefault();
+                                if (latestVersionInfo != null)
+                                {
+                                    if (latestVersionInfo.BuildNumber > currentBuildVersion)
+                                    {
+                                        _newVersionAvailable = true;
+                                        _newVersionURL = latestVersionInfo.Url;
+
+                                        HyperlinkOpenNewVersionLink.Text = $"A new version is now available! {latestVersionInfo.UpdateName} released on: {latestVersionInfo.ReleaseDate.ToShortDateString()}";
+
+                                    }                                    
+                                }
+                            }
+                        }
+
+                        if (_newVersionAvailable)
+                        {
+                            TextBlockNewVersion.Visibility = Visibility.Visible;
+                        }
+                        else
+                        {
+                            TextBlockNewVersion.Visibility = Visibility.Hidden;
+                        }
+                    }                  
+                    
+
+                } catch {
+                    TextBlockNewVersion.Visibility = Visibility.Hidden;
+                }                
+
+                _versionCheckCompleted = true;
+            }
 
         }
 
@@ -1003,6 +1073,15 @@
                 if (value < 1) AgentJobsTimelinePeriodNumberTextBox.Text = "1";
                 else if (value > 14) AgentJobsTimelinePeriodNumberTextBox.Text = "14";
             }
+        }
+
+
+        private void HyperlinkOpenNewVersionLink_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(_newVersionURL))
+            {
+                Process.Start(new ProcessStartInfo(_newVersionURL) { UseShellExecute = true });
+            } 
         }
 
     }

@@ -27,6 +27,12 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Linq;
 using AxialSqlTools.Properties;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using System.Globalization;
+using System.Net;
+using System.IO.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace AxialSqlTools
 {
@@ -63,6 +69,23 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(AskChatGptWindow))]
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
+
+        public class SQLVersionInfo
+        {
+            public string SqlVersion { get; set; }    // e.g. "SQL Server 2022"
+            public Version BuildNumber { get; set; }   // e.g. "16.0.1000"
+            public DateTime ReleaseDate { get; set; }
+            public string UpdateName { get; set; }    // e.g. "CU5" or "Security Update XYZ"
+            public string Url { get; set; }
+        }
+
+        public class SQLBuildsData
+        {
+            public Dictionary<string, List<SQLVersionInfo>> Builds { get; set; } = new Dictionary<string, List<SQLVersionInfo>>();
+        }
+
+        public SQLBuildsData SQLBuildsDataInfo;
+
         #region QueryHistory
         private class QueryHistoryEntry
         {
@@ -125,7 +148,7 @@ namespace AxialSqlTools
         private static void EnqueueDataForProcessing(QueryHistoryEntry data)
         {
             _queryHistoryQueue.Enqueue(data);
-            Task.Run(() => ProcessDataAsync());
+            _ = Task.Run(() => ProcessDataAsync());
         }
 
         private static async Task ProcessDataAsync()
@@ -225,6 +248,8 @@ namespace AxialSqlTools
 
         public Dictionary<string, string> globalSnippets = new Dictionary<string, string>();
 
+        public static AxialSqlToolsPackage PackageInstance { get; private set; }
+
         #region Package Members
 
         /// <summary>
@@ -239,6 +264,8 @@ namespace AxialSqlTools
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+
+            PackageInstance = this;
 
             InitializeLogging();
 
@@ -360,7 +387,16 @@ namespace AxialSqlTools
 
             }
 
-            // needed for the AxyPlot library
+            try
+            {
+                SQLBuildsDataInfo = await Task.Run(() => DownloadSqlServerBuildInfo());
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An exception occurred");
+            }
+
+            // needed for the OxyPlot library
             AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
 
         }
@@ -502,7 +538,7 @@ namespace AxialSqlTools
                             }
                         }
 
-                        foreach (GridColumn gridColumn in gridColumns)
+                        foreach (Microsoft.SqlServer.Management.UI.Grid.GridColumn gridColumn in gridColumns)
                         {
 
                             if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
@@ -693,6 +729,196 @@ namespace AxialSqlTools
             UpdateRenamedTemplatesControls(commandBarFolder, fileNamesCache);
 
         }
+
+
+        private static SQLBuildsData DownloadSqlServerBuildInfo()
+        {
+            try
+            {
+                return DownloadAndParseExcel();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An exception occurred");
+
+                return null;
+            }            
+
+        }
+
+        private static SQLBuildsData DownloadAndParseExcel()
+        {
+            SQLBuildsData data = new SQLBuildsData();
+            string excelUrl = "https://aka.ms/sqlserverbuilds";
+
+            // Download the Excel file into a byte array.
+            byte[] excelBytes;
+            using (WebClient webClient = new WebClient())
+            {
+                excelBytes = webClient.DownloadData(excelUrl);
+            }
+
+            List<string> sheetNames = new List<string> { "2022", "2019", "2017", "2016", "2014", "2012"}; // not going for older versions...
+
+            // Load the Excel file into a MemoryStream.
+            using (MemoryStream stream = new MemoryStream(excelBytes))
+            {
+                // Open the SpreadsheetDocument for read-only access.
+                using (SpreadsheetDocument document = SpreadsheetDocument.Open(stream, false))
+                {
+                    WorkbookPart workbookPart = document.WorkbookPart;
+                    SharedStringTablePart sharedStringPart = workbookPart.SharedStringTablePart;
+
+                    // Iterate over each sheet in the workbook.
+                    foreach (Sheet sheet in workbookPart.Workbook.Sheets)
+                    {
+                        string sheetName = sheet.Name;
+                        WorksheetPart worksheetPart = workbookPart.GetPartById(sheet.Id) as WorksheetPart;
+                        if (worksheetPart == null)
+                        {
+                            continue;
+                        }
+
+                        if(!sheetNames.Contains(sheetName))
+                        {
+                            continue;
+                        }
+
+                        // Get the SheetData element.
+                        SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+                        if (sheetData == null)
+                        {
+                            continue;
+                        }
+
+                        var buildList = new List<SQLVersionInfo>();
+                        Dictionary<int, string> headers = null;
+                        bool isHeaderRow = true;
+
+                        // Iterate over the rows in the worksheet.
+                        foreach (Row row in sheetData.Elements<Row>())
+                        {
+                            // The first row is assumed to be the header.
+                            if (isHeaderRow)
+                            {
+                                headers = new Dictionary<int, string>();
+                                foreach (Cell cell in row.Elements<Cell>())
+                                {
+                                    int colIndex = GetColumnIndex(cell.CellReference);
+                                    string headerValue = GetCellValue(cell, sharedStringPart);
+                                    headers[colIndex] = headerValue;
+                                }
+                                isHeaderRow = false;
+                            }
+                            else
+                            {
+                                // Build a dictionary of header -> cell value for this row.
+                                Dictionary<string, string> rowData = new Dictionary<string, string>();
+
+                                foreach (Cell cell in row.Elements<Cell>())
+                                {
+                                    int colIndex = GetColumnIndex(cell.CellReference);
+                                    if (headers != null && headers.ContainsKey(colIndex))
+                                    {
+                                        string header = headers[colIndex];
+                                        string cellValue = GetCellValue(cell, sharedStringPart);
+                                        rowData[header] = cellValue;
+                                    }
+                                }
+
+                                // Only add the row if it contains a non-empty "Build" value.
+                                if (rowData.ContainsKey("Build Number") && !string.IsNullOrWhiteSpace(rowData["Build Number"]))
+                                {
+                                    SQLVersionInfo info = new SQLVersionInfo
+                                    {
+                                        SqlVersion = sheetName,
+                                        UpdateName = rowData.ContainsKey("Cumulative Update or Security ID") ? rowData["Cumulative Update or Security ID"] : null,
+                                        Url = rowData.ContainsKey("KB URL") ? rowData["KB URL"] : null
+                                    };
+
+                                    string BuildNumber = rowData.ContainsKey("Build Number") ? rowData["Build Number"] : null;
+                                    if (BuildNumber != null)
+                                    {
+                                        try
+                                        {
+                                            info.BuildNumber = new Version(BuildNumber);
+                                        }
+                                        catch { }
+                                    }
+                                    // Parse the release date if present.
+                                    if (rowData.ContainsKey("Release Date"))
+                                    {
+                                        string releaseDateStr = rowData["Release Date"];
+                                        if (double.TryParse(releaseDateStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
+                                        {
+                                            try
+                                            {
+                                                info.ReleaseDate = DateTime.FromOADate(result);
+                                            }
+                                            catch { }
+                                        }
+                                                                         
+                                    }
+                                    buildList.Add(info);
+                                }
+                            }
+                        }
+
+                        // Store the build list keyed by the worksheet (SQL Server version) name.
+                        data.Builds[sheetName] = buildList;
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        /// <summary>
+        /// Retrieves the text value of a cell. If the cell uses the shared string table,
+        /// the method returns the appropriate string.
+        /// </summary>
+        /// <param name="cell">The cell to read.</param>
+        /// <param name="sharedStringPart">The shared string table part (may be null).</param>
+        /// <returns>The cell value as a string.</returns>
+        private static string GetCellValue(Cell cell, SharedStringTablePart sharedStringPart)
+        {
+            if (cell == null)
+                return null;
+
+            string value = cell.InnerText;
+
+            if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString)
+            {
+                if (sharedStringPart != null && int.TryParse(value, out int index))
+                {
+                    return sharedStringPart.SharedStringTable.ElementAt(index).InnerText;
+                }
+            }
+            return value;
+        }
+
+        /// <summary>
+        /// Converts a cell reference (e.g. "A1", "B2", "AA3") to a zero-based column index.
+        /// </summary>
+        /// <param name="cellReference">The cell reference string.</param>
+        /// <returns>The zero-based column index.</returns>
+        private static int GetColumnIndex(string cellReference)
+        {
+            if (string.IsNullOrEmpty(cellReference))
+                return -1;
+
+            // Extract only the letters.
+            string columnReference = new string(cellReference.Where(c => Char.IsLetter(c)).ToArray());
+            int columnIndex = 0;
+            int factor = 1;
+            for (int pos = columnReference.Length - 1; pos >= 0; pos--)
+            {
+                columnIndex += (columnReference[pos] - 'A' + 1) * factor;
+                factor *= 26;
+            }
+            return columnIndex - 1; // Convert to zero-based index.
+        }
+
 
 
     }

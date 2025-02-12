@@ -34,11 +34,16 @@
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0">
                         <StackPanel Orientation="Vertical" >
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Version:" Width="150"/>
-                            <Label Content="= SQL Server engine version =" x:Name="Label_ServerVersion" FontWeight="Bold"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Version:" Width="150"/>
+                                <Label Content="= SQL Server engine version =" x:Name="Label_ServerVersion" FontWeight="Bold"/>
+                                <TextBlock x:Name="TextBlockNewVersion" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden">           
+                                    <Hyperlink Click="HyperlinkOpenNewVersionLink_Click">
+                                        <Run x:Name="HyperlinkOpenNewVersionLink" Text="A new version is now available!" />
+                                    </Hyperlink>
+                                </TextBlock>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
                             <StackPanel Orientation="Vertical">
                                 <StackPanel Orientation="Horizontal">
                                     <Label Content="Server name:" Width="150"/>
