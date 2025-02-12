@@ -13,9 +13,13 @@
                 <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Export the grid to a file and send it via email</TextBlock>
             </StackPanel>
             <StackPanel Orientation="Vertical">
-                <StackPanel Orientation="Horizontal" Margin="5,5,5,5">
+                <StackPanel Orientation="Horizontal" Margin="5">
                     <Label Content="File:" x:Name="FullFileNameTitleLabel" Width="80" />
                     <Label Content="" x:Name="FullFileNameLabel" FontWeight="Bold" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="5">
+                    <Label Content="Rename to:"  Width="80" />                    
+                    <TextBox Height="22" TextWrapping="Wrap" Text="" x:Name="TextBoxNewFileName" Width="300" />                   
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="5,5,5,5">
                     <Label Content="From:" Width="80" />

@@ -475,6 +475,27 @@
             if (CheckBox_CCMyself.IsChecked == true)
                 ccEmail = SettingsManager.GetMyEmail();
 
+            if (!string.IsNullOrEmpty(TextBoxNewFileName.Text))
+            {
+                // rename the file
+                try
+                {
+                    string directory = Path.GetDirectoryName(exportedFilename); 
+                    string extension = Path.GetExtension(exportedFilename); 
+                    string newFileName = TextBoxNewFileName.Text + extension; 
+                    string newFilePath = Path.Combine(directory, newFileName); 
+
+                    // Rename the file
+                    File.Move(exportedFilename, newFilePath);
+
+                    exportedFilename = newFilePath;
+
+                    FullFileNameLabel.Content = exportedFilename;
+
+                }
+                catch {}
+            }            
+
             bool success = false;
 
             if (mailConfig.isSMTP)
