@@ -178,10 +178,10 @@
 
             UpdateUI(0, new HealthDashboardServerMetric { }, true);
 
-            if (ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo != null)
-            {
+            var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer(inMaster: true);
 
-                var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo(inMaster: true);
+            if (!string.IsNullOrEmpty(connectionInfo.FullConnectionString))
+            {                
                 connectionString = connectionInfo.FullConnectionString;
 
                 _cancellationTokenSource = new CancellationTokenSource();
@@ -559,13 +559,13 @@
                         }
                         else
                         {
-                            TextBlockNewVersion.Visibility = Visibility.Hidden;
+                            TextBlockNewVersion.Visibility = Visibility.Collapsed;
                         }
                     }                  
                     
 
                 } catch {
-                    TextBlockNewVersion.Visibility = Visibility.Hidden;
+                    TextBlockNewVersion.Visibility = Visibility.Collapsed;
                 }                
 
                 _versionCheckCompleted = true;

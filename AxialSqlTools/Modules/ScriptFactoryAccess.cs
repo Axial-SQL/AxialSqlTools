@@ -48,11 +48,13 @@ namespace AxialSqlTools
                 return null;
 
             string databaseName = "master";
-
-            Match match = Regex.Match(selectedNode.Context, @"Database\[@Name='(.*?)'\]");
-            if (match.Success)
+            if (!inMaster)
             {
-                databaseName = match.Groups[1].Value;
+                Match match = Regex.Match(selectedNode.Context, @"Database\[@Name='(.*?)'\]");
+                if (match.Success)
+                {
+                    databaseName = match.Groups[1].Value;
+                }
             }
 
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();

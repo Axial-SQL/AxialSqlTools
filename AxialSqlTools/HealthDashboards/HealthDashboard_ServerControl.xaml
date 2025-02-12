@@ -36,12 +36,14 @@
                         <StackPanel Orientation="Vertical" >
                             <StackPanel Orientation="Horizontal">
                                 <Label Content="Version:" Width="150"/>
+                                <StackPanel Orientation="Vertical">
                                 <Label Content="= SQL Server engine version =" x:Name="Label_ServerVersion" FontWeight="Bold"/>
-                                <TextBlock x:Name="TextBlockNewVersion" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden">           
+                                <TextBlock x:Name="TextBlockNewVersion" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" >           
                                     <Hyperlink Click="HyperlinkOpenNewVersionLink_Click">
                                         <Run x:Name="HyperlinkOpenNewVersionLink" Text="A new version is now available!" />
                                     </Hyperlink>
                                 </TextBlock>
+                                </StackPanel>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                             <StackPanel Orientation="Vertical">
