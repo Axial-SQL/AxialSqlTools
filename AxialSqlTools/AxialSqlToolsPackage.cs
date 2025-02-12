@@ -390,6 +390,10 @@ namespace AxialSqlTools
             try
             {
                 SQLBuildsDataInfo = await Task.Run(() => DownloadSqlServerBuildInfo());
+
+                //MenuCommand CmdSqlServerBuilds = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
+                //CmdSqlServerBuilds.Visible = true;
+
             }
             catch (Exception ex)
             {
