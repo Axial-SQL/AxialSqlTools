@@ -11,8 +11,15 @@
              Name="SQLServerBuilds">
     
     <Grid>
-        <Label Content="Data source: https://aka.ms/sqlserverbuilds" />
-        <TreeView x:Name="sqlVersionTreeView" Margin="0,25,0,0">
+        <DockPanel HorizontalAlignment="Left">
+            <TextBlock Margin="0" HorizontalAlignment="Center" FontWeight="Bold">
+                <Run Text="Data Source:" />
+                <Hyperlink Click="HyperlinkDataSource_Click">
+                    <Run Text="https://aka.ms/sqlserverbuilds" />
+                </Hyperlink>
+            </TextBlock>           
+        </DockPanel>
+        <TreeView x:Name="sqlVersionTreeView" Margin="0,20,0,0">
             <TreeView.Resources>
                 <!-- Style for Grid-like Row -->
                 <Style TargetType="TreeViewItem">

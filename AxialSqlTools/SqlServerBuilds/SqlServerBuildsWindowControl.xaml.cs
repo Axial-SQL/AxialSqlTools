@@ -5,6 +5,7 @@
     using System.Collections.ObjectModel;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.IO;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Documents;
@@ -63,6 +64,9 @@
                     {
                         rowPanel.Children.Add(CreateColumnText(update.BuildNumber.ToString(), 120));
                     }
+                    else {
+                        rowPanel.Children.Add(CreateColumnText("n/a", 120));
+                    }
                     rowPanel.Children.Add(CreateColumnText(update.ReleaseDate.ToString("yyyy-MM-dd"), 120));
                     rowPanel.Children.Add(CreateColumnText(update.UpdateName, 100));
 
@@ -104,6 +108,10 @@
             return link;
         }
 
+        private void HyperlinkDataSource_Click(object sender, RoutedEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo("https://aka.ms/sqlserverbuilds") { UseShellExecute = true });
+        }
 
     }
 }

@@ -847,9 +847,10 @@ namespace AxialSqlTools
                                     {
                                         try
                                         {
-                                            info.BuildNumber = new Version(BuildNumber);
+                                            info.BuildNumber = new Version(BuildNumber.Trim());
                                         }
-                                        catch { }
+                                        catch {                                            
+                                        }
                                     }
                                     // Parse the release date if present.
                                     if (rowData.ContainsKey("Release Date"))
