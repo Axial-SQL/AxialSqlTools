@@ -67,6 +67,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(HealthDashboard_Servers))]
     [ProvideToolWindow(typeof(DataTransferWindow))]
     [ProvideToolWindow(typeof(AskChatGptWindow))]
+    [ProvideToolWindow(typeof(SqlServerBuildsWindow))]
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
 
@@ -287,6 +288,7 @@ namespace AxialSqlTools
                 await QueryHistoryCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
                 await AskChatGptCommand.InitializeAsync(this);
+                await SqlServerBuildsWindowCommand.InitializeAsync(this);
             }
             catch (Exception ex)
             {
@@ -391,8 +393,8 @@ namespace AxialSqlTools
             {
                 SQLBuildsDataInfo = await Task.Run(() => DownloadSqlServerBuildInfo());
 
-                //MenuCommand CmdSqlServerBuilds = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
-                //CmdSqlServerBuilds.Visible = true;
+                MenuCommand CmdSqlServerBuilds = m_plugin.MenuCommandService.FindCommand(new CommandID(SqlServerBuildsWindowCommand.CommandSet, SqlServerBuildsWindowCommand.CommandId));
+                CmdSqlServerBuilds.Visible = true;
 
             }
             catch (Exception ex)
@@ -401,7 +403,7 @@ namespace AxialSqlTools
             }
 
             // needed for the OxyPlot library
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);           
 
         }
 
@@ -922,7 +924,6 @@ namespace AxialSqlTools
             }
             return columnIndex - 1; // Convert to zero-based index.
         }
-
 
 
     }

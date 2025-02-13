@@ -105,6 +105,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="SqlServerBuilds\SqlServerBuildsWindow.cs" />
+    <Compile Include="SqlServerBuilds\SqlServerBuildsWindowCommand.cs" />
+    <Compile Include="SqlServerBuilds\SqlServerBuildsWindowControl.xaml.cs">
+      <DependentUpon>SqlServerBuildsWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="WindowAbout\AboutWindow.cs" />
     <Compile Include="WindowAbout\AboutWindowCommand.cs" />
     <Compile Include="WindowAbout\AboutWindowControl.xaml.cs">
@@ -245,6 +250,10 @@
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
     </Page>
+    <Page Include="SqlServerBuilds\SqlServerBuildsWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="WindowAbout\AboutWindowControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -260,9 +269,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="SqlServerBuilds\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup>
