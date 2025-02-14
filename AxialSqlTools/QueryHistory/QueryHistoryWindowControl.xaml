@@ -1,0 +1,79 @@
+﻿<UserControl x:Class="AxialSqlTools.QueryHistoryWindowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
+             Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
+             mc:Ignorable="d"
+             d:DesignHeight="300" d:DesignWidth="500"
+             Name="MyToolWindow">
+    <Grid>
+        <!-- Define rows for filter controls, the main list, and pagination -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Filter controls -->
+            <RowDefinition Height="*"/>
+            <!-- Main list -->
+            <RowDefinition Height="Auto"/>
+            <!-- Paging controls -->
+        </Grid.RowDefinitions>
+
+        <!-- Define two columns: List (2/3) and Details (1/3) -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Row="0" Grid.Column="0" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Label -->
+            <Label Content="Filter by Query Text:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+
+            <!-- TextBox for filter input -->
+            <TextBox Grid.Column="1" 
+               Margin="0,0,5,0"
+               Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" 
+               ToolTip="Enter text to filter QueryText" />
+
+            <!-- Clear filter button -->
+            <Button Grid.Column="2" Content="Clear" VerticalAlignment="Center" Command="{Binding ClearFilterCommand}" />
+        </Grid>
+
+
+        <!-- DataGrid for paginated list -->
+        <DataGrid Grid.Row="1" Grid.Column="0" Margin="5"
+            ItemsSource="{Binding QueryHistoryRecords}" 
+            SelectedItem="{Binding SelectedRecord, Mode=TwoWay}"
+            AutoGenerateColumns="False">
+            <!-- Define the columns you wish to show -->
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="Auto" />
+                <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="Auto" />
+                <!-- Add more columns as needed -->
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Pagination Controls -->
+        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" 
+              HorizontalAlignment="Center" Margin="5">
+            <Button Content="Previous" Command="{Binding PreviousPageCommand}" Margin="5"/>
+            <TextBlock Text="{Binding CurrentPage}" VerticalAlignment="Center" Margin="5"/>
+            <Button Content="Next" Command="{Binding NextPageCommand}" Margin="5"/>
+        </StackPanel>
+
+        <!-- Detail view: Full QueryText -->
+        <TextBox Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Margin="5" 
+           Text="{Binding SelectedRecord.QueryText}" 
+           IsReadOnly="True" 
+           TextWrapping="Wrap" 
+           AcceptsReturn="True" 
+           VerticalScrollBarVisibility="Auto"/>
+    </Grid>
+</UserControl>

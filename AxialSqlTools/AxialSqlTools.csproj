@@ -67,7 +67,6 @@
     <Compile Include="Commands\ExportGridToExcelCommand.cs" />
     <Compile Include="Commands\FormatQueryCommand.cs" />
     <Compile Include="Commands\OpenTemplatesFolderCommand.cs" />
-    <Compile Include="Commands\QueryHistoryCommand.cs" />
     <Compile Include="Commands\RefreshTemplatesCommand.cs" />
     <Compile Include="Commands\ResultGridCommands.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
@@ -104,6 +103,11 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="QueryHistory\QueryHistoryWindow.cs" />
+    <Compile Include="QueryHistory\QueryHistoryWindowCommand.cs" />
+    <Compile Include="QueryHistory\QueryHistoryWindowControl.xaml.cs">
+      <DependentUpon>QueryHistoryWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindow.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowCommand.cs" />
@@ -249,6 +253,10 @@
     <Page Include="HealthDashboards\HealthDashboard_ServersControl.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="QueryHistory\QueryHistoryWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="SqlServerBuilds\SqlServerBuildsWindowControl.xaml">
       <SubType>Designer</SubType>
