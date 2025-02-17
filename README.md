@@ -12,7 +12,7 @@ If you find this extension useful and it helps streamline your workflow in SSMS,
 
 Check it out and let me know what you think!
 
-<img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/main.png?raw=true"/>
+<img src="https://github.com/user-attachments/assets/38b097d2-231e-43b3-b183-51579a50092f"/>
 
 ***Very much work in progress. Please submit bugs/ideas in this repo.***
 
