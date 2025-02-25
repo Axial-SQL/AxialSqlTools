@@ -114,6 +114,7 @@ namespace AxialSqlTools
                 if (jj > 0) buffer.AppendLine("-------------------------------------------");
 
                 StringBuilder columnList = new StringBuilder();
+                StringBuilder columnListSelect = new StringBuilder();
                 int ii = 0;
                 foreach (DataColumn column in dataTable.Columns)
                 {
@@ -121,6 +122,9 @@ namespace AxialSqlTools
                     {
                         columnList.Append(", \n");
                         columnList.Append("         ");
+
+                        columnListSelect.Append(",\n");
+                        columnListSelect.Append("       ");
                     }
                     string columnType = "SQL_VARIANT";
                     if (column.ExtendedProperties.ContainsKey("sqlType"))
@@ -131,6 +135,8 @@ namespace AxialSqlTools
                         columnName = (string)column.ExtendedProperties["columnName"];
 
                     columnList.AppendFormat("[{0}] {1}", columnName, columnType);
+
+                    columnListSelect.AppendFormat("[{0}]", columnName);
 
                     ii += 1;
                 }
@@ -218,7 +224,7 @@ namespace AxialSqlTools
                     buffer.AppendLine("GO");
                 }
 
-                buffer.AppendLine("SELECT * FROM #tempBuffer;");
+                buffer.AppendLine($"SELECT {columnListSelect.ToString()} \nFROM #tempBuffer;");
 
                 globalBuffer.Append(buffer.ToString());
 
