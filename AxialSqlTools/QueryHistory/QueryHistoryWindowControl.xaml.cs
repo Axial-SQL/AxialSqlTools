@@ -1,37 +1,40 @@
 ﻿namespace AxialSqlTools
 {
+    using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.ComponentModel;
-    using System;
-    using System.Diagnostics.CodeAnalysis;
+    using Microsoft.Data.SqlClient; // For ADO.NET SQL Server access
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Input;
-    using System.Linq;
 
     /// <summary>
     /// Interaction logic for QueryHistoryWindowControl.
     /// </summary>
     public partial class QueryHistoryWindowControl : UserControl
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="QueryHistoryWindowControl"/> class.
-        /// </summary>
         public QueryHistoryWindowControl()
         {
-            this.InitializeComponent();
-
+            InitializeComponent();
             DataContext = new QueryHistoryViewModel();
-
         }
 
-        // Model representing a record from the QueryHistory table
+        // Model representing a record from the QueryHistory table.
         public class QueryHistoryRecord
         {
             public int Id { get; set; }
             public DateTime Date { get; set; }
+            public DateTime FinishTime { get; set; }
+            public string ElapsedTime { get; set; }
+            public long TotalRowsReturned { get; set; }
+            public string ExecResult { get; set; }
             public string QueryText { get; set; }
+            public string QueryTextShort { get; set; }
+            public string DataSource { get; set; }
+            public string DatabaseName { get; set; }
+            public string LoginName { get; set; }
+            public string WorkstationId { get; set; }
         }
 
         // A simple RelayCommand implementation for command binding.
@@ -60,10 +63,10 @@
         // The ViewModel that backs your UI.
         public class QueryHistoryViewModel : INotifyPropertyChanged
         {
-            // Complete set of records loaded from a data source.
+            // Holds the records loaded from SQL Server.
             private List<QueryHistoryRecord> _allRecords;
 
-            // The paginated and filtered list bound to the DataGrid.
+            // The list bound to the DataGrid.
             public ObservableCollection<QueryHistoryRecord> QueryHistoryRecords { get; set; }
 
             private QueryHistoryRecord _selectedRecord;
@@ -89,145 +92,115 @@
                     if (_filterText != value)
                     {
                         _filterText = value;
-                        CurrentPage = 1; // Reset to first page on filter change.
                         OnPropertyChanged(nameof(FilterText));
-                        UpdateRecords();
                     }
                 }
             }
 
-            private int _currentPage = 1;
-            public int CurrentPage
-            {
-                get => _currentPage;
-                set
-                {
-                    if (_currentPage != value)
-                    {
-                        _currentPage = value;
-                        OnPropertyChanged(nameof(CurrentPage));
-                        UpdateRecords();
-                    }
-                }
-            }
-
-            private int _pageSize = 100; // Number of records per page.
-            public int PageSize
-            {
-                get => _pageSize;
-                set
-                {
-                    if (_pageSize != value)
-                    {
-                        _pageSize = value;
-                        OnPropertyChanged(nameof(PageSize));
-                        UpdateRecords();
-                    }
-                }
-            }
-
-            public ICommand NextPageCommand { get; }
-            public ICommand PreviousPageCommand { get; }
+            // RefreshCommand triggers reloading of data with the current filter.
+            public ICommand RefreshCommand { get; }
+            public ICommand ClearFilterCommand { get; }
 
             public QueryHistoryViewModel()
             {
                 QueryHistoryRecords = new ObservableCollection<QueryHistoryRecord>();
-                NextPageCommand = new RelayCommand(NextPage, CanGoNextPage);
-                PreviousPageCommand = new RelayCommand(PreviousPage, CanGoPreviousPage);
-
-                // Simulate loading records (replace this with your actual data retrieval)
-                LoadDummyData();
-
-                // Display the initial page
-                UpdateRecords();
+                RefreshCommand = new RelayCommand(RefreshData);
+                ClearFilterCommand = new RelayCommand(() => { FilterText = string.Empty; RefreshData(); });
+                // Initial load.
+                RefreshData();
             }
 
-            // Dummy data generator for demonstration purposes.
-            private void LoadDummyData()
+            // Loads up to 1000 records from SQL Server using a filter (if provided).
+            private void RefreshData()
             {
                 _allRecords = new List<QueryHistoryRecord>();
-                for (int i = 1; i <= 100; i++)
+
+                // Retrieve connection and table settings (update as needed).
+                string connectionString = SettingsManager.GetQueryHistoryConnectionString();
+                string qhTableName = SettingsManager.GetQueryHistoryTableNameOrDefault();
+
+                // Build the query.
+                string query = $@"
+                    SELECT TOP 1000 
+                        [QueryID],
+                        [StartTime],
+                        [FinishTime],
+                        [ElapsedTime],
+                        [TotalRowsReturned],
+                        [ExecResult],
+                        [QueryText],
+                        [DataSource],
+                        [DatabaseName],
+                        [LoginName],
+                        [WorkstationId]
+                    FROM {qhTableName} ";
+
+                if (!string.IsNullOrWhiteSpace(FilterText))
                 {
-                    _allRecords.Add(new QueryHistoryRecord
-                    {
-                        Id = i,
-                        Date = DateTime.Now.AddMinutes(-i * 10),
-                        QueryText = $"SELECT * FROM Table WHERE Id = {i}; -- Sample query {i}"
-                    });
+                    query += "WHERE [QueryText] LIKE @FilterText ";
                 }
-            }
 
-            // Apply filtering and pagination to update the displayed records.
-            private void UpdateRecords()
-            {
-                // Filter the records based on the FilterText (if provided)
-                var filtered = string.IsNullOrWhiteSpace(FilterText)
-                    ? _allRecords
-                    : _allRecords.Where(r => r.QueryText.IndexOf(FilterText, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                query += "ORDER BY QueryID DESC";
 
-                // Calculate total pages.
-                int totalPages = (int)Math.Ceiling((double)filtered.Count / PageSize);
-                // Ensure the current page is within the valid range.
-                if (CurrentPage > totalPages)
-                    CurrentPage = totalPages > 0 ? totalPages : 1;
+                try
+                {
+                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    {
+                        connection.Open();
+                        using (SqlCommand command = new SqlCommand(query, connection))
+                        {
+                            if (!string.IsNullOrWhiteSpace(FilterText))
+                            {
+                                command.Parameters.AddWithValue("@FilterText", "%" + FilterText + "%");
+                            }
+                            using (SqlDataReader reader = command.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    var record = new QueryHistoryRecord
+                                    {
+                                        Id = reader.GetInt32(reader.GetOrdinal("QueryID")),
+                                        Date = reader.GetDateTime(reader.GetOrdinal("StartTime")),
+                                        FinishTime = reader.GetDateTime(reader.GetOrdinal("FinishTime")),
+                                        ElapsedTime = reader.GetString(reader.GetOrdinal("ElapsedTime")),
+                                        TotalRowsReturned = reader.GetInt64(reader.GetOrdinal("TotalRowsReturned")),
+                                        ExecResult = reader.GetString(reader.GetOrdinal("ExecResult")),
+                                        QueryText = reader.GetString(reader.GetOrdinal("QueryText")),
+                                        DataSource = reader.GetString(reader.GetOrdinal("DataSource")),
+                                        DatabaseName = reader.GetString(reader.GetOrdinal("DatabaseName")),
+                                        LoginName = reader.GetString(reader.GetOrdinal("LoginName")),
+                                        WorkstationId = reader.GetString(reader.GetOrdinal("WorkstationId"))
+                                    };
 
-                // Get records for the current page.
-                var pageRecords = filtered
-                    .Skip((CurrentPage - 1) * PageSize)
-                    .Take(PageSize)
-                    .ToList();
+                                    // Limit the short version of QueryText to 100 characters.
+                                    record.QueryTextShort = record.QueryText.Length > 100
+                                        ? record.QueryText.Substring(0, 100)
+                                        : record.QueryText;
 
-                // Refresh the ObservableCollection.
+                                    _allRecords.Add(record);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error loading data: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+
+                // Update the bound collection.
                 QueryHistoryRecords.Clear();
-                foreach (var record in pageRecords)
+                foreach (var record in _allRecords)
                 {
                     QueryHistoryRecords.Add(record);
                 }
-
-                // Update command states.
-                CommandManager.InvalidateRequerySuggested();
             }
-
-            // Command logic to determine if the "Next" button can be enabled.
-            private bool CanGoNextPage()
-            {
-                var filteredCount = string.IsNullOrWhiteSpace(FilterText)
-                    ? _allRecords.Count
-                    : _allRecords.Count(r => r.QueryText.IndexOf(FilterText, StringComparison.OrdinalIgnoreCase) >= 0);
-                int totalPages = (int)Math.Ceiling((double)filteredCount / PageSize);
-                return CurrentPage < totalPages;
-            }
-
-            // Go to the next page.
-            private void NextPage()
-            {
-                if (CanGoNextPage())
-                {
-                    CurrentPage++;
-                }
-            }
-
-            // Command logic to determine if the "Previous" button can be enabled.
-            private bool CanGoPreviousPage() => CurrentPage > 1;
-
-            // Go to the previous page.
-            private void PreviousPage()
-            {
-                if (CanGoPreviousPage())
-                {
-                    CurrentPage--;
-                }
-            }
-
-            #region INotifyPropertyChanged Implementation
 
             public event PropertyChangedEventHandler PropertyChanged;
             protected void OnPropertyChanged(string propertyName)
             {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
             }
-
-            #endregion
         }
     }
 }
