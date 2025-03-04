@@ -212,7 +212,7 @@ namespace AxialSqlTools
                             command.Parameters.AddWithValue("@ElapsedTime", data.ElapsedTime);
                             command.Parameters.AddWithValue("@TotalRowsReturned", data.TotalRowsReturned);
                             command.Parameters.AddWithValue("@ExecResult", data.ExecResult);
-                            command.Parameters.AddWithValue("@QueryText", data.QueryText);
+                            command.Parameters.AddWithValue("@QueryText", data.QueryText.Trim());
                             command.Parameters.AddWithValue("@DataSource", data.DataSource);
                             command.Parameters.AddWithValue("@DatabaseName", data.DatabaseName);
                             command.Parameters.AddWithValue("@LoginName", data.LoginName);

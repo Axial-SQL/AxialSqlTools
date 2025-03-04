@@ -33,13 +33,14 @@
                      Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" 
                      ToolTip="Enter text to filter QueryText"/>
             <Button Grid.Column="2" Content="Refresh" VerticalAlignment="Center" 
-                    Command="{Binding RefreshCommand}" Margin="0,0,5,0"/>
-            <Button Grid.Column="3" Content="Clear" VerticalAlignment="Center" 
+                    Command="{Binding RefreshCommand}" Margin="0,0,5,0" Height="25" Width="50"/>
+            <Button Grid.Column="3" Content="Clear" VerticalAlignment="Center"  Height="25" Width="50"
                     Command="{Binding ClearFilterCommand}"/>
         </Grid>
 
         <!-- DataGrid displaying the records -->
         <DataGrid Grid.Row="1" Margin="5"
+                  IsReadOnly="True"
                   ItemsSource="{Binding QueryHistoryRecords}" 
                   SelectedItem="{Binding SelectedRecord, Mode=TwoWay}"
                   AutoGenerateColumns="False">
