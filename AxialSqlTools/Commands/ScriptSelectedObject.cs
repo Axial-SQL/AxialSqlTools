@@ -207,36 +207,27 @@ namespace AxialSqlTools
 
                     Scripter scripter = new Scripter(server) { Options = new ScriptingOptions() };
 
-                    //TODO - configure all options
-                    scripter.Options.ScriptData = false;
-                    scripter.Options.ScriptForCreateOrAlter = true;
+                    if (object_type == "USER_TABLE")
+                    {
+                        scripter.Options.ScriptData = false;
+                        scripter.Options.DriAllKeys = true;
 
-                    scripter.Options.DriAllKeys = true;
+                        scripter.Options.Indexes = true;
+                        scripter.Options.Triggers = true;
+                        scripter.Options.Default = true;
+                        scripter.Options.DriAll = true;
 
-                    scripter.Options.Indexes = true;
-                    scripter.Options.Triggers = true;
-                    scripter.Options.Default = true;
-                    scripter.Options.DriAll = true;
-
-                    scripter.Options.ScriptDataCompression = true;
-                    scripter.Options.NoCollation = true;
-
-                    //{
-                    //    Options = {
-                    //        ScriptData = false,
-                    //        ScriptSchema = true,
-                    //        ScriptDrops = false,
-                    //        WithDependencies = true,
-                    //        Indexes = true, // Include indexes
-                    //        NoCollation = false, // Specify collation
-                    //        // Other options as needed
-
-                    //    }
-                    //};
-
-                    // Select the object to script
+                        scripter.Options.ScriptDataCompression = true;
+                        scripter.Options.NoCollation = true;
+                    }
+                    else
+                    {
+                        scripter.Options.ScriptForCreateOrAlter = true;
+                        scripter.Options.EnforceScriptingOptions = true;
+                    }
+                    // scripter.Options.ScriptBatchTerminator = true; -> this doesn't work for some reason..
+                       
                     Database db = server.Databases[database_name];
-
                     SqlSmoObject dbObject = null;
 
                     if (db.Tables.Contains(object_name, object_schema))
@@ -265,6 +256,7 @@ namespace AxialSqlTools
                         foreach (string line in sc)
                         {
                             sb.AppendLine(line);
+                            sb.AppendLine("GO");
                         }
                         string fullScriptResult = sb.ToString();
 
