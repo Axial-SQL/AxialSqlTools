@@ -114,6 +114,7 @@
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Format Query</ButtonText>
+          <LocCanonicalName>AxialSqlTools.FormatQuery</LocCanonicalName>
         </Strings>
       </Button>
       
@@ -124,6 +125,7 @@
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Export Grid to Excel</ButtonText>
+          <LocCanonicalName>AxialSqlTools.ExportGridToExcel</LocCanonicalName>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcelAndEmail" priority="0x0100" type="Button">
@@ -132,6 +134,7 @@
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Export Grid to Email</ButtonText>
+          <LocCanonicalName>AxialSqlTools.ExportGridToEmail</LocCanonicalName>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" priority="0x0110" type="Button">
@@ -140,6 +143,7 @@
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Export Grid as Temp Table</ButtonText>
+          <LocCanonicalName>AxialSqlTools.ExportGridAsTempTable</LocCanonicalName>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridToGoogleSheet" priority="0x0000" type="Button">
@@ -157,6 +161,7 @@
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Script Definition to New Window</ButtonText>
+          <LocCanonicalName>AxialSqlTools.ScriptSelectedObject</LocCanonicalName>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialFindObjectInObjectExplorer" priority="0x0000" type="Button">
@@ -310,7 +315,24 @@
       <Bitmap guid="guidChat" href="Resources\chat.png" usedList="bmpChat" />
       <Bitmap guid="guidSqlBuildInfo" href="Resources\sql-build-info.png" usedList="bmpSqlBuildInfo" />
     </Bitmaps>
+
+    
   </Commands>
+
+
+  <KeyBindings>
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialFormatQueryButton" 
+                editor="guidVSStd97" key1="F" mod1="Control Shift Alt"/>
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" 
+                editor="guidVSStd97" key1="E" mod1="Control Shift Alt"/>
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcelAndEmail" 
+                editor="guidVSStd97" key1="M" mod1="Control Shift Alt"/>
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" 
+                editor="guidVSStd97" key1="S" mod1="Control Shift Alt"/>
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" 
+                editor="guidVSStd97" key1="T" mod1="Control Shift Alt"/>
+
+  </KeyBindings>
 
   <Symbols>
     <!-- This is the package guid. -->
