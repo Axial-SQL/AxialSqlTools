@@ -25,6 +25,7 @@
     using static AxialSqlTools.AxialSqlToolsPackage;
     using DocumentFormat.OpenXml.Bibliography;
     using DocumentFormat.OpenXml.Spreadsheet;
+    using static AxialSqlTools.HealthDashboard_ServerControl;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
@@ -274,9 +275,9 @@
             // server memory
             string usedMemory = FormatBytesToGB(metrics.PerfCounter_TotalServerMemory * 1024);
             string targetMemory = FormatBytesToGB(metrics.PerfCounter_TargetServerMemory * 1024);
-            //string serverMemory = FormatBytesToGB(0 * 1024);
+            string serverMemory = FormatBytesToGB(metrics.ServerMemoryTotal * 1024);
 
-            Label_MemoryInfo.Content = $"{usedMemory} / {targetMemory}";
+            Label_MemoryInfo.Content = $"{usedMemory} / {targetMemory} / {serverMemory}";
             //\\-----------------------------------------
 
             TimeSpan pleTimeSpan = TimeSpan.FromSeconds(metrics.PerfCounter_PLE);
@@ -386,61 +387,7 @@
             // Wait Stats info graph
 
             waitsStatsAggregator.UpdateWaitStats(metrics.WaitStatsInfo);
-
-            var aggrData = waitsStatsAggregator.GetAggregatedData();
-
-            var barModelWS = new PlotModel { Title = "Real-time Wait Stats" };
-
-            var categoryAxis = new CategoryAxis { Position = AxisPosition.Left };
-            var valueAxis = new LinearAxis { Position = AxisPosition.Bottom, MinimumPadding = 0, AbsoluteMinimum = 0 };
-
-            barModelWS.Axes.Add(categoryAxis);
-            barModelWS.Axes.Add(valueAxis);
-
-            foreach (var aggValue in aggrData)
-            {
-                categoryAxis.Labels.Add(aggValue.Key.ToString());
-            }
-                       
-            var LegendWS = new Legend
-            {
-                LegendTitle = "Wait Stats",
-                LegendPosition = LegendPosition.RightTop,
-                LegendPlacement = LegendPlacement.Outside,
-                LegendOrientation = LegendOrientation.Vertical,
-                LegendBackground = OxyColor.FromAColor(200, OxyColors.White),
-                LegendBorder = OxyColors.Black
-            };
-            LegendWS.LegendMaxWidth = 200;
-
-            // Legend configuration
-            barModelWS.IsLegendVisible = true; // Make the legend visible
-            barModelWS.Legends.Add(LegendWS);
-
-            foreach (var previousWaitStat in waitsStatsAggregator.previousWaitStats)
-            {
-                var barSeriesWS = new BarSeries
-                {
-                    //LabelPlacement = LabelPlacement.Inside,
-                    //LabelFormatString = "{0:0}", // Adjust this to change how the labels are formatted
-                    StrokeColor = OxyColors.Black,
-                    StrokeThickness = 1,
-                    IsStacked = true
-                };
-
-                barSeriesWS.Title = previousWaitStat.WaitName;
-
-                foreach (var aggValue in aggrData)
-                {
-                    foreach (WaitsInfo ws in aggValue.Value)
-                        if (ws.WaitName == previousWaitStat.WaitName)
-                            barSeriesWS.Items.Add(new BarItem { Value = (double)ws.WaitSec }); //, Color = OxyColors.LightPink });
-                }
-                barModelWS.Series.Add(barSeriesWS);
-            }
-
-            this.WaitStatsModel.Model = barModelWS;
-
+            UpdateWaitStatsGraph(waitsStatsAggregator.previousWaitStats, waitsStatsAggregator.GetAggregatedData());
 
             //--------------------------------------------------------------------
             // Disk info graph
@@ -571,6 +518,64 @@
                 _versionCheckCompleted = true;
             }
 
+        }
+
+        private void UpdateWaitStatsGraph(List<WaitsInfo> previousWaitStats, Dictionary<DateTime, List<WaitsInfo>> aggrData)
+        {
+
+            var sortedKeys = aggrData.Keys.OrderBy(k => k).ToList();
+
+            var barModelWS = new PlotModel { Title = "Real-time Wait Stats" };
+
+            var categoryAxis = new CategoryAxis { Position = AxisPosition.Left };
+            var valueAxis = new LinearAxis { Position = AxisPosition.Bottom, MinimumPadding = 0, AbsoluteMinimum = 0 };
+
+            barModelWS.Axes.Add(categoryAxis);
+            barModelWS.Axes.Add(valueAxis);
+
+            foreach (var key in sortedKeys)
+            {
+                categoryAxis.Labels.Add(key.ToString("HH:mm"));
+            }
+
+            var LegendWS = new Legend
+            {
+                LegendTitle = "Wait Stats",
+                LegendPosition = LegendPosition.RightTop,
+                LegendPlacement = LegendPlacement.Outside,
+                LegendOrientation = LegendOrientation.Vertical,
+                LegendBackground = OxyColor.FromAColor(200, OxyColors.White),
+                LegendBorder = OxyColors.Black
+            };
+            LegendWS.LegendMaxWidth = 200;
+
+            // Legend configuration
+            barModelWS.IsLegendVisible = true; // Make the legend visible
+            barModelWS.Legends.Add(LegendWS);
+
+            foreach (var previousWaitStat in previousWaitStats)
+            {
+                var barSeriesWS = new BarSeries
+                {
+                    //LabelPlacement = LabelPlacement.Inside,
+                    //LabelFormatString = "{0:0}", // Adjust this to change how the labels are formatted
+                    StrokeColor = OxyColors.Black,
+                    StrokeThickness = 1,
+                    IsStacked = true
+                };
+
+                barSeriesWS.Title = previousWaitStat.WaitName;
+
+                foreach (var aggValue in aggrData)
+                {
+                    foreach (WaitsInfo ws in aggValue.Value)
+                        if (ws.WaitName == previousWaitStat.WaitName)
+                            barSeriesWS.Items.Add(new BarItem { Value = (double)ws.WaitSec }); //, Color = OxyColors.LightPink });
+                }
+                barModelWS.Series.Add(barSeriesWS);
+            }
+
+            this.WaitStatsModel.Model = barModelWS;
         }
 
         public static string FormatBytesToMB(long bytes)

@@ -92,6 +92,7 @@ namespace AxialSqlTools
         public long PerfCounter_DataFileSize { get; set; }
         public long PerfCounter_LogFileSize { get; set; }
         public long PerfCounter_UsedLogFileSize { get; set; }
+        public long ServerMemoryTotal { get; set; }
         public long PerfCounter_TargetServerMemory { get; set; }
         public long PerfCounter_TotalServerMemory { get; set; }
         public long PerfCounter_AlwaysOn_LogSendQueue { get; set; }
@@ -292,7 +293,11 @@ namespace AxialSqlTools
                     FROM sys.dm_os_performance_counters
                     WHERE [object_name] = '{perfCounterObjectName}:Database Replica'
                           AND [counter_name] = 'Log Send Queue'
-                          AND [instance_name] = '_Total';
+                          AND [instance_name] = '_Total'
+                    UNION ALL
+
+                    SELECT 'TOTAL-SERVER-MEMORY', 'TOTAL-SERVER-MEMORY', physical_memory_kb 
+                    FROM sys.dm_os_sys_info
                     ";
 
                     using (SqlCommand command = new SqlCommand(queryText_5a, connection))
@@ -333,6 +338,11 @@ namespace AxialSqlTools
                                     {
                                         if (CounterName == "Log Send Queue")
                                             metrics.PerfCounter_AlwaysOn_LogSendQueue = CounterValue;
+                                    }
+                                    else if (CounterGroup == "TOTAL-SERVER-MEMORY")
+                                    {
+                                        if (CounterName == "TOTAL-SERVER-MEMORY")
+                                            metrics.ServerMemoryTotal = CounterValue;
                                     }
 
                                 }
