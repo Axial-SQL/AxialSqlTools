@@ -3,21 +3,26 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0" xmlns:axialsqltools="clr-namespace:AxialSqlTools"
+             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:axialsqltools="clr-namespace:AxialSqlTools"
              Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
              Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300"
              Name="SQLServerBuilds">
-    
+
     <Grid>
         <DockPanel HorizontalAlignment="Left">
-            <TextBlock Margin="0" HorizontalAlignment="Center" FontWeight="Bold">
+            <TextBlock Margin="0"  FontWeight="Bold">
                 <Run Text="Data Source:" />
                 <Hyperlink Click="HyperlinkDataSource_Click">
                     <Run Text="https://aka.ms/sqlserverbuilds" />
                 </Hyperlink>
-            </TextBlock>           
+                <Run Text=" | " />
+                <Hyperlink Click="HyperlinkCopyAsTSQL_Click">
+                    <Run Text="Copy as TSQL" />
+                </Hyperlink>
+            </TextBlock>
         </DockPanel>
         <TreeView x:Name="sqlVersionTreeView" Margin="0,20,0,0">
             <TreeView.Resources>
