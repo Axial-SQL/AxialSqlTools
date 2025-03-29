@@ -422,7 +422,9 @@
             {
                 Position = AxisPosition.Left,
                 Key = "DiskAxis",
-                ItemsSource = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToList()
+                ItemsSource = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToList(),
+                IsZoomEnabled = false,
+                IsPanEnabled = false
             });
 
             barModel.Axes.Add(new LinearAxis
@@ -431,7 +433,9 @@
                 MinimumPadding = 0.1,
                 MaximumPadding = 0.1,
                 AbsoluteMinimum = 0,
-                Title = "Gb"
+                Title = "Gb",
+                IsZoomEnabled = false,
+                IsPanEnabled = false
             });
 
             this.DiskInfoModel.Model = barModel;
@@ -527,8 +531,18 @@
 
             var barModelWS = new PlotModel { Title = "Real-time Wait Stats" };
 
-            var categoryAxis = new CategoryAxis { Position = AxisPosition.Left };
-            var valueAxis = new LinearAxis { Position = AxisPosition.Bottom, MinimumPadding = 0, AbsoluteMinimum = 0 };
+            var categoryAxis = new CategoryAxis { 
+                Position = AxisPosition.Left,
+                IsZoomEnabled = false,
+                IsPanEnabled = false
+            };
+            var valueAxis = new LinearAxis { 
+                Position = AxisPosition.Bottom, 
+                MinimumPadding = 0, 
+                AbsoluteMinimum = 0,
+                IsZoomEnabled = false,
+                IsPanEnabled = false
+            };
 
             barModelWS.Axes.Add(categoryAxis);
             barModelWS.Axes.Add(valueAxis);
