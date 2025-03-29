@@ -17,8 +17,8 @@ namespace AxialSqlTools
         {
             #region m_BlockingRequestsQuery
             private const string m_BlockingRequestsQuery = @"
-WITH Blocking
-AS (SELECT [session_Id] AS [Spid],
+WITH blocking
+AS (SELECT [session_id] AS [spid],
            percent_complete,
            blocked,
            waittime,
@@ -35,7 +35,7 @@ AS (SELECT [session_Id] AS [Spid],
 				END - er.statement_start_offset) / 2) AS [Individual Query],
            qt.[text] AS [Parent Query],
            [program_name] AS Program,
-           Hostname,
+           hostname,
            cpu_time,
            reads,
            start_time,
@@ -45,7 +45,7 @@ AS (SELECT [session_Id] AS [Spid],
     FROM sys.dm_exec_requests AS er
          INNER JOIN sys.sysprocesses AS sp ON er.[session_id] = sp.spid 
          CROSS APPLY sys.dm_exec_sql_text(er.[sql_handle]) AS qt
-    WHERE [session_Id] > 50 AND [session_Id] NOT IN (@@SPID))
+    WHERE [session_id] > 50 AND [session_id] NOT IN (@@SPID))
 SELECT * FROM blocking WHERE blocked <> 0
 UNION ALL
 SELECT * FROM blocking WHERE spid IN (SELECT blocked FROM blocking WHERE blocked <> 0);
