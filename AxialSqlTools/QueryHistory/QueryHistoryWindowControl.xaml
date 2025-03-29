@@ -10,18 +10,20 @@
              d:DesignHeight="300" d:DesignWidth="500"
              Name="MyToolWindow">
     <Grid>
-        <!-- Define rows for filter controls, the main list, and the full QueryText field -->
+        <!-- Define 2 rows: one for the filter controls, one for main content -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Filter controls -->
             <RowDefinition Height="*"/>
-            <!-- DataGrid -->
-            <RowDefinition Height="Auto"/>
-            <!-- QueryText detail view -->
         </Grid.RowDefinitions>
+        <!-- Define 2 columns for the main content row -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="*"/>
+            <!-- Adjust width as needed -->
+        </Grid.ColumnDefinitions>
 
-        <!-- Filter Controls -->
-        <Grid Grid.Row="0" Margin="5">
+        <!-- Filter Controls: Spanning both columns in row 0 -->
+        <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -31,15 +33,15 @@
             <Label Content="Filter by Query Text:" VerticalAlignment="Center" Margin="0,0,5,0"/>
             <TextBox Grid.Column="1" Margin="0,0,5,0"
                      Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" 
-                     ToolTip="Enter text to filter QueryText"/>
+                     ToolTip="Enter text to filter QueryText" KeyDown="TextBox_KeyDown"/>
             <Button Grid.Column="2" Content="Refresh" VerticalAlignment="Center" 
                     Command="{Binding RefreshCommand}" Margin="0,0,5,0" Height="25" Width="50"/>
-            <Button Grid.Column="3" Content="Clear" VerticalAlignment="Center"  Height="25" Width="50"
+            <Button Grid.Column="3" Content="Clear" VerticalAlignment="Center" Height="25" Width="50"
                     Command="{Binding ClearFilterCommand}"/>
         </Grid>
 
-        <!-- DataGrid displaying the records -->
-        <DataGrid Grid.Row="1" Margin="5"
+        <!-- DataGrid displaying the records in row 1, left column -->
+        <DataGrid Grid.Row="1" Grid.Column="0" Margin="5"
                   IsReadOnly="True"
                   ItemsSource="{Binding QueryHistoryRecords}" 
                   SelectedItem="{Binding SelectedRecord, Mode=TwoWay}"
@@ -68,13 +70,13 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <!-- Full QueryText detail view placed at the bottom -->
-        <TextBox Grid.Row="2" Margin="5"
+        <!-- Full QueryText detail view placed in row 1, right column -->
+        <TextBox Grid.Row="1" Grid.Column="1" Margin="5"
                  Text="{Binding SelectedRecord.QueryText}" 
                  IsReadOnly="True" 
                  TextWrapping="Wrap" 
                  AcceptsReturn="True" 
                  VerticalScrollBarVisibility="Auto"
-                 Height="100"/>
+                 FontFamily="Consolas" FontSize="14"/>
     </Grid>
 </UserControl>

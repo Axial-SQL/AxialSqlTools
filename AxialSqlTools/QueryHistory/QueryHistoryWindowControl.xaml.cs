@@ -202,5 +202,17 @@
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
             }
         }
+
+        private void TextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                if (DataContext is QueryHistoryViewModel viewModel && viewModel.RefreshCommand.CanExecute(null))
+                {
+                    viewModel.RefreshCommand.Execute(null);
+                }
+                e.Handled = true; 
+            }
+        }
     }
 }
