@@ -27,7 +27,7 @@ SELECT
 FROM sys.tables AS t
      LEFT OUTER JOIN
      (SELECT si.object_id,
-             COUNT(*) AS IndexCount,
+             COUNT(CASE WHEN si.type_desc = 'HEAP' THEN NULL ELSE 1 END) AS IndexCount,
              SUM(CASE WHEN si.type_desc = 'CLUSTERED' THEN 1 ELSE 0 END) AS HasClusteredIndex,
              SUM(CASE WHEN si.is_primary_key = 1 THEN 1 ELSE 0 END) AS HasPK,
              SUM(CASE WHEN si.type_desc = 'CLUSTERED'
