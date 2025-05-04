@@ -222,7 +222,7 @@
     <Content Include="Resources\grid-to-email.png" />
     <Content Include="Resources\grid-to-temp-table.png" />
     <Content Include="Resources\info.png" />
-    <Content Include="Resources\logo.png" />
+    <Resource Include="Resources\logo.png" />
     <Content Include="Resources\open-folder.png" />
     <Content Include="Resources\query-history.png" />
     <Content Include="Resources\refresh.png" />
