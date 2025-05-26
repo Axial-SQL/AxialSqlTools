@@ -12,9 +12,7 @@ If you find this extension useful and it helps streamline your workflow in SSMS,
 
 Check it out and let me know what you think!
 
-<img src="https://github.com/user-attachments/assets/38b097d2-231e-43b3-b183-51579a50092f"/>
-
-***Very much work in progress. Please submit bugs/ideas in this repo.***
+![image](https://github.com/user-attachments/assets/d13a577f-9cb1-4daa-adcb-00f7c21d806b)
 
 ## Main Features - (see Wiki for more details)
 
@@ -62,7 +60,7 @@ The build process will automatically copy all necessary files into the SSMS exte
 Older releases have compiled addins for SSMS 18, 19 and 20 but those are no longer supported.
 
 After obtaining the compiled files (either by compiling from source or downloading from Releases), place the folder with the compiled files into the following directory:
-`C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Extensions`
+`C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Extensions`
 
 For older releases:
 - For SSMS 20: `C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Extensions` 
@@ -99,7 +97,7 @@ This project stands on the shoulders of the many developers and authors who have
 This tool is distributed freely under the Apache-2.0 license, with no warranty implied. 
 It is an internal tool that we use daily at our organization. 
 While we do not offer formal support or sell this tool, we are open to consulting and helping solve complex SQL Server challenges. 
-Feel free to reach out for professional assistance: `info@axial-sql.com`.
+Feel free to reach out for professional assistance: `albochkov03@gmail.com`.
 
 ## Disclaimer
 This extension is provided "as is", with all faults, defects, and errors, and without warranty of any kind. 
