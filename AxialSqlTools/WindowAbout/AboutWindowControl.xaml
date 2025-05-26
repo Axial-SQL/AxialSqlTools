@@ -7,16 +7,31 @@
              Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
              Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              mc:Ignorable="d"
-             Name="MyToolWindow" Width="516.974" Height="400">
+             Name="MyToolWindow"  Height="400">
     <Grid>
         <StackPanel Orientation="Vertical" Margin="0,0,0,0">
             <Image Source="/AxialSqlTools;component/Resources/logo.png" Width="250" />
-            <TextBlock Margin="10" HorizontalAlignment="Center" x:Name="TextBlock_CurrentVersion"></TextBlock>
-            <TextBlock Margin="186,10" HorizontalAlignment="Center"><Run Text="Expert SQL Server solutions"/></TextBlock>
-            <TextBlock Margin="10" HorizontalAlignment="Center">info@axial-sql.com</TextBlock>
-            <Button Content="Visit our web-site at https://axial-sql.com/" Click="buttonAxialSqlWebsite_Click" Height="30" x:Name="buttonVisitWebsite" VerticalAlignment="Center" Margin="100,10,100,10"/>
+            <TextBlock Margin="10" HorizontalAlignment="Center" x:Name="TextBlock_CurrentVersion" FontFamily="Consolas" FontSize="14"></TextBlock>
+            <TextBlock Margin="10" HorizontalAlignment="Center" FontWeight="Bold" FontSize="20" FontFamily="Consolas" ><Run Text="Expert SQL Server solutions"/></TextBlock>
+            <TextBlock Margin="10" HorizontalAlignment="Center" FontFamily="Consolas" FontSize="14">
+              <Run Text="Feel free to reach out for professional assistance: "/>
+              <Hyperlink
+                    NavigateUri="mailto:albochkov03@gmail.com"
+                    RequestNavigate="Hyperlink_RequestNavigateEmail">
+                <Run Text="albochkov03@gmail.com"/>
+              </Hyperlink>
+            </TextBlock>
 
-            <TextBlock Margin="20" HorizontalAlignment="Center">
+            <TextBlock Margin="10" HorizontalAlignment="Center" FontFamily="Consolas" FontSize="14">
+              <Run Text="Visit our web-site at "/>
+              <Hyperlink
+                    NavigateUri="https://axial-sql.com/"
+                    RequestNavigate="buttonAxialSqlWebsite_Click">
+                <Run Text="https://axial-sql.com/"/>
+              </Hyperlink>
+            </TextBlock>
+
+            <TextBlock Margin="20" HorizontalAlignment="Center" FontFamily="Consolas" FontSize="14">
                 <Run Text="AddIn Log Folder:" />
                 <Hyperlink Click="HyperlinkLogFolder_Click">
                     <Run x:Name="HyperlinkText_LogFolder" Text="Open" />

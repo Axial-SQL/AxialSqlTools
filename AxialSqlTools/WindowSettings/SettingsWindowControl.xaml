@@ -76,6 +76,13 @@
                 <StackPanel Orientation="Horizontal" Margin="5">
                     <CheckBox x:Name="ApplyCodeFormat" Content="Apply additional format on the TSQL parser output" VerticalAlignment="Center"/>
                     <Button Margin="5" Content="Save" x:Name="button_SaveApplyAdditionalFormat" Click="Button_SaveApplyAdditionalFormat_Click" Width="50" FontWeight="Bold"/>
+                    <TextBlock Margin="5" VerticalAlignment="Center">
+                        <Hyperlink
+                            NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library"
+                            RequestNavigate="Hyperlink_RequestNavigateFormatQueryWiki">
+                            View Wiki for more details
+                        </Hyperlink>
+                    </TextBlock>
                 </StackPanel>
             </GroupBox>
             <GroupBox>

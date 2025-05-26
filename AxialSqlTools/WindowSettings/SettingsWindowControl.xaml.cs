@@ -2,12 +2,14 @@
 {
     using Microsoft.Data.SqlClient;
     using System;
+    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.IO.Compression;
     using System.Net.Http;
     using System.Windows;
     using System.Windows.Controls;
+    using System.Windows.Navigation;
 
     /// <summary>
     /// Interaction logic for SettingsWindowControl.
@@ -237,6 +239,12 @@
             SettingsManager.SaveApplyAdditionalCodeFormatting(ApplyCodeFormat.IsChecked.GetValueOrDefault());
 
             SavedMessage();
+        }
+
+        private void Hyperlink_RequestNavigateFormatQueryWiki(object sender, RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
         }
 
         private void Button_SaveOpenAi_Click(object sender, RoutedEventArgs e)

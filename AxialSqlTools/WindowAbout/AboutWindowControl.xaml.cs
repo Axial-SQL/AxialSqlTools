@@ -1,12 +1,13 @@
 ﻿namespace AxialSqlTools
 {
     using System;
-    using System.IO;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.IO;
     using System.Reflection;
     using System.Windows;
     using System.Windows.Controls;
+    using System.Windows.Navigation;
 
     /// <summary>
     /// Interaction logic for AboutWindowControl.
@@ -36,20 +37,18 @@
             HyperlinkText_LogFolder.Text = _logFolder;
         }
 
-        /// <summary>
-        /// Handles click on the button by displaying a message box.
-        /// </summary>
-        /// <param name="sender">The event sender.</param>
-        /// <param name="e">The event args.</param>
-        [SuppressMessage("Microsoft.Globalization", "CA1300:SpecifyMessageBoxOptions", Justification = "Sample code")]
-        [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Default event handler naming pattern")]
-        private void buttonAxialSqlWebsite_Click(object sender, RoutedEventArgs e)
+        private void Hyperlink_RequestNavigateEmail(object sender, RequestNavigateEventArgs e)
         {
-
-            string url = "https://axial-sql.com";
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
         }
+
+        private void buttonAxialSqlWebsite_Click(object sender, RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
+        }
+
 
         private void HyperlinkLogFolder_Click(object sender, RoutedEventArgs e)
         {
