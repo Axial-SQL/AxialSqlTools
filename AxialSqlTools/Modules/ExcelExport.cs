@@ -1,12 +1,16 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using EnvDTE;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace AxialSqlTools
 {
@@ -14,6 +18,14 @@ namespace AxialSqlTools
     {
 
         #region Create Stylesheet
+
+        private static Font CreateConsolasFont(string fontColor, bool isBold)
+        {
+            // reuse your existing CreateFont, then override the name
+            Font font = CreateFont(fontColor, isBold);
+            font.FontName = new FontName() { Val = "Consolas" };
+            return font;
+        }
 
         private static Stylesheet CreateStylesheet()
         {
@@ -39,7 +51,8 @@ namespace AxialSqlTools
                     /*Index 9 - Bold Blue*/ CreateFont("0066FF", true),
                     /*Index 10 - Green*/ CreateFont("339900", false),
                     /*Index 11 - Bold Green*/ CreateFont("339900", true),
-                    /*Index 12 - Bold Black Large*/ CreateFont("000000", true)
+                    /*Index 12 - Bold Black Large*/ CreateFont("000000", true),
+                    /*Index 13 - Consolas, regular, black*/ CreateConsolasFont("000000", false)
                         ),
                     new Fills(
                     /*Index 0 - Default Fill (None)*/ CreateFill(string.Empty, PatternValues.None),
@@ -80,7 +93,8 @@ namespace AxialSqlTools
                     /*Index 23 - Black Font, No Fill, All Borders, Centered Vertically, Right Aligned*/ CreateCellFormat(0, 0, 1, rightHorizontal, centerVertical, false),
                     /*Index 24 - Black Font, No Fill, All Borders, Centered Horizontally, Top Aligned, Wrap Text*/ CreateCellFormat(0, 0, 1, centerHorizontal, topVertical, true),
                     /*Index 25 - Bold Black Font, No Fill, No Borders, Wrap Text*/ CreateCellFormat(1, 0, 0, leftHorizontal, topVertical, false),
-                    /*Index 4 - Bold Black Font, Dark Gray Fill, All Borders, Centered, Wrap Text*/ CreateCellFormat(1, 2, 1, centerHorizontal, centerVertical, true)
+                    /*Index 4 - Bold Black Font, Dark Gray Fill, All Borders, Centered, Wrap Text*/ CreateCellFormat(1, 2, 1, centerHorizontal, centerVertical, true),
+                    /*Index 27 - Consolas Font, no fill or borders*/ CreateCellFormat(13, 0, 0, leftHorizontal, null, false)
                         )
                     );
             }
@@ -186,8 +200,58 @@ namespace AxialSqlTools
 
         #endregion Create Stylesheet
 
+        private static string GetSourceQueryText()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            DTE dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+
+            if (dte?.ActiveDocument != null)
+            {
+
+                try
+                {
+                    TextSelection selection = dte.ActiveDocument.Selection as TextSelection;
+
+                    string existingCommandText = selection.Text.Trim();
+
+                    if (!string.IsNullOrEmpty(existingCommandText))
+                    {
+                        return existingCommandText;
+                    }
+
+                 
+                    TextDocument textDoc = dte.ActiveDocument.Object("TextDocument") as TextDocument;
+                    if (textDoc != null)
+                    {
+                        existingCommandText = textDoc.CreateEditPoint(textDoc.StartPoint).GetText(textDoc.EndPoint).Trim();
+
+                        if (!string.IsNullOrEmpty(existingCommandText))
+                        {
+                            return existingCommandText;
+                        }
+                    }
+
+                }
+                catch 
+                {                   
+
+                }
+               
+            } 
+            
+            return string.Empty;
+        }
+
         public static void SaveDataTableToExcel(List<DataTable> dataTables, string filePath)
         {
+            // export source query text if Shift is pressed
+            string sourceQuery = string.Empty; 
+            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+            if (isShiftPressed)
+            {
+                sourceQuery = GetSourceQueryText();
+            }
+
             using (SpreadsheetDocument document = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
             {
                 WorkbookPart workbookPart = document.AddWorkbookPart();
@@ -196,133 +260,101 @@ namespace AxialSqlTools
                 workbookPart.Workbook.AppendChild(new BookViews(new WorkbookView()));
 
                 WorkbookStylesPart workbookStylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
-                workbookStylesPart.Stylesheet = CreateStylesheet();               
+                workbookStylesPart.Stylesheet = CreateStylesheet();
 
                 Sheets sheets = document.WorkbookPart.Workbook.AppendChild<Sheets>(new Sheets());
 
-                uint i = 1;
+                uint sheetId = 1;
 
+                // --- existing DataTable sheets ---
                 foreach (DataTable dataTable in dataTables)
                 {
                     WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
                     worksheetPart.Worksheet = new Worksheet();
 
-                    //------------------------------------------------------------------------------
+                    // set up columns
                     Columns columns = new Columns();
-                    uint ColumnNumber = 1;
+                    uint colNum = 1;
                     foreach (DataColumn column in dataTable.Columns)
                     {
-                        Column firstColumn = new Column() { Min = ColumnNumber, Max = ColumnNumber };
-
+                        Column col = new Column() { Min = colNum, Max = colNum };
                         if (column.ExtendedProperties.ContainsKey("columnWidthInPixels"))
                         {
-                            firstColumn.Width = Convert.ToDouble(column.ExtendedProperties["columnWidthInPixels"]) * 0.17;
-                            firstColumn.CustomWidth = true;
+                            col.Width = Convert.ToDouble(column.ExtendedProperties["columnWidthInPixels"]) * 0.17;
+                            col.CustomWidth = true;
                         }
-                        columns.Append(firstColumn);
-                        ColumnNumber += 1;
+                        columns.Append(col);
+                        colNum++;
                     }
                     worksheetPart.Worksheet.AppendChild(columns);
-                    //------------------------------------------------------------------------------
-                    worksheetPart.Worksheet.AppendChild(new SheetData());
 
+                    // add sheet data
+                    SheetData sheetData = new SheetData();
+                    worksheetPart.Worksheet.AppendChild(sheetData);
+
+                    // append sheet to workbook
                     Sheet sheet = new Sheet()
                     {
-                        Id = document.WorkbookPart.GetIdOfPart(worksheetPart),
-                        SheetId = i,
-                        Name = "QueryResult_" + i.ToString()
+                        Id = workbookPart.GetIdOfPart(worksheetPart),
+                        SheetId = sheetId,
+                        Name = "QueryResult_" + sheetId
                     };
                     sheets.Append(sheet);
 
-                    SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
-
-                   
-                    // Add column headers
+                    // header row
                     Row headerRow = new Row();
                     foreach (DataColumn column in dataTable.Columns)
                     {
-
-                        string columnType = "SQL_VARIANT";
-                        if (column.ExtendedProperties.ContainsKey("sqlType"))
-                            columnType = (string)column.ExtendedProperties["sqlType"];
-
-                        string columnName = column.ColumnName;
-                        if (column.ExtendedProperties.ContainsKey("columnName"))
-                            columnName = (string)column.ExtendedProperties["columnName"];
+                        string columnName = column.ExtendedProperties.ContainsKey("columnName")
+                            ? (string)column.ExtendedProperties["columnName"]
+                            : column.ColumnName;
 
                         Cell cell = new Cell
                         {
                             DataType = CellValues.String,
                             CellValue = new CellValue(columnName),
-                            /*Index 4 - Bold Black Font, Dark Gray Fill, All Borders, Centered*/
-                            StyleIndex = 4
+                            StyleIndex = 4  // bold, fill, borders, etc.
                         };
                         headerRow.AppendChild(cell);
-
                     }
                     sheetData.AppendChild(headerRow);
 
-                    // Add data rows
+                    // data rows
                     foreach (DataRow dataRow in dataTable.Rows)
                     {
                         Row newRow = new Row();
                         foreach (DataColumn column in dataTable.Columns)
                         {
-                            //TODO - do more types 
-
                             Cell cell = new Cell();
+                            object value = dataRow[column];
 
-                            if (dataRow[column] is System.DBNull)
+                            if (value is DBNull)
                             {
                                 cell.DataType = CellValues.String;
                                 cell.CellValue = new CellValue();
                             }
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(int)) 
+                            else if (column.DataType == typeof(int)
+                                     || column.DataType == typeof(long)
+                                     || column.DataType == typeof(double)
+                                     || column.DataType == typeof(decimal)
+                                     || column.DataType == typeof(short)
+                                     || column.DataType == typeof(byte))
                             {
                                 cell.DataType = CellValues.Number;
-                                cell.CellValue = new CellValue((int)dataRow[column]);
+                                cell.CellValue = new CellValue(value.ToString());
                             }
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(long)) 
-                            {
-                                cell.DataType = CellValues.Number;
-                                cell.CellValue = new CellValue(dataRow[column].ToString());
-                            }
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(double))
-                            {
-                                cell.DataType = CellValues.Number;
-                                cell.CellValue = new CellValue((double)dataRow[column]);
-                            }
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(decimal)) 
-                            {
-                                cell.DataType = CellValues.Number;
-                                cell.CellValue = new CellValue((decimal)dataRow[column]);
-                            }
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(short)
-                                || dataTable.Columns[column.Ordinal].DataType == typeof(byte))
-                            {
-                                cell.DataType = CellValues.Number;
-                                cell.CellValue = new CellValue(Convert.ToInt32(dataRow[column]));
-                            }
-                            // Dates are more complex because you need to apply style first
-                            //else if (dataTable.Columns[column.Ordinal].DataType == typeof(DateTime))
-                            //{
-                            //    cell.DataType = CellValues.Date;
-                            //    cell.CellValue = new CellValue((DateTime)dataRow[column]);
-                            //}
-                            else if (dataTable.Columns[column.Ordinal].DataType == typeof(bool))
+                            else if (column.DataType == typeof(bool))
                             {
                                 cell.DataType = CellValues.Boolean;
-                                cell.CellValue = new CellValue((bool)dataRow[column]);
+                                cell.CellValue = new CellValue((bool)value);
                             }
-                            else {
-
-                                string value = dataRow[column].ToString(); 
-                                if (value.Length > 32767)
-                                {
-                                    value = value.Substring(0, 32767); // Truncate
-                                }
+                            else
+                            {
+                                string text = value.ToString();
+                                if (text.Length > 32767)
+                                    text = text.Substring(0, 32767);
                                 cell.DataType = CellValues.String;
-                                cell.CellValue = new CellValue(value);
+                                cell.CellValue = new CellValue(text);
                             }
 
                             newRow.AppendChild(cell);
@@ -330,87 +362,96 @@ namespace AxialSqlTools
                         sheetData.AppendChild(newRow);
                     }
 
-                    //--------------------------------------------------------
-                    // Create or get the SheetViews element
-                    SheetViews sheetViews = worksheetPart.Worksheet.GetFirstChild<SheetViews>();
-                    sheetViews = new SheetViews();
-                    worksheetPart.Worksheet.InsertAt(sheetViews, 0); // Insert at the beginning of the Worksheet
-                    // Create a SheetView element
+                    // freeze header row
+                    SheetViews sheetViews = new SheetViews();
+                    worksheetPart.Worksheet.InsertAt(sheetViews, 0);
                     SheetView sheetView = new SheetView() { TabSelected = true, WorkbookViewId = 0 };
-                    // Create a Pane element that specifies freezing the first row
                     Pane pane = new Pane()
                     {
-                        VerticalSplit = 1, // Freeze one row
+                        VerticalSplit = 1,
                         TopLeftCell = "A2",
                         ActivePane = PaneValues.BottomLeft,
                         State = PaneStateValues.Frozen
                     };
                     sheetView.Append(pane);
                     sheetViews.Append(sheetView);
+
                     worksheetPart.Worksheet.Save();
-                    //\\------------------------------------------------------
-
-                    ////--------------------------------------------------------
-                    // TODO - doesn't work properly 
-                    //// try to create a new filtered table around data
-                    //string columnNameStart = "A"; // Starting at column A
-                    //string columnNameEnd = GetColumnName(dataTable.Columns.Count); // Get the last column name based on the DataTable column count
-                    //int rowCount = dataTable.Rows.Count + 1; // Including the header row
-                    //string reference = $"{columnNameStart}1:{columnNameEnd}{rowCount}";
-
-                    //TableDefinitionPart tablePart = worksheetPart.AddNewPart<TableDefinitionPart>();
-                    //tablePart.Table = new Table()
-                    //{
-                    //    Id = i,
-                    //    Name = "Table_" + i,
-                    //    DisplayName = "Table_" + i,
-                    //    Reference = reference,
-                    //    TotalsRowShown = false,
-                    //    AutoFilter = new AutoFilter() { Reference = reference }
-                    //};
-
-                    //tablePart.Table.TableColumns = new TableColumns() { Count = (uint)dataTable.Columns.Count };
-                    //uint columnIndex = 1;
-                    //foreach (DataColumn column in dataTable.Columns)
-                    //{
-                    //    TableColumn tableColumn = new TableColumn()
-                    //    {
-                    //        Id = columnIndex,
-                    //        Name = column.ColumnName
-                    //    };
-                    //    tablePart.Table.TableColumns.Append(tableColumn);
-                    //    columnIndex++;
-                    //}
-
-                    //tablePart.Table.Save();
-                    ////\\--------------------------------------------------------
-
-
-                    i += 1;
-
+                    sheetId++;
                 }
 
-                //workbookPart.Workbook.AppendChild(new BookViews(new WorkbookView()));
+                // --- new Source sheet ---
+                if (!string.IsNullOrEmpty(sourceQuery))
+                {
+                    WorksheetPart sourcePart = workbookPart.AddNewPart<WorksheetPart>();
+                    // create a Worksheet with an empty SheetData
+                    SheetData sourceData = new SheetData();
+                    sourcePart.Worksheet = new Worksheet(sourceData);
+
+                    // make column A about 10× the default 8.43-char width (≈84.3)
+                    Columns sourceColumns = new Columns();
+                    sourceColumns.Append(new Column()
+                    {
+                        Min = 1,
+                        Max = 1,
+                        Width = 8.43 * 10,
+                        CustomWidth = true
+                    });
+                    // insert as the very first child of the worksheet
+                    sourcePart.Worksheet.InsertAt(sourceColumns, 0);
+                    //-------------------------------------------
+
+                    Row headerRow = new Row();
+                    Cell cellHeader = new Cell
+                    {
+                        DataType = CellValues.String,
+                        CellValue = new CellValue("Source Query"),
+                        StyleIndex = 4  // bold, fill, borders, etc.
+                    };
+                    headerRow.AppendChild(cellHeader);
+                    sourceData.AppendChild(headerRow);
+
+                    //-------------------------------------------
+                    // Export source query text
+
+                    // split on CRLF or LF
+                    string[] lines = sourceQuery.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+                    foreach (string line in lines)
+                    {
+                        // make an InlineString cell that preserves leading tabs/spaces
+                        Cell cell = new Cell
+                        {
+                            DataType = CellValues.InlineString,
+                            StyleIndex = 27    // use your Consolas style
+                        };
+
+                        InlineString inlineStr = new InlineString();
+                        Text t = new Text(line){ Space = SpaceProcessingModeValues.Preserve };
+
+                        inlineStr.AppendChild(t);
+                        cell.AppendChild(inlineStr);
+
+                        Row row = new Row();
+                        row.AppendChild(cell);
+                        sourceData.AppendChild(row);
+
+                    }
+
+                    // append the Source sheet
+                    Sheet sourceSheet = new Sheet()
+                    {
+                        Id = workbookPart.GetIdOfPart(sourcePart),
+                        SheetId = sheetId,
+                        Name = "Source"
+                    };
+                    sheets.Append(sourceSheet);
+
+                    sourcePart.Worksheet.Save();
+                }
 
                 workbookPart.Workbook.Save();
             }
-        }
-
-        // Helper method to convert column index to column name (e.g., 1 to A, 28 to AB)
-        static string GetColumnName(int columnIndex)
-        {
-            int dividend = columnIndex;
-            string columnName = String.Empty;
-            int modulo;
-
-            while (dividend > 0)
-            {
-                modulo = (dividend - 1) % 26;
-                columnName = Convert.ToChar(65 + modulo).ToString() + columnName;
-                dividend = (int)((dividend - modulo) / 26);
-            }
-
-            return columnName;
         }
 
     }

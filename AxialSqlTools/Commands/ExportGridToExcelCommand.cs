@@ -141,6 +141,7 @@ namespace AxialSqlTools
         {
             using (FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog())
             {
+                folderBrowserDialog.Description = "Excel Export | Hold Shift to export the query text into a new tab";
                 folderBrowserDialog.SelectedPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
                 DialogResult result = folderBrowserDialog.ShowDialog();
