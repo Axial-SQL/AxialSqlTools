@@ -193,6 +193,8 @@ namespace AxialSqlTools
                 WorkbookPart workbookPart = document.AddWorkbookPart();
                 workbookPart.Workbook = new Workbook();
 
+                workbookPart.Workbook.AppendChild(new BookViews(new WorkbookView()));
+
                 WorkbookStylesPart workbookStylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
                 workbookStylesPart.Stylesheet = CreateStylesheet();               
 
@@ -387,6 +389,8 @@ namespace AxialSqlTools
                     i += 1;
 
                 }
+
+                //workbookPart.Workbook.AppendChild(new BookViews(new WorkbookView()));
 
                 workbookPart.Workbook.Save();
             }
