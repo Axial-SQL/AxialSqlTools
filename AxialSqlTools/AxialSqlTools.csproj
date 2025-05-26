@@ -36,7 +36,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CopyVsixExtensionFiles>True</CopyVsixExtensionFiles>
-    <CopyVsixExtensionLocation>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Extensions\AxialSqlTools\</CopyVsixExtensionLocation>
+    <CopyVsixExtensionLocation>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Extensions\AxialSqlTools\</CopyVsixExtensionLocation>
     <DeployExtension>False</DeployExtension>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -133,49 +133,49 @@
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Data.SqlClient">
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Microsoft.Data.SqlClient.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Microsoft.Data.SqlClient.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.ConnectionInfo, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Microsoft.SqlServer.ConnectionInfo.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Microsoft.SqlServer.ConnectionInfo.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.GridControl">
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Microsoft.SqlServer.GridControl.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Microsoft.SqlServer.GridControl.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Management.Sdk.Sfc, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Microsoft.SqlServer.Management.Sdk.Sfc.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Microsoft.SqlServer.Management.Sdk.Sfc.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.RegSvrEnum, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Microsoft.SqlServer.RegSvrEnum.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Microsoft.SqlServer.RegSvrEnum.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Smo, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Microsoft.SqlServer.Smo.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Microsoft.SqlServer.Smo.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.SqlServer.TransactSql.ScriptDom">
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Extensions\Application\Microsoft.SqlServer.TransactSql.ScriptDom.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Extensions\Application\Microsoft.SqlServer.TransactSql.ScriptDom.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="SQLEditors">
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Extensions\Application\SQLEditors.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Extensions\Application\SQLEditors.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="SqlPackageBase">
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\SqlPackageBase.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\SqlPackageBase.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="SqlWorkbench.Interfaces">
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\SqlWorkbench.Interfaces.dll</HintPath>
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\SqlWorkbench.Interfaces.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -206,7 +206,7 @@
       <Version>2.2.0</Version>
     </PackageReference>
     <PackageReference Include="System.Security.Cryptography.ProtectedData">
-      <Version>9.0.3</Version>
+      <Version>9.0.5</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
@@ -281,7 +281,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup>
-    <PostBuildEvent>powershell -Command "Compress-Archive -Path 'C:\Program Files\Microsoft SQL Server Management Studio 21\Preview\Common7\IDE\Extensions\AxialSqlTools\*' -DestinationPath '%25USERPROFILE%25\Desktop\AxialSqlTools_SSMS21.zip' -Force"</PostBuildEvent>
+    <PostBuildEvent>powershell -Command "Compress-Archive -Path 'C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Extensions\AxialSqlTools\*' -DestinationPath '%25USERPROFILE%25\Desktop\AxialSqlTools_SSMS21.zip' -Force"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
