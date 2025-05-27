@@ -53,14 +53,7 @@
     <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
       <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="AuroraCore\CommandBase.cs" />
-    <Compile Include="AuroraCore\CommandRegistry.cs" />
-    <Compile Include="AuroraCore\Config.cs" />
-    <Compile Include="AuroraCore\Feature.cs" />
-    <Compile Include="AuroraCore\File.cs" />
-    <Compile Include="AuroraCore\Log.cs" />
-    <Compile Include="AuroraCore\Plugin.cs" />
-    <Compile Include="AuroraCore\Singleton.cs" />
+    <Compile Include="Modules\AuroraCore.cs" />
     <Compile Include="Commands\CheckAddinVersionCommand.cs" />
     <Compile Include="Commands\CommandProcessor.cs" />
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />

@@ -322,13 +322,10 @@ namespace AxialSqlTools
 
                 //---------------------------------------------------------------------------
                 // Query Templates
-                string optionsFileName = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "AxialSqlTools.xml");
-                Config options = Config.Load(optionsFileName);
-
                 ImageList icons = new ImageList();
                 icons.Images.Add(Resources.script);
 
-                m_plugin = new Plugin(application, profferCommands3, icons, oleMenuCommandService, "AxialSqlTools", "Aurora.Connect", options);
+                m_plugin = new Plugin(application, profferCommands3, icons, oleMenuCommandService, "AxialSqlTools", "Aurora.Connect");
 
                 CommandBar commandBar = m_plugin.AddCommandBar("Axial SQL Tools", MsoBarPosition.msoBarTop);
                 m_commandRegistry = new CommandRegistry(m_plugin, commandBar, new Guid(PackageGuidString), new Guid(PackageGuidGroup));
