@@ -65,6 +65,11 @@
 
                 OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
 
+                // Excel export settings
+                var excelSettings = SettingsManager.GetExcelExportSettings();
+                ExcelExportIncludeSourceQuery.IsChecked = excelSettings.includeSourceQuery;
+                ExcelExportAddAutoFilter.IsChecked = excelSettings.addAutofilter;
+
             }
             catch (Exception ex)
             {
@@ -244,6 +249,18 @@
         {
             SettingsManager.SaveApplyAdditionalCodeFormatting(ApplyCodeFormat.IsChecked.GetValueOrDefault());
 
+            SavedMessage();
+        }
+
+        private void button_SaveExcelExportSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var settings = new SettingsManager.ExcelExportSettings
+            {
+                includeSourceQuery = ExcelExportIncludeSourceQuery.IsChecked.GetValueOrDefault(false),
+                addAutofilter = ExcelExportAddAutoFilter.IsChecked.GetValueOrDefault(false)
+            };
+
+            SettingsManager.SaveExcelExportSettings(settings);
             SavedMessage();
         }
 

@@ -294,6 +294,59 @@
                 </Grid>
             </TabItem>
 
+            <TabItem Header="Excel Export">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0"
+							   Margin="5" HorizontalAlignment="left" >
+						<Run Text="Feature description in"/>
+						<Hyperlink
+							NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-To-Excel"
+							RequestNavigate="buttonWikiPage_Click">
+							<Run Text="Wiki"/>
+						</Hyperlink>
+                    </TextBlock>
+
+                    <CheckBox
+						Grid.Row="1"
+						x:Name="ExcelExportIncludeSourceQuery"
+						Content="Include source query on its own sheet (hold Shift to do the opposite)"
+						Margin="5"/>
+                    
+                    <CheckBox
+						Grid.Row="2"
+						x:Name="ExcelExportAddAutoFilter"
+						Content="Add filter dropdowns to header row (AutoFilter)"
+						Margin="5"/>
+
+                    <Button
+						Grid.Row="4"
+						x:Name="button_SaveExcelExportSettings" 
+						Click="button_SaveExcelExportSettings_Click"
+						Width="80" 
+						Height="24"
+						Margin="5"
+						HorizontalAlignment="Left"
+						FontWeight="Bold">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Image
+								Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+								Width="16"
+								Height="16"
+								Margin="0,0,4,0"/>
+                            <TextBlock Text="Save" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </TabItem>
+            
             <TabItem Header="SMTP Settings">
                 <Grid>
                     <Grid.RowDefinitions>

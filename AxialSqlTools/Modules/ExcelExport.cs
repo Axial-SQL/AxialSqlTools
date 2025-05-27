@@ -244,13 +244,17 @@ namespace AxialSqlTools
 
         public static void SaveDataTableToExcel(List<DataTable> dataTables, string filePath)
         {
-            // export source query text if Shift is pressed
-            string sourceQuery = string.Empty; 
+
+            var excelSettings = SettingsManager.GetExcelExportSettings();
+
+            // detect shift state
             bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
-            if (isShiftPressed)
-            {
-                sourceQuery = GetSourceQueryText();
-            }
+
+            // include the source only when includeSourceQuery XOR shiftPressed is true
+            bool includeSource = excelSettings.includeSourceQuery ^ isShiftPressed;
+
+            // now pull it or leave it empty
+            string sourceQuery = includeSource ? GetSourceQueryText() : string.Empty;
 
             using (SpreadsheetDocument document = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
             {
@@ -362,10 +366,29 @@ namespace AxialSqlTools
                         sheetData.AppendChild(newRow);
                     }
 
+
+                    //--------------------------------------------
+                    // Add AutoFilter to the header row
+                    if (excelSettings.addAutofilter)
+                    {
+                        // 1) compute the last column letter
+                        string lastCol = GetExcelColumnName(dataTable.Columns.Count);
+
+                        // 2) build the filter range (header is always row 1)
+                        string filterRef = $"A1:{lastCol}1";
+
+                        // 3) insert the AutoFilter element
+                        var autoFilter = new AutoFilter() { Reference = filterRef };
+                        // make sure sheetData is the <sheetData> you appended rows into
+                        worksheetPart.Worksheet.InsertAfter(autoFilter, sheetData);
+                    }
+                    //--------------------------------------------
+
                     // freeze header row
                     SheetViews sheetViews = new SheetViews();
                     worksheetPart.Worksheet.InsertAt(sheetViews, 0);
-                    SheetView sheetView = new SheetView() { TabSelected = true, WorkbookViewId = 0 };
+                    bool isActive = (sheetId == 1);
+                    SheetView sheetView = new SheetView() { TabSelected = isActive, WorkbookViewId = 0 };
                     Pane pane = new Pane()
                     {
                         VerticalSplit = 1,
@@ -453,6 +476,20 @@ namespace AxialSqlTools
                 workbookPart.Workbook.Save();
             }
         }
+        private static string GetExcelColumnName(int columnNumber)
+        {
+            int dividend = columnNumber;
+            string columnName = "";
+            while (dividend > 0)
+            {
+                int modulo = (dividend - 1) % 26;
+                columnName = Convert.ToChar('A' + modulo) + columnName;
+                dividend = (dividend - modulo) / 26;
+            }
+            return columnName;
+        }
 
     }
+
+
 }

@@ -249,6 +249,12 @@ ORDER BY sd.[name];
             public bool EnableSsl;
         }
 
+        public class ExcelExportSettings
+        {
+            public bool includeSourceQuery = false;
+            public bool addAutofilter = false;
+        }
+
         public class FrequentlyUsedEmail
         {
             public string EmailAddress;
@@ -570,6 +576,39 @@ ORDER BY sd.[name];
         public static bool SaveQueryHistoryTableName(string qhTableName)
         {
             return SaveRegisterValue("QueryHistoryTableName", qhTableName);
+        }
+
+        public static ExcelExportSettings GetExcelExportSettings()
+        {
+            try
+            {
+                // read the JSON blob (or empty string)
+                string json = GetRegisterValue("ExcelExportSettings");
+                if (string.IsNullOrEmpty(json))
+                    return new ExcelExportSettings();
+
+                // deserialize; on failure fall back to defaults
+                var settings = JsonConvert.DeserializeObject<ExcelExportSettings>(json);
+                return settings ?? new ExcelExportSettings();
+            }
+            catch
+            {
+                return new ExcelExportSettings();
+            }
+        }
+
+        public static bool SaveExcelExportSettings(ExcelExportSettings settings)
+        {
+            try
+            {
+                // serialize to JSON and write to registry
+                string json = JsonConvert.SerializeObject(settings);
+                return SaveRegisterValue("ExcelExportSettings", json);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
     }
