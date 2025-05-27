@@ -253,6 +253,7 @@ ORDER BY sd.[name];
         {
             public bool includeSourceQuery = false;
             public bool addAutofilter = false;
+            public bool exportBoolsAsNumbers = false;
         }
 
         public class FrequentlyUsedEmail

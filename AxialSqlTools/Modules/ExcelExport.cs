@@ -342,15 +342,26 @@ namespace AxialSqlTools
                                      || column.DataType == typeof(double)
                                      || column.DataType == typeof(decimal)
                                      || column.DataType == typeof(short)
-                                     || column.DataType == typeof(byte))
+                                     || column.DataType == typeof(byte)
+                                     )
                             {
                                 cell.DataType = CellValues.Number;
                                 cell.CellValue = new CellValue(value.ToString());
                             }
                             else if (column.DataType == typeof(bool))
                             {
-                                cell.DataType = CellValues.Boolean;
-                                cell.CellValue = new CellValue((bool)value);
+                                bool flag = (bool)value;
+
+                                if (excelSettings.exportBoolsAsNumbers)
+                                {
+                                    cell.DataType = CellValues.Number;
+                                }
+                                else
+                                {
+                                    cell.DataType = CellValues.Boolean;
+                                }
+
+                                cell.CellValue = new CellValue(flag ? "1" : "0");
                             }
                             else
                             {

@@ -302,6 +302,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0"
@@ -324,6 +325,12 @@
 						Grid.Row="2"
 						x:Name="ExcelExportAddAutoFilter"
 						Content="Add filter dropdowns to header row (AutoFilter)"
+						Margin="5"/>
+
+                    <CheckBox
+						Grid.Row="3"
+						x:Name="ExcelExportBoolsAsNumbers"
+						Content="Export booleans as numbers (TRUE/FALSE -> 1/0)"
 						Margin="5"/>
 
                     <Button
