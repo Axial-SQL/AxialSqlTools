@@ -542,16 +542,20 @@ namespace AxialSqlTools
 
                             if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
                             {
-                                var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
-                                if (textAlignField != null)
-                                {
-                                    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                                }
+                                // not needed
+                                //var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
+                                //if (textAlignField != null)
+                                //{
+                                //    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                                //}
+
+                                // applies to the row number column 
                                 var textAlignField2 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_myAlign");
                                 if (textAlignField2 != null)
                                 {
                                     textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
                                 }
+
                                 var textAlignField3 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_textFormat");
                                 if (textAlignField3 != null)
                                 {
