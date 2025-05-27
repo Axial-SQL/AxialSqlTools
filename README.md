@@ -69,7 +69,9 @@ For older releases:
 
 - For SSMS 18: `C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
 
-If your Windows security policy has blocked the `AxialSqlTools.dll` file, you may need to unlock it by using the checkbox in the file properties.
+> **⚠️ Warning**
+>
+> If your Windows security policy has blocked the `AxialSqlTools.dll` file, you may need to unlock it by using the checkbox in the file properties.
 
 Restart SQL Server Management Studio after placing the files in the extensions directory.
 
