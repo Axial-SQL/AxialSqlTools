@@ -226,6 +226,7 @@
     <Content Include="Resources\open-folder.png" />
     <Content Include="Resources\query-history.png" />
     <Content Include="Resources\refresh.png" />
+    <Resource Include="Resources\save.png" />
     <Content Include="Resources\script.png" />
     <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />

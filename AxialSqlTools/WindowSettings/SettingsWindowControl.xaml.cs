@@ -79,7 +79,7 @@
 
             if (string.IsNullOrWhiteSpace(_queryHistoryConnectionString))
             {
-                Label_QueryHistoryConnectionInfo.Content = " < not configured > ";
+                Label_QueryHistoryConnectionInfo.Text = " < not configured > ";
             }
             else
             {
@@ -90,12 +90,12 @@
 
                     string msg = string.Format("Server: {0}; Database: {1}; User ID: {2}", builder.DataSource, builder.InitialCatalog, builder.UserID);
 
-                    Label_QueryHistoryConnectionInfo.Content = msg;
+                    Label_QueryHistoryConnectionInfo.Text = msg;
 
                 }
                 catch (Exception ex)
                 {
-                    Label_QueryHistoryConnectionInfo.Content = ex.Message;
+                    Label_QueryHistoryConnectionInfo.Text = ex.Message;
                 }
             }
         }
@@ -209,6 +209,12 @@
             MessageBox.Show(
                 string.Format(System.Globalization.CultureInfo.CurrentUICulture, "The change has been saved", this.ToString()),
                 "Setting saved");
+        }
+
+        private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
         }
 
         private void ButtonSaveSmtpSettings_Click(object sender, RoutedEventArgs e)
