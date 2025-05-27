@@ -27,12 +27,6 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Linq;
 using AxialSqlTools.Properties;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
-using System.Globalization;
-using System.Net;
-using System.IO.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace AxialSqlTools
 {
