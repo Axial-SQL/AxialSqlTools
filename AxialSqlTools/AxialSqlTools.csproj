@@ -222,6 +222,7 @@
     <Content Include="Resources\refresh.png" />
     <Resource Include="Resources\save.png" />
     <Content Include="Resources\script.png" />
+    <Resource Include="Resources\send.png" />
     <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />
     <Content Include="Resources\sql-build-info.png" />

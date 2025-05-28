@@ -56,7 +56,27 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Margin="5,5,5,5">
-                    <Button Content="Send" Name="ButtonSend" Height="35" Margin="5,5,0,5" Click="Button_SendAndClose" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="1" UseLayoutRounding="False" Width="94.591" FontWeight="Bold"/>
+                    <Button Name="ButtonSend" 
+                        Height="35" 
+                        Margin="5,5,0,5" 
+                        Click="Button_SendAndClose" 
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center" 
+                        Padding="1" 
+                        UseLayoutRounding="False" 
+                        Width="94.591" 
+                        FontWeight="Bold">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Image
+						        Source="pack://application:,,,/AxialSqlTools;component/Resources/send.png"
+						        Width="16"
+						        Height="16"
+						        Margin="0,0,4,0"/>
+                            <TextBlock Text="Send" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    
                     <Label Content="" x:Name="SendWarningLabel" FontWeight="Bold" />
 
                 </StackPanel>
