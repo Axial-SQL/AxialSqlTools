@@ -13,6 +13,7 @@
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Documents;
+    using System.Windows.Input;
 
 
     /// <summary>
@@ -161,7 +162,9 @@
             string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             exportedFilename = Path.Combine(folderPath, fileName);
 
-            ExcelExport.SaveDataTableToExcel(dataTables, exportedFilename);
+            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
+            ExcelExport.SaveDataTableToExcel(dataTables, exportedFilename, isShiftPressed);
 
             connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo(inMaster: true);
             //\\-----------------------------------------------------------------

@@ -242,13 +242,10 @@ namespace AxialSqlTools
             return string.Empty;
         }
 
-        public static void SaveDataTableToExcel(List<DataTable> dataTables, string filePath)
+        public static void SaveDataTableToExcel(List<DataTable> dataTables, string filePath, bool isShiftPressed)
         {
 
             var excelSettings = SettingsManager.GetExcelExportSettings();
-
-            // detect shift state
-            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
 
             // include the source only when includeSourceQuery XOR shiftPressed is true
             bool includeSource = excelSettings.includeSourceQuery ^ isShiftPressed;

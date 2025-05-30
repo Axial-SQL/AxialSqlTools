@@ -1,4 +1,11 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.SqlServer.Management.UI.Grid;
+using Microsoft.SqlServer.Management.UI.VSIntegration;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
@@ -9,13 +16,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.SqlServer.Management.UI.Grid;
-using Microsoft.SqlServer.Management.UI.VSIntegration;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
+using System.Windows.Input;
 using Task = System.Threading.Tasks.Task;
 
 namespace AxialSqlTools
@@ -113,6 +114,9 @@ namespace AxialSqlTools
         private void Execute(object sender, EventArgs e)
         {
 
+            // detect shift state
+            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
             string folderPath = ShowFolderBrowserDialog();
             if (string.IsNullOrEmpty(folderPath))
             {                
@@ -125,7 +129,7 @@ namespace AxialSqlTools
             string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             string fileLocation = Path.Combine(folderPath, fileName);
 
-            ExcelExport.SaveDataTableToExcel(dataTables, fileLocation);
+            ExcelExport.SaveDataTableToExcel(dataTables, fileLocation, isShiftPressed);
 
             VsShellUtilities.ShowMessageBox(
                 this.package,
@@ -141,7 +145,6 @@ namespace AxialSqlTools
         {
             using (FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog())
             {
-                folderBrowserDialog.Description = "Excel Export | Hold Shift to export the query text into a new tab";
                 folderBrowserDialog.SelectedPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
                 DialogResult result = folderBrowserDialog.ShowDialog();
