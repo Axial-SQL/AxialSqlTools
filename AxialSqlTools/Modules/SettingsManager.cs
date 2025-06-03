@@ -254,6 +254,29 @@ ORDER BY sd.[name];
             public bool includeSourceQuery = false;
             public bool addAutofilter = false;
             public bool exportBoolsAsNumbers = false;
+            public string defaultDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            public string defaultFileName = "DataExport_{yyyyMMdd_HHmmss}.xlsx";
+
+            public string GetDefaultDirectory()
+            {
+                if (!string.IsNullOrEmpty(defaultDirectory)
+                    && Directory.Exists(defaultDirectory))
+                {
+                    return defaultDirectory;
+                }
+
+                return Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            }
+
+            public string GetDefaultFileName()
+            {
+                if (!string.IsNullOrWhiteSpace(defaultFileName))
+                {
+                    return defaultFileName;
+                }
+
+                return "DataExport_{yyyyMMdd_HHmmss}.xlsx";
+            }
         }
 
         public class FrequentlyUsedEmail

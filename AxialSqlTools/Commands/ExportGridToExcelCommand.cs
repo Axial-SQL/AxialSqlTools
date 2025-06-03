@@ -91,19 +91,6 @@ namespace AxialSqlTools
             Instance = new ExportGridToExcelCommand(package, commandService);
         }
 
-        public object GetNonPublicField(object obj, string field)
-        {
-            FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-
-            return f.GetValue(obj);
-        }
-        public FieldInfo GetNonPublicFieldInfo(object obj, string field)
-        {
-            FieldInfo f = obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
-
-            return f;
-        }
-
         /// <summary>
         /// This function is the callback used to execute the command when the menu item is clicked.
         /// See the constructor to see how the menu item is associated with this function using
@@ -117,41 +104,45 @@ namespace AxialSqlTools
             // detect shift state
             bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
 
-            string folderPath = ShowFolderBrowserDialog();
-            if (string.IsNullOrEmpty(folderPath))
-            {                
-                Console.WriteLine("No folder selected.");
+            string filePath = ShowSaveFileDialog();
+            if (string.IsNullOrEmpty(filePath))
+            {
                 return;
             }
 
             List<DataTable> dataTables = GridAccess.GetDataTables();
 
-            string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-            string fileLocation = Path.Combine(folderPath, fileName);
-
-            ExcelExport.SaveDataTableToExcel(dataTables, fileLocation, isShiftPressed);
+            ExcelExport.SaveDataTableToExcel(dataTables, filePath, isShiftPressed);
 
             VsShellUtilities.ShowMessageBox(
                 this.package,
-                "Data has been exported to:\n" + fileLocation,
-                "Done",
+                "The data has been successfully exported to:\n" + filePath,
+                "Export Complete",
                 OLEMSGICON.OLEMSGICON_INFO,
                 OLEMSGBUTTON.OLEMSGBUTTON_OK,
                 OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
         }
 
-        static string ShowFolderBrowserDialog()
+        static string ShowSaveFileDialog()
         {
-            using (FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog())
+            using (SaveFileDialog saveDialog = new SaveFileDialog())
             {
-                folderBrowserDialog.SelectedPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
-                DialogResult result = folderBrowserDialog.ShowDialog();
+                var settings = SettingsManager.GetExcelExportSettings();
 
-                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(folderBrowserDialog.SelectedPath))
+                // Suggest Desktop as the initial folder
+                saveDialog.InitialDirectory = settings.GetDefaultDirectory();
+                saveDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
+                saveDialog.DefaultExt = "xlsx"; 
+
+                // Suggest a timestamped filename
+                saveDialog.FileName = ExcelExport.ExpandDateWildcards(settings.GetDefaultFileName());
+
+                DialogResult result = saveDialog.ShowDialog();
+                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(saveDialog.FileName))
                 {
-                    return folderBrowserDialog.SelectedPath;
+                    return saveDialog.FileName;
                 }
                 else
                 {

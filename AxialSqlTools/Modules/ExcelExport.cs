@@ -7,8 +7,10 @@ using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -199,6 +201,41 @@ namespace AxialSqlTools
         }
 
         #endregion Create Stylesheet
+
+        public static string ExpandDateWildcards(string pattern)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+                throw new ArgumentException("Pattern must not be empty", nameof(pattern));
+
+            // 1) Replace all "{formatString}" with DateTime.Now.ToString(formatString)
+            string result = Regex.Replace(pattern, @"\{([^}]+)\}", match =>
+            {
+                string formatInside = match.Groups[1].Value;
+                try
+                {
+                    return DateTime.Now.ToString(formatInside);
+                }
+                catch (FormatException)
+                {
+                    // If the user typed an invalid format, just emit it verbatim (or you could throw)
+                    return match.Value;
+                }
+            });
+
+            // 2) Ensure ".xlsx" extension
+            if (!result.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                result += ".xlsx";
+            }
+
+            // 3) Remove or replace any illegal path characters
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                result = result.Replace(c.ToString(), "_");
+            }
+
+            return result;
+        }
 
         private static string GetSourceQueryText()
         {

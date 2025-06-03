@@ -157,10 +157,13 @@
                 }
             }
 
-
             string folderPath = Path.GetTempPath();
-            string fileName = $"DataExport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-            exportedFilename = Path.Combine(folderPath, fileName);
+
+            var settings = SettingsManager.GetExcelExportSettings();
+            // Suggest a timestamped filename
+            string defaultName = ExcelExport.ExpandDateWildcards(settings.GetDefaultFileName());
+
+            exportedFilename = Path.Combine(folderPath, defaultName);
 
             bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
 

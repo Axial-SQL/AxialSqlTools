@@ -70,6 +70,8 @@
                 ExcelExportIncludeSourceQuery.IsChecked = excelSettings.includeSourceQuery;
                 ExcelExportAddAutoFilter.IsChecked = excelSettings.addAutofilter;
                 ExcelExportBoolsAsNumbers.IsChecked = excelSettings.exportBoolsAsNumbers;
+                ExcelExportDefaultDirectory.Text = excelSettings.defaultDirectory;
+                ExcelExportDefaultFilename.Text = excelSettings.defaultFileName;
 
             }
             catch (Exception ex)
@@ -259,7 +261,9 @@
             {
                 includeSourceQuery = ExcelExportIncludeSourceQuery.IsChecked.GetValueOrDefault(false),
                 addAutofilter = ExcelExportAddAutoFilter.IsChecked.GetValueOrDefault(false),
-                exportBoolsAsNumbers = ExcelExportBoolsAsNumbers.IsChecked.GetValueOrDefault(false)
+                exportBoolsAsNumbers = ExcelExportBoolsAsNumbers.IsChecked.GetValueOrDefault(false),
+                defaultDirectory = ExcelExportDefaultDirectory.Text,
+                defaultFileName = ExcelExportDefaultFilename.Text
             };
 
             SettingsManager.SaveExcelExportSettings(settings);
