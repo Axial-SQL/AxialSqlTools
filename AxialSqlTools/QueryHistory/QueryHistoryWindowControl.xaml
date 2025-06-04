@@ -7,76 +7,159 @@
              Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
              Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="500"
+             d:DesignHeight="800"
+             d:DesignWidth="1000"
              Name="MyToolWindow">
+
     <Grid>
-        <!-- Define 2 rows: one for the filter controls, one for main content -->
+        <!-- Main grid has three rows: 
+             Row 0 = Auto (filter controls split into two lines)
+             Row 1 = *    (result count + DataGrid)
+             Row 2 = 2*   (full SQL code)
+        -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <!-- Define 2 columns for the main content row -->
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*"/>
-            <ColumnDefinition Width="*"/>
-            <!-- Adjust width as needed -->
-        </Grid.ColumnDefinitions>
 
-        <!-- Filter Controls: Spanning both columns in row 0 -->
-        <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Label Content="Filter by Query Text:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <TextBox Grid.Column="1" Margin="0,0,5,0"
-                     Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" 
-                     ToolTip="Enter text to filter QueryText" KeyDown="TextBox_KeyDown"/>
-            <Button Grid.Column="2" Content="Refresh" VerticalAlignment="Center" 
-                    Command="{Binding RefreshCommand}" Margin="0,0,5,0" Height="25" Width="50"/>
-            <Button Grid.Column="3" Content="Clear" VerticalAlignment="Center" Height="25" Width="50"
-                    Command="{Binding ClearFilterCommand}"/>
+        <!-- ==============
+             Row 0: FILTER CONTROLS
+             ============== -->
+        <Grid Grid.Row="0" Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- First filter row -->
+                <RowDefinition Height="Auto"/>
+                <!-- Second filter row -->
+            </Grid.RowDefinitions>
+
+            <!-- First filter row: From date, Server, Query -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Label Content="From:"  Width="40" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <DatePicker Width="120"
+                            SelectedDate="{Binding FilterFromDate, Mode=TwoWay}"
+                            SelectedDateChanged="DatePicker_SelectedDateChanged"/>
+
+                <Label Content="Server:"  Width="70" VerticalAlignment="Center" Margin="16,0,4,0"/>
+                <TextBox Width="160"
+                         Text="{Binding FilterServer, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Enter server name (or part of it)"
+                         KeyDown="TextBox_KeyDown"/>
+
+                <Label Content="Query:" VerticalAlignment="Center" Margin="16,0,4,0"/>
+                <TextBox Width="300"
+                         Text="{Binding FilterQueryText, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Enter text to filter QueryText"
+                         KeyDown="TextBox_KeyDown"/>
+            </StackPanel>
+
+            <!-- Second filter row: To date, Database, Buttons -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,6,0,0">
+                <Label Content="To:" Width="40" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <DatePicker Width="120"
+                            SelectedDate="{Binding FilterToDate, Mode=TwoWay}"
+                            SelectedDateChanged="DatePicker_SelectedDateChanged"/>
+
+                <Label Content="Database:" Width="70" VerticalAlignment="Center" Margin="16,0,4,0"/>
+                <TextBox Width="160"
+                         Text="{Binding FilterDatabase, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Enter database name (or part of it)"
+                         KeyDown="TextBox_KeyDown"/>
+
+                <Button Content="Refresh"
+                        Margin="65,0,4,0"
+                        Width="80" Height="26"
+                        Command="{Binding RefreshCommand}"/>
+
+                <Button Content="Clear"
+                        Width="70" Height="26"
+                        Command="{Binding ClearFilterCommand}"/>
+            </StackPanel>
         </Grid>
 
-        <!-- DataGrid displaying the records in row 1, left column -->
-        <DataGrid Grid.Row="1" Grid.Column="0" Margin="5"
-                  IsReadOnly="True"
-                  ItemsSource="{Binding QueryHistoryRecords}" 
-                  SelectedItem="{Binding SelectedRecord, Mode=TwoWay}"
-                  AutoGenerateColumns="False">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="Auto"/>
-                <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="Auto"/>
-                <DataGridTextColumn Header="FinishTime" Binding="{Binding FinishTime}" Width="Auto"/>
-                <DataGridTextColumn Header="ElapsedTime" Binding="{Binding ElapsedTime}" Width="Auto"/>
-                <DataGridTextColumn Header="TotalRowsReturned" Binding="{Binding TotalRowsReturned}" Width="Auto"/>
-                <DataGridTextColumn Header="ExecResult" Binding="{Binding ExecResult}" Width="Auto"/>
-                <DataGridTextColumn Header="QueryText" Binding="{Binding QueryTextShort}" Width="Auto" MaxWidth="300">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                            <Setter Property="TextWrapping" Value="Wrap"/>
-                            <Setter Property="LineHeight" Value="16"/>
-                            <Setter Property="MaxHeight" Value="32"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="DataSource" Binding="{Binding DataSource}" Width="Auto"/>
-                <DataGridTextColumn Header="DatabaseName" Binding="{Binding DatabaseName}" Width="Auto"/>
-                <DataGridTextColumn Header="LoginName" Binding="{Binding LoginName}" Width="Auto"/>
-                <DataGridTextColumn Header="WorkstationId" Binding="{Binding WorkstationId}" Width="Auto"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- =====================================
+             Row 1: RESULT COUNT + DATA GRID
+             ===================================== -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- Full QueryText detail view placed in row 1, right column -->
-        <TextBox Grid.Row="1" Grid.Column="1" Margin="5"
-                 Text="{Binding SelectedRecord.QueryText}" 
-                 IsReadOnly="True" 
-                 TextWrapping="Wrap" 
-                 AcceptsReturn="True" 
+            <!-- Result count -->
+            <TextBlock Grid.Row="0"
+                       Margin="5,0,0,6"
+                       FontWeight="Bold"
+                       Text="{Binding QueryHistoryRecords.Count, StringFormat={}{0} Result(s)}"/>
+
+            <!-- DataGrid -->
+            <DataGrid Grid.Row="1"
+                      Margin="5"
+                      IsReadOnly="True"
+                      ItemsSource="{Binding QueryHistoryRecords}"
+                      SelectedItem="{Binding SelectedRecord, Mode=TwoWay}"
+                      AutoGenerateColumns="False"
+                      SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID"
+                                        Binding="{Binding Id}"
+                                        Width="Auto"/>
+                    <DataGridTextColumn Header="StartTime"
+                                        Binding="{Binding Date}"
+                                        Width="160"/>
+                    <DataGridTextColumn Header="FinishTime"
+                                        Binding="{Binding FinishTime}"
+                                        Width="160"/>
+                    <DataGridTextColumn Header="Elapsed"
+                                        Binding="{Binding ElapsedTime}"
+                                        Width="Auto"/>
+                    <DataGridTextColumn Header="Rows"
+                                        Binding="{Binding TotalRowsReturned}"
+                                        Width="Auto"/>
+                    <DataGridTextColumn Header="Result"
+                                        Binding="{Binding ExecResult}"
+                                        Width="Auto"/>
+                    <DataGridTextColumn Header="Server"
+                                        Binding="{Binding DataSource}"
+                                        Width="160"/>
+                    <DataGridTextColumn Header="Database"
+                                        Binding="{Binding DatabaseName}"
+                                        Width="160"/>
+                    <DataGridTextColumn Header="Login"
+                                        Binding="{Binding LoginName}"
+                                        Width="Auto"/>
+                    <DataGridTextColumn Header="Workstation"
+                                        Binding="{Binding WorkstationId}"
+                                        Width="Auto"/>
+                    <DataGridTextColumn Header="Query (short)"
+                                        Binding="{Binding QueryTextShort}"
+                                        Width="300"
+                                        MaxWidth="300">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                <Setter Property="LineHeight" Value="16"/>
+                                <Setter Property="MaxHeight" Value="32"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <!-- ================================
+             Row 2: FULL SQL CODE VIEWER
+             ================================ -->
+        <TextBox Grid.Row="2"
+                 Margin="5"
+                 Text="{Binding SelectedRecord.QueryText}"
+                 IsReadOnly="True"
+                 TextWrapping="Wrap"
+                 AcceptsReturn="True"
                  VerticalScrollBarVisibility="Auto"
-                 FontFamily="Consolas" FontSize="14"/>
+                 FontFamily="Consolas"
+                 FontSize="12"/>
     </Grid>
 </UserControl>

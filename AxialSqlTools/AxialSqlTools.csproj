@@ -98,11 +98,14 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="QueryHistory\QueryHistoryRecord.cs" />
+    <Compile Include="QueryHistory\QueryHistoryViewModel.cs" />
     <Compile Include="QueryHistory\QueryHistoryWindow.cs" />
     <Compile Include="QueryHistory\QueryHistoryWindowCommand.cs" />
     <Compile Include="QueryHistory\QueryHistoryWindowControl.xaml.cs">
       <DependentUpon>QueryHistoryWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="QueryHistory\RelayCommand.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindow.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowCommand.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowControl.xaml.cs">
