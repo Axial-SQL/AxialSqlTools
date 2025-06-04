@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -380,7 +381,8 @@ namespace AxialSqlTools
                                      )
                             {
                                 cell.DataType = CellValues.Number;
-                                cell.CellValue = new CellValue(value.ToString());
+                                // use InvariantCulture so decimal separator is "."
+                                cell.CellValue = new CellValue(Convert.ToString(value, CultureInfo.InvariantCulture));
                             }
                             else if (column.DataType == typeof(bool))
                             {
