@@ -123,7 +123,7 @@ namespace AxialSqlTools
             {
                 sqlDataTypeName = sqlDataTypeName + "(" + (sqlDataColumnSize == 2147483647 ? "MAX" : sqlDataColumnSize.ToString()) + ")";
             }
-            else if (sqlDataTypeName == "DECIMAL" || sqlDataTypeName == "DECIMAL")
+            else if (sqlDataTypeName == "DECIMAL" || sqlDataTypeName == "NUMERIC")
             {
                 sqlDataTypeName = sqlDataTypeName + "(" + NumericPrecision + "," + NumericScale + ")";
             }
