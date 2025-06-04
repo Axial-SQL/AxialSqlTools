@@ -45,13 +45,15 @@
                 <TextBox Width="160"
                          Text="{Binding FilterServer, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="Enter server name (or part of it)"
-                         KeyDown="TextBox_KeyDown"/>
+                         KeyDown="TextBox_KeyDown"
+                         VerticalContentAlignment="Center"/>
 
                 <Label Content="Query:" VerticalAlignment="Center" Margin="16,0,4,0"/>
                 <TextBox Width="300"
                          Text="{Binding FilterQueryText, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="Enter text to filter QueryText"
-                         KeyDown="TextBox_KeyDown"/>
+                         KeyDown="TextBox_KeyDown"
+                         VerticalContentAlignment="Center"/>
             </StackPanel>
 
             <!-- Second filter row: To date, Database, Buttons -->
@@ -65,7 +67,8 @@
                 <TextBox Width="160"
                          Text="{Binding FilterDatabase, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="Enter database name (or part of it)"
-                         KeyDown="TextBox_KeyDown"/>
+                         KeyDown="TextBox_KeyDown"
+                         VerticalContentAlignment="Center"/>
 
                 <Button Content="Refresh"
                         Margin="65,0,4,0"
