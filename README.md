@@ -57,17 +57,9 @@ To install the addin, you have two options:
 The build process will automatically copy all necessary files into the SSMS extension folder, and you will be ready to use it.
 
 2. **Download the Release:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository.
-Older releases have compiled addins for SSMS 18, 19 and 20 but those are no longer supported.
 
 After obtaining the compiled files (either by compiling from source or downloading from Releases), place the folder with the compiled files into the following directory:
 `C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Extensions`
-
-For older releases:
-- For SSMS 20: `C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Extensions` 
-
-- For SSMS 19: `C:\Program Files (x86)\Microsoft SQL Server Management Studio 19\Common7\IDE\Extensions`
-
-- For SSMS 18: `C:\Program Files (x86)\Microsoft SQL Server Management Studio 18\Common7\IDE\Extensions`
 
 > **⚠️ Warning**
 >
