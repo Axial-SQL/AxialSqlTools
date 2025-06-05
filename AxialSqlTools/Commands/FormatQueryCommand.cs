@@ -153,11 +153,13 @@ namespace AxialSqlTools
 
         }
 
+
         class OwnVisitor : TSqlFragmentVisitor
         {
             public List<QualifiedJoin> QualifiedJoins = new List<QualifiedJoin>();
             public List<UnqualifiedJoin> UnqualifiedJoins = new List<UnqualifiedJoin>();
             public List<SearchedCaseExpression> CaseExpressions = new List<SearchedCaseExpression>();
+            public List<StatementList> ProcBodies = new List<StatementList>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {                
@@ -238,6 +240,228 @@ namespace AxialSqlTools
                 //GenerateSpaceAndCollation(node.Collation);
             }
 
+            public override void ExplicitVisit(CreateProcedureStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                {
+                    ProcBodies.Add(node.StatementList);
+                }
+            }
+
+            // NEW: collect each StatementList inside a CREATE FUNCTION
+            public override void ExplicitVisit(CreateFunctionStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                {
+                    ProcBodies.Add(node.StatementList);
+                }
+            }
+
+            // NEW: collect each StatementList inside a CREATE TRIGGER
+            public override void ExplicitVisit(CreateTriggerStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                {
+                    ProcBodies.Add(node.StatementList);
+                }
+            }
+
+            //
+            // ─── NEW OVERRIDES FOR ALTER … ──────────────────────────────────────────────
+            //
+            public override void ExplicitVisit(AlterProcedureStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                    ProcBodies.Add(node.StatementList);
+            }
+
+            public override void ExplicitVisit(AlterFunctionStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                    ProcBodies.Add(node.StatementList);
+            }
+
+            public override void ExplicitVisit(AlterTriggerStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                    ProcBodies.Add(node.StatementList);
+            }
+
+            //
+            // ─── NEW OVERRIDES FOR CREATE OR ALTER … ────────────────────────────────────
+            //
+            public override void ExplicitVisit(CreateOrAlterProcedureStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                    ProcBodies.Add(node.StatementList);
+            }
+
+            public override void ExplicitVisit(CreateOrAlterFunctionStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                    ProcBodies.Add(node.StatementList);
+            }
+
+            public override void ExplicitVisit(CreateOrAlterTriggerStatement node)
+            {
+                base.ExplicitVisit(node);
+                if (node.StatementList != null)
+                    ProcBodies.Add(node.StatementList);
+            }
+
+        }
+
+        /// <summary>
+        /// Recursively walks a StatementList, forces a double‐newline between each sibling statement,
+        /// then dives into any nested StatementList inside control‐flow blocks (BEGIN/END, IF, WHILE, etc.).
+        /// </summary>
+        /// <param name="stmtList">The StatementList to process.</param>
+        /// <param name="sqlFragment">The root TSqlFragment, used to access the ScriptTokenStream.</param>
+        private void InsertBlankLinesRecursive(StatementList stmtList, TSqlFragment sqlFragment)
+        {
+            // 1) Insert a blank line between each pair of sibling statements in this list
+            var statements = stmtList.Statements;
+            for (int i = 0; i < statements.Count - 1; i++)
+            {              
+
+                // Find the last token of the i‐th statement
+                int endOfStmt = statements[i].LastTokenIndex;
+                int nextIdx = endOfStmt + 1;
+
+                if (nextIdx < sqlFragment.ScriptTokenStream.Count)
+                {
+                    TSqlParserToken nextToken = sqlFragment.ScriptTokenStream[nextIdx];
+                    if (nextToken.TokenType == TSqlTokenType.WhiteSpace)
+                    {
+                        nextToken.Text = "\r\n\r\n";
+                    }
+                    else
+                    {
+                        // (In practice, ScriptGenerator always emits at least one whitespace token here,
+                        // so you usually won’t hit this branch. If you do, you could insert a WhiteSpace
+                        // token manually, but it’s rarely necessary.)
+                    }
+                }
+            }
+
+            // 2) For each statement in this list, check if it contains its own StatementList
+            foreach (TSqlStatement stmt in statements)
+            {
+                // ─── Handle BEGIN ... END blocks ───────────────────────────────────────────
+                // e.g.:
+                //   CREATE PROCEDURE ... AS BEGIN
+                //       <inner statements>
+                //   END
+                if (stmt is BeginEndBlockStatement beb && beb.StatementList != null)
+                {
+                    InsertBlankLinesRecursive(beb.StatementList, sqlFragment);
+                }
+
+                // ─── Handle IF ... THEN [ ... ] ELSE [ ... ] ──────────────────────────────
+                // An IfStatement can have:
+                //   • ThenStatement  (either a single statement or a StatementList or BeginEndBlock)
+                //   • ElseStatement  (same possibilities)
+                if (stmt is IfStatement ifStmt)
+                {
+                    //// THEN part
+                    //if (ifStmt.ThenStatement is StatementList thenList)
+                    //{
+                    //    InsertBlankLinesRecursive(thenList, sqlFragment);
+                    //}
+                    //else
+                    if (ifStmt.ThenStatement is BeginEndBlockStatement thenBlock && thenBlock.StatementList != null)
+                    {
+                        InsertBlankLinesRecursive(thenBlock.StatementList, sqlFragment);
+                    }
+
+                    //// ELSE part (if present)
+                    //if (ifStmt.ElseStatement is StatementList elseList)
+                    //{
+                    //    InsertBlankLinesRecursive(elseList, sqlFragment);
+                    //}
+                    //else
+                    if (ifStmt.ElseStatement is BeginEndBlockStatement elseBlock && elseBlock.StatementList != null)
+                    {
+                        InsertBlankLinesRecursive(elseBlock.StatementList, sqlFragment);
+                    }
+                }
+
+                // ─── Handle WHILE loops ────────────────────────────────────────────────────
+                //   WHILE <condition>
+                //       <some statement or BEGIN...END>
+                //if (stmt is WhileStatement whileStmt && whileStmt.Statement is StatementList whList)
+                //{
+                //    InsertBlankLinesRecursive(whList, sqlFragment);
+                //}
+                //else 
+                if (stmt is WhileStatement ws && ws.Statement is BeginEndBlockStatement whBlock && whBlock.StatementList != null)
+                {
+                    InsertBlankLinesRecursive(whBlock.StatementList, sqlFragment);
+                }
+
+                // ─── Handle TRY...CATCH ───────────────────────────────────────────────────
+                //   TRY
+                //       <tryBlock>
+                //   CATCH
+                //       <catchBlock>
+                if (stmt is TryCatchStatement tryCatch)
+                {
+                    // the TryBlock is either a StatementList or a BeginEndBlock
+                    if (tryCatch.TryStatements is StatementList tryList)
+                    {
+                        InsertBlankLinesRecursive(tryList, sqlFragment);
+                    }                    
+
+                    if (tryCatch.CatchStatements is StatementList catchList)
+                    {
+                        InsertBlankLinesRecursive(catchList, sqlFragment);
+                    }
+
+                }
+
+                //// ─── Handle FOR loops (BOTH FOR… AND FOR EACH CURSOR) ───────────────────────
+                ////   FOR ... { <stmt> | BEGIN...END }
+                ////   FOR EACH ... { <stmt> | BEGIN...END }
+                //if (stmt is ForLoopStatementBase forStmt)
+                //{
+                //    if (forStmt.Statement is StatementList forList)
+                //    {
+                //        InsertBlankLinesRecursive(forList, sqlFragment);
+                //    }
+                //    else if (forStmt.Statement is BeginEndBlock forBlock && forBlock.StatementList != null)
+                //    {
+                //        InsertBlankLinesRecursive(forBlock.StatementList, sqlFragment);
+                //    }
+                //}
+
+                //    // ─── (Optional) Handle other nested‐statement constructs ─────────────────────
+                //    // If you also use:
+                //    //   • USING (SQL Server 2022+)   → UsingStatement.StatementList
+                //    //   • LOCK (SQL Server 2022+)    → LockStatement.StatementList
+                //    //   • CURSOR declarations
+                //    //   • MERGE … OUTPUT statements that embed nested blocks
+                //    //
+                //    // you can copy the same pattern: check “is UsingStatement” or “is LockStatement,”
+                //    // grab its .StatementList or nested BeginEndBlock, and recurse.
+
+                //    // Example for a USING statement (if you ever see it in your code):
+                //    // if (stmt is UsingStatement usingStmt && usingStmt.Statement is StatementList usingList)
+                //    // {
+                //    //     InsertBlankLinesRecursive(usingList, sqlFragment);
+                //    // }
+                //    // else if (stmt is UsingStatement us && us.Statement is BeginEndBlock usingBlock)
+                //    // {
+                //    //     InsertBlankLinesRecursive(usingBlock.StatementList, sqlFragment);
+                //    // }
+            }
         }
 
 
@@ -283,7 +507,6 @@ namespace AxialSqlTools
             return resultCode;           
 
         }
-
 
         private string ApplySpecialFormat(string oldCode, TSql160Parser sqlParser)
         {
@@ -560,7 +783,13 @@ namespace AxialSqlTools
                 }
 
             }
-            
+
+            //special case #5 - add two new lines after each PROC/FUNC/TRIGGER statement
+            foreach (StatementList topLevel in visitor.ProcBodies)
+            {
+                InsertBlankLinesRecursive(topLevel, sqlFragment);
+            }
+
             // return full recompiled result
             StringBuilder sqlText = new StringBuilder();
             foreach (var Token in sqlFragment.ScriptTokenStream)
