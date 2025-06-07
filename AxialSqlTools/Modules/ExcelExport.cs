@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using static AxialSqlTools.AxialSqlToolsPackage;
 
 namespace AxialSqlTools
 {
@@ -270,9 +271,9 @@ namespace AxialSqlTools
                     }
 
                 }
-                catch 
-                {                   
-
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "An exception occurred");
                 }
                
             } 
