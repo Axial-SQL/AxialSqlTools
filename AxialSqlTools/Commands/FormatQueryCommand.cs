@@ -13,7 +13,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Task = System.Threading.Tasks.Task;
-
+using static AxialSqlTools.AxialSqlToolsPackage;
 
 namespace AxialSqlTools
 {
@@ -386,8 +386,6 @@ namespace AxialSqlTools
 
                 }
 
-                // cursor ...
-
             }
         }
 
@@ -396,7 +394,7 @@ namespace AxialSqlTools
         {
             string resultCode = "";
 
-            TSql160Parser sqlParser = new TSql160Parser(false);
+            TSql170Parser sqlParser = new TSql170Parser(false);
 
             IList<ParseError> parseErrors = new List<ParseError>();
             TSqlFragment result = sqlParser.Parse(new StringReader(oldCode), out parseErrors);
@@ -419,15 +417,19 @@ namespace AxialSqlTools
             gen.Options.SqlVersion = SqlVersion.Sql170; //TODO - try to get from current connection
             gen.GenerateScript(result, out resultCode);
 
-            if (SettingsManager.GetApplyAdditionalCodeFormatting())
+
+            var formatSettings = SettingsManager.GetTSqlCodeFormatSettings();
+
+            if (formatSettings.HasAnyFormattingEnabled())
             {
                 try
                 {
-                    resultCode = ApplySpecialFormat(resultCode, sqlParser);
+                    resultCode = ApplySpecialFormat(resultCode, sqlParser, formatSettings);
                 }
-                catch
+                catch(Exception ex)                   
                 {
-                    //TODO - probably need to display the failure somehow
+                    _logger.Error(ex, "An error occurred while applying special formatting to the code.");
+
                 }
             }
 
@@ -435,7 +437,7 @@ namespace AxialSqlTools
 
         }
 
-        private string ApplySpecialFormat(string oldCode, TSql160Parser sqlParser)
+        private string ApplySpecialFormat(string oldCode, TSql170Parser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings)
         {
             IList<ParseError> parseErrors = new List<ParseError>();
 
@@ -444,9 +446,8 @@ namespace AxialSqlTools
             OwnVisitor visitor = new OwnVisitor();
             sqlFragment.Accept(visitor);
 
-            // visitor.TokenJoinLocations.Sort((a, b) => b.CompareTo(a));
-
             // special case #1 - remove new line after JOIN
+            if (formatSettings.removeNewLineAfterJoin)
             foreach (QualifiedJoin QJoin in visitor.QualifiedJoins)
             {
 
@@ -477,6 +478,7 @@ namespace AxialSqlTools
             }
 
             //special case #2 - JOIN .. ON -> add a tab before ON
+            if (formatSettings.addTabAfterJoinOn)
             foreach (QualifiedJoin QJoin in visitor.QualifiedJoins)
             {
 
@@ -509,6 +511,7 @@ namespace AxialSqlTools
             }
 
             //special case #3 - CROSS should be on the new line
+            if (formatSettings.moveCrossJoinToNewLine)
             foreach (UnqualifiedJoin CrossJoin in visitor.UnqualifiedJoins)
             {
                 int NextTokenNumber = CrossJoin.SecondTableReference.FirstTokenIndex;
@@ -541,6 +544,7 @@ namespace AxialSqlTools
             }
 
             //special case #4 - CASE <new line + tab> WHEN <new line + tab + tab> THEN <new line + tab> ELSE <new line> END
+            if (formatSettings.formatCaseAsMultiline)
             foreach (SearchedCaseExpression CaseExpr in visitor.CaseExpressions)
             {
                 // add new line and spaces+4 before WHEN
@@ -712,12 +716,14 @@ namespace AxialSqlTools
             }
 
             //special case #5.1 - add two new lines after each PROC/FUNC/TRIGGER statement
+            if (formatSettings.addNewLineBetweenStatementsInBlocks)
             foreach (StatementList topLevel in visitor.ProcBodies)
             {
                 InsertBlankLinesRecursive(topLevel, sqlFragment);
             }
 
             //special case #5.2 - also add blank lines in every anonymous batch
+            if (formatSettings.addNewLineBetweenStatementsInBlocks)
             if (sqlFragment is TSqlScript script)
             {
                 foreach (var batch in script.Batches)

@@ -10,6 +10,7 @@
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Navigation;
+    using static AxialSqlTools.AxialSqlToolsPackage;
 
     /// <summary>
     /// Interaction logic for SettingsWindowControl.
@@ -61,7 +62,12 @@
                 SMTP_Password.Password = smtpSettings.Password;
                 SMTP_EnableSSL.IsChecked = smtpSettings.EnableSsl;
 
-                ApplyCodeFormat.IsChecked = SettingsManager.GetApplyAdditionalCodeFormatting();
+                var tsqlCodeFormatSettings = SettingsManager.GetTSqlCodeFormatSettings();
+                RemoveNewLineAfterJoin.IsChecked = tsqlCodeFormatSettings.removeNewLineAfterJoin;
+                AddTabAfterJoinOn.IsChecked = tsqlCodeFormatSettings.addTabAfterJoinOn;
+                MoveCrossJoinToNewLine.IsChecked = tsqlCodeFormatSettings.moveCrossJoinToNewLine;
+                FormatCaseAsMultiline.IsChecked = tsqlCodeFormatSettings.formatCaseAsMultiline;
+                AddNewLineBetweenStatementsInBlocks.IsChecked = tsqlCodeFormatSettings.addNewLineBetweenStatementsInBlocks;
 
                 OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
 
@@ -76,7 +82,9 @@
             }
             catch (Exception ex)
             {
-                string msg = $"Erorr message: {ex.Message} \nInnerException: {ex.InnerException}";
+                _logger.Error(ex, "An exception occurred while loading settings");
+
+                string msg = $"Error message: {ex.Message} \nInnerException: {ex.InnerException}";
                 MessageBox.Show(msg, "Error");
             }
 
@@ -250,8 +258,16 @@
 
         private void Button_SaveApplyAdditionalFormat_Click(object sender, RoutedEventArgs e)
         {
-            SettingsManager.SaveApplyAdditionalCodeFormatting(ApplyCodeFormat.IsChecked.GetValueOrDefault());
+            var settings = new SettingsManager.TSqlCodeFormatSettings
+            {
+                removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
+                addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
+                moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
+                formatCaseAsMultiline = FormatCaseAsMultiline.IsChecked.GetValueOrDefault(false),
+                addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false)
+            };
 
+            SettingsManager.SaveTSqlCodeFormatSettings(settings);
             SavedMessage();
         }
 

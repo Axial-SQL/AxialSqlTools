@@ -279,6 +279,23 @@ ORDER BY sd.[name];
             }
         }
 
+        public class TSqlCodeFormatSettings
+        {
+            public bool removeNewLineAfterJoin = false;
+            public bool addTabAfterJoinOn = false;
+            public bool moveCrossJoinToNewLine = false;
+            public bool formatCaseAsMultiline = false;
+            public bool addNewLineBetweenStatementsInBlocks = false;
+            public bool HasAnyFormattingEnabled()
+            {
+                return removeNewLineAfterJoin
+                    || addTabAfterJoinOn
+                    || moveCrossJoinToNewLine
+                    || formatCaseAsMultiline
+                    || addNewLineBetweenStatementsInBlocks;
+            }
+        }
+
         public class FrequentlyUsedEmail
         {
             public string EmailAddress;
@@ -490,17 +507,6 @@ ORDER BY sd.[name];
 
         }
 
-        public static bool GetApplyAdditionalCodeFormatting()
-        {
-            bool result = false;
-            bool success = bool.TryParse(GetRegisterValue("ApplyAdditionalCodeFormat"), out result);            
-            return result;
-        }
-        public static bool SaveApplyAdditionalCodeFormatting(bool ApplyAdditionalCodeFormatting)
-        {
-            return SaveRegisterValue("ApplyAdditionalCodeFormat", ApplyAdditionalCodeFormatting.ToString());
-        }
-
         public static string GetOpenAiApiKey()
         {
             string key = "";
@@ -634,6 +640,37 @@ ORDER BY sd.[name];
                 return false;
             }
         }
+
+        public static TSqlCodeFormatSettings GetTSqlCodeFormatSettings()
+        {
+            try
+            {
+                string json = GetRegisterValue("TSqlCodeFormatSettings");
+                if (string.IsNullOrEmpty(json))
+                    return new TSqlCodeFormatSettings();
+
+                var settings = JsonConvert.DeserializeObject<TSqlCodeFormatSettings>(json);
+                return settings ?? new TSqlCodeFormatSettings();
+            }
+            catch
+            {
+                return new TSqlCodeFormatSettings();
+            }
+        }
+
+        public static bool SaveTSqlCodeFormatSettings(TSqlCodeFormatSettings settings)
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(settings);
+                return SaveRegisterValue("TSqlCodeFormatSettings", json);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
 
     }
 }

@@ -255,6 +255,12 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0"
@@ -267,14 +273,28 @@
 						</Hyperlink>
                     </TextBlock>
 
-                    <CheckBox
-						Grid.Row="1"
-						x:Name="ApplyCodeFormat"
-						Content="Apply additional format on the TSQL parser output"
-						Margin="5"/>
+                    <CheckBox Grid.Row="1" Margin="5"
+                        x:Name="RemoveNewLineAfterJoin"
+                        Content="Remove new line after JOIN"/>
+
+                    <CheckBox Grid.Row="2" Margin="5"
+                        x:Name="AddTabAfterJoinOn"
+                        Content="Add tab after JOIN..ON"/>
+
+                    <CheckBox Grid.Row="3" Margin="5"
+                        x:Name="MoveCrossJoinToNewLine"
+                        Content="Place CROSS JOIN on a new line"/>
+
+                    <CheckBox Grid.Row="4" Margin="5"
+                        x:Name="FormatCaseAsMultiline"
+                        Content="Format CASE expression as multiline"/>
+
+                    <CheckBox Grid.Row="5" Margin="5"
+                        x:Name="AddNewLineBetweenStatementsInBlocks"
+                        Content="Add new line between statements in code blocks"/>
 
                     <Button
-						Grid.Row="2"
+						Grid.Row="6"
 						x:Name="button_SaveApplyAdditionalFormat"
 						Click="Button_SaveApplyAdditionalFormat_Click"
 						Width="80" 
