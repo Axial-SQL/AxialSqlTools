@@ -288,13 +288,15 @@ ORDER BY sd.[name];
             public bool moveCrossJoinToNewLine = false;
             public bool formatCaseAsMultiline = false;
             public bool addNewLineBetweenStatementsInBlocks = false;
+            public bool breakSprocParametersPerLine = false;
             public bool HasAnyFormattingEnabled()
             {
                 return removeNewLineAfterJoin
                     || addTabAfterJoinOn
                     || moveCrossJoinToNewLine
                     || formatCaseAsMultiline
-                    || addNewLineBetweenStatementsInBlocks;
+                    || addNewLineBetweenStatementsInBlocks
+                    || breakSprocParametersPerLine;
             }
         }
 

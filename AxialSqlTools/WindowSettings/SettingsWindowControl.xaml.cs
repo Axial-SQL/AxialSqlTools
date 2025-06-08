@@ -30,7 +30,7 @@ FROM Customers c
 JOIN Orders o ON c.CustomerID = o.CustomerID CROSS JOIN Regions r
 WHERE c.IsActive = 1;
 
-SELECT p.ProductID, p.ProductName FROM Products p;
+SELECT p.ProductID, p.ProductName FROM Products p; EXEC dbo.test @a = 0, @b = 1;
 end
 ";
         /// <summary>
@@ -86,6 +86,7 @@ end
                 MoveCrossJoinToNewLine.IsChecked = tsqlCodeFormatSettings.moveCrossJoinToNewLine;
                 FormatCaseAsMultiline.IsChecked = tsqlCodeFormatSettings.formatCaseAsMultiline;
                 AddNewLineBetweenStatementsInBlocks.IsChecked = tsqlCodeFormatSettings.addNewLineBetweenStatementsInBlocks;
+                BreakSprocParametersPerLine.IsChecked = tsqlCodeFormatSettings.breakSprocParametersPerLine;
 
                 OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
 
@@ -282,7 +283,8 @@ end
                 addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
                 moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
                 formatCaseAsMultiline = FormatCaseAsMultiline.IsChecked.GetValueOrDefault(false),
-                addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false)
+                addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false),
+                breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false)
             };
 
             SettingsManager.SaveTSqlCodeFormatSettings(settings);
@@ -385,7 +387,8 @@ end
                 addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
                 moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
                 formatCaseAsMultiline = FormatCaseAsMultiline.IsChecked.GetValueOrDefault(false),
-                addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false)
+                addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false),
+                breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false)
             };
 
             FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, settings);

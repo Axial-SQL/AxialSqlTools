@@ -303,8 +303,14 @@
                         Checked="formatSetting_Checked"
                         Unchecked="formatSetting_Unchecked"/>
 
+                    <CheckBox Grid.Row="6" Margin="5"
+                        x:Name="BreakSprocParametersPerLine"
+                        Content="Break sproc parameters per line" 
+                        Checked="formatSetting_Checked"
+                        Unchecked="formatSetting_Unchecked"/>
+
                     <Button
-						Grid.Row="6"
+						Grid.Row="7"
 						x:Name="button_SaveApplyAdditionalFormat"
 						Click="Button_SaveApplyAdditionalFormat_Click"
 						Width="80" 

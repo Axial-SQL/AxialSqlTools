@@ -15,6 +15,7 @@ namespace AxialSqlTools
             public List<UnqualifiedJoin> UnqualifiedJoins = new List<UnqualifiedJoin>();
             public List<SearchedCaseExpression> CaseExpressions = new List<SearchedCaseExpression>();
             public List<StatementList> ProcBodies = new List<StatementList>();
+            public List<ExecuteStatement> ExecStatements = new List<ExecuteStatement>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -156,6 +157,12 @@ namespace AxialSqlTools
                 base.ExplicitVisit(node);
                 if (node.StatementList != null)
                     ProcBodies.Add(node.StatementList);
+            }
+
+            public override void ExplicitVisit(ExecuteStatement node)
+            {
+                base.ExplicitVisit(node);
+                ExecStatements.Add(node);
             }
 
         }
@@ -574,14 +581,14 @@ namespace AxialSqlTools
                 }
 
             //special case #5.1 - add two new lines after each PROC/FUNC/TRIGGER statement
+            //special case #5.2 - also add blank lines in every anonymous batch
             if (formatSettings.addNewLineBetweenStatementsInBlocks)
+            {                 
                 foreach (StatementList topLevel in visitor.ProcBodies)
                 {
                     InsertBlankLinesRecursive(topLevel, sqlFragment);
                 }
-
-            //special case #5.2 - also add blank lines in every anonymous batch
-            if (formatSettings.addNewLineBetweenStatementsInBlocks)
+                
                 if (sqlFragment is TSqlScript script)
                 {
                     foreach (var batch in script.Batches)
@@ -594,6 +601,60 @@ namespace AxialSqlTools
                         InsertBlankLinesRecursive(anonList, sqlFragment, skipTopLevel: true);
                     }
                 }
+            }
+
+            // special case #6 – break sproc parameters onto separate lines
+            if (formatSettings.breakSprocParametersPerLine)
+            {
+                var tokens = sqlFragment.ScriptTokenStream;
+
+                // for every EXEC … call
+                foreach (var execStmt in visitor.ExecStatements)
+                {
+                    var spec = execStmt.ExecuteSpecification;
+                    var execEntry = (ExecutableProcedureReference)spec.ExecutableEntity;
+
+                    if (execEntry.Parameters.Count > 1)
+                    {
+                        // 0) figure out how much indent EXEC itself already has
+                        string baseIndent = "";
+                        int wsIdxBeforeExec = execStmt.FirstTokenIndex - 1;
+                        if (wsIdxBeforeExec >= 0 && tokens[wsIdxBeforeExec].TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            var wsText = tokens[wsIdxBeforeExec].Text;
+                            // grab whatever is after the last newline
+                            int lastNl = wsText.LastIndexOf("\r\n");
+                            baseIndent = lastNl >= 0
+                                ? wsText.Substring(lastNl + 2)
+                                : wsText;
+                        }
+
+                        // 1) put first param on its own indented line
+                        int insertPos = execEntry.ProcedureReference.LastTokenIndex + 1;
+                        if (insertPos < tokens.Count && tokens[insertPos].TokenType == TSqlTokenType.WhiteSpace)
+                            tokens[insertPos].Text = "\r\n"
+                                                    + baseIndent
+                                                    + "\t";
+
+                        // 2) for every comma between params, break+indent by the same amount
+                        for (int i = spec.FirstTokenIndex; i <= spec.LastTokenIndex; i++)
+                        {
+                            if (tokens[i].TokenType == TSqlTokenType.Comma)
+                            {
+                                int wsAfterComma = i + 1;
+                                if (wsAfterComma < tokens.Count
+                                 && tokens[wsAfterComma].TokenType == TSqlTokenType.WhiteSpace)
+                                {
+                                    tokens[wsAfterComma].Text = " "         // space after comma
+                                                             + "\r\n"
+                                                             + baseIndent
+                                                             + "\t";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // return full recompiled result
             StringBuilder sqlText = new StringBuilder();
