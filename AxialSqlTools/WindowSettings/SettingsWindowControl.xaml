@@ -260,6 +260,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -308,9 +309,15 @@
                         Content="Break sproc parameters per line" 
                         Checked="formatSetting_Checked"
                         Unchecked="formatSetting_Unchecked"/>
+                    
+                    <CheckBox Grid.Row="7" Margin="5"
+                        x:Name="UppercaseBuiltInFunctions"
+                        Content="Always upper-case built-in functions" 
+                        Checked="formatSetting_Checked"
+                        Unchecked="formatSetting_Unchecked"/>
 
                     <Button
-						Grid.Row="7"
+						Grid.Row="8"
 						x:Name="button_SaveApplyAdditionalFormat"
 						Click="Button_SaveApplyAdditionalFormat_Click"
 						Width="80" 
@@ -348,7 +355,7 @@
                     </Button>
                     -->
 
-                    <Grid Grid.Row="8" >
+                    <Grid Grid.Row="9" >
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />

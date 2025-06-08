@@ -24,13 +24,13 @@
 while (1=0) 
 begin 
 select 
-    c.CustomerID, o.OrderID,
+    c.CustomerID, getDate(),
     CASE WHEN o.TotalAmount > 1000 THEN 'High' WHEN o.TotalAmount > 500 THEN 'Medium' ELSE 'Low' END AS OrderSize
 FROM Customers c
 JOIN Orders o ON c.CustomerID = o.CustomerID CROSS JOIN Regions r
 WHERE c.IsActive = 1;
 
-SELECT p.ProductID, p.ProductName FROM Products p; EXEC dbo.test @a = 0, @b = 1;
+SELECT dbo.func(p.ProductID), p.ProductName FROM Products p; EXEC dbo.test @a = 0, @b = 1;
 end
 ";
         /// <summary>
@@ -87,6 +87,7 @@ end
                 FormatCaseAsMultiline.IsChecked = tsqlCodeFormatSettings.formatCaseAsMultiline;
                 AddNewLineBetweenStatementsInBlocks.IsChecked = tsqlCodeFormatSettings.addNewLineBetweenStatementsInBlocks;
                 BreakSprocParametersPerLine.IsChecked = tsqlCodeFormatSettings.breakSprocParametersPerLine;
+                UppercaseBuiltInFunctions.IsChecked = tsqlCodeFormatSettings.uppercaseBuiltInFunctions;
 
                 OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
 
@@ -284,7 +285,8 @@ end
                 moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
                 formatCaseAsMultiline = FormatCaseAsMultiline.IsChecked.GetValueOrDefault(false),
                 addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false),
-                breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false)
+                breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false),
+                uppercaseBuiltInFunctions = UppercaseBuiltInFunctions.IsChecked.GetValueOrDefault(false)
             };
 
             SettingsManager.SaveTSqlCodeFormatSettings(settings);
@@ -388,7 +390,8 @@ end
                 moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
                 formatCaseAsMultiline = FormatCaseAsMultiline.IsChecked.GetValueOrDefault(false),
                 addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false),
-                breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false)
+                breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false),
+                uppercaseBuiltInFunctions = UppercaseBuiltInFunctions.IsChecked.GetValueOrDefault(false)
             };
 
             FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, settings);

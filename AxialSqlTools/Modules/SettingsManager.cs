@@ -289,6 +289,7 @@ ORDER BY sd.[name];
             public bool formatCaseAsMultiline = false;
             public bool addNewLineBetweenStatementsInBlocks = false;
             public bool breakSprocParametersPerLine = false;
+            public bool uppercaseBuiltInFunctions = false;
             public bool HasAnyFormattingEnabled()
             {
                 return removeNewLineAfterJoin
@@ -296,7 +297,8 @@ ORDER BY sd.[name];
                     || moveCrossJoinToNewLine
                     || formatCaseAsMultiline
                     || addNewLineBetweenStatementsInBlocks
-                    || breakSprocParametersPerLine;
+                    || breakSprocParametersPerLine
+                    || uppercaseBuiltInFunctions;
             }
         }
 

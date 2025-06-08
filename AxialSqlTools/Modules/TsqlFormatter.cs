@@ -16,6 +16,7 @@ namespace AxialSqlTools
             public List<SearchedCaseExpression> CaseExpressions = new List<SearchedCaseExpression>();
             public List<StatementList> ProcBodies = new List<StatementList>();
             public List<ExecuteStatement> ExecStatements = new List<ExecuteStatement>();
+            public List<FunctionCall> FunctionCalls = new List<FunctionCall>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -163,6 +164,12 @@ namespace AxialSqlTools
             {
                 base.ExplicitVisit(node);
                 ExecStatements.Add(node);
+            }
+
+            public override void ExplicitVisit(FunctionCall node)
+            {
+                base.ExplicitVisit(node);
+                FunctionCalls.Add(node);
             }
 
         }
@@ -652,6 +659,29 @@ namespace AxialSqlTools
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // special case #7 - uppercase built-in function names
+            if (formatSettings.uppercaseBuiltInFunctions)
+            {
+                var tokens = sqlFragment.ScriptTokenStream;
+                foreach (var func in visitor.FunctionCalls)
+                {
+                    // skip if schema-qualified (e.g. dbo.MyFunc)
+                    if (func.CallTarget != null)
+                        continue;
+
+                    // FunctionName spans one or more identifier tokens immediately before "("
+                    int start = func.FunctionName.FirstTokenIndex;
+                    int end = func.FunctionName.LastTokenIndex;
+
+                    for (int i = start; i <= end; i++)
+                    {
+                        var tok = tokens[i];
+                        if (tok.TokenType == TSqlTokenType.Identifier)
+                            tok.Text = tok.Text.ToUpperInvariant();
                     }
                 }
             }
