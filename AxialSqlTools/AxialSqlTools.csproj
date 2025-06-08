@@ -53,6 +53,11 @@
     <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
       <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DatabaseScripter\DatabaseScripterToolWindow.cs" />
+    <Compile Include="DatabaseScripter\DatabaseScripterToolWindowCommand.cs" />
+    <Compile Include="DatabaseScripter\DatabaseScripterToolWindowControl.xaml.cs">
+      <DependentUpon>DatabaseScripterToolWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Modules\AuroraCore.cs" />
     <Compile Include="Commands\CheckAddinVersionCommand.cs" />
     <Compile Include="Commands\CommandProcessor.cs" />
@@ -221,6 +226,7 @@
     <Content Include="Resources\attention.png" />
     <Content Include="Resources\chat.png" />
     <Content Include="Resources\data-source-target.png" />
+    <Content Include="Resources\database-scripter.png" />
     <Content Include="Resources\export-data.png" />
     <Content Include="Resources\grid-to-email.png" />
     <Content Include="Resources\grid-to-temp-table.png" />
@@ -243,6 +249,10 @@
     <Page Include="AskChatGPT\AskChatGptWindowControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="DatabaseScripter\DatabaseScripterToolWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="DataTransfer\DataTransferWindowControl.xaml">
       <SubType>Designer</SubType>

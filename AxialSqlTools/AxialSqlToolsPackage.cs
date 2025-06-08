@@ -63,6 +63,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(AskChatGptWindow))]
     [ProvideToolWindow(typeof(SqlServerBuildsWindow))]
     [ProvideToolWindow(typeof(QueryHistoryWindow))]
+    [ProvideToolWindow(typeof(DatabaseScripterToolWindow))]
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
 
@@ -284,6 +285,7 @@ namespace AxialSqlTools
                 await AskChatGptCommand.InitializeAsync(this);
                 await SqlServerBuildsWindowCommand.InitializeAsync(this);
                 await QueryHistoryWindowCommand.InitializeAsync(this);
+                await DatabaseScripterToolWindowCommand.InitializeAsync(this);
 
             }
             catch (Exception ex)
@@ -396,7 +398,7 @@ namespace AxialSqlTools
             }
 
             // needed for the OxyPlot library
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);           
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);     
             
         }
 

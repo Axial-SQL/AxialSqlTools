@@ -225,6 +225,16 @@
         </Strings>
       </Button>
 
+      <!-- WIP -->
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDatabaseScripterCommand" priority="0x0000" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
+        <Icon guid="guidDatabaseScripter" id="bmpDatabaseScripter" />
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings>
+          <ButtonText>Database Scripter</ButtonText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialAskChatGptCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_AI" />
         <Icon guid="guidChat" id="bmpChat" />
@@ -288,8 +298,8 @@
         <Strings>
           <ButtonText>New Version Available!</ButtonText>
         </Strings>
-      </Button>
-   
+      </Button>   
+
     </Buttons>
 
     <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
@@ -314,23 +324,19 @@
       <Bitmap guid="guidOpenFolder" href="Resources\open-folder.png" usedList="bmpOpenFolder" />
       <Bitmap guid="guidChat" href="Resources\chat.png" usedList="bmpChat" />
       <Bitmap guid="guidSqlBuildInfo" href="Resources\sql-build-info.png" usedList="bmpSqlBuildInfo" />
-    </Bitmaps>
+      <Bitmap guid="guidDatabaseScripter" href="Resources\database-scripter.png" usedList="bmpDatabaseScripter" />
+  </Bitmaps>
 
     
   </Commands>
 
 
   <KeyBindings>
-    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialFormatQueryButton" 
-                editor="guidVSStd97" key1="F" mod1="Control Shift Alt"/>
-    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" 
-                editor="guidVSStd97" key1="E" mod1="Control Shift Alt"/>
-    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcelAndEmail" 
-                editor="guidVSStd97" key1="M" mod1="Control Shift Alt"/>
-    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" 
-                editor="guidVSStd97" key1="S" mod1="Control Shift Alt"/>
-    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" 
-                editor="guidVSStd97" key1="T" mod1="Control Shift Alt"/>
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialFormatQueryButton" editor="guidVSStd97" key1="F" mod1="Control Shift Alt" />
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" editor="guidVSStd97" key1="E" mod1="Control Shift Alt" />
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcelAndEmail" editor="guidVSStd97" key1="M" mod1="Control Shift Alt" />
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" editor="guidVSStd97" key1="S" mod1="Control Shift Alt" />
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" editor="guidVSStd97" key1="T" mod1="Control Shift Alt" />
 
   </KeyBindings>
 
@@ -380,7 +386,9 @@
 
       <IDSymbol name="AxialAskChatGptCommand" value="4146" />
       
-      <IDSymbol name="AxialSqlServerBuildsCommand" value="4147" />            
+      <IDSymbol name="AxialSqlServerBuildsCommand" value="4147" />
+
+      <IDSymbol name="AxialDatabaseScripterCommand" value="4148" />
 
     </GuidSymbol>
 
@@ -428,6 +436,9 @@
     </GuidSymbol>
     <GuidSymbol name="guidSqlBuildInfo" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d5}">
       <IDSymbol name="bmpSqlBuildInfo" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidDatabaseScripter" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d6}">
+      <IDSymbol name="bmpDatabaseScripter" value="1" />
     </GuidSymbol>
 
   </Symbols>
