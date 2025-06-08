@@ -82,6 +82,7 @@ namespace AxialSqlTools
                 IncludeIfNotExists = false,
                 ScriptSchema = true,
                 DriAll = true,   // script out keys, indexes, FKs, etc.
+                Indexes = true,
                 SchemaQualify = true,
                 NoCollation = false,
                 AnsiFile = false,
@@ -93,7 +94,7 @@ namespace AxialSqlTools
             //
             // Helper function to write out an SMO UrnCollection (script lines) to a file.
             //
-            void WriteScriptToFile(UrnCollection urns, string targetPath)
+            void WriteScriptToFile(UrnCollection urns, string targetPath, bool formatCode = false)
             {
                 // The Scripter will produce a StringCollection of lines.
                 var scripter = new Scripter(server)
@@ -104,6 +105,11 @@ namespace AxialSqlTools
                 var scriptLines = scripter.Script(urns);
                 // Combine lines into one string with Environment.NewLine
                 string singleScript = string.Join(Environment.NewLine, scriptLines.Cast<string>().ToArray());
+
+                if (formatCode)
+                {                   
+                    singleScript = TSqlFormatter.FormatCode(singleScript);
+                }   
 
                 File.WriteAllText(targetPath, singleScript);
             }
@@ -119,7 +125,7 @@ namespace AxialSqlTools
                 // URN for this table
                 var urns = new UrnCollection { table.Urn };
                 string outFile = Path.Combine(dbFolderPath, "Tables", $"{table.Schema}.{table.Name}.sql");
-                WriteScriptToFile(urns, outFile);
+                WriteScriptToFile(urns, outFile, formatCode: true);
                 Console.WriteLine($"[Table]           {table.Schema}.{table.Name}  →  {outFile}");
             }
 
