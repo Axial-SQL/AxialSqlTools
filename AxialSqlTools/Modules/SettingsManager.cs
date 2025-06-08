@@ -10,7 +10,9 @@ using Newtonsoft.Json;
 
 namespace AxialSqlTools
 {
-    class SettingsManager
+
+
+    public class SettingsManager
     {
 
         public class HealthDashboardServerQueryTexts

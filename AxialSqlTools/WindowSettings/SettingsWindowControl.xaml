@@ -260,7 +260,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0"
@@ -275,23 +275,33 @@
 
                     <CheckBox Grid.Row="1" Margin="5"
                         x:Name="RemoveNewLineAfterJoin"
-                        Content="Remove new line after JOIN"/>
+                        Content="Remove new line after JOIN" 
+                        Checked="formatSetting_Checked"
+                        Unchecked="formatSetting_Unchecked"/>
 
                     <CheckBox Grid.Row="2" Margin="5"
                         x:Name="AddTabAfterJoinOn"
-                        Content="Add tab after JOIN..ON"/>
+                        Content="Add tab after JOIN..ON" 
+                        Checked="formatSetting_Checked"
+                        Unchecked="formatSetting_Unchecked"/>
 
                     <CheckBox Grid.Row="3" Margin="5"
                         x:Name="MoveCrossJoinToNewLine"
-                        Content="Place CROSS JOIN on a new line"/>
+                        Content="Place CROSS JOIN on a new line" 
+                        Checked="formatSetting_Checked"
+                        Unchecked="formatSetting_Unchecked"/>
 
                     <CheckBox Grid.Row="4" Margin="5"
                         x:Name="FormatCaseAsMultiline"
-                        Content="Format CASE expression as multiline"/>
+                        Content="Format CASE expression as multiline" 
+                        Checked="formatSetting_Checked"
+                        Unchecked="formatSetting_Unchecked"/>
 
                     <CheckBox Grid.Row="5" Margin="5"
                         x:Name="AddNewLineBetweenStatementsInBlocks"
-                        Content="Add new line between statements in code blocks"/>
+                        Content="Add new line between statements in code blocks" 
+                        Checked="formatSetting_Checked"
+                        Unchecked="formatSetting_Unchecked"/>
 
                     <Button
 						Grid.Row="6"
@@ -311,6 +321,55 @@
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+
+                    <!--
+                    <Button
+                        Grid.Row="7"
+                        x:Name="button_ApplyCodeFormatting"
+                        Width="100"
+                        Height="24"
+                        Margin="5"
+                        HorizontalAlignment="Left"
+                        FontWeight="Bold" Click="button_ApplyCodeFormatting_Click">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Image
+                                Source="pack://application:,,,/AxialSqlTools;component/Resources/play.png"
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,4,0"/>
+                            <TextBlock Text="Try it" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    -->
+
+                    <Grid Grid.Row="8" >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <GroupBox Header="Source query" Grid.Column="0">
+                            <TextBox x:Name="SourceQueryPreview"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 TextWrapping="Wrap"
+                                 FontFamily="Consolas"
+                                 FontSize="12"/>
+                        </GroupBox>
+
+                        <GroupBox Header="Formatted query" Grid.Column="1">
+                            <TextBox x:Name="FormattedQueryPreview"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 TextWrapping="Wrap"
+                                 FontFamily="Consolas"
+                                 FontSize="12"
+                                 IsReadOnly="True"/>
+                        </GroupBox>
+                    </Grid>
+
                 </Grid>
             </TabItem>
 

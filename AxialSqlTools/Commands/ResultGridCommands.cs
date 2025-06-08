@@ -32,8 +32,6 @@ namespace AxialSqlTools
 
     internal sealed class ResultGridCopyAsInsertCommand : ResultGridCommandBase
     {
-        private static string templates;
-        private readonly AsyncPackage package;
 
         static ResultGridCopyAsInsertCommand()
         {

@@ -14,6 +14,7 @@
     using System.Windows.Controls;
     using System.Windows.Documents;
     using System.Windows.Input;
+    using static AxialSqlTools.AxialSqlToolsPackage;
 
 
     /// <summary>
@@ -254,7 +255,7 @@
             }
             catch (Exception ex)
             {
-                
+                _logger.Error(ex, "Error while fetching Database Mail Profiles from the server.");
             }
 
             if (EmailServerOptions.Items.Count > 0)
@@ -320,7 +321,8 @@
                     Port = smtpSettings.Port,
                     EnableSsl = smtpSettings.EnableSsl,
                     DeliveryMethod = SmtpDeliveryMethod.Network,
-                    UseDefaultCredentials = false
+                    UseDefaultCredentials = false,
+                    Timeout = 5000 // timeout in milliseconds (e.g., 5 sec)
                 };
 
                 if (!string.IsNullOrEmpty(smtpSettings.Username))
@@ -353,7 +355,9 @@
                     File.Delete(exportedFilename);
                 }
                 catch (Exception exFile)
-                { }
+                {
+                    _logger.Error(exFile, "Error while deleting the exported file after sending the email.");
+                }
 
                 return true;
 

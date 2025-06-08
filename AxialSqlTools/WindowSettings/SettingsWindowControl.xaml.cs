@@ -19,6 +19,20 @@
     {
 
         private string _queryHistoryConnectionString;
+
+        private string tsqlFormatExample = @"
+while (1=0) 
+begin 
+select 
+    c.CustomerID, o.OrderID,
+    CASE WHEN o.TotalAmount > 1000 THEN 'High' WHEN o.TotalAmount > 500 THEN 'Medium' ELSE 'Low' END AS OrderSize
+FROM Customers c
+JOIN Orders o ON c.CustomerID = o.CustomerID CROSS JOIN Regions r
+WHERE c.IsActive = 1;
+
+SELECT p.ProductID, p.ProductName FROM Products p;
+end
+";
         /// <summary>
         /// Initializes a new instance of the <see cref="SettingsWindowControl"/> class.
         /// </summary>
@@ -29,6 +43,10 @@
             LoadSavedSettings();
 
             this.Loaded += UserControl_Loaded;
+
+            SourceQueryPreview.Text = tsqlFormatExample;
+
+            formatTSqlExample();
 
         }
 
@@ -357,6 +375,30 @@
 
             UpdateQueryHistoryConnectionDetails();
 
+        }
+
+        private void formatTSqlExample()
+        {
+            var settings = new SettingsManager.TSqlCodeFormatSettings
+            {
+                removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
+                addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
+                moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
+                formatCaseAsMultiline = FormatCaseAsMultiline.IsChecked.GetValueOrDefault(false),
+                addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false)
+            };
+
+            FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, settings);
+        }
+
+        private void formatSetting_Checked(object sender, RoutedEventArgs e)
+        {
+            formatTSqlExample();
+        }
+
+        private void formatSetting_Unchecked(object sender, RoutedEventArgs e)
+        {
+            formatTSqlExample();
         }
     }
 }
