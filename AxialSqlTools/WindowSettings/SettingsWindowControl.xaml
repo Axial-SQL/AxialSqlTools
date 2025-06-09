@@ -261,6 +261,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -315,9 +316,15 @@
                         Content="Always upper-case built-in functions" 
                         Checked="formatSetting_Checked"
                         Unchecked="formatSetting_Unchecked"/>
+                    
+                    <CheckBox Grid.Row="8" Margin="5"
+                         x:Name="UnindentBeginEndBlocks"
+                         Content="Unindent Begin..End blocks" 
+                         Checked="formatSetting_Checked"
+                         Unchecked="formatSetting_Unchecked"/>
 
                     <Button
-						Grid.Row="8"
+						Grid.Row="9"
 						x:Name="button_SaveApplyAdditionalFormat"
 						Click="Button_SaveApplyAdditionalFormat_Click"
 						Width="80" 
@@ -355,7 +362,7 @@
                     </Button>
                     -->
 
-                    <Grid Grid.Row="9" >
+                    <Grid Grid.Row="10" >
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />

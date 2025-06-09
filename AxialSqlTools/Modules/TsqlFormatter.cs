@@ -1,8 +1,10 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml.EMMA;
+using Microsoft.SqlServer.Management.Smo;
+using Microsoft.SqlServer.TransactSql.ScriptDom;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using static AxialSqlTools.AxialSqlToolsPackage;
 
 namespace AxialSqlTools
@@ -17,6 +19,7 @@ namespace AxialSqlTools
             public List<StatementList> ProcBodies = new List<StatementList>();
             public List<ExecuteStatement> ExecStatements = new List<ExecuteStatement>();
             public List<FunctionCall> FunctionCalls = new List<FunctionCall>();
+            public List<BeginEndBlockStatement> BeginEndBlocks = new List<BeginEndBlockStatement>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -171,6 +174,12 @@ namespace AxialSqlTools
                 base.ExplicitVisit(node);
                 FunctionCalls.Add(node);
             }
+
+            public override void ExplicitVisit(BeginEndBlockStatement node)
+            {
+                base.ExplicitVisit(node);
+                BeginEndBlocks.Add(node);
+            }    
 
         }
 
@@ -686,6 +695,29 @@ namespace AxialSqlTools
                 }
             }
 
+            // special case #8 – do not indent BEGIN/END in control‐flow
+            if (formatSettings.unindentBeginEndBlocks)
+            {
+                // adjust to "\t" if you indent with tabs
+                string indentString = new string(' ', 4);
+
+                foreach (var beb in visitor.BeginEndBlocks)
+                {
+                    // include the whitespace before BEGIN (at FirstTokenIndex-1)
+                    // and every whitespace token up through the token before END
+                    int startIdx = Math.Max(0, beb.FirstTokenIndex - 1);
+                    int endIdx = Math.Max(0, beb.LastTokenIndex - 1);
+
+                    for (int ti = startIdx; ti <= endIdx && ti < sqlFragment.ScriptTokenStream.Count; ti++)
+                    {
+                        var tok = sqlFragment.ScriptTokenStream[ti];
+                        if (tok.TokenType == TSqlTokenType.WhiteSpace)
+                            tok.Text = RemoveOneIndent(tok.Text, indentString);
+                    }
+                }
+
+            }
+
             // return full recompiled result
             StringBuilder sqlText = new StringBuilder();
             foreach (var Token in sqlFragment.ScriptTokenStream)
@@ -695,5 +727,28 @@ namespace AxialSqlTools
 
             return sqlText.ToString();
         }
+
+        // Helper: for a whitespace token that looks like "\r\n    …",
+        // remove exactly one instance of indentString after each newline.
+        private static string RemoveOneIndent(string wsText, string indentString)
+        {
+            var lines = wsText.Split(new[] { "\r\n" }, StringSplitOptions.None);
+            // if it’s just spaces/tabs, drop one indent if present
+            if (lines.Length == 1)
+            {
+                return lines[0].StartsWith(indentString)
+                    ? lines[0].Substring(indentString.Length)
+                    : lines[0];
+            }
+            // otherwise for each line after the first, drop one indent if present
+            for (int i = 1; i < lines.Length; i++)
+            {
+                if (lines[i].StartsWith(indentString))
+                    lines[i] = lines[i].Substring(indentString.Length);
+            }
+            return string.Join("\r\n", lines);
+        }
+
+
     }
 }
