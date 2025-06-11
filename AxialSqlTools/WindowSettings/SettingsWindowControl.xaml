@@ -319,8 +319,13 @@
                         <CheckBox x:Name="BreakSprocDefinitionParametersPerLine" Margin="5"
                               Content="Break sproc definition parameters per line" 
                               Checked="formatSetting_Checked"
-                              Unchecked="formatSetting_Unchecked"/>                        
-                        
+                              Unchecked="formatSetting_Unchecked"/>
+                        <!-- TODO -->
+                        <CheckBox x:Name="BreakSelectFieldsAfterTopAndUnindent" Margin="5" Visibility="Hidden"
+                              Content="Break SELECT fields after TOP and unindent" 
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+
                     </UniformGrid>
 
                     <Button

@@ -1,6 +1,4 @@
-﻿using DocumentFormat.OpenXml.EMMA;
-using Microsoft.SqlServer.Management.Smo;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
+﻿using Microsoft.SqlServer.TransactSql.ScriptDom;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,6 +23,7 @@ namespace AxialSqlTools
             public List<CreateProcedureStatement> SprocDefinitionsCreate = new List<CreateProcedureStatement>();
             public List<AlterProcedureStatement> SprocDefinitionsAlter = new List<AlterProcedureStatement>();
             public List<CreateOrAlterProcedureStatement> SprocDefinitionsCreateAlter = new List<CreateOrAlterProcedureStatement>();
+            public List<QuerySpecification> SelectsWithTop = new List<QuerySpecification>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -195,6 +194,12 @@ namespace AxialSqlTools
                 DeclareStatements.Add(node);
             }
 
+            public override void ExplicitVisit(QuerySpecification node)
+            {
+                base.ExplicitVisit(node);
+                if (node.TopRowFilter != null)
+                    SelectsWithTop.Add(node);
+            }
         }
 
         /// <summary>
@@ -824,6 +829,45 @@ namespace AxialSqlTools
                 foreach (var proc in visitor.SprocDefinitionsCreateAlter)
                     SplitParams(proc.Parameters);
 
+            }
+
+            // special case #11 - split SELECT fields after TOP, fixed indent up to FROM
+            // TODO - can't get this right, so disabled for now
+            if (formatSettings.breakSelectFieldsAfterTopAndUnindent)
+            {
+                //var tokens = sqlFragment.ScriptTokenStream;
+                //const string indent = "\t";
+
+                //foreach (var qs in visitor.SelectsWithTop)
+                //{
+                //    // 1) break right after TOP(...) into "\r\n\t"
+                //    int splitIdx = qs.TopRowFilter.LastTokenIndex + 1;
+                //    if (splitIdx < tokens.Count
+                //     && tokens[splitIdx].TokenType == TSqlTokenType.WhiteSpace)
+                //    {
+                //        tokens[splitIdx].Text = "\r\n" + indent;
+                //    }
+
+                //    //// 2) for every select‐element after the first, break before it into "\r\n\t"
+                //    //for (int i = 1; i < qs.SelectElements.Count; i++)
+                //    //{
+                //    //    var elem = qs.SelectElements[i];
+                //    //    int wsIdx = elem.FirstTokenIndex - 1;
+                //    //    if (wsIdx >= 0
+                //    //     && tokens[wsIdx].TokenType == TSqlTokenType.WhiteSpace)
+                //    //    {
+                //    //        tokens[wsIdx].Text = "\r\n" + indent;
+                //    //    }
+                //    //}
+
+                //    //// 3) unindent FROM back to column 1
+                //    //int wsBeforeFrom = qs.FromClause.FirstTokenIndex - 1;
+                //    //if (wsBeforeFrom >= 0
+                //    // && tokens[wsBeforeFrom].TokenType == TSqlTokenType.WhiteSpace)
+                //    //{
+                //    //    tokens[wsBeforeFrom].Text = "\r\n";
+                //    //}
+                //}
             }
 
             // return full recompiled result

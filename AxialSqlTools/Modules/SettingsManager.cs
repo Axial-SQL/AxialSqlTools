@@ -293,6 +293,7 @@ ORDER BY sd.[name];
             public bool unindentBeginEndBlocks = false;
             public bool breakVariableDefinitionsPerLine = false;
             public bool breakSprocDefinitionParametersPerLine = false;
+            public bool breakSelectFieldsAfterTopAndUnindent = false;
 
             public bool HasAnyFormattingEnabled()
             {
@@ -305,7 +306,8 @@ ORDER BY sd.[name];
                     || uppercaseBuiltInFunctions
                     || unindentBeginEndBlocks
                     || breakVariableDefinitionsPerLine
-                    || breakSprocDefinitionParametersPerLine;
+                    || breakSprocDefinitionParametersPerLine
+                    || breakSelectFieldsAfterTopAndUnindent;
             }
         }
 
