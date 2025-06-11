@@ -24,7 +24,7 @@
 begin 
 select top 10
     c.CustomerID, getDate(),
-    CASE WHEN o.TotalAmount > 1000 THEN 'High' WHEN o.TotalAmount > 500 THEN 'Medium' ELSE 'Low' END AS OrderSize
+    CASE WHEN o.TotalAmount > 1000 THEN 'High' ELSE 'Low' END AS OrderSize
 FROM Customers c
 JOIN Orders o ON c.CustomerID = o.CustomerID CROSS JOIN Regions r
 WHERE c.IsActive = 1;
@@ -95,7 +95,7 @@ as select 1;
                 UnindentBeginEndBlocks.IsChecked = tsqlCodeFormatSettings.unindentBeginEndBlocks;
                 BreakVariableDefinitionsPerLine.IsChecked = tsqlCodeFormatSettings.breakVariableDefinitionsPerLine;  
                 BreakSprocDefinitionParametersPerLine.IsChecked = tsqlCodeFormatSettings.breakSprocDefinitionParametersPerLine;
-                BreakSelectFieldsAfterTopAndUnindent.IsChecked = tsqlCodeFormatSettings.breakSelectFieldsAfterTopAndUnindent;
+                // BreakSelectFieldsAfterTopAndUnindent.IsChecked = tsqlCodeFormatSettings.breakSelectFieldsAfterTopAndUnindent;
 
                 OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
 
@@ -143,20 +143,6 @@ as select 1;
                 }
             }
         }
-
-        ///// <summary>
-        ///// Handles click on the button by displaying a message box.
-        ///// </summary>
-        ///// <param name="sender">The event sender.</param>
-        ///// <param name="e">The event args.</param>
-        //[SuppressMessage("Microsoft.Globalization", "CA1300:SpecifyMessageBoxOptions", Justification = "Sample code")]
-        //[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Default event handler naming pattern")]
-        //private void button1_Click(object sender, RoutedEventArgs e)
-        //{
-        //    MessageBox.Show(
-        //        string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Invoked '{0}'", this.ToString()),
-        //        "SettingsWindow");
-        //}
 
         private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)
         {
@@ -298,7 +284,7 @@ as select 1;
                 unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false),
                 breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked.GetValueOrDefault(false),
                 breakSprocDefinitionParametersPerLine = BreakSprocDefinitionParametersPerLine.IsChecked.GetValueOrDefault(false),
-                breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
+                // breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
             };
 
             SettingsManager.SaveTSqlCodeFormatSettings(settings);
@@ -407,7 +393,7 @@ as select 1;
                 unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false),
                 breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked.GetValueOrDefault(false),
                 breakSprocDefinitionParametersPerLine = BreakSprocDefinitionParametersPerLine.IsChecked.GetValueOrDefault(false),
-                breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
+                // breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
             };
 
             FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, settings);
