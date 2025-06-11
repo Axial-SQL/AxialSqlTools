@@ -22,7 +22,7 @@
 
         private string tsqlFormatExample = @"while (1=0) 
 begin 
-select 
+select top 10
     c.CustomerID, getDate(),
     CASE WHEN o.TotalAmount > 1000 THEN 'High' WHEN o.TotalAmount > 500 THEN 'Medium' ELSE 'Low' END AS OrderSize
 FROM Customers c
@@ -31,8 +31,11 @@ WHERE c.IsActive = 1;
 
 SELECT dbo.func(p.ProductID), p.ProductName FROM Products p; EXEC dbo.test @a = 0, @b = 1;
 end
-if 1=0 begin select 1; 
+if 1=0 begin select 1; declare @a int, @b varchar(10) = ''
 end
+go
+create procedure dbo.test @a int, @b int = 0
+as select 1;
 ";
         /// <summary>
         /// Initializes a new instance of the <see cref="SettingsWindowControl"/> class.
@@ -90,6 +93,7 @@ end
                 BreakSprocParametersPerLine.IsChecked = tsqlCodeFormatSettings.breakSprocParametersPerLine;
                 UppercaseBuiltInFunctions.IsChecked = tsqlCodeFormatSettings.uppercaseBuiltInFunctions;
                 UnindentBeginEndBlocks.IsChecked = tsqlCodeFormatSettings.unindentBeginEndBlocks;
+                BreakVariableDefinitionsPerLine.IsChecked = tsqlCodeFormatSettings.breakVariableDefinitionsPerLine;  
 
                 OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
 
@@ -289,7 +293,8 @@ end
                 addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false),
                 breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false),
                 uppercaseBuiltInFunctions = UppercaseBuiltInFunctions.IsChecked.GetValueOrDefault(false),
-                unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false)
+                unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false),
+                breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked.GetValueOrDefault(false)
             };
 
             SettingsManager.SaveTSqlCodeFormatSettings(settings);
@@ -395,7 +400,8 @@ end
                 addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false),
                 breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false),
                 uppercaseBuiltInFunctions = UppercaseBuiltInFunctions.IsChecked.GetValueOrDefault(false),
-                unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false)
+                unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false),
+                breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked.GetValueOrDefault(false)
             };
 
             FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, settings);

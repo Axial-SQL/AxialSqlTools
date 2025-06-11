@@ -20,6 +20,8 @@ namespace AxialSqlTools
             public List<ExecuteStatement> ExecStatements = new List<ExecuteStatement>();
             public List<FunctionCall> FunctionCalls = new List<FunctionCall>();
             public List<BeginEndBlockStatement> BeginEndBlocks = new List<BeginEndBlockStatement>();
+            public List<DeclareVariableStatement> DeclareStatements = new List<DeclareVariableStatement>();
+
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -179,7 +181,13 @@ namespace AxialSqlTools
             {
                 base.ExplicitVisit(node);
                 BeginEndBlocks.Add(node);
-            }    
+            }
+
+            public override void ExplicitVisit(DeclareVariableStatement node)
+            {
+                base.ExplicitVisit(node);
+                DeclareStatements.Add(node);
+            }
 
         }
 
@@ -716,6 +724,56 @@ namespace AxialSqlTools
                     }
                 }
 
+            }
+
+            // special case #9 - break DECLARE variables per line
+            if (formatSettings.breakVariableDefinitionsPerLine)
+            {
+                var tokens = sqlFragment.ScriptTokenStream;
+                foreach (var decl in visitor.DeclareStatements)
+                {
+                    // only split if more than one variable
+                    if (decl.Declarations.Count > 1)
+                    {
+                        // figure out how much indent DECLARE already has
+                        string baseIndent = "";
+                        int wsBefore = decl.FirstTokenIndex - 1;
+                        if (wsBefore >= 0 && tokens[wsBefore].TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            var txt = tokens[wsBefore].Text;
+                            int lastNl = txt.LastIndexOf("\r\n");
+                            baseIndent = lastNl >= 0
+                                ? txt.Substring(lastNl + 2)
+                                : txt;
+                        }
+
+                        // 1) break after the first declaration
+                        int endOfFirst = decl.Declarations[0].LastTokenIndex + 1;
+                        if (endOfFirst < tokens.Count && tokens[endOfFirst].TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            tokens[endOfFirst].Text = "\r\n"
+                                                     + baseIndent
+                                                     + "\t";
+                        }
+
+                        // 2) for each comma in the DECLARE, break+indent
+                        for (int i = decl.FirstTokenIndex; i <= decl.LastTokenIndex; i++)
+                        {
+                            if (tokens[i].TokenType == TSqlTokenType.Comma)
+                            {
+                                int afterComma = i + 1;
+                                if (afterComma < tokens.Count
+                                    && tokens[afterComma].TokenType == TSqlTokenType.WhiteSpace)
+                                {
+                                    tokens[afterComma].Text = " "       // keep a space
+                                                               + "\r\n"
+                                                               + baseIndent
+                                                               + "\t";
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // return full recompiled result

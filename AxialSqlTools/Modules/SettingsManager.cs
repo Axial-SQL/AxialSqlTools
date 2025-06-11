@@ -291,6 +291,8 @@ ORDER BY sd.[name];
             public bool breakSprocParametersPerLine = false;
             public bool uppercaseBuiltInFunctions = false;
             public bool unindentBeginEndBlocks = false;
+            public bool breakVariableDefinitionsPerLine = false;
+            
             public bool HasAnyFormattingEnabled()
             {
                 return removeNewLineAfterJoin
@@ -300,7 +302,8 @@ ORDER BY sd.[name];
                     || addNewLineBetweenStatementsInBlocks
                     || breakSprocParametersPerLine
                     || uppercaseBuiltInFunctions
-                    || unindentBeginEndBlocks;
+                    || unindentBeginEndBlocks
+                    || breakVariableDefinitionsPerLine;
             }
         }
 

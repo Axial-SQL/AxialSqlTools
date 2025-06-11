@@ -312,6 +312,10 @@
                               Content="Unindent Begin..End blocks" 
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="BreakVariableDefinitionsPerLine" Margin="5"
+                              Content="Break variable definitions per line" 
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
                     </UniformGrid>
 
                     <Button
