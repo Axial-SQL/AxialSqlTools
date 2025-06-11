@@ -4,6 +4,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using static AxialSqlTools.AxialSqlToolsPackage;
 
@@ -21,7 +22,9 @@ namespace AxialSqlTools
             public List<FunctionCall> FunctionCalls = new List<FunctionCall>();
             public List<BeginEndBlockStatement> BeginEndBlocks = new List<BeginEndBlockStatement>();
             public List<DeclareVariableStatement> DeclareStatements = new List<DeclareVariableStatement>();
-
+            public List<CreateProcedureStatement> SprocDefinitionsCreate = new List<CreateProcedureStatement>();
+            public List<AlterProcedureStatement> SprocDefinitionsAlter = new List<AlterProcedureStatement>();
+            public List<CreateOrAlterProcedureStatement> SprocDefinitionsCreateAlter = new List<CreateOrAlterProcedureStatement>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -105,6 +108,7 @@ namespace AxialSqlTools
             public override void ExplicitVisit(CreateProcedureStatement node)
             {
                 base.ExplicitVisit(node);
+                SprocDefinitionsCreate.Add(node);
                 if (node.StatementList != null)
                     ProcBodies.Add(node.StatementList);
             }
@@ -126,6 +130,7 @@ namespace AxialSqlTools
             public override void ExplicitVisit(AlterProcedureStatement node)
             {
                 base.ExplicitVisit(node);
+                SprocDefinitionsAlter.Add(node);
                 if (node.StatementList != null)
                     ProcBodies.Add(node.StatementList);
             }
@@ -147,6 +152,7 @@ namespace AxialSqlTools
             public override void ExplicitVisit(CreateOrAlterProcedureStatement node)
             {
                 base.ExplicitVisit(node);
+                SprocDefinitionsCreateAlter.Add(node);
                 if (node.StatementList != null)
                     ProcBodies.Add(node.StatementList);
             }
@@ -774,6 +780,50 @@ namespace AxialSqlTools
                         }
                     }
                 }
+            }
+
+            // special case #10 - split sproc definition parameters per line + add one tab
+            if (formatSettings.breakSprocDefinitionParametersPerLine)
+            {
+                var tokens = sqlFragment.ScriptTokenStream;
+                const string indent = "\t";
+
+                // helper to process any one proc‐definition
+                void SplitParams(IList<ProcedureParameter> parameters)
+                {
+                    if (parameters.Count <= 1)
+                        return;
+
+                    // break before the very first param
+                    int wsIdx = parameters[0].FirstTokenIndex - 1;
+                    if (wsIdx >= 0 && tokens[wsIdx].TokenType == TSqlTokenType.WhiteSpace)
+                        tokens[wsIdx].Text = "\r\n" + indent;
+
+                    // now break at every comma
+                    int start = parameters.First().FirstTokenIndex;
+                    int end = parameters.Last().LastTokenIndex;
+                    for (int i = start; i <= end; i++)
+                    {
+                        if (tokens[i].TokenType == TSqlTokenType.Comma)
+                        {
+                            int after = i + 1;
+                            if (after < tokens.Count
+                             && tokens[after].TokenType == TSqlTokenType.WhiteSpace)
+                                tokens[after].Text = " "      // keep one space
+                                                   + "\r\n"
+                                                   + indent;
+                        }
+                    }
+                }
+
+                // apply to all three collections
+                foreach (var proc in visitor.SprocDefinitionsCreate)
+                    SplitParams(proc.Parameters);
+                foreach (var proc in visitor.SprocDefinitionsAlter)
+                    SplitParams(proc.Parameters);
+                foreach (var proc in visitor.SprocDefinitionsCreateAlter)
+                    SplitParams(proc.Parameters);
+
             }
 
             // return full recompiled result

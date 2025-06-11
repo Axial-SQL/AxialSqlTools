@@ -301,7 +301,7 @@
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
                         <CheckBox x:Name="BreakSprocParametersPerLine" Margin="5"
-                              Content="Break sproc parameters per line" 
+                              Content="Break exec sproc parameters per line" 
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
                         <CheckBox x:Name="UppercaseBuiltInFunctions" Margin="5"
@@ -316,6 +316,11 @@
                               Content="Break variable definitions per line" 
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="BreakSprocDefinitionParametersPerLine" Margin="5"
+                              Content="Break sproc definition parameters per line" 
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>                        
+                        
                     </UniformGrid>
 
                     <Button
