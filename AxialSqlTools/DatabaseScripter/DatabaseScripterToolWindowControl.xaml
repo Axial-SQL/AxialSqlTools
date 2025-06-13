@@ -3,14 +3,44 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300"
+             d:DesignHeight="400" d:DesignWidth="400"
              Name="MyToolWindow">
-    <Grid>
-        <StackPanel Orientation="Vertical">
-            <TextBlock Margin="10" HorizontalAlignment="Center">DatabaseScripterToolWindow</TextBlock>
-            <Button Content="Script out" Click="button1_Click" Width="120" Height="80" Name="button1"/>
+    <Grid Margin="10">
+        <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="8">
+            <TextBlock Text="Database Scripter And GitHub Committer" 
+                       FontSize="18" 
+                       HorizontalAlignment="Center"/>
+
+            <!-- GitHub parameters -->
+            <StackPanel Orientation="Horizontal" Margin="4">
+                <TextBlock Text="Owner:" Width="60"/>
+                <TextBox Name="OwnerTextBox" Width="200" Text="alex-bochkov"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="4">
+                <TextBlock Text="Repo:" Width="60"/>
+                <TextBox Name="RepoTextBox" Width="200" Text="db-repo-test"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="4">
+                <TextBlock Text="Branch:" Width="60"/>
+                <TextBox Name="BranchTextBox" Width="200" Text="main"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="4">
+                <TextBlock Text="Commit Msg:" Width="60"/>
+                <TextBox Name="MessageTextBox" Width="200" Text="Add or update scripted objects"/>
+            </StackPanel>
+
+            <Button Name="RunButton"
+                    Content="Script And Commit"
+                    Width="140" Height="40"
+                    Click="RunButton_Click"/>
+
+            <ProgressBar Name="OverallProgressBar"
+                         Height="16"
+                         Minimum="0" Maximum="100"/>
+
+            <ListBox Name="ProgressListBox"
+                     Height="200"/>
         </StackPanel>
     </Grid>
 </UserControl>

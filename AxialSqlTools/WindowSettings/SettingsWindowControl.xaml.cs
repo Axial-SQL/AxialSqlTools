@@ -1,6 +1,7 @@
 ﻿namespace AxialSqlTools
 {
     using Microsoft.Data.SqlClient;
+    using Newtonsoft.Json.Linq;
     using System;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
@@ -105,7 +106,7 @@ as select 1;
                 ExcelExportAddAutoFilter.IsChecked = excelSettings.addAutofilter;
                 ExcelExportBoolsAsNumbers.IsChecked = excelSettings.exportBoolsAsNumbers;
                 ExcelExportDefaultDirectory.Text = excelSettings.defaultDirectory;
-                ExcelExportDefaultFilename.Text = excelSettings.defaultFileName;
+                ExcelExportDefaultFilename.Text = excelSettings.defaultFileName;                              
 
             }
             catch (Exception ex)
@@ -114,6 +115,15 @@ as select 1;
 
                 string msg = $"Error message: {ex.Message} \nInnerException: {ex.InnerException}";
                 MessageBox.Show(msg, "Error");
+            }
+
+            try
+            {
+                GitHubToken.Password = WindowsCredentialHelper.LoadToken("AxialSqlTools_GitHubToken");
+            }
+            catch 
+            {
+                // ??
             }
 
         }
@@ -407,6 +417,15 @@ as select 1;
         private void formatSetting_Unchecked(object sender, RoutedEventArgs e)
         {
             formatTSqlExample();
+        }
+
+        private void buttonSaveGitHubSettings_Click(object sender, RoutedEventArgs e)
+        {
+
+            WindowsCredentialHelper.SaveToken("AxialSqlTools_GitHubToken", "AxialSqlTools_GitHubToken", GitHubToken.Password);
+
+            SavedMessage();
+
         }
     }
 }

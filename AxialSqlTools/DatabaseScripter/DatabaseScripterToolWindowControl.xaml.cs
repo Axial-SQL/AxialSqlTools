@@ -1,236 +1,233 @@
 ﻿using Microsoft.SqlServer.Management.Common;
+using Microsoft.SqlServer.Management.Sdk.Sfc;
 using Microsoft.SqlServer.Management.Smo;
+using Octokit;
 using System;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 
 namespace AxialSqlTools
 {
-    /// <summary>
-    /// Interaction logic for DatabaseScripterToolWindowControl.
-    /// </summary>
     public partial class DatabaseScripterToolWindowControl : UserControl
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DatabaseScripterToolWindowControl"/> class.
-        /// </summary>
+        private readonly ObservableCollection<string> _progressMessages = new ObservableCollection<string>();
+
         public DatabaseScripterToolWindowControl()
         {
-            this.InitializeComponent();
+
+            InitializeComponent();
+
+            ProgressListBox.ItemsSource = _progressMessages;
+
+
+
         }
 
-        /// <summary>
-        /// Handles click on the button by displaying a message box.
-        /// </summary>
-        /// <param name="sender">The event sender.</param>
-        /// <param name="e">The event args.</param>
-        [SuppressMessage("Microsoft.Globalization", "CA1300:SpecifyMessageBoxOptions", Justification = "Sample code")]
-        [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Default event handler naming pattern")]
-        private void button1_Click(object sender, RoutedEventArgs e)
+        private async void RunButton_Click(object sender, RoutedEventArgs e)
+        {
+            RunButton.IsEnabled = false;
+            _progressMessages.Clear();
+
+            var progress = new Progress<string>(msg =>
+            {
+                _progressMessages.Add(msg);
+                ProgressListBox.ScrollIntoView(msg);
+            });
+
+            // 1) Retrieve connection info and SMO objects on the UI thread
+            var ci = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer();
+            var server = new Server(new ServerConnection(ci.ServerName));
+            var db = server.Databases[ci.Database];
+
+            var messageProgress = new Progress<string>(msg =>
+            {
+                _progressMessages.Add(msg);
+                ProgressListBox.ScrollIntoView(msg);
+            });
+
+            var percentProgress = new Progress<double>(pct =>
+            {
+                OverallProgressBar.Value = pct;
+            });
+
+            try
+            {
+                // 1. Script everything into memory
+                var scripts = await Task.Run(() => ScriptAllObjectsInMemory(server, db, messageProgress, percentProgress));
+
+                // 2. Commit to GitHub
+                await CommitToGitHubAsync(
+                    owner: OwnerTextBox.Text.Trim(),
+                    repo: RepoTextBox.Text.Trim(),
+                    branch: BranchTextBox.Text.Trim(),
+                    message: MessageTextBox.Text.Trim(),
+                    files: scripts,
+                    progress: progress);
+
+                _progressMessages.Add("✅ All done!");
+            }
+            catch (Exception ex)
+            {
+                _progressMessages.Add("❌ Error: " + ex.Message);
+            }
+            finally
+            {
+                RunButton.IsEnabled = true;
+            }
+        }
+
+        private Dictionary<string, string> ScriptAllObjectsInMemory(
+            Server server,
+            Database db,
+            IProgress<string> msgProgress,
+            IProgress<double> pctProgress)
         {
 
-            var ci = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer();
-
-            var sourceConnectionString = ci.FullConnectionString;
-
-            var serverConnection = new ServerConnection(ci.ServerName);
-            var server = new Server(serverConnection);
-
-            var chosenDb = server.Databases[ci.Database];   
-
-            string outputRoot = @"C:\temp";
-            string dbFolderPath = Path.Combine(outputRoot, chosenDb.Name);
-
-            //
-            // 4) Create subdirectories for each object type we intend to script.
-            //
-            var objectFolders = new[]
+            var options = new ScriptingOptions
             {
-                "Tables",
-                "Views",
-                "StoredProcedures",
-                "UserDefinedFunctions",
-                "ScalarFunctions",
-                "TableValuedFunctions",
-                "Synonyms",
-                "Types",
-                "Triggers",
-                "ExtendedProperties"
-                // add more folders if you need other object categories
+                IncludeHeaders = false,
+                IncludeIfNotExists = false,
+                ScriptSchema = true,
+                DriAll = true,
+                Indexes = true,
+                SchemaQualify = true,
+                ScriptBatchTerminator = true,
+                IncludeDatabaseContext = false
             };
 
-            foreach (var folder in objectFolders)
+            var result = new Dictionary<string, string>();
+            var categories = new (IEnumerable<Urn> items, string folder, bool format)[]
             {
-                string fullPath = Path.Combine(dbFolderPath, folder);
-                if (!Directory.Exists(fullPath))
+                // only Tables get formatted
+                (db.Tables.Cast<Table>()
+                            .Where(t => !t.IsSystemObject)
+                            .Select(t => t.Urn),
+                    "Tables", true),
+
+                (db.Views.Cast<View>()
+                            .Where(v => !v.IsSystemObject)
+                            .Select(v => v.Urn),
+                    "Views", false),
+
+                (db.StoredProcedures.Cast<StoredProcedure>()
+                                        .Where(sp => !sp.IsSystemObject)
+                                        .Select(sp => sp.Urn),
+                    "StoredProcedures", false),
+
+                (db.UserDefinedFunctions.Cast<UserDefinedFunction>()
+                                            .Where(fn => !fn.IsSystemObject)
+                                            .Select(fn => fn.Urn),
+                    "TableValuedFunctions", false),
+
+                (db.Synonyms.Cast<Synonym>()
+                            .Select(s => s.Urn),
+                    "Synonyms", false),
+
+                (db.UserDefinedDataTypes.Cast<UserDefinedDataType>()
+                                            .Select(udt => udt.Urn),
+                    "Types", false),
+
+                (db.Triggers.Cast<DatabaseDdlTrigger>()
+                            .Where(tr => !tr.IsSystemObject)
+                            .Select(tr => tr.Urn),
+                    "Triggers", false)
+            };
+
+
+            var scripter = new Scripter(server) { Options = options };
+
+            int total = categories.Sum(c => c.items.Count());
+            int done = 0;
+
+            foreach (var (items, folder, format) in categories)
+            {
+                foreach (var urn in items)
                 {
-                    Directory.CreateDirectory(fullPath);
+                    var lines = scripter.Script(new UrnCollection { urn });
+                    var sql = string.Join(Environment.NewLine, lines.Cast<string>());
+
+                    if (format)
+                        sql = TSqlFormatter.FormatCode(sql);
+
+                    var path = $"{folder}/{urn.GetAttribute("Schema")}.{urn.GetAttribute("Name")}.sql";
+
+                    result[path] = sql;
+
+                    done++;
+
+                    msgProgress.Report($"[{done}/{total}] scripted {path}");
+                    pctProgress.Report(done * 100.0 / total);
+
                 }
             }
 
-            //
-            // 5) Prepare common ScriptingOptions (no header comments, include schema, DRI, etc.)
-            //
-            var options = new ScriptingOptions
+            return result;
+        }
+
+        private async Task CommitToGitHubAsync(
+            string owner,
+            string repo,
+            string branch,
+            string message,
+            Dictionary<string, string> files,
+            IProgress<string> progress)
+        {
+            // load token however you like
+            var token = WindowsCredentialHelper.LoadToken("AxialSqlTools_GitHubToken");
+            if (string.IsNullOrEmpty(token))
+                throw new InvalidOperationException("GitHub token not found");
+
+            var client = new GitHubClient(new ProductHeaderValue("AxialSqlTools"))
             {
-                IncludeHeaders = false,  // <--- REMOVE "Script Date", "Server Version", etc.
-                IncludeIfNotExists = false,
-                ScriptSchema = true,
-                DriAll = true,   // script out keys, indexes, FKs, etc.
-                Indexes = true,
-                SchemaQualify = true,
-                NoCollation = false,
-                AnsiFile = false,
-                ScriptData = false, // only schema, no data
-                ScriptBatchTerminator = true,   // include "GO"
-                IncludeDatabaseContext = false,  // do NOT include "USE [dbname]"
+                Credentials = new Credentials(token)
             };
 
-            //
-            // Helper function to write out an SMO UrnCollection (script lines) to a file.
-            //
-            void WriteScriptToFile(UrnCollection urns, string targetPath, bool formatCode = false)
+            // 1. get the branch ref and latest commit
+            progress.Report("Fetching branch info...");
+            var reference = await client.Git.Reference.Get(owner, repo, $"heads/{branch}");
+            var latestCommit = await client.Git.Commit.Get(owner, repo, reference.Object.Sha);
+
+            // 2. create blobs
+            var treeItems = new List<NewTreeItem>();
+            int count = 0, total = files.Count;
+            foreach (var kvp in files)
             {
-                // The Scripter will produce a StringCollection of lines.
-                var scripter = new Scripter(server)
+                var blob = await client.Git.Blob.Create(owner, repo,
+                    new NewBlob { Content = kvp.Value, Encoding = EncodingType.Utf8 });
+
+                treeItems.Add(new NewTreeItem
                 {
-                    Options = options
-                };
+                    Path = kvp.Key,
+                    Mode = "100644",
+                    Type = TreeType.Blob,
+                    Sha = blob.Sha
+                });
 
-                var scriptLines = scripter.Script(urns);
-                // Combine lines into one string with Environment.NewLine
-                string singleScript = string.Join(Environment.NewLine, scriptLines.Cast<string>().ToArray());
-
-                if (formatCode)
-                {                   
-                    singleScript = TSqlFormatter.FormatCode(singleScript);
-                }   
-
-                File.WriteAllText(targetPath, singleScript);
+                count++;
+                progress.Report($"[{count}/{total}] created blob for {kvp.Key}");
             }
 
-            //
-            // 6a) Script Tables
-            //
-            foreach (Table table in chosenDb.Tables)
-            {
-                if (table.IsSystemObject)
-                    continue;
+            // 3. create new tree
+            progress.Report("Creating tree...");
+            var newTree = new NewTree { BaseTree = latestCommit.Tree.Sha };
+            foreach (var ti in treeItems) newTree.Tree.Add(ti);
+            var treeResponse = await client.Git.Tree.Create(owner, repo, newTree);
 
-                // URN for this table
-                var urns = new UrnCollection { table.Urn };
-                string outFile = Path.Combine(dbFolderPath, "Tables", $"{table.Schema}.{table.Name}.sql");
-                WriteScriptToFile(urns, outFile, formatCode: true);
-                Console.WriteLine($"[Table]           {table.Schema}.{table.Name}  →  {outFile}");
-            }
+            // 4. commit
+            progress.Report("Creating commit...");
+            var newCommit = await client.Git.Commit.Create(owner, repo,
+                new NewCommit(message, treeResponse.Sha, new[] { latestCommit.Sha }));
 
-            //
-            // 6b) Script Views
-            //
-            foreach (View view in chosenDb.Views)
-            {
-                if (view.IsSystemObject)
-                    continue;
+            // 5. update branch
+            await client.Git.Reference.Update(owner, repo, reference.Ref,
+                new ReferenceUpdate(newCommit.Sha));
 
-                var urns = new UrnCollection { view.Urn };
-                string outFile = Path.Combine(dbFolderPath, "Views", $"{view.Schema}.{view.Name}.sql");
-                WriteScriptToFile(urns, outFile);
-                Console.WriteLine($"[View]            {view.Schema}.{view.Name}  →  {outFile}");
-            }
-
-            //
-            // 6c) Script Stored Procedures
-            //
-            foreach (StoredProcedure sp in chosenDb.StoredProcedures)
-            {
-                if (sp.IsSystemObject)
-                    continue;
-
-                var urns = new UrnCollection { sp.Urn };
-                string outFile = Path.Combine(dbFolderPath, "StoredProcedures", $"{sp.Schema}.{sp.Name}.sql");
-                WriteScriptToFile(urns, outFile);
-                Console.WriteLine($"[StoredProc]      {sp.Schema}.{sp.Name}  →  {outFile}");
-            }
-
-            //
-            // 6d) Script Scalar and Table-Valued Functions
-            //
-            foreach (UserDefinedFunction fn in chosenDb.UserDefinedFunctions)
-            {
-                if (fn.IsSystemObject)
-                    continue;
-
-                // Distinguish scalar vs table-valued
-                //TODO string folderName = fn.IsTableFunction ? "TableValuedFunctions" : "ScalarFunctions";
-                string folderName = "TableValuedFunctions";
-                var urns = new UrnCollection { fn.Urn };
-                string outFile = Path.Combine(dbFolderPath, folderName, $"{fn.Schema}.{fn.Name}.sql");
-                WriteScriptToFile(urns, outFile);
-                Console.WriteLine($"[Function]        {fn.Schema}.{fn.Name}  →  {outFile}");
-            }
-
-            //
-            // 6e) Script Synonyms
-            //
-            foreach (Synonym syn in chosenDb.Synonyms)
-            {
-                //if (syn.IsSystemObject)
-                //    continue;
-
-                var urns = new UrnCollection { syn.Urn };
-                string outFile = Path.Combine(dbFolderPath, "Synonyms", $"{syn.Schema}.{syn.Name}.sql");
-                WriteScriptToFile(urns, outFile);
-                Console.WriteLine($"[Synonym]         {syn.Schema}.{syn.Name}  →  {outFile}");
-            }
-
-            //
-            // 6f) Script User-Defined Types
-            //
-            foreach (UserDefinedDataType udt in chosenDb.UserDefinedDataTypes)
-            {
-                //if (udt.IsSystemObject)
-                //    continue;
-
-                var urns = new UrnCollection { udt.Urn };
-                string outFile = Path.Combine(dbFolderPath, "Types", $"{udt.Schema}.{udt.Name}.sql");
-                WriteScriptToFile(urns, outFile);
-                Console.WriteLine($"[UserType]        {udt.Schema}.{udt.Name}  →  {outFile}");
-            }
-
-            //
-            // 6g) Script DDL Triggers (on the database)
-            //
-            foreach (DatabaseDdlTrigger trig in chosenDb.Triggers)
-            {
-                if (trig.IsSystemObject)
-                    continue;
-
-                var urns = new UrnCollection { trig.Urn };
-                string outFile = Path.Combine(dbFolderPath, "Triggers", $"{trig.Name}.sql");
-                WriteScriptToFile(urns, outFile);
-                Console.WriteLine($"[DBTrigger]       {trig.Name}  →  {outFile}");
-            }
-
-            ////
-            //// 6h) Script Extended Properties (optional, e.g. descriptions)
-            ////
-            //foreach (ExtendedProperty ep in chosenDb.ExtendedProperties)
-            //{
-            //    var urns = new UrnCollection { ep.Urn };
-            //    string outFile = Path.Combine(dbFolderPath, "ExtendedProperties", $"{ep.Name}.sql");
-            //    WriteScriptToFile(urns, outFile);
-            //    Console.WriteLine($"[ExtProperty]     {ep.Name}  →  {outFile}");
-            //}
-
-
-
-
-
+            progress.Report($"Commit complete: {newCommit.Sha}");
         }
     }
 }
