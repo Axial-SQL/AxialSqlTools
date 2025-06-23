@@ -229,9 +229,9 @@
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDatabaseScripterCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
         <Icon guid="guidDatabaseScripter" id="bmpDatabaseScripter" />
-        <CommandFlag>DefaultInvisible</CommandFlag>
+        <!--<CommandFlag>DefaultInvisible</CommandFlag>-->
         <Strings>
-          <ButtonText>GitHub Database Schema Backup</ButtonText>
+          <ButtonText>GitHub Database Schema Backup - WIP - DO NOT USE</ButtonText>
         </Strings>
       </Button>
 

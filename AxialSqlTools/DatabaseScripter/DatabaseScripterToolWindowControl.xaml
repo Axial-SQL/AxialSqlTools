@@ -8,7 +8,7 @@
              Name="MyToolWindow">
     <Grid Margin="10">
         <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="8">
-            <TextBlock Text="Database Scripter And GitHub Committer" 
+            <TextBlock Text="WIP - DO NOT USE - Database Scripter And GitHub Committer" 
                        FontSize="18" 
                        HorizontalAlignment="Center"/>
 

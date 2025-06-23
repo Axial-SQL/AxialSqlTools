@@ -154,7 +154,10 @@ namespace AxialSqlTools
                     if (format)
                         sql = TSqlFormatter.FormatCode(sql);
 
-                    var path = $"{folder}/{urn.GetAttribute("Schema")}.{urn.GetAttribute("Name")}.sql";
+                    var dbName = db.Name;
+
+                    // then in your loop
+                    var path = $"{dbName}/{folder}/{urn.GetAttribute("Schema")}.{urn.GetAttribute("Name")}.sql";
 
                     result[path] = sql;
 
