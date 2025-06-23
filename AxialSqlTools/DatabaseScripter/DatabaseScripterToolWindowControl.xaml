@@ -1,46 +1,51 @@
-﻿<UserControl x:Class="AxialSqlTools.DatabaseScripterToolWindowControl"
+﻿<!-- DatabaseScripterToolWindowControl.xaml -->
+<UserControl x:Class="AxialSqlTools.DatabaseScripterToolWindowControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="400" d:DesignWidth="400"
+             d:DesignHeight="500" d:DesignWidth="450"
              Name="MyToolWindow">
     <Grid Margin="10">
-        <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="8">
-            <TextBlock Text="WIP - DO NOT USE - Database Scripter And GitHub Committer" 
-                       FontSize="18" 
-                       HorizontalAlignment="Center"/>
+        <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="8" >
 
-            <!-- GitHub parameters -->
-            <StackPanel Orientation="Horizontal" Margin="4">
-                <TextBlock Text="Owner:" Width="60"/>
-                <TextBox Name="OwnerTextBox" Width="200" Text="alex-bochkov"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="4">
-                <TextBlock Text="Repo:" Width="60"/>
-                <TextBox Name="RepoTextBox" Width="200" Text="db-repo-test"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="4">
-                <TextBlock Text="Branch:" Width="60"/>
-                <TextBox Name="BranchTextBox" Width="200" Text="main"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="4">
-                <TextBlock Text="Commit Msg:" Width="60"/>
-                <TextBox Name="MessageTextBox" Width="200" Text="Add or update scripted objects"/>
+            <TextBlock Text="Database Scripter And GitHub Committer"
+                       FontSize="18" FontWeight="Bold"
+                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+            <!-- Repo list -->
+            <TextBlock Text="Saved GitHub Repos:" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,4">
+                <ListBox Name="ReposListBox"
+                         Width="300" Height="100"
+                         DisplayMemberPath="DisplayName"
+                         SelectedItem="{Binding SelectedRepo, Mode=TwoWay}"/>
+                <StackPanel Orientation="Vertical" Margin="8,0">
+                    <Button Name="AddRepoButton" Content="+ Add" Width="60" Click="AddRepoButton_Click"/>
+                    <Button Name="RemoveRepoButton" Content="– Remove" Width="60" Margin="0,4,0,0" Click="RemoveRepoButton_Click"/>
+                </StackPanel>
             </StackPanel>
 
+            <!-- Commit message -->
+            <StackPanel Orientation="Horizontal" Margin="0,8">
+                <TextBlock Text="Commit Msg:" Width="80"/>
+                <TextBox Name="MessageTextBox" Width="300" Text="Add or update scripted objects"/>
+            </StackPanel>
+
+            <!-- Run -->
             <Button Name="RunButton"
                     Content="Script And Commit"
-                    Width="140" Height="40"
+                    Width="160" Height="40"
                     Click="RunButton_Click"/>
 
+            <!-- Progress -->
             <ProgressBar Name="OverallProgressBar"
-                         Height="16"
-                         Minimum="0" Maximum="100"/>
+                         Height="16" Minimum="0" Maximum="100" Margin="0,8"/>
 
             <ListBox Name="ProgressListBox"
                      Height="200"/>
+
         </StackPanel>
     </Grid>
 </UserControl>

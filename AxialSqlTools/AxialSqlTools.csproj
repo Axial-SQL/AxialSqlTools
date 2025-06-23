@@ -53,6 +53,9 @@
     <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
       <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DatabaseScripter\AddRepoDialog.xaml.cs">
+      <DependentUpon>AddRepoDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="DatabaseScripter\DatabaseScripterToolWindow.cs" />
     <Compile Include="DatabaseScripter\DatabaseScripterToolWindowCommand.cs" />
     <Compile Include="DatabaseScripter\DatabaseScripterToolWindowControl.xaml.cs">
@@ -253,6 +256,10 @@
     <Page Include="AskChatGPT\AskChatGptWindowControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="DatabaseScripter\AddRepoDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="DatabaseScripter\DatabaseScripterToolWindowControl.xaml">
       <SubType>Designer</SubType>
