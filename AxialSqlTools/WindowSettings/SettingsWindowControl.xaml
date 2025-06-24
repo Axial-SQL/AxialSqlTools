@@ -560,7 +560,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="GitHub Integration">
+            <TabItem Header="GitHub Integration" Visibility="Hidden">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

@@ -2,6 +2,7 @@
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Sdk.Sfc;
 using Microsoft.SqlServer.Management.Smo;
+using Newtonsoft.Json;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Newtonsoft.Json;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView;
 
 namespace AxialSqlTools
 {
@@ -191,19 +192,26 @@ namespace AxialSqlTools
             var reference = await client.Git.Reference.Get(repo.Owner, repo.Name, $"heads/{repo.Branch}");
             var latestCommit = await client.Git.Commit.Get(repo.Owner, repo.Name, reference.Object.Sha);
 
-            // fetch entire tree recursively
-            //var remoteTree = await client.Git.Tree.GetRecursive(repo.Owner, repo.Name, latestCommit.Tree.Sha);
-            //progress.Report("Done fetching...");
-            //var baseFolder = $"{files.Keys.First().Split('/')[0]}/"; // DatabaseName/
-            //var remotePaths = new HashSet<string>(
-            //    remoteTree.Tree
-            //              .Where(n => n.Path.StartsWith(baseFolder) && n.Type == TreeType.Blob)
-            //              .Select(n => n.Path));
+            //------test-
+            var remotePaths = new List<string>();
+            foreach (var folder in new[] { "Tables", "Views", "StoredProcedures", /* etc */ })
+            {
+                // this returns only the files & sub-dirs under `<dbName>/<folder>`
+                var items = await client.Repository.Content
+                                     .GetAllContentsByRef(repo.Owner, repo.Name, $"{"AWSInventory"}/{folder}", repo.Branch);
+
+                // files get `Type == "file"` and you get their .Path and .Sha directly
+                remotePaths.AddRange(items
+                    .Where(i => i.Type == ContentType.File)
+                    .Select(i => i.Path));
+            }
+            var remoteSet = new HashSet<string>(remotePaths);
+            //\\ ---test-
 
             var localPaths = new HashSet<string>(files.Keys);
             //var toAdd = localPaths.Except(remotePaths).ToList();
             var toAdd = localPaths.ToList();
-            //var toDelete = remotePaths.Except(localPaths).ToList();
+            var toDelete = remotePaths.Except(localPaths).ToList();
             //var toModify = localPaths
             //               .Intersect(remotePaths)
             //               .Where(p => {
@@ -216,7 +224,7 @@ namespace AxialSqlTools
             var msg = $"About to commit changes to GitHub:\n\n" +
                       $"Files to add:    {toAdd.Count}\n" +
                       //$"Files to modify: {toModify.Count}\n" +
-                      //$"Files to delete: {toDelete.Count}\n\n" +
+                      $"Files to delete (doesn't work yet): {toDelete.Count}\n\n" +
                       "Continue?";
             if (MessageBox.Show(msg, "Confirm Commit", MessageBoxButton.YesNo, MessageBoxImage.Question)
                 != MessageBoxResult.Yes)
@@ -273,15 +281,56 @@ namespace AxialSqlTools
 
     public class GitRepo
     {
+        // This is what we persist to disk
+        [JsonProperty("Token")]
+        public string EncryptedToken { get; set; }
+
+        // Backing field for the decrypted token
+        [JsonIgnore]
+        private string _token;
+
+        // This is what the rest of your code uses
+        [JsonIgnore]
+        public string Token
+        {
+            get
+            {
+                if (_token == null && !string.IsNullOrEmpty(EncryptedToken))
+                {
+                    // decrypt on first access
+                    var cipher = Convert.FromBase64String(EncryptedToken);
+                    var plain = SettingsManager.Unprotect(cipher);
+                    _token = plain != null
+                        ? Encoding.UTF8.GetString(plain)
+                        : throw new InvalidOperationException("Failed to decrypt GitRepo token.");
+                }
+                return _token;
+            }
+            set
+            {
+                _token = value;
+                if (!string.IsNullOrEmpty(value))
+                {
+                    // encrypt each time it’s set
+                    var data = Encoding.UTF8.GetBytes(value);
+                    var cipher = SettingsManager.Protect(data);
+                    EncryptedToken = Convert.ToBase64String(cipher);
+                }
+                else
+                {
+                    EncryptedToken = null;
+                }
+            }
+        }
+
+        // other props...
         public string Owner { get; set; }
         public string Name { get; set; }
         public string Branch { get; set; }
-        public string Token { get; set; }
 
         [JsonIgnore]
         public string DisplayName => $"{Owner}/{Name}@{Branch}";
     }
-
     public static class RepoStore
     {
         private static readonly string _path =

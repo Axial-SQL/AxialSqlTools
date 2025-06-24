@@ -323,7 +323,7 @@ ORDER BY sd.[name];
             }
         }
 
-        private static byte[] Protect(byte[] data)
+        public static byte[] Protect(byte[] data)
         {
             try
             {
@@ -337,7 +337,7 @@ ORDER BY sd.[name];
             }
         }
 
-        private static byte[] Unprotect(byte[] data)
+        public static byte[] Unprotect(byte[] data)
         {
             try
             {

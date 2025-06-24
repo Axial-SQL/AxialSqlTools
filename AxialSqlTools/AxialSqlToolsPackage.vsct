@@ -231,7 +231,7 @@
         <Icon guid="guidDatabaseScripter" id="bmpDatabaseScripter" />
         <!--<CommandFlag>DefaultInvisible</CommandFlag>-->
         <Strings>
-          <ButtonText>GitHub Database Schema Backup - WIP - DO NOT USE</ButtonText>
+          <ButtonText>Sync to GitHub</ButtonText>
         </Strings>
       </Button>
 
