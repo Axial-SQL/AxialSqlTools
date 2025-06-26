@@ -1,4 +1,6 @@
-﻿using EnvDTE;
+﻿using DocumentFormat.OpenXml.Office2013.Drawing.ChartStyle;
+using DocumentFormat.OpenXml.Spreadsheet;
+using EnvDTE;
 using EnvDTE80;
 using Microsoft.SqlServer.Management.UI.Grid;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
@@ -52,6 +54,16 @@ namespace AxialSqlTools
             btnControlAsCsv.Caption = "Copy As CSV";
             btnControlAsCsv.Click += OnClick_CopyAsCSV;
 
+            var btnControlCCN = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlCCN.Visible = true;
+            btnControlCCN.Caption = "Copy Selected Column Names";
+            btnControlCCN.Click += OnClick_CopySelectedColumnNames;
+
+            var btnControlCCNA = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlCCNA.Visible = true;
+            btnControlCCNA.Caption = "Copy All Column Names";
+            btnControlCCNA.Click += OnClick_CopyAllColumnNames ;
+
         }
 
         private static void OnClick_CopyAsInsert(CommandBarButton Ctrl, ref bool CancelDefault)
@@ -64,7 +76,68 @@ namespace AxialSqlTools
             CopySelectedValues("CSV");
         }
 
-        
+        private static void OnClick_CopySelectedColumnNames(CommandBarButton Ctrl, ref bool CancelDefault)
+        {
+            CopyColumnNames(all: false);
+        }
+
+        private static void OnClick_CopyAllColumnNames(CommandBarButton Ctrl, ref bool CancelDefault)
+        {
+            CopyColumnNames(all: true);
+        }
+
+        private static void CopyColumnNames(bool all)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var focusGridControl = GridAccess.GetFocusGridControl();
+            using (var gridResultControl = new ResultGridControlAdaptor(focusGridControl))
+            {
+
+                var columnNames = new List<string>();
+
+                if (all)                
+                {
+                    for (int i = 1; i < gridResultControl.ColumnCount; i++)
+                    {
+                        columnNames.Add("[" + gridResultControl.GetColumnName(i) + "]");
+                    }
+                } else
+                {
+                    var selectedCells = focusGridControl.SelectedCells;
+
+                    foreach (BlockOfCells cell in selectedCells)
+                    {
+                        int leftColNumber = cell.X;
+                        int rightColNumber = cell.Right;
+
+                        for (int i = leftColNumber; i <= rightColNumber; i++)
+                        {
+                            columnNames.Add("[" + gridResultControl.GetColumnName(i) + "]");
+                        }
+                    }
+
+                }
+
+                if (columnNames.Any())
+                {
+                    string columnNamesStr = string.Join(",", columnNames);
+
+                    SetClipboardText(columnNamesStr);
+
+                    ServiceCache.ExtensibilityModel.StatusBar.Text = "Copied Column Names";
+                }
+                else
+                {
+                    ServiceCache.ExtensibilityModel.StatusBar.Text = "No Column Names to Copy";
+                }
+
+            }
+            
+        }
+
+
+
         private static void CopySelectedValues (string CopyType)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
