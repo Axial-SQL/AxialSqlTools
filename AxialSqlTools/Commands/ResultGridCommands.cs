@@ -106,6 +106,8 @@ namespace AxialSqlTools
                 {
                     var selectedCells = focusGridControl.SelectedCells;
 
+                    var addedColIndexes = new HashSet<int>();
+
                     foreach (BlockOfCells cell in selectedCells)
                     {
                         int leftColNumber = cell.X;
@@ -113,7 +115,8 @@ namespace AxialSqlTools
 
                         for (int i = leftColNumber; i <= rightColNumber; i++)
                         {
-                            columnNames.Add("[" + gridResultControl.GetColumnName(i) + "]");
+                            if (addedColIndexes.Add(i)) // ignore dups
+                                columnNames.Add("[" + gridResultControl.GetColumnName(i) + "]");
                         }
                     }
 
