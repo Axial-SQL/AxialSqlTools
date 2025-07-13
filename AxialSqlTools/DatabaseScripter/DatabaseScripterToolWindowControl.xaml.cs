@@ -1,5 +1,4 @@
 ﻿// DatabaseScripterToolWindowControl.xaml.cs
-using DocumentFormat.OpenXml.Math;
 using Microsoft.Data.SqlClient;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Sdk.Sfc;
@@ -15,17 +14,39 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using static AxialSqlTools.ScriptFactoryAccess;
+using static AxialSqlTools.DatabaseScripterToolWindowControl;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView;
 
 namespace AxialSqlTools
 {
     public partial class DatabaseScripterToolWindowControl : UserControl
     {
+        public class SmoObjectMap
+        {
+            public string SysType { get; }
+            public string UrnType { get; }
+            public string Folder { get; }
+            public bool Format { get; }
+            public string ParentType { get; }  
+
+            public SmoObjectMap(
+                string sysType,
+                string urnType,
+                string folder,
+                bool format,
+                string parentType = null)
+            {
+                SysType = sysType;
+                UrnType = urnType;
+                Folder = folder;
+                Format = format;
+                ParentType = parentType;
+            }
+        }        
 
         // In-memory list of DB connections
-        private readonly ObservableCollection<ConnectionInfo> _connections;
-        private ConnectionInfo SelectedConnection => (ConnectionInfo)ConnectionsListBox.SelectedItem;
+        private readonly ObservableCollection<ScriptFactoryAccess.ConnectionInfo> _connections;
+        private ScriptFactoryAccess.ConnectionInfo SelectedConnection => (ScriptFactoryAccess.ConnectionInfo)ConnectionsListBox.SelectedItem;
 
 
         private readonly ObservableCollection<GitRepo> _repos;
@@ -37,7 +58,7 @@ namespace AxialSqlTools
             InitializeComponent();
             ProgressListBox.ItemsSource = _progressMessages;
 
-            _connections = new ObservableCollection<ConnectionInfo>();
+            _connections = new ObservableCollection<ScriptFactoryAccess.ConnectionInfo>();
             ConnectionsListBox.ItemsSource = _connections;
 
             _repos = new ObservableCollection<GitRepo>(RepoStore.Load());
@@ -131,6 +152,20 @@ namespace AxialSqlTools
                 OverallProgressBar.Value = pct;
             });
 
+            SmoObjectMap[] ObjectMap =
+            {
+                new SmoObjectMap("U",  "Table",               "Tables",           true),
+                new SmoObjectMap("V",  "View",                "Views",            false),
+                new SmoObjectMap("P",  "StoredProcedure",     "StoredProcedures", false),
+                new SmoObjectMap("FN", "UserDefinedFunction", "Functions",        false),
+                new SmoObjectMap("TF", "UserDefinedFunction", "Functions",        false),
+                new SmoObjectMap("IF", "UserDefinedFunction", "Functions",        false),
+                //new SmoObjectMap("TR", "DatabaseDdlTrigger",  "Triggers",       false), -- weird that Database Triggers are not in sys.objects
+                new SmoObjectMap("TR", "Trigger",             "Triggers",         false, parentType: "Table"), 
+                new SmoObjectMap("SN", "Synonym",             "Synonyms",         false),
+                new SmoObjectMap("TT", "UserDefinedType",     "Types",            false),
+            };
+
             try
             {
                 // 1) Script every database into one combined dictionary
@@ -139,12 +174,13 @@ namespace AxialSqlTools
                 for (int i = 0; i < total; i++)
                 {
                     var ci = _connections[i];
-                    textProgress.Report($"▶ [{i + 1}/{total}] Scripting {ci.ServerName}\\{ci.Database}…");
+                    textProgress.Report($"▶ [{i + 1}/{total}] Scripting {ci.ServerName}\\{ci.Database}...");
 
                     var scripts = await Task.Run(() =>
                         ScriptAllObjectsInMemory(
                             ci.FullConnectionString,
                             ci.Database,
+                            ObjectMap,
                             textProgress,
                             // no-op percent reporter
                             new Progress<double>(_ => { })
@@ -163,14 +199,15 @@ namespace AxialSqlTools
                 await CommitToGitHubAsync(
                     SelectedRepo,
                     allScripts,
+                    ObjectMap,
                     MessageTextBox.Text.Trim(),
                     textProgress);
 
-                _progressMessages.Add("🎉 All done!");
+                textProgress.Report("🎉 All done!");
             }
             catch (Exception ex)
             {
-                _progressMessages.Add("❌ Error: " + ex.Message);
+                textProgress.Report("❌ Error: " + ex.Message);
             }
             finally
             {
@@ -178,9 +215,49 @@ namespace AxialSqlTools
             }
         }
 
+        public static async Task<List<string>> GetAllRemoteFilePathsAsync(
+            GitHubClient client,
+            GitRepo repo,
+            string basePath)
+        {
+            var result = new List<string>();
+            await Recurse(basePath).ConfigureAwait(false);
+            return result;
+
+            async Task Recurse(string path)
+            {
+                System.Collections.Generic.IReadOnlyList<RepositoryContent> items;
+                try
+                {
+                    items = await client.Repository.Content
+                        .GetAllContentsByRef(repo.Owner, repo.Name, path, repo.Branch)
+                        .ConfigureAwait(false);
+                }
+                catch (NotFoundException)
+                {
+                    // directory doesn't exist → nothing under here
+                    return;
+                }
+
+                foreach (var item in items)
+                {
+                    if (item.Type == ContentType.Dir)
+                    {
+                        // dive into subfolder
+                        await Recurse(item.Path).ConfigureAwait(false);
+                    }
+                    else if (item.Type == ContentType.File)
+                    {
+                        result.Add(item.Path);
+                    }
+                }
+            }
+        }
+
         private Dictionary<string, string> ScriptAllObjectsInMemory(
             string connectionString,
             string databaseName,
+            SmoObjectMap[] objectMap,
             IProgress<string> msgProgress,
             IProgress<double> pctProgress)
         {
@@ -191,7 +268,7 @@ namespace AxialSqlTools
             Server server = new Server(serverConn);
 
             // grab the server instance name
-            string serverName = server.ConnectionContext.ServerInstance;
+            string serverName = server.ConnectionContext.TrueName;
 
             var options = new ScriptingOptions
             {
@@ -200,25 +277,12 @@ namespace AxialSqlTools
                 ScriptSchema = true,
                 DriAll = true,
                 Indexes = true,
+                // Triggers = true, -- triggers are scripted separately because SMO doesn't inject GO between table definition and it's trigger
                 SchemaQualify = true,
                 ScriptBatchTerminator = true,
                 IncludeDatabaseContext = false
             };
             var scripter = new Scripter(server) { Options = options };
-
-            // map sys.objects types → SMO Urn type + folder + whether to pretty‐format
-            var objectMap = new[]
-            {
-                new { SysType="U",   UrnType="Table",               Folder="Tables",           Format=true  },
-                new { SysType="V",   UrnType="View",                Folder="Views",            Format=false },
-                new { SysType="P",   UrnType="StoredProcedure",     Folder="StoredProcedures", Format=false },
-                new { SysType="FN",  UrnType="UserDefinedFunction", Folder="Functions",        Format=false },
-                new { SysType="TF",  UrnType="UserDefinedFunction", Folder="Functions",        Format=false },
-                new { SysType="IF",  UrnType="UserDefinedFunction", Folder="Functions",        Format=false },
-                new { SysType="TR",  UrnType="DatabaseDdlTrigger",  Folder="Triggers",         Format=false },
-                new { SysType="SN",  UrnType="Synonym",             Folder="Synonyms",         Format=false },
-                new { SysType="TT",  UrnType="UserDefinedType",     Folder="Types",            Format=false }
-            };
 
             // pre‐count for progress
             int total = 0;
@@ -245,10 +309,16 @@ namespace AxialSqlTools
                 using (var qConn = new SqlConnection(connectionString))
                 {
                     qConn.Open();
+                    //This approach is WAY faster than the default SMO object iterators
                     using (var cmd = new SqlCommand(
-                        @"SELECT SCHEMA_NAME(schema_id) AS SchemaName, name
-                          FROM sys.objects
-                          WHERE type=@t AND is_ms_shipped=0
+                        @"SELECT SCHEMA_NAME(o.schema_id) AS SchemaName,
+                                 o.[name],
+                                 SCHEMA_NAME(p.schema_id) AS ParentSchemaName,
+                                 p.[name] AS ParentName
+                          FROM sys.objects  o
+                          LEFT OUTER JOIN sys.objects AS p
+                              ON o.parent_object_id = p.[object_id]
+                          WHERE o.type=@t AND o.is_ms_shipped=0
                           ORDER BY SchemaName, name",
                         qConn))
                     {
@@ -260,11 +330,23 @@ namespace AxialSqlTools
                                 var schema = rdr.GetString(0);
                                 var name = rdr.GetString(1);
 
-                                // ---- HERE: include the server in the URN ----
                                 var urnText =
-                                    $"Server[@Name='{serverName}']/" +
-                                    $"Database[@Name='{databaseName}']/" +
-                                    $"{m.UrnType}[@Schema='{schema}' and @Name='{name}']";
+                                        $"Server[@Name='{serverName}']/" +
+                                        $"Database[@Name='{databaseName}']/" +
+                                        $"{m.UrnType}[@Schema='{schema}' and @Name='{name}']";
+
+                                if (!string.IsNullOrEmpty(m.ParentType))
+                                {
+                                    var parentSchema = rdr.GetString(2);
+                                    var parentName = rdr.GetString(3);
+
+                                    urnText =
+                                        $"Server[@Name='{serverName}']/" +
+                                        $"Database[@Name='{databaseName}']/" +
+                                        $"{m.ParentType}[@Schema='{parentSchema}' and @Name='{parentName}']/" +
+                                        $"{m.UrnType}[@Name='{name}']";
+
+                                }
 
                                 var urn = new Urn(urnText);
 
@@ -293,6 +375,7 @@ namespace AxialSqlTools
         private async Task CommitToGitHubAsync(
             GitRepo repo,
             Dictionary<string, string> files,
+            SmoObjectMap[] objectMap,
             string commitMessage,
             IProgress<string> progress)
         {
@@ -305,21 +388,16 @@ namespace AxialSqlTools
             var reference = await client.Git.Reference.Get(repo.Owner, repo.Name, $"heads/{repo.Branch}");
             var latestCommit = await client.Git.Commit.Get(repo.Owner, repo.Name, reference.Object.Sha);
 
-            //------test-
+            // Prepare a list of files to be deleted
             var remotePaths = new List<string>();
-            foreach (var folder in new[] { "Tables", "Views", "StoredProcedures", /* etc */ })
+            foreach (ScriptFactoryAccess.ConnectionInfo ci in _connections)
             {
-                // this returns only the files & sub-dirs under `<dbName>/<folder>`
-                var items = await client.Repository.Content
-                                     .GetAllContentsByRef(repo.Owner, repo.Name, $"{"AWSInventory"}/{folder}", repo.Branch);
-
-                // files get `Type == "file"` and you get their .Path and .Sha directly
-                remotePaths.AddRange(items
-                    .Where(i => i.Type == ContentType.File)
-                    .Select(i => i.Path));
-            }
+                progress.Report($"▶ Fetching remote files under [{ci.Database}]");
+                var items = await GetAllRemoteFilePathsAsync(client, SelectedRepo, ci.Database);
+                remotePaths.AddRange(items);
+            }                
             var remoteSet = new HashSet<string>(remotePaths);
-            //\\ ---test-
+            //------------
 
             var localPaths = new HashSet<string>(files.Keys);
             //var toAdd = localPaths.Except(remotePaths).ToList();
@@ -334,18 +412,21 @@ namespace AxialSqlTools
             //               .ToList();
 
             // confirmation dialog
-            var msg = $"About to commit changes to GitHub:\n\n" +
-                      $"Files to add:    {toAdd.Count}\n" +
-                      //$"Files to modify: {toModify.Count}\n" +
-                      $"Files to delete (doesn't work yet): {toDelete.Count}\n\n" +
-                      "Continue?";
-            if (MessageBox.Show(msg, "Confirm Commit", MessageBoxButton.YesNo, MessageBoxImage.Question)
-                != MessageBoxResult.Yes)
-            {
-                progress.Report("Commit cancelled by user.");
-                return;
-            }
 
+            if (ConfirmBeforePushing.IsChecked.GetValueOrDefault()) {
+
+                var msg = $"About to commit changes to GitHub:\n\n" +
+                            $"Files to add/modify:    {toAdd.Count}\n" +
+                            //$"Files to modify: {toModify.Count}\n" +
+                            $"Files to empty (an Octokit bug doesn't allow delete): {toDelete.Count}\n\n" +
+                            "Continue?";
+                if (MessageBox.Show(msg, "Confirm Commit", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                    != MessageBoxResult.Yes)
+                {
+                    progress.Report("Commit cancelled by user.");
+                    return;
+                }
+            } 
             // build tree items
             var treeItems = new List<NewTreeItem>();
             int count = 0, total = toAdd.Count; // + toModify.Count + toDelete.Count;
@@ -359,12 +440,13 @@ namespace AxialSqlTools
                 progress.Report($"[{++count}/{total}] prepared blob for {path}");
             }
 
-            //// deletions
-            //foreach (var path in toDelete)
-            //{
-            //    treeItems.Add(new NewTreeItem { Path = path, Mode = "100644", Type = TreeType.Blob, Sha = null });
-            //    progress.Report($"[{++count}/{total}] marked delete for {path}");
-            //}
+            // deletions
+            foreach (var path in toDelete)
+            {
+                // there is a bug here - https://github.com/octokit/octokit.net/issues/2836
+                treeItems.Add(new NewTreeItem { Path = path, Mode = "100644", Type = TreeType.Blob, Content = "<object deleted>"});
+                progress.Report($"[{++count}/{total}] emptied file for {path}");
+            }
 
             // create new tree & commit
             progress.Report("Creating tree...");
@@ -447,7 +529,7 @@ namespace AxialSqlTools
     public static class RepoStore
     {
         private static readonly string _path =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                          "AxialSQL", "repos.json");
 
         public static List<GitRepo> Load()
@@ -463,7 +545,7 @@ namespace AxialSqlTools
 
         public static void Save(IEnumerable<GitRepo> repos)
         {
-            var dir = Path.GetDirectoryName(_path);
+            var dir = System.IO.Path.GetDirectoryName(_path);
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(_path, JsonConvert.SerializeObject(repos, Formatting.Indented));
         }

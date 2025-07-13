@@ -37,7 +37,7 @@
         {
             public List<WaitsInfo> previousWaitStats = new List<WaitsInfo>();
             private Dictionary<DateTime, List<WaitsInfo>> aggregatedWaitStats = new Dictionary<DateTime, List<WaitsInfo>>();
-            private readonly Timer timer;
+            //private readonly Timer timer;
 
             public WaitsStatsAggregator()
             {

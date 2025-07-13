@@ -231,7 +231,7 @@
         <Icon guid="guidDatabaseScripter" id="bmpDatabaseScripter" />
         <!--<CommandFlag>DefaultInvisible</CommandFlag>-->
         <Strings>
-          <ButtonText>Sync to GitHub (WIP - do not use)</ButtonText>
+          <ButtonText>Sync to GitHub</ButtonText>
         </Strings>
       </Button>
 

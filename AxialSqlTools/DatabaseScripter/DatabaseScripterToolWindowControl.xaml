@@ -11,6 +11,10 @@
         <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="8" >
 
             <!-- In‐memory Connections list -->
+            <TextBlock Text="Sync to GitHub"
+                       FontSize="18" FontWeight="Bold"
+                       HorizontalAlignment="Left" Margin="0,0,0,8"/>
+            
             <TextBlock Text="Database Connections:" FontWeight="SemiBold"/>
             <StackPanel Orientation="Horizontal" Margin="0,4">
                 <ListBox Name="ConnectionsListBox"
@@ -30,9 +34,6 @@
                 </StackPanel>
             </StackPanel>
 
-            <TextBlock Text="Sync to GitHub"
-                       FontSize="18" FontWeight="Bold"
-                       HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
             <!-- Repo list -->
             <TextBlock Text="Saved GitHub Repos:" FontWeight="SemiBold"/>
@@ -51,12 +52,13 @@
             <StackPanel Orientation="Horizontal" Margin="0,8">
                 <TextBlock Text="Commit Msg:" Width="80"/>
                 <TextBox Name="MessageTextBox" Width="300" Text="Add or update scripted objects"/>
+                <CheckBox Name="ConfirmBeforePushing" Content="Confirm before pushing" Margin="10,0,0,0"/>
             </StackPanel>
 
             <!-- Run -->
             <Button Name="RunButton"
                     Content="Script And Commit"
-                    Width="160" Height="40"
+                    Width="160" Height="40" HorizontalAlignment="Left"
                     Click="RunButton_Click"/>
 
             <!-- Progress -->
