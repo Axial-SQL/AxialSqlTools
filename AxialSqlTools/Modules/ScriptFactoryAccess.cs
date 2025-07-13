@@ -23,6 +23,16 @@ namespace AxialSqlTools
             public string Database { get; set; }            
             public string ServerName { get; set; }            
             public UIConnectionInfo ActiveConnectionInfo { get; set; }
+
+            public string DisplayName
+            {
+                get
+                {
+                    return $"{ServerName} \\ {Database}";
+                }
+            }
+
+            public override string ToString() => DisplayName;
         }
 
         private static INodeInformation GetSelectedNode(IObjectExplorerService _objectExplorerService)

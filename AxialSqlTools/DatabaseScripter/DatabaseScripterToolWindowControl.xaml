@@ -10,6 +10,26 @@
     <Grid Margin="10">
         <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="8" >
 
+            <!-- In‐memory Connections list -->
+            <TextBlock Text="Database Connections:" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,4">
+                <ListBox Name="ConnectionsListBox"
+                     Width="400" Height="100"
+                     DisplayMemberPath="DisplayName"
+                     SelectedItem="{Binding SelectedConnection, Mode=TwoWay}"/>
+                <StackPanel Orientation="Vertical" Margin="8,0,0,0">
+                    <Button Name="AddConnectionButton"
+                        Content="+ Add"
+                        Width="60"
+                        Click="AddConnectionButton_Click"/>
+                    <Button Name="RemoveConnectionButton"
+                        Content="– Remove"
+                        Width="60"
+                        Margin="0,4,0,0"
+                        Click="RemoveConnectionButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+
             <TextBlock Text="Sync to GitHub"
                        FontSize="18" FontWeight="Bold"
                        HorizontalAlignment="Left" Margin="0,0,0,8"/>

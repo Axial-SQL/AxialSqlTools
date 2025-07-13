@@ -123,7 +123,6 @@ namespace AxialSqlTools
 
                           // Optionally, configure archive settings, etc.
                           ArchiveFileName = Path.Combine(logDirectory, "archive/log.{###}.txt"),
-                          ArchiveNumbering = ArchiveNumberingMode.Rolling,
                           ArchiveAboveSize = 1024 * 1024 * 5, // 5 MB, for example
                           MaxArchiveFiles = 5
                       };

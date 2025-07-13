@@ -1,4 +1,6 @@
 ﻿// DatabaseScripterToolWindowControl.xaml.cs
+using DocumentFormat.OpenXml.Math;
+using Microsoft.Data.SqlClient;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Sdk.Sfc;
 using Microsoft.SqlServer.Management.Smo;
@@ -13,12 +15,19 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using static AxialSqlTools.ScriptFactoryAccess;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView;
 
 namespace AxialSqlTools
 {
     public partial class DatabaseScripterToolWindowControl : UserControl
     {
+
+        // In-memory list of DB connections
+        private readonly ObservableCollection<ConnectionInfo> _connections;
+        private ConnectionInfo SelectedConnection => (ConnectionInfo)ConnectionsListBox.SelectedItem;
+
+
         private readonly ObservableCollection<GitRepo> _repos;
         private GitRepo SelectedRepo => (GitRepo)ReposListBox.SelectedItem;
         private readonly ObservableCollection<string> _progressMessages = new ObservableCollection<string>();
@@ -28,9 +37,33 @@ namespace AxialSqlTools
             InitializeComponent();
             ProgressListBox.ItemsSource = _progressMessages;
 
+            _connections = new ObservableCollection<ConnectionInfo>();
+            ConnectionsListBox.ItemsSource = _connections;
+
             _repos = new ObservableCollection<GitRepo>(RepoStore.Load());
             ReposListBox.ItemsSource = _repos;
             if (_repos.Any()) ReposListBox.SelectedIndex = 0;
+        }
+
+        private void AddConnectionButton_Click(object sender, RoutedEventArgs e)
+        {
+            _connections.Add(ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer());
+        }
+
+        private void RemoveConnectionButton_Click(object sender, RoutedEventArgs e)
+        {
+            var conn = SelectedConnection;
+            if (conn == null) return;
+
+            if (MessageBox.Show(
+                    $"Remove connection to {conn.ServerName}\\{conn.Database}?",
+                    "Confirm",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning)
+                == MessageBoxResult.Yes)
+            {
+                _connections.Remove(conn);
+            }
         }
 
         private void AddRepoButton_Click(object sender, RoutedEventArgs e)
@@ -68,6 +101,16 @@ namespace AxialSqlTools
 
         private async void RunButton_Click(object sender, RoutedEventArgs e)
         {
+
+            if (!_connections.Any())
+            {
+                MessageBox.Show("Please add at least one database connection first.",
+                                "No Connections",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Exclamation);
+                return;
+            }
+
             if (SelectedRepo == null)
             {
                 MessageBox.Show("Please select a GitHub repo first.", "No Repo Selected",
@@ -78,40 +121,52 @@ namespace AxialSqlTools
             RunButton.IsEnabled = false;
             _progressMessages.Clear();
 
-            var progress = new Progress<string>(msg =>
+            IProgress<string> textProgress = new Progress<string>(msg =>
             {
                 _progressMessages.Add(msg);
                 ProgressListBox.ScrollIntoView(msg);
             });
+            IProgress<double> overallProgress = new Progress<double>(pct =>
+            {
+                OverallProgressBar.Value = pct;
+            });
 
             try
             {
-                // 1) Script everything into memory
-                var ci = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer();
-                var server = new Server(new ServerConnection(ci.ServerName));
-                var db = server.Databases[ci.Database];
-
-                var messageProgress = new Progress<string>(msg =>
+                // 1) Script every database into one combined dictionary
+                var allScripts = new Dictionary<string, string>();
+                int total = _connections.Count;
+                for (int i = 0; i < total; i++)
                 {
-                    _progressMessages.Add(msg);
-                    ProgressListBox.ScrollIntoView(msg);
-                });
-                var percentProgress = new Progress<double>(pct =>
-                {
-                    OverallProgressBar.Value = pct;
-                });
+                    var ci = _connections[i];
+                    textProgress.Report($"▶ [{i + 1}/{total}] Scripting {ci.ServerName}\\{ci.Database}…");
 
-                var scripts = await Task.Run(() =>
-                    ScriptAllObjectsInMemory(server, db, messageProgress, percentProgress));
+                    var scripts = await Task.Run(() =>
+                        ScriptAllObjectsInMemory(
+                            ci.FullConnectionString,
+                            ci.Database,
+                            textProgress,
+                            // no-op percent reporter
+                            new Progress<double>(_ => { })
+                        ));
 
-                // 2) Commit to GitHub with diff & confirm
+                    // merge, prefixing each script path by the database name
+                    foreach (var kv in scripts)
+                    { 
+                        allScripts[kv.Key] = kv.Value;
+                    }
+                }
+
+                // 2) Commit everything at once to the selected repo
+                textProgress.Report($"▶ Committing all {allScripts.Count} scripts to {SelectedRepo.DisplayName}…");
+
                 await CommitToGitHubAsync(
                     SelectedRepo,
-                    scripts,
+                    allScripts,
                     MessageTextBox.Text.Trim(),
-                    progress);
+                    textProgress);
 
-                _progressMessages.Add("✅ All done!");
+                _progressMessages.Add("🎉 All done!");
             }
             catch (Exception ex)
             {
@@ -124,11 +179,20 @@ namespace AxialSqlTools
         }
 
         private Dictionary<string, string> ScriptAllObjectsInMemory(
-            Server server,
-            Database db,
+            string connectionString,
+            string databaseName,
             IProgress<string> msgProgress,
             IProgress<double> pctProgress)
         {
+            // Prepare SMO objects
+            var sqlConn = new SqlConnection(connectionString);
+            var serverConn = new ServerConnection(sqlConn);
+            // server already passed in but reaffirm it's the same:
+            Server server = new Server(serverConn);
+
+            // grab the server instance name
+            string serverName = server.ConnectionContext.ServerInstance;
+
             var options = new ScriptingOptions
             {
                 IncludeHeaders = false,
@@ -140,42 +204,91 @@ namespace AxialSqlTools
                 ScriptBatchTerminator = true,
                 IncludeDatabaseContext = false
             };
+            var scripter = new Scripter(server) { Options = options };
 
-            var result = new Dictionary<string, string>();
-            var categories = new (IEnumerable<Urn> items, string folder, bool format)[]
+            // map sys.objects types → SMO Urn type + folder + whether to pretty‐format
+            var objectMap = new[]
             {
-                (db.Tables.Cast<Table>().Where(t=>!t.IsSystemObject).Select(t=>t.Urn), "Tables", true),
-                (db.Views.Cast<View>().Where(v=>!v.IsSystemObject).Select(v=>v.Urn), "Views", false),
-                (db.StoredProcedures.Cast<StoredProcedure>().Where(sp=>!sp.IsSystemObject).Select(sp=>sp.Urn), "StoredProcedures", false),
-                (db.UserDefinedFunctions.Cast<UserDefinedFunction>().Where(fn=>!fn.IsSystemObject).Select(fn=>fn.Urn), "TableValuedFunctions", false),
-                (db.Synonyms.Cast<Synonym>().Select(s=>s.Urn), "Synonyms", false),
-                (db.UserDefinedDataTypes.Cast<UserDefinedDataType>().Select(udt=>udt.Urn), "Types", false),
-                (db.Triggers.Cast<DatabaseDdlTrigger>().Where(tr=>!tr.IsSystemObject).Select(tr=>tr.Urn), "Triggers", false)
+                new { SysType="U",   UrnType="Table",               Folder="Tables",           Format=true  },
+                new { SysType="V",   UrnType="View",                Folder="Views",            Format=false },
+                new { SysType="P",   UrnType="StoredProcedure",     Folder="StoredProcedures", Format=false },
+                new { SysType="FN",  UrnType="UserDefinedFunction", Folder="Functions",        Format=false },
+                new { SysType="TF",  UrnType="UserDefinedFunction", Folder="Functions",        Format=false },
+                new { SysType="IF",  UrnType="UserDefinedFunction", Folder="Functions",        Format=false },
+                new { SysType="TR",  UrnType="DatabaseDdlTrigger",  Folder="Triggers",         Format=false },
+                new { SysType="SN",  UrnType="Synonym",             Folder="Synonyms",         Format=false },
+                new { SysType="TT",  UrnType="UserDefinedType",     Folder="Types",            Format=false }
             };
 
-            var scripter = new Scripter(server) { Options = options };
-            int total = categories.Sum(c => c.items.Count());
+            // pre‐count for progress
+            int total = 0;
+            using (var countConn = new SqlConnection(connectionString))
+            {
+                countConn.Open();
+                foreach (var m in objectMap)
+                {
+                    using (var cmd = new SqlCommand(
+                        "SELECT COUNT(*) FROM sys.objects WHERE type=@t AND is_ms_shipped=0",
+                        countConn))
+                    {
+                        cmd.Parameters.AddWithValue("@t", m.SysType);
+                        total += (int)cmd.ExecuteScalar();
+                    }
+                }
+            }
+
+            var result = new Dictionary<string, string>();
             int done = 0;
 
-            foreach (var (items, folder, format) in categories)
+            foreach (var m in objectMap)
             {
-                foreach (var urn in items)
+                using (var qConn = new SqlConnection(connectionString))
                 {
-                    var lines = scripter.Script(new UrnCollection { urn });
-                    var sql = string.Join(Environment.NewLine, lines.Cast<string>());
-                    if (format) sql = TSqlFormatter.FormatCode(sql);
+                    qConn.Open();
+                    using (var cmd = new SqlCommand(
+                        @"SELECT SCHEMA_NAME(schema_id) AS SchemaName, name
+                          FROM sys.objects
+                          WHERE type=@t AND is_ms_shipped=0
+                          ORDER BY SchemaName, name",
+                        qConn))
+                    {
+                        cmd.Parameters.AddWithValue("@t", m.SysType);
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                var schema = rdr.GetString(0);
+                                var name = rdr.GetString(1);
 
-                    var path = $"{db.Name}/{folder}/{urn.GetAttribute("Schema")}.{urn.GetAttribute("Name")}.sql";
-                    result[path] = sql;
+                                // ---- HERE: include the server in the URN ----
+                                var urnText =
+                                    $"Server[@Name='{serverName}']/" +
+                                    $"Database[@Name='{databaseName}']/" +
+                                    $"{m.UrnType}[@Schema='{schema}' and @Name='{name}']";
 
-                    done++;
-                    msgProgress.Report($"[{done}/{total}] scripted {path}");
-                    pctProgress.Report(done * 100.0 / total);
+                                var urn = new Urn(urnText);
+
+                                // script via SMO
+                                var lines = scripter.Script(new UrnCollection { urn });
+                                var sql = string.Join(Environment.NewLine, lines.Cast<string>());
+                                if (m.Format)
+                                    sql = TSqlFormatter.FormatCode(sql);
+
+                                var path = $"{databaseName}/{m.Folder}/{schema}.{name}.sql";
+                                result[path] = sql;
+
+                                done++;
+                                msgProgress.Report($"[{done}/{total}] scripted {path}");
+                                pctProgress.Report(done * 100.0 / total);
+                            }
+                        }
+                    }
                 }
             }
 
             return result;
         }
+
 
         private async Task CommitToGitHubAsync(
             GitRepo repo,

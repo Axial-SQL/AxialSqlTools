@@ -206,7 +206,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="NLog">
-      <Version>5.5.0</Version>
+      <Version>6.0.1</Version>
     </PackageReference>
     <PackageReference Include="Npgsql">
       <Version>8.0.7</Version>
@@ -221,7 +221,7 @@
       <Version>4.3.4</Version>
     </PackageReference>
     <PackageReference Include="System.Security.Cryptography.ProtectedData">
-      <Version>9.0.5</Version>
+      <Version>9.0.7</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
