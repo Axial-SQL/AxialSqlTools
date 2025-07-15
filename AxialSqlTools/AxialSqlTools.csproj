@@ -53,12 +53,12 @@
     <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
       <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DatabaseScripter\AddRepoDialog.xaml.cs">
+    <Compile Include="SyncToGitHub\AddRepoDialog.xaml.cs">
       <DependentUpon>AddRepoDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DatabaseScripter\DatabaseScripterToolWindow.cs" />
-    <Compile Include="DatabaseScripter\DatabaseScripterToolWindowCommand.cs" />
-    <Compile Include="DatabaseScripter\DatabaseScripterToolWindowControl.xaml.cs">
+    <Compile Include="SyncToGitHub\DatabaseScripterToolWindow.cs" />
+    <Compile Include="SyncToGitHub\DatabaseScripterToolWindowCommand.cs" />
+    <Compile Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml.cs">
       <DependentUpon>DatabaseScripterToolWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Modules\AuroraCore.cs" />
@@ -257,11 +257,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="DatabaseScripter\AddRepoDialog.xaml">
+    <Page Include="SyncToGitHub\AddRepoDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DatabaseScripter\DatabaseScripterToolWindowControl.xaml">
+    <Page Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

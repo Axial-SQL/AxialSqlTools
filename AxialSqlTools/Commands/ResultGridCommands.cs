@@ -68,21 +68,29 @@ namespace AxialSqlTools
 
         private static void OnClick_CopyAsInsert(CommandBarButton Ctrl, ref bool CancelDefault)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             CopySelectedValues("SQLINSERT");
         }
 
         private static void OnClick_CopyAsCSV(CommandBarButton Ctrl, ref bool CancelDefault)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             CopySelectedValues("CSV");
         }
 
         private static void OnClick_CopySelectedColumnNames(CommandBarButton Ctrl, ref bool CancelDefault)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             CopyColumnNames(all: false);
         }
 
         private static void OnClick_CopyAllColumnNames(CommandBarButton Ctrl, ref bool CancelDefault)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             CopyColumnNames(all: true);
         }
 

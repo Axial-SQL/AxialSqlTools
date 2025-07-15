@@ -283,6 +283,7 @@ namespace AxialSqlTools
 
         public static void SaveDataTableToExcel(List<DataTable> dataTables, string filePath, bool isShiftPressed)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
 
             var excelSettings = SettingsManager.GetExcelExportSettings();
 

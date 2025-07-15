@@ -8,6 +8,7 @@ using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -50,7 +51,7 @@ namespace AxialSqlTools
 
 
         private readonly ObservableCollection<GitRepo> _repos;
-        private GitRepo SelectedRepo => (GitRepo)ReposListBox.SelectedItem;
+        private GitRepo SelectedRepo => (GitRepo)ReposComboBox.SelectedItem;
         private readonly ObservableCollection<string> _progressMessages = new ObservableCollection<string>();
 
         public DatabaseScripterToolWindowControl()
@@ -62,8 +63,38 @@ namespace AxialSqlTools
             ConnectionsListBox.ItemsSource = _connections;
 
             _repos = new ObservableCollection<GitRepo>(RepoStore.Load());
-            ReposListBox.ItemsSource = _repos;
-            if (_repos.Any()) ReposListBox.SelectedIndex = 0;
+            ReposComboBox.ItemsSource = _repos;
+            // if (_repos.Any()) ReposComboBox.SelectedIndex = 0;
+        }
+
+        private void ReposComboBox_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Only if you haven’t already selected one
+            if (ReposComboBox.Items.Count > 0 && ReposComboBox.SelectedIndex < 0)
+            {
+                // Option A: by index
+                ReposComboBox.SelectedIndex = 0;
+
+                // Option B: by item
+                // ReposComboBox.SelectedItem = _repos[0];
+            }
+        }
+
+        private void OpenRepoCommitsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var repo = SelectedRepo;
+            if (repo == null)
+            {
+                MessageBox.Show("Please select a repo first.", "No Repo Selected",
+                                MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                return;
+            }
+
+            // URL to the commits for the current branch
+            var url = $"https://github.com/{repo.Owner}/{repo.Name}/commits/{repo.Branch}";
+
+            // Open in default browser
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
 
         private void AddConnectionButton_Click(object sender, RoutedEventArgs e)
@@ -194,7 +225,7 @@ namespace AxialSqlTools
                 }
 
                 // 2) Commit everything at once to the selected repo
-                textProgress.Report($"▶ Committing all {allScripts.Count} scripts to {SelectedRepo.DisplayName}…");
+                textProgress.Report($"▶ Committing all {allScripts.Count} scripts to {SelectedRepo.DisplayName}...");
 
                 await CommitToGitHubAsync(
                     SelectedRepo,
@@ -280,7 +311,10 @@ namespace AxialSqlTools
                 // Triggers = true, -- triggers are scripted separately because SMO doesn't inject GO between table definition and it's trigger
                 SchemaQualify = true,
                 ScriptBatchTerminator = true,
-                IncludeDatabaseContext = false
+                IncludeDatabaseContext = false,
+
+                // <— ensure only your options are honored
+                EnforceScriptingOptions = true
             };
             var scripter = new Scripter(server) { Options = options };
 
@@ -329,6 +363,9 @@ namespace AxialSqlTools
                             {
                                 var schema = rdr.GetString(0);
                                 var name = rdr.GetString(1);
+
+                                // an example [dbo].["Weird Table Name'];
+                                name = name.Replace("'", "''");
 
                                 var urnText =
                                         $"Server[@Name='{serverName}']/" +
@@ -384,15 +421,11 @@ namespace AxialSqlTools
                 Credentials = new Credentials(repo.Token)
             };
 
-            progress.Report("Fetching branch info...");
-            var reference = await client.Git.Reference.Get(repo.Owner, repo.Name, $"heads/{repo.Branch}");
-            var latestCommit = await client.Git.Commit.Get(repo.Owner, repo.Name, reference.Object.Sha);
-
             // Prepare a list of files to be deleted
             var remotePaths = new List<string>();
             foreach (ScriptFactoryAccess.ConnectionInfo ci in _connections)
             {
-                progress.Report($"▶ Fetching remote files under [{ci.Database}]");
+                progress.Report($"▶ Fetching remote file structure under [{ci.Database}]");
                 var items = await GetAllRemoteFilePathsAsync(client, SelectedRepo, ci.Database);
                 remotePaths.AddRange(items);
             }                
@@ -418,7 +451,7 @@ namespace AxialSqlTools
                 var msg = $"About to commit changes to GitHub:\n\n" +
                             $"Files to add/modify:    {toAdd.Count}\n" +
                             //$"Files to modify: {toModify.Count}\n" +
-                            $"Files to empty (an Octokit bug doesn't allow delete): {toDelete.Count}\n\n" +
+                            $"Files to delete: {toDelete.Count}\n\n" +
                             "Continue?";
                 if (MessageBox.Show(msg, "Confirm Commit", MessageBoxButton.YesNo, MessageBoxImage.Question)
                     != MessageBoxResult.Yes)
@@ -426,7 +459,37 @@ namespace AxialSqlTools
                     progress.Report("Commit cancelled by user.");
                     return;
                 }
-            } 
+            }
+
+            // deletions
+            int delCounter = 0, delTotal = toDelete.Count;
+            foreach (var path in toDelete)
+            {
+                // // there is a bug here - https://github.com/octokit/octokit.net/issues/2836
+                // treeItems.Add(new NewTreeItem { Path = path, Mode = "100644", Type = TreeType.Blob, Content = "<object deleted>"});
+                // progress.Report($"[{++count}/{total}] emptied file for {path}");
+
+                progress.Report($"[{++delCounter}/{delTotal}] Deleting {path} ... ");
+
+                var existing = await client.Repository.Content
+                    .GetAllContentsByRef(repo.Owner, repo.Name, path, repo.Branch)
+                    .ConfigureAwait(false);
+                var fileSha = existing.First().Sha;
+
+                // 2) Build your DeleteFileRequest
+                var deleteRequest = new DeleteFileRequest(
+                    message: $"Remove {path}",
+                    sha: fileSha,
+                    branch: repo.Branch
+                // optional: author, committer can be set too
+                );
+
+                // 3) Call the DeleteFile method
+                await client.Repository.Content.DeleteFile(repo.Owner, repo.Name, path, deleteRequest).ConfigureAwait(false);
+
+            }
+
+
             // build tree items
             var treeItems = new List<NewTreeItem>();
             int count = 0, total = toAdd.Count; // + toModify.Count + toDelete.Count;
@@ -438,15 +501,11 @@ namespace AxialSqlTools
                     new NewBlob { Content = files[path], Encoding = EncodingType.Utf8 });
                 treeItems.Add(new NewTreeItem { Path = path, Mode = "100644", Type = TreeType.Blob, Sha = blob.Sha });
                 progress.Report($"[{++count}/{total}] prepared blob for {path}");
-            }
+            }           
 
-            // deletions
-            foreach (var path in toDelete)
-            {
-                // there is a bug here - https://github.com/octokit/octokit.net/issues/2836
-                treeItems.Add(new NewTreeItem { Path = path, Mode = "100644", Type = TreeType.Blob, Content = "<object deleted>"});
-                progress.Report($"[{++count}/{total}] emptied file for {path}");
-            }
+            progress.Report("Fetching branch info...");
+            var reference = await client.Git.Reference.Get(repo.Owner, repo.Name, $"heads/{repo.Branch}");
+            var latestCommit = await client.Git.Commit.Get(repo.Owner, repo.Name, reference.Object.Sha);
 
             // create new tree & commit
             progress.Report("Creating tree...");
