@@ -11,6 +11,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -225,13 +226,16 @@ namespace AxialSqlTools
                 }
 
                 // 2) Commit everything at once to the selected repo
-                textProgress.Report($"▶ Committing all {allScripts.Count} scripts to {SelectedRepo.DisplayName}...");
+                //textProgress.Report($"▶ Committing all {allScripts.Count} scripts to {SelectedRepo.DisplayName}...");
+
+                bool shouldConfirm = ConfirmBeforePushing.IsChecked.GetValueOrDefault();
 
                 await CommitToGitHubAsync(
                     SelectedRepo,
                     allScripts,
                     ObjectMap,
                     MessageTextBox.Text.Trim(),
+                    shouldConfirm,
                     textProgress);
 
                 textProgress.Report("🎉 All done!");
@@ -246,43 +250,46 @@ namespace AxialSqlTools
             }
         }
 
-        public static async Task<List<string>> GetAllRemoteFilePathsAsync(
+        public static async Task<Dictionary<string, string>> GetAllRemoteFileShasAsync(
             GitHubClient client,
             GitRepo repo,
-            string basePath)
+            string basePath,
+            IProgress<string> progress)
         {
-            var result = new List<string>();
-            await Recurse(basePath).ConfigureAwait(false);
-            return result;
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             async Task Recurse(string path)
             {
                 System.Collections.Generic.IReadOnlyList<RepositoryContent> items;
                 try
                 {
+
+                    progress.Report($"▶ Fetching folder structure under [{path}]");
+
                     items = await client.Repository.Content
                         .GetAllContentsByRef(repo.Owner, repo.Name, path, repo.Branch)
                         .ConfigureAwait(false);
                 }
                 catch (NotFoundException)
                 {
-                    // directory doesn't exist → nothing under here
-                    return;
+                    return; // folder doesn’t exist
                 }
 
                 foreach (var item in items)
                 {
                     if (item.Type == ContentType.Dir)
                     {
-                        // dive into subfolder
                         await Recurse(item.Path).ConfigureAwait(false);
                     }
                     else if (item.Type == ContentType.File)
                     {
-                        result.Add(item.Path);
+                        result[item.Path] = item.Sha;
                     }
                 }
             }
+
+            await Recurse(basePath).ConfigureAwait(false);
+            return result;
         }
 
         private Dictionary<string, string> ScriptAllObjectsInMemory(
@@ -414,6 +421,7 @@ namespace AxialSqlTools
             Dictionary<string, string> files,
             SmoObjectMap[] objectMap,
             string commitMessage,
+            bool shouldConfirm,
             IProgress<string> progress)
         {
             var client = new GitHubClient(new ProductHeaderValue("AxialSqlTools"))
@@ -421,38 +429,51 @@ namespace AxialSqlTools
                 Credentials = new Credentials(repo.Token)
             };
 
-            // Prepare a list of files to be deleted
-            var remotePaths = new List<string>();
-            foreach (ScriptFactoryAccess.ConnectionInfo ci in _connections)
+            // 1) Gather all remote path→SHA
+            var remoteFileShas = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var ci in _connections)
             {
-                progress.Report($"▶ Fetching remote file structure under [{ci.Database}]");
-                var items = await GetAllRemoteFilePathsAsync(client, SelectedRepo, ci.Database);
-                remotePaths.AddRange(items);
-            }                
-            var remoteSet = new HashSet<string>(remotePaths);
-            //------------
+                progress.Report($"▶ Fetching remote structure under [{ci.Database}]");
+                var shas = await GetAllRemoteFileShasAsync(client, repo, ci.Database, progress)
+                                 .ConfigureAwait(false);
+                foreach (var kv in shas)
+                    remoteFileShas[kv.Key] = kv.Value;
+            }
 
-            var localPaths = new HashSet<string>(files.Keys);
-            //var toAdd = localPaths.Except(remotePaths).ToList();
-            var toAdd = localPaths.ToList();
+            var localPaths = new HashSet<string>(files.Keys, StringComparer.OrdinalIgnoreCase);
+            var remotePaths = new HashSet<string>(remoteFileShas.Keys, StringComparer.OrdinalIgnoreCase);
+
+            // 2) Diff lists
+            var toAdd = localPaths.Except(remotePaths).ToList();
             var toDelete = remotePaths.Except(localPaths).ToList();
-            //var toModify = localPaths
-            //               .Intersect(remotePaths)
-            //               .Where(p => {
-            //                   var remoteContent = FetchRemoteContent(client, repo, p).GetAwaiter().GetResult();
-            //                   return !string.Equals(remoteContent, files[p], StringComparison.Ordinal);
-            //               })
-            //               .ToList();
 
-            // confirmation dialog
+            // 3) Check content‐diff for existing files
+            var toModify = new List<string>();
+            foreach (var path in localPaths.Intersect(remotePaths))
+            {
+                var localSha = ComputeBlobSha(files[path]);
+                var remoteSha = remoteFileShas[path];
 
-            if (ConfirmBeforePushing.IsChecked.GetValueOrDefault()) {
+                if (!string.Equals(localSha, remoteSha, StringComparison.OrdinalIgnoreCase))
+                    toModify.Add(path);
+            }
 
+            // 4) Bail out if nothing changed
+            var changeCount = toAdd.Count + toModify.Count + toDelete.Count;
+            if (changeCount == 0)
+            {
+                progress.Report("🟢 No changes detected. Skipping GitHub commit.");
+                return;
+            }
+
+            // 5) Optionally confirm
+            if (shouldConfirm)
+            {
                 var msg = $"About to commit changes to GitHub:\n\n" +
-                            $"Files to add/modify:    {toAdd.Count}\n" +
-                            //$"Files to modify: {toModify.Count}\n" +
-                            $"Files to delete: {toDelete.Count}\n\n" +
-                            "Continue?";
+                          $"New files:      {toAdd.Count}\n" +
+                          $"Modified files: {toModify.Count}\n" +
+                          $"Deleted files:  {toDelete.Count}\n\n" +
+                          "Continue?";
                 if (MessageBox.Show(msg, "Confirm Commit", MessageBoxButton.YesNo, MessageBoxImage.Question)
                     != MessageBoxResult.Yes)
                 {
@@ -461,75 +482,96 @@ namespace AxialSqlTools
                 }
             }
 
-            // deletions
-            int delCounter = 0, delTotal = toDelete.Count;
+            // 6) Delete removed files
+            int delCounter = 0;
             foreach (var path in toDelete)
             {
-                // // there is a bug here - https://github.com/octokit/octokit.net/issues/2836
-                // treeItems.Add(new NewTreeItem { Path = path, Mode = "100644", Type = TreeType.Blob, Content = "<object deleted>"});
-                // progress.Report($"[{++count}/{total}] emptied file for {path}");
-
-                progress.Report($"[{++delCounter}/{delTotal}] Deleting {path} ... ");
-
+                progress.Report($"[{++delCounter}/{toDelete.Count}] Deleting {path}...");
                 var existing = await client.Repository.Content
                     .GetAllContentsByRef(repo.Owner, repo.Name, path, repo.Branch)
                     .ConfigureAwait(false);
                 var fileSha = existing.First().Sha;
 
-                // 2) Build your DeleteFileRequest
                 var deleteRequest = new DeleteFileRequest(
                     message: $"Remove {path}",
                     sha: fileSha,
                     branch: repo.Branch
-                // optional: author, committer can be set too
                 );
-
-                // 3) Call the DeleteFile method
-                await client.Repository.Content.DeleteFile(repo.Owner, repo.Name, path, deleteRequest).ConfigureAwait(false);
-
+                await client.Repository.Content
+                    .DeleteFile(repo.Owner, repo.Name, path, deleteRequest)
+                    .ConfigureAwait(false);
             }
 
-
-            // build tree items
+            // 7) Prepare blobs only for adds + modifies
             var treeItems = new List<NewTreeItem>();
-            int count = 0, total = toAdd.Count; // + toModify.Count + toDelete.Count;
-
-            // additions & modifications
-            foreach (var path in toAdd) // toAdd.Concat(toModify))
+            int count = 0, total = toAdd.Count + toModify.Count;
+            foreach (var path in toAdd.Concat(toModify))
             {
                 var blob = await client.Git.Blob.Create(repo.Owner, repo.Name,
                     new NewBlob { Content = files[path], Encoding = EncodingType.Utf8 });
-                treeItems.Add(new NewTreeItem { Path = path, Mode = "100644", Type = TreeType.Blob, Sha = blob.Sha });
-                progress.Report($"[{++count}/{total}] prepared blob for {path}");
-            }           
+                treeItems.Add(new NewTreeItem
+                {
+                    Path = path,
+                    Mode = "100644",
+                    Type = TreeType.Blob,
+                    Sha = blob.Sha
+                });
+                progress.Report($"[{++count}/{total}] Prepared blob for {path}");
+            }
 
+            // 8) Create tree + commit
             progress.Report("Fetching branch info...");
-            var reference = await client.Git.Reference.Get(repo.Owner, repo.Name, $"heads/{repo.Branch}");
-            var latestCommit = await client.Git.Commit.Get(repo.Owner, repo.Name, reference.Object.Sha);
+            var reference = await client.Git.Reference
+                .Get(repo.Owner, repo.Name, $"heads/{repo.Branch}")
+                .ConfigureAwait(false);
+            var latestCommit = await client.Git.Commit
+                .Get(repo.Owner, repo.Name, reference.Object.Sha)
+                .ConfigureAwait(false);
 
-            // create new tree & commit
             progress.Report("Creating tree...");
             var newTree = new NewTree { BaseTree = latestCommit.Tree.Sha };
-            foreach (var ti in treeItems) newTree.Tree.Add(ti);
-            var treeResponse = await client.Git.Tree.Create(repo.Owner, repo.Name, newTree);
+            foreach (var ti in treeItems)
+                newTree.Tree.Add(ti);
+            var treeResponse = await client.Git.Tree
+                .Create(repo.Owner, repo.Name, newTree)
+                .ConfigureAwait(false);
 
             progress.Report("Creating commit...");
-            var newCommit = await client.Git.Commit.Create(repo.Owner, repo.Name,
-                new NewCommit(commitMessage, treeResponse.Sha, new[] { latestCommit.Sha }));
+            var newCommit = await client.Git.Commit
+                .Create(repo.Owner, repo.Name,
+                        new NewCommit(commitMessage, treeResponse.Sha, new[] { latestCommit.Sha }))
+                .ConfigureAwait(false);
 
             progress.Report("Updating branch...");
-            await client.Git.Reference.Update(repo.Owner, repo.Name, reference.Ref,
-                new ReferenceUpdate(newCommit.Sha));
+            await client.Git.Reference
+                .Update(repo.Owner, repo.Name, reference.Ref, new ReferenceUpdate(newCommit.Sha))
+                .ConfigureAwait(false);
 
-            progress.Report($"Commit complete: {newCommit.Sha}");
+            progress.Report($"🎉 Commit complete: {newCommit.Sha}");
         }
 
-        private async Task<string> FetchRemoteContent(GitHubClient client, GitRepo repo, string path)
+        // helper to compute the Git blob SHA1
+        private static string ComputeBlobSha(string content)
         {
-            var contents = await client.Repository.Content.GetAllContentsByRef(repo.Owner, repo.Name, path, repo.Branch);
-            return contents.First().Content;
+            var contentBytes = Encoding.UTF8.GetBytes(content);
+            var header = $"blob {contentBytes.Length}\0";
+            var headerBytes = Encoding.UTF8.GetBytes(header);
+
+            using (var sha1 = SHA1.Create())
+            {
+                // feed header + content
+                sha1.TransformBlock(headerBytes, 0, headerBytes.Length, null, 0);
+                sha1.TransformFinalBlock(contentBytes, 0, contentBytes.Length);
+                return BitConverter
+                    .ToString(sha1.Hash)
+                    .Replace("-", string.Empty)
+                    .ToLowerInvariant();
+            }
         }
+
     }
+
+
 
     // --- helper classes below ---
 
