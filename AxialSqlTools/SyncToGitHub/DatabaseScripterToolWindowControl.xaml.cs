@@ -50,10 +50,256 @@ namespace AxialSqlTools
         private readonly ObservableCollection<ScriptFactoryAccess.ConnectionInfo> _connections;
         private ScriptFactoryAccess.ConnectionInfo SelectedConnection => (ScriptFactoryAccess.ConnectionInfo)ConnectionsListBox.SelectedItem;
 
-
-        private readonly ObservableCollection<GitRepo> _repos;
-        private GitRepo SelectedRepo => (GitRepo)ReposComboBox.SelectedItem;
         private readonly ObservableCollection<string> _progressMessages = new ObservableCollection<string>();
+
+        private readonly ObservableCollection<GitHubSyncProfile> _profiles;
+        private GitHubSyncProfile _currentProfile;
+        private bool _isEditingProfile = false;
+
+
+        #region SyncProfiles UI
+
+        private void UpdateMainFrameState()
+        {
+            bool hasProfile = ProfilesComboBox.SelectedItem != null;
+
+            // Disable controls below profile selector if no profile selected
+            ConnectionsListBox.IsEnabled = hasProfile;
+            AddConnectionButton.IsEnabled = hasProfile;
+            RemoveConnectionButton.IsEnabled = hasProfile;
+            RunButton.IsEnabled = hasProfile;
+            MessageTextBox.IsEnabled = hasProfile;
+            ConfirmBeforePushing.IsEnabled = hasProfile;
+        }
+
+        private void UpdateRepoInfo(GitHubSyncProfile profile)
+        {
+            if (profile == null || profile.Repo == null)
+            {
+                RepoUrlHyperlink.Inlines.Clear();
+                RepoUrlHyperlink.Inlines.Add("Repo: (none selected)");
+                RepoUrlHyperlink.NavigateUri = null;
+
+                RepoSyncOptionsTextBlock.Text = "Sync options will appear here";
+                return;
+            }
+
+            // Build the GitHub repo URL
+            string url = $"https://github.com/{profile.Repo.Owner}/{profile.Repo.Name}/tree/{profile.Repo.Branch}";
+
+            RepoUrlHyperlink.Inlines.Clear();
+            RepoUrlHyperlink.Inlines.Add(url);
+            RepoUrlHyperlink.NavigateUri = new Uri(url);
+
+            var jobsInfo = profile.ExportServerJobs ? "✔ Export Jobs" : "✖ Jobs Not Exported";
+            var loginsInfo = profile.ExportServerLoginsAndPermissions ? "✔ Export Logins" : "✖ Logins Not Exported";
+            RepoSyncOptionsTextBlock.Text = $"{jobsInfo} | {loginsInfo}";
+        }
+
+        private void RepoUrlHyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            if (e.Uri != null)
+            {
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            }
+            e.Handled = true;
+        }
+
+
+
+        // Switch to profile editor
+        private void AddNewProfileButton_Click(object sender, RoutedEventArgs e)
+        {
+            _currentProfile = new GitHubSyncProfile();
+            _isEditingProfile = false;
+
+            // Clear all fields
+            ProfileNameTextBox.Clear();
+            RepoOwnerTextBox.Clear();
+            RepoNameTextBox.Clear();
+            RepoBranchTextBox.Text = "main";
+            RepoTokenBox.Password = string.Empty;
+
+            ExportJobsCheckBox.IsChecked = false;
+            ExportLoginsCheckBox.IsChecked = false;
+            ProfileDatabasesListBox.Items.Clear();
+
+            ProfileEditorFrame.Visibility = Visibility.Visible;
+            MainFrame.Visibility = Visibility.Collapsed;
+        }
+
+        // Add DB to profile in editor
+        private void AddDatabaseToProfile_Click(object sender, RoutedEventArgs e)
+        {
+            var conn = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer();
+            if (conn != null)
+            {
+                ProfileDatabasesListBox.Items.Add(conn);
+            }
+        }
+
+        private void RemoveDatabaseFromProfile_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedDb = (ScriptFactoryAccess.ConnectionInfo)ProfileDatabasesListBox.SelectedItem;
+            if (selectedDb != null)
+            {
+                ProfileDatabasesListBox.Items.Remove(selectedDb);
+            }
+        }
+
+        private void EditProfileButton_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedProfile = (GitHubSyncProfile)ProfilesComboBox.SelectedItem;
+            if (selectedProfile == null)
+            {
+                MessageBox.Show("Please select a profile to edit.", "No Profile Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _currentProfile = selectedProfile;
+            _isEditingProfile = true;
+
+            // Pre-fill form fields
+            ProfileNameTextBox.Text = _currentProfile.ProfileName;
+
+            if (_currentProfile.Repo != null)
+            {
+                RepoOwnerTextBox.Text = _currentProfile.Repo.Owner;
+                RepoNameTextBox.Text = _currentProfile.Repo.Name;
+                RepoBranchTextBox.Text = _currentProfile.Repo.Branch;
+                RepoTokenBox.Password = _currentProfile.Repo.Token ?? string.Empty;
+            }
+            
+
+            ExportJobsCheckBox.IsChecked = _currentProfile.ExportServerJobs;
+            ExportLoginsCheckBox.IsChecked = _currentProfile.ExportServerLoginsAndPermissions;
+
+            ProfileDatabasesListBox.Items.Clear();
+            foreach (var db in _currentProfile.Databases)
+                ProfileDatabasesListBox.Items.Add(db);
+
+            ProfileEditorFrame.Visibility = Visibility.Visible;
+            MainFrame.Visibility = Visibility.Collapsed;
+        }
+
+        // Save profile
+        private async void SaveProfile_Click(object sender, RoutedEventArgs e)
+        {
+            string profileName = ProfileNameTextBox.Text.Trim();
+            string owner = RepoOwnerTextBox.Text.Trim();
+            string name = RepoNameTextBox.Text.Trim();
+            string branch = RepoBranchTextBox.Text.Trim();
+            string token = RepoTokenBox.Password.Trim();
+
+            // Basic validation
+            if (string.IsNullOrEmpty(profileName) ||
+                string.IsNullOrEmpty(owner) ||
+                string.IsNullOrEmpty(name) ||
+                string.IsNullOrEmpty(branch) ||
+                string.IsNullOrEmpty(token))
+            {
+                MessageBox.Show("Profile Name, Owner, Repo Name, Branch, and Token are required.",
+                                "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // GitHub repo & branch validation
+            try
+            {
+                var client = new GitHubClient(new ProductHeaderValue("AxialSqlTools"))
+                {
+                    Credentials = new Credentials(token)
+                };
+
+                // Validate repo existence
+                var repoInfo = await client.Repository.Get(owner, name);
+
+                // Validate branch existence
+                var branchInfo = await client.Repository.Branch.Get(owner, name, branch);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to validate GitHub details:\n{ex.Message}",
+                                "GitHub Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Save profile after successful validation
+            _currentProfile.ProfileName = profileName;
+
+            if (_currentProfile.Repo == null)
+                _currentProfile.Repo = new GitRepo();
+            _currentProfile.Repo.Owner = owner;
+            _currentProfile.Repo.Name = name;
+            _currentProfile.Repo.Branch = branch;
+            _currentProfile.Repo.Token = token;
+            _currentProfile.ExportServerJobs = ExportJobsCheckBox.IsChecked == true;
+            _currentProfile.ExportServerLoginsAndPermissions = ExportLoginsCheckBox.IsChecked == true;
+            _currentProfile.Databases = ProfileDatabasesListBox.Items.Cast<ScriptFactoryAccess.ConnectionInfo>().ToList();
+
+            if (!_isEditingProfile)
+                _profiles.Add(_currentProfile);
+
+            ProfileStore.Save(_profiles);
+
+            _isEditingProfile = false;
+            SwitchToMainFrame();
+
+        }
+
+
+        private void CancelProfileEdit_Click(object sender, RoutedEventArgs e)
+        {
+            _isEditingProfile = false;
+            SwitchToMainFrame();
+        }
+
+        private void DeleteProfile_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentProfile == null)
+            {
+                MessageBox.Show("No profile selected.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var confirm = MessageBox.Show($"Delete profile '{_currentProfile.ProfileName}'?", "Confirm Delete",
+                                          MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (confirm == MessageBoxResult.Yes)
+            {
+                _profiles.Remove(_currentProfile);
+                ProfileStore.Save(_profiles);
+                _currentProfile = null;
+                _isEditingProfile = false;
+                SwitchToMainFrame();
+            }
+        }
+
+
+        private void SwitchToMainFrame()
+        {
+            ProfileEditorFrame.Visibility = Visibility.Collapsed;
+            MainFrame.Visibility = Visibility.Visible;
+            ProfileNameTextBox.Clear();
+            ProfileDatabasesListBox.Items.Clear();
+        }
+
+        // Load profile into main UI
+        private void ProfilesComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _currentProfile = (GitHubSyncProfile)ProfilesComboBox.SelectedItem;
+
+            _connections.Clear();
+            if (_currentProfile != null)
+            {
+                foreach (var db in _currentProfile.Databases)
+                    _connections.Add(db);
+            }
+
+            UpdateRepoInfo(_currentProfile);
+            UpdateMainFrameState();
+        }
+        #endregion
 
         public DatabaseScripterToolWindowControl()
         {
@@ -63,39 +309,10 @@ namespace AxialSqlTools
             _connections = new ObservableCollection<ScriptFactoryAccess.ConnectionInfo>();
             ConnectionsListBox.ItemsSource = _connections;
 
-            _repos = new ObservableCollection<GitRepo>(RepoStore.Load());
-            ReposComboBox.ItemsSource = _repos;
-            // if (_repos.Any()) ReposComboBox.SelectedIndex = 0;
-        }
+            _profiles = new ObservableCollection<GitHubSyncProfile>(ProfileStore.Load());
+            ProfilesComboBox.ItemsSource = _profiles;
 
-        private void ReposComboBox_Loaded(object sender, RoutedEventArgs e)
-        {
-            // Only if you haven’t already selected one
-            if (ReposComboBox.Items.Count > 0 && ReposComboBox.SelectedIndex < 0)
-            {
-                // Option A: by index
-                ReposComboBox.SelectedIndex = 0;
-
-                // Option B: by item
-                // ReposComboBox.SelectedItem = _repos[0];
-            }
-        }
-
-        private void OpenRepoCommitsButton_Click(object sender, RoutedEventArgs e)
-        {
-            var repo = SelectedRepo;
-            if (repo == null)
-            {
-                MessageBox.Show("Please select a repo first.", "No Repo Selected",
-                                MessageBoxButton.OK, MessageBoxImage.Exclamation);
-                return;
-            }
-
-            // URL to the commits for the current branch
-            var url = $"https://github.com/{repo.Owner}/{repo.Name}/commits/{repo.Branch}";
-
-            // Open in default browser
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            UpdateMainFrameState();
         }
 
         private void AddConnectionButton_Click(object sender, RoutedEventArgs e)
@@ -119,39 +336,6 @@ namespace AxialSqlTools
             }
         }
 
-        private void AddRepoButton_Click(object sender, RoutedEventArgs e)
-        {
-            var dlg = new AddRepoDialog
-            {
-                Owner = Window.GetWindow(this),
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
-            if (dlg.ShowDialog() == true)
-            {
-                _repos.Add(dlg.Result);
-                RepoStore.Save(_repos);
-            }
-        }
-
-        private void RemoveRepoButton_Click(object sender, RoutedEventArgs e)
-        {
-            var repo = SelectedRepo;
-            if (repo == null)
-                return;
-
-            var answer = MessageBox.Show(
-                $"Remove {repo.DisplayName}?",
-                "Confirm",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (answer != MessageBoxResult.Yes)
-                return;
-
-            _repos.Remove(repo);
-            RepoStore.Save(_repos);
-        }
-
         private async void RunButton_Click(object sender, RoutedEventArgs e)
         {
 
@@ -164,7 +348,7 @@ namespace AxialSqlTools
                 return;
             }
 
-            if (SelectedRepo == null)
+            if (_currentProfile.Repo == null)
             {
                 MessageBox.Show("Please select a GitHub repo first.", "No Repo Selected",
                                 MessageBoxButton.OK, MessageBoxImage.Exclamation);
@@ -231,7 +415,7 @@ namespace AxialSqlTools
                 bool shouldConfirm = ConfirmBeforePushing.IsChecked.GetValueOrDefault();
 
                 await CommitToGitHubAsync(
-                    SelectedRepo,
+                    _currentProfile.Repo,
                     allScripts,
                     ObjectMap,
                     MessageTextBox.Text.Trim(),
@@ -433,7 +617,7 @@ namespace AxialSqlTools
             var remoteFileShas = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var ci in _connections)
             {
-                progress.Report($"▶ Fetching remote structure under [{ci.Database}]");
+                // progress.Report($"▶ Fetching remote structure under [{ci.Database}]");
                 var shas = await GetAllRemoteFileShasAsync(client, repo, ci.Database, progress)
                                  .ConfigureAwait(false);
                 foreach (var kv in shas)
@@ -505,49 +689,59 @@ namespace AxialSqlTools
             // 7) Prepare blobs only for adds + modifies
             var treeItems = new List<NewTreeItem>();
             int count = 0, total = toAdd.Count + toModify.Count;
-            foreach (var path in toAdd.Concat(toModify))
+
+            if (total > 0)
             {
-                var blob = await client.Git.Blob.Create(repo.Owner, repo.Name,
-                    new NewBlob { Content = files[path], Encoding = EncodingType.Utf8 });
-                treeItems.Add(new NewTreeItem
+                foreach (var path in toAdd.Concat(toModify))
                 {
-                    Path = path,
-                    Mode = "100644",
-                    Type = TreeType.Blob,
-                    Sha = blob.Sha
-                });
-                progress.Report($"[{++count}/{total}] Prepared blob for {path}");
+                    var blob = await client.Git.Blob.Create(repo.Owner, repo.Name,
+                        new NewBlob { Content = files[path], Encoding = EncodingType.Utf8 });
+                    treeItems.Add(new NewTreeItem
+                    {
+                        Path = path,
+                        Mode = "100644",
+                        Type = TreeType.Blob,
+                        Sha = blob.Sha
+                    });
+                    progress.Report($"[{++count}/{total}] Prepared blob for {path}");
+                }
+
+                // 8) Create tree + commit
+                progress.Report("Fetching branch info...");
+                var reference = await client.Git.Reference
+                    .Get(repo.Owner, repo.Name, $"heads/{repo.Branch}")
+                    .ConfigureAwait(false);
+                var latestCommit = await client.Git.Commit
+                    .Get(repo.Owner, repo.Name, reference.Object.Sha)
+                    .ConfigureAwait(false);
+
+                progress.Report("Creating tree...");
+                var newTree = new NewTree { BaseTree = latestCommit.Tree.Sha };
+                foreach (var ti in treeItems)
+                    newTree.Tree.Add(ti);
+                var treeResponse = await client.Git.Tree
+                    .Create(repo.Owner, repo.Name, newTree)
+                    .ConfigureAwait(false);
+
+                progress.Report("Creating commit...");
+                var newCommit = await client.Git.Commit
+                    .Create(repo.Owner, repo.Name,
+                            new NewCommit(commitMessage, treeResponse.Sha, new[] { latestCommit.Sha }))
+                    .ConfigureAwait(false);
+
+                progress.Report("Updating branch...");
+                await client.Git.Reference
+                    .Update(repo.Owner, repo.Name, reference.Ref, new ReferenceUpdate(newCommit.Sha))
+                    .ConfigureAwait(false);
+
+                progress.Report($"🎉 Commit complete: {newCommit.Sha}");
+
             }
-
-            // 8) Create tree + commit
-            progress.Report("Fetching branch info...");
-            var reference = await client.Git.Reference
-                .Get(repo.Owner, repo.Name, $"heads/{repo.Branch}")
-                .ConfigureAwait(false);
-            var latestCommit = await client.Git.Commit
-                .Get(repo.Owner, repo.Name, reference.Object.Sha)
-                .ConfigureAwait(false);
-
-            progress.Report("Creating tree...");
-            var newTree = new NewTree { BaseTree = latestCommit.Tree.Sha };
-            foreach (var ti in treeItems)
-                newTree.Tree.Add(ti);
-            var treeResponse = await client.Git.Tree
-                .Create(repo.Owner, repo.Name, newTree)
-                .ConfigureAwait(false);
-
-            progress.Report("Creating commit...");
-            var newCommit = await client.Git.Commit
-                .Create(repo.Owner, repo.Name,
-                        new NewCommit(commitMessage, treeResponse.Sha, new[] { latestCommit.Sha }))
-                .ConfigureAwait(false);
-
-            progress.Report("Updating branch...");
-            await client.Git.Reference
-                .Update(repo.Owner, repo.Name, reference.Ref, new ReferenceUpdate(newCommit.Sha))
-                .ConfigureAwait(false);
-
-            progress.Report($"🎉 Commit complete: {newCommit.Sha}");
+            else 
+            { 
+                progress.Report($"🎉 Commit complete");
+            }
+                
         }
 
         // helper to compute the Git blob SHA1
@@ -570,85 +764,5 @@ namespace AxialSqlTools
         }
 
     }
-
-
-
-    // --- helper classes below ---
-
-    public class GitRepo
-    {
-        // This is what we persist to disk
-        [JsonProperty("Token")]
-        public string EncryptedToken { get; set; }
-
-        // Backing field for the decrypted token
-        [JsonIgnore]
-        private string _token;
-
-        // This is what the rest of your code uses
-        [JsonIgnore]
-        public string Token
-        {
-            get
-            {
-                if (_token == null && !string.IsNullOrEmpty(EncryptedToken))
-                {
-                    // decrypt on first access
-                    var cipher = Convert.FromBase64String(EncryptedToken);
-                    var plain = SettingsManager.Unprotect(cipher);
-                    _token = plain != null
-                        ? Encoding.UTF8.GetString(plain)
-                        : throw new InvalidOperationException("Failed to decrypt GitRepo token.");
-                }
-                return _token;
-            }
-            set
-            {
-                _token = value;
-                if (!string.IsNullOrEmpty(value))
-                {
-                    // encrypt each time it’s set
-                    var data = Encoding.UTF8.GetBytes(value);
-                    var cipher = SettingsManager.Protect(data);
-                    EncryptedToken = Convert.ToBase64String(cipher);
-                }
-                else
-                {
-                    EncryptedToken = null;
-                }
-            }
-        }
-
-        // other props...
-        public string Owner { get; set; }
-        public string Name { get; set; }
-        public string Branch { get; set; }
-
-        [JsonIgnore]
-        public string DisplayName => $"{Owner}/{Name}@{Branch}";
-    }
-    public static class RepoStore
-    {
-        private static readonly string _path =
-            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                         "AxialSQL", "repos.json");
-
-        public static List<GitRepo> Load()
-        {
-            try
-            {
-                if (!File.Exists(_path)) return new List<GitRepo>();
-                var json = File.ReadAllText(_path);
-                return JsonConvert.DeserializeObject<List<GitRepo>>(json);
-            }
-            catch { return new List<GitRepo>(); }
-        }
-
-        public static void Save(IEnumerable<GitRepo> repos)
-        {
-            var dir = System.IO.Path.GetDirectoryName(_path);
-            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(_path, JsonConvert.SerializeObject(repos, Formatting.Indented));
-        }
-    }
+    
 }

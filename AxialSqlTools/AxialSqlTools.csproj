@@ -53,9 +53,6 @@
     <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
       <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="SyncToGitHub\AddRepoDialog.xaml.cs">
-      <DependentUpon>AddRepoDialog.xaml</DependentUpon>
-    </Compile>
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindow.cs" />
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindowCommand.cs" />
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml.cs">
@@ -121,6 +118,9 @@
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowControl.xaml.cs">
       <DependentUpon>SqlServerBuildsWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="SyncToGitHub\GitHubSyncProfile.cs" />
+    <Compile Include="SyncToGitHub\GitRepo.cs" />
+    <Compile Include="SyncToGitHub\ProfileStore.cs" />
     <Compile Include="WindowAbout\AboutWindow.cs" />
     <Compile Include="WindowAbout\AboutWindowCommand.cs" />
     <Compile Include="WindowAbout\AboutWindowControl.xaml.cs">
@@ -256,10 +256,6 @@
     <Page Include="AskChatGPT\AskChatGptWindowControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="SyncToGitHub\AddRepoDialog.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml">
       <SubType>Designer</SubType>
