@@ -3,6 +3,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Sdk.Sfc;
 using Microsoft.SqlServer.Management.Smo;
+using Microsoft.SqlServer.Management.Smo.Agent;
 using Newtonsoft.Json;
 using Octokit;
 using System;
@@ -394,6 +395,7 @@ namespace AxialSqlTools
 
                     var scripts = await Task.Run(() =>
                         ScriptAllObjectsInMemory(
+                            _currentProfile,
                             ci.FullConnectionString,
                             ci.Database,
                             ObjectMap,
@@ -477,6 +479,7 @@ namespace AxialSqlTools
         }
 
         private Dictionary<string, string> ScriptAllObjectsInMemory(
+            GitHubSyncProfile currentProfile,
             string connectionString,
             string databaseName,
             SmoObjectMap[] objectMap,
@@ -503,6 +506,9 @@ namespace AxialSqlTools
                 SchemaQualify = true,
                 ScriptBatchTerminator = true,
                 IncludeDatabaseContext = false,
+
+                LoginSid = true,
+                ExtendedProperties = true,                
 
                 // <— ensure only your options are honored
                 EnforceScriptingOptions = true
@@ -594,6 +600,43 @@ namespace AxialSqlTools
                         }
                     }
                 }
+            }
+
+            if (currentProfile.ExportServerJobs)
+            {
+                foreach (Job job in server.JobServer.Jobs)
+                {                    
+                    var jobScript = job.Script(options);
+
+                    var path = $"{serverName}/Jobs/{job.Name}.sql";
+
+                    result[path] = string.Join(Environment.NewLine, jobScript.Cast<string>());
+
+                    msgProgress.Report($"[{++done}/{total}] scripted Job {job.Name}");
+                }                
+            }
+
+            if (currentProfile.ExportServerLoginsAndPermissions)
+            {
+                foreach (Login login in server.Logins)
+                {
+
+                    var loginScript = login.Script(options);
+                    var path = $"{serverName}/Logins/{login.Name}.sql";
+                    result[path] = string.Join(Environment.NewLine, loginScript.Cast<string>());
+
+                    msgProgress.Report($"[{++done}/{total}] scripted Login {login.Name}");
+                    
+                    //// script permissions
+                    //foreach (ObjectPermissionInfo perm in login.EnumObjectPermissions())
+                    //{
+                    //    var permScript = perm.Script();
+                    //    var permPath = $"{databaseName}/Logins/{login.Name}_Permissions.sql";
+                    //    result[permPath] = string.Join(Environment.NewLine, permScript);
+                    //    msgProgress.Report($"[{++done}/{total}] scripted Permissions for {login.Name}");
+                    //    pctProgress.Report(done * 100.0 / total);
+                    //}
+                }                
             }
 
             return result;
