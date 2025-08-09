@@ -173,6 +173,10 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <!-- new rows for creation script and spacing -->
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -180,74 +184,94 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-							Margin="10" HorizontalAlignment="left" >
-						  <Run Text="Feature description in"/>
-						  <Hyperlink
-								NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-History"
-								RequestNavigate="buttonWikiPage_Click">
-							<Run Text="Wiki"/>
-						  </Hyperlink>
+                   Margin="10" HorizontalAlignment="left">
+            <Run Text="Feature description in"/>
+            <Hyperlink
+                NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-History"
+                RequestNavigate="buttonWikiPage_Click">
+                <Run Text="Wiki"/>
+            </Hyperlink>
                     </TextBlock>
 
                     <Label Grid.Row="1" Grid.Column="0"
-						   Content="Connection Info:"
-						   Margin="5"/>
+               Content="Connection Info:"
+               Margin="5"/>
                     <TextBlock Grid.Row="1" Grid.Column="1"
-							   x:Name="Label_QueryHistoryConnectionInfo"
-							   Text="&lt; not configured &gt;"
-							   VerticalAlignment="Center"
-							   Margin="5"/>
-                    
+                   x:Name="Label_QueryHistoryConnectionInfo"
+                   Text="&lt; not configured &gt;"
+                   VerticalAlignment="Center"
+                   Margin="5"/>
+
                     <Button Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-							Content="Use connection from Object Explorer"
-							x:Name="button_SelectDatabaseFromObjectExplorer"
-							Click="Button_SelectDatabaseFromObjectExplorer_Click"
-                            HorizontalAlignment="Left"
-							Width="240"
-							Margin="5,0,0,5"
-							FontWeight="Bold"/>
-                    
+                Content="Use connection from Object Explorer"
+                x:Name="button_SelectDatabaseFromObjectExplorer"
+                Click="Button_SelectDatabaseFromObjectExplorer_Click"
+                HorizontalAlignment="Left"
+                Width="240"
+                Margin="5,0,0,5"
+                FontWeight="Bold"/>
 
                     <Label Grid.Row="5" Grid.Column="0"
-						   Content="Target Table Name:"
-						   Margin="5"/>
+               Content="Target Table Name:"
+               Margin="5"/>
                     <TextBox Grid.Row="5" Grid.Column="1"
-							 x:Name="QueryHistoryTableName"
-							 ToolTip="Leave blank to use the default [dbo].[QueryHistory] table."
-                             VerticalContentAlignment="Center"
-							 Margin="5"/>
-                    
-                    <Label Grid.Row="6" Grid.Column="1"					
-					 Content="Leave blank to use the default [dbo].[QueryHistory] table." Margin="0,0,0,5"/>
-                   
-                    <Button Content="Disable Query History" Grid.Row="7" Grid.Column="1"
-							x:Name="button_DisableQueryHistory"
-							Click="Button_DisableQueryHistory_Click"
-							Width="150" HorizontalAlignment="Left"
-							Margin="5"
-							FontWeight="Bold"/>
-                    
-                    <Button  Grid.Row="8" Grid.Column="0"
-							x:Name="button_SaveQueryHistory"
-							Click="Button_SaveQueryHistory_Click"
-							Width="80" 
-							Height="24"
-							Margin="5"
-							FontWeight="Bold" HorizontalAlignment="Left">
+                 x:Name="QueryHistoryTableName"
+                 ToolTip="Leave blank to use the default [dbo].[QueryHistory] table."
+                 VerticalContentAlignment="Center"
+                 Margin="5"
+                 TextChanged="QueryHistoryTableName_TextChanged"/>
+
+                    <Label Grid.Row="6" Grid.Column="1"
+               Content="Leave blank to use the default [dbo].[QueryHistory] table."
+               Margin="0,0,0,5"/>
+
+                    <!-- New: creation script viewer -->
+                    <GroupBox Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2"
+                  Header="Creation script (for information only)"
+                  Margin="5">
+                        <Grid>
+                            <TextBox x:Name="QueryHistoryCreateScript"
+                         FontFamily="Consolas"
+                         FontSize="12"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         AcceptsTab="True"
+                         TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"
+                         MinHeight="160"
+                         Margin="5"/>
+                        </Grid>
+                    </GroupBox>
+
+                    <Button Content="Disable Query History"
+                Grid.Row="9" Grid.Column="1"
+                x:Name="button_DisableQueryHistory"
+                Click="Button_DisableQueryHistory_Click"
+                Width="150" HorizontalAlignment="Left"
+                Margin="5"
+                FontWeight="Bold"/>
+
+                    <Button Grid.Row="10" Grid.Column="0"
+                x:Name="button_SaveQueryHistory"
+                Click="Button_SaveQueryHistory_Click"
+                Width="80"
+                Height="24"
+                Margin="5"
+                FontWeight="Bold" HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Image
-							Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
-							Width="16"
-							Height="16"
-							Margin="0,0,4,0"/>
+                    Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+                    Width="16"
+                    Height="16"
+                    Margin="0,0,4,0"/>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
-
-
                 </Grid>
             </TabItem>
+
 
             <TabItem Header="Code Format">
                 <Grid Margin="5">

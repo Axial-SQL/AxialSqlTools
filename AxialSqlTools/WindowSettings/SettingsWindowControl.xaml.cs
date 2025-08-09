@@ -8,6 +8,7 @@
     using System.IO;
     using System.IO.Compression;
     using System.Net.Http;
+    using System.Text;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Navigation;
@@ -74,6 +75,7 @@ as select 1;
                 QueryHistoryTableName.Text = SettingsManager.GetQueryHistoryTableName();
                 UpdateQueryHistoryConnectionDetails();
 
+                RefreshQueryHistoryCreateScript();
 
                 MyEmailAddress.Text = SettingsManager.GetMyEmail();
 
@@ -335,6 +337,9 @@ as select 1;
             SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text); 
 
             SavedMessage();
+
+            RefreshQueryHistoryCreateScript();
+
         }
 
         private void Button_SelectDatabaseFromObjectExplorer_Click(object sender, RoutedEventArgs e)
@@ -387,6 +392,8 @@ as select 1;
 
             UpdateQueryHistoryConnectionDetails();
 
+            RefreshQueryHistoryCreateScript();
+
         }
 
         private void formatTSqlExample()
@@ -427,5 +434,65 @@ as select 1;
             SavedMessage();
 
         }
+
+
+        private static string DefaultQueryHistoryTableName => "[dbo].[QueryHistory]";
+
+        private void QueryHistoryTableName_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            RefreshQueryHistoryCreateScript();
+        }
+
+        private string EffectiveQueryHistoryTableName()
+        {
+            var name = QueryHistoryTableName?.Text;
+            return string.IsNullOrWhiteSpace(name) ? DefaultQueryHistoryTableName : name.Trim();
+        }
+
+        private string GenerateQueryHistoryCreateTableScript(string tableName)
+        {
+            // Deterministic index names for display-only purposes
+            string indexNameGuid = Guid.NewGuid().ToString();
+
+            return $@"
+IF OBJECT_ID(N'{tableName}', N'U') IS NULL
+BEGIN
+    CREATE TABLE {tableName} (
+        [QueryID]           INT            IDENTITY (1, 1) NOT NULL,
+        [StartTime]         DATETIME       NOT NULL,
+        [FinishTime]        DATETIME       NOT NULL,
+        [ElapsedTime]       VARCHAR (15)   NOT NULL,
+        [TotalRowsReturned] BIGINT         NOT NULL,
+        [ExecResult]        VARCHAR (100)  NOT NULL,
+        [QueryText]         NVARCHAR (MAX) NOT NULL,
+        [DataSource]        NVARCHAR (128) NOT NULL,
+        [DatabaseName]      NVARCHAR (128) NOT NULL,
+        [LoginName]         NVARCHAR (128) NOT NULL,
+        [WorkstationId]     NVARCHAR (128) NOT NULL,
+        PRIMARY KEY CLUSTERED ([QueryID]),
+        INDEX [IDX_{indexNameGuid}_1] ([StartTime]),
+        INDEX [IDX_{indexNameGuid}_2] ([FinishTime]),
+        INDEX [IDX_{indexNameGuid}_3] ([DataSource]),
+        INDEX [IDX_{indexNameGuid}_4] ([DatabaseName])
+    );
+    ALTER INDEX ALL ON {tableName} REBUILD WITH (DATA_COMPRESSION = PAGE);
+END
+".Trim();
+        }
+
+        private void RefreshQueryHistoryCreateScript()
+        {
+            try
+            {
+                QueryHistoryCreateScript.Text = GenerateQueryHistoryCreateTableScript(EffectiveQueryHistoryTableName());
+            }
+            catch (Exception ex)
+            {
+                QueryHistoryCreateScript.Text = $"-- Failed to generate script: {ex.Message}";
+            }
+        }
+
+
+
     }
 }

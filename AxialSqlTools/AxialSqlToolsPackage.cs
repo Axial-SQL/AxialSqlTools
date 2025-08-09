@@ -190,6 +190,7 @@ namespace AxialSqlTools
                                 INDEX [IDX_{indexNameGuid}_3] ([DataSource]),
                                 INDEX [IDX_{indexNameGuid}_4] ([DatabaseName])
                             );
+                            ALTER INDEX ALL ON {qhTableName} REBUILD WITH (DATA_COMPRESSION = PAGE);
                         END
 
                         INSERT INTO {qhTableName}
