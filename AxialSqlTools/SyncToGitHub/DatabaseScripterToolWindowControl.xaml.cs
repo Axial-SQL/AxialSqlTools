@@ -601,7 +601,7 @@ namespace AxialSqlTools
                     }
                 }
             }
-
+            /*
             if (currentProfile.ExportServerJobs)
             {
                 foreach (Job job in server.JobServer.Jobs)
@@ -638,7 +638,7 @@ namespace AxialSqlTools
                     //}
                 }                
             }
-
+            */
             return result;
         }
 
