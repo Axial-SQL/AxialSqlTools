@@ -12,7 +12,7 @@ If you find this extension useful and it helps streamline your workflow in SSMS,
 
 Check it out and let me know what you think!
 
-![image](https://github.com/user-attachments/assets/d13a577f-9cb1-4daa-adcb-00f7c21d806b)
+<img alt="image" src="https://github.com/user-attachments/assets/23ce2810-44cb-485d-852a-23f74ee0c3b0" />
 
 ## Main Features - (see Wiki for more details)
 
@@ -43,6 +43,8 @@ Check it out and let me know what you think!
 - [**BULK Data Transfer**](https://github.com/Axial-SQL/AxialSqlTools/wiki/BULK-Data-Transfer): A simplified UI for trivial data copy use-cases.
   
 - [**Query History**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-History): A detailed log of executed queries, enabling auditing, tracking, and easy retrieval of past executions.
+
+- [**Sync to GitHub**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Sync-to-GitHub): Rudimentary, low effort, manually triggered source control.
 
 ## Query Library
 
