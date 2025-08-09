@@ -23,7 +23,12 @@ GO
 CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256 ENCRYPTION BY SERVER CERTIFICATE [TDE];
 GO
 ALTER DATABASE [', d.[name], '] SET ENCRYPTION ON;
-GO') AS encryptCommand
+GO
+-- rotate the cert only without re-ecnrypting the entire database	
+-- ALTER DATABASE ENCRYPTION KEY ENCRYPTION BY SERVER CERTIFICATE [TDE_new];
+GO
+-- re-encrypt the entire database without changing the certificate
+--ALTER DATABASE ENCRYPTION KEY REGENERATE WITH ALGORITHM = AES_256;') AS encryptCommand
 FROM sys.databases AS d
      LEFT OUTER JOIN sys.dm_database_encryption_keys AS a
      ON d.database_id = a.database_id
