@@ -56,30 +56,11 @@
                                    FontStyle="Italic"
                                    Foreground="Gray"/>
                             </StackPanel>
-                        </StackPanel>
-                    </GroupBox>
-
-
-
-                    <!-- Database Connections -->
-                    <GroupBox Margin="0,5">
-                        <GroupBox.Header>
-                            <TextBlock Text="Source Databases" FontSize="14" FontWeight="Bold"/>
-                        </GroupBox.Header>
-                        <StackPanel>
-                            <TextBlock Text="Database Connections:" FontWeight="SemiBold"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,4">
-                                <ListBox Name="ConnectionsListBox"
-                                         Width="400" Height="100"
-                                         DisplayMemberPath="DisplayName"/>
-                                <StackPanel Orientation="Vertical" Margin="8,0,0,0">
-                                    <Button Name="AddConnectionButton"
-                                            Content="+ Add" Width="60"
-                                            Click="AddConnectionButton_Click"/>
-                                    <Button Name="RemoveConnectionButton"
-                                            Content="– Remove" Width="60" Margin="0,4,0,0"
-                                            Click="RemoveConnectionButton_Click"/>
-                                </StackPanel>
+                            <StackPanel Orientation="Vertical" Margin="0,5,0,0">
+                                <TextBlock Name="RepoSyncDbsTextBlock"
+                                   Text="List of databases will appear here"
+                                   FontStyle="Italic"
+                                   Foreground="Gray"/>
                             </StackPanel>
                         </StackPanel>
                     </GroupBox>
@@ -140,17 +121,19 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Hidden for now -->
-                <CheckBox Name="ExportJobsCheckBox" Content="Export Server Jobs" Margin="0,10,0,0" Visibility="Hidden"/>
-                <CheckBox Name="ExportLoginsCheckBox" Content="Export Logins and Permissions" Visibility="Hidden"/>
-
-                <TextBlock Text="Databases:" Margin="0,10,0,0" FontWeight="SemiBold"/>
                 <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                    <ListBox Name="ProfileDatabasesListBox" Height="100" Width="350"
-                     DisplayMemberPath="DisplayName"/>
-                    <StackPanel Orientation="Vertical" Margin="8,0,0,0">
-                        <Button Content="+ Add" Width="60" Click="AddDatabaseToProfile_Click"/>
-                        <Button Content="– Remove" Width="60" Margin="0,4,0,0" Click="RemoveDatabaseFromProfile_Click"/>
+                    <Button Content="Set Connection" Click="SetProfileServerConnection_Click"/>
+                    <TextBlock Text="Connection Info:" Name="ProfileConnectionInfoTextBox"/>
+                </StackPanel>
+                
+                <CheckBox Name="ExportServerParamsCheckBox" Content="Export SQL Server Configuration Values" Margin="0,10,0,0"/>
+                <CheckBox Name="ExportJobsCheckBox" Content="Export SQL Server Agent Parameters - Jobs, Operators, Alerts" Margin="0,10,0,0"/>
+                <CheckBox Name="ExportLoginsCheckBox" Content="Export Logins and Permissions" Margin="0,10,0,0"/>
+
+                <StackPanel Orientation="Vertical" Margin="0,5,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="Databases:" Width="80" VerticalAlignment="Center"/>
+                        <TextBox Name="ListOfDatabasesTextBox" Width="400"/>
                     </StackPanel>
                 </StackPanel>
 

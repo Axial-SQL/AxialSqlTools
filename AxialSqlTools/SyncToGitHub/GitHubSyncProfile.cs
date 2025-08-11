@@ -1,4 +1,5 @@
 ﻿using AxialSqlTools;
+using Microsoft.SqlServer.Management.Common;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -9,60 +10,61 @@ public class GitHubSyncProfile
     public string ProfileName { get; set; }
     public GitRepo Repo { get; set; } = new GitRepo();
 
-    // Encrypted JSON representation of databases (stored in file)
-    [JsonProperty("Databases")]
-    public string EncryptedDatabases { get; set; }
+    public string DatabaseList { get; set; }
 
-    // Backing field for decrypted databases
-    [JsonIgnore]
-    private List<ScriptFactoryAccess.ConnectionInfo> _databases;
+    [JsonProperty("ServerConnection")]
+    public string EncryptedServerConnection { get; set; }
 
     [JsonIgnore]
-    public List<ScriptFactoryAccess.ConnectionInfo> Databases
+    private ScriptFactoryAccess.ConnectionInfo _serverConnection;
+
+    [JsonIgnore]
+    public ScriptFactoryAccess.ConnectionInfo ServerConnection
     {
         get
         {
-            if (_databases == null && !string.IsNullOrEmpty(EncryptedDatabases))
+            if (_serverConnection == null && !string.IsNullOrEmpty(EncryptedServerConnection))
             {
                 try
                 {
-                    var cipher = Convert.FromBase64String(EncryptedDatabases);
+                    var cipher = Convert.FromBase64String(EncryptedServerConnection);
                     var plainBytes = SettingsManager.Unprotect(cipher);
                     if (plainBytes != null)
                     {
                         var json = Encoding.UTF8.GetString(plainBytes);
-                        _databases = JsonConvert.DeserializeObject<List<ScriptFactoryAccess.ConnectionInfo>>(json);
+                        _serverConnection = JsonConvert.DeserializeObject<ScriptFactoryAccess.ConnectionInfo>(json);
                     }
                     else
                     {
-                        _databases = new List<ScriptFactoryAccess.ConnectionInfo>();
+                        _serverConnection = null;
                     }
                 }
                 catch
                 {
-                    _databases = new List<ScriptFactoryAccess.ConnectionInfo>();
+                    _serverConnection = null;
                 }
             }
-            return _databases ?? new List<ScriptFactoryAccess.ConnectionInfo>();
+            return _serverConnection;
         }
         set
         {
-            _databases = value ?? new List<ScriptFactoryAccess.ConnectionInfo>();
+            _serverConnection = value;
 
-            if (_databases.Count > 0)
+            if (_serverConnection != null)
             {
-                var json = JsonConvert.SerializeObject(_databases);
+                var json = JsonConvert.SerializeObject(_serverConnection);
                 var data = Encoding.UTF8.GetBytes(json);
                 var cipher = SettingsManager.Protect(data);
-                EncryptedDatabases = Convert.ToBase64String(cipher);
+                EncryptedServerConnection = Convert.ToBase64String(cipher);
             }
             else
             {
-                EncryptedDatabases = null;
+                EncryptedServerConnection = null;
             }
         }
     }
 
+    public bool ExportServerConfigValues { get; set; }
     public bool ExportServerJobs { get; set; }
     public bool ExportServerLoginsAndPermissions { get; set; }
 
