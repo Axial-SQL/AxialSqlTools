@@ -24,7 +24,7 @@ CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256 ENCRYPTION BY SERVER CER
 GO
 ALTER DATABASE [', d.[name], '] SET ENCRYPTION ON;
 GO
--- rotate the cert only without re-ecnrypting the entire database	
+-- rotate the cert only without re-encrypting the entire database	
 -- ALTER DATABASE ENCRYPTION KEY ENCRYPTION BY SERVER CERTIFICATE [TDE_new];
 GO
 -- re-encrypt the entire database without changing the certificate
