@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
+using Microsoft.SqlServer.Dac;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Sdk.Sfc;
 using Microsoft.SqlServer.Management.Smo;
@@ -615,14 +616,95 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
             IProgress<string> msgProgress,
             IProgress<double> pctProgress)
         {
-            // Prepare SMO objects
+
+            // grab the correct server instance name
+            string serverName = "";
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("SELECT CONVERT(sysname, SERVERPROPERTY('ServerName'))", conn))
+            {
+                conn.Open();
+                serverName = (string)(cmd.ExecuteScalar() ?? "");
+            }
+            if (string.IsNullOrWhiteSpace(serverName))
+                serverName = "UnknownServer";
+
+            var dacResults = new Dictionary<string, string>();
+
+            string tempRoot = Path.Combine(Path.GetTempPath(), "dac_extract_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempRoot);
+
+            try
+            {
+                var dac = new DacServices(connectionString);
+
+                var extractOptions = new DacExtractOptions
+                {
+                    // Matches: /p:ExtractTarget=SchemaObjectType
+                    ExtractTarget = DacExtractTarget.SchemaObjectType,
+                    // Matches: /p:VerifyExtraction=false
+                    VerifyExtraction = false
+                };
+
+                dac.Extract(
+                    targetPath: tempRoot,     // folder when ExtractTarget is folder-based
+                    databaseName: databaseName,
+                    applicationName: "Snapshot-" + databaseName,
+                    applicationVersion: new Version(1, 0, 0, 0),
+                    applicationDescription: "Automated extract",
+                    tables: null,                      // or list tuples to include reference data per table
+                    extractOptions: extractOptions
+                );
+                
+
+                var files = Directory.EnumerateFiles(tempRoot, "*.sql", SearchOption.AllDirectories)
+                                     .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                                     .ToArray();
+
+                foreach (var file in files)
+                {
+
+                    var sql = File.ReadAllText(file);
+
+                    var scriptPath = file.Replace(tempRoot, "").Replace("\\", "/");
+
+                    var path = $"{serverName}/Databases/{databaseName}{scriptPath}";
+                    dacResults[path] = sql.Trim();  
+
+                }
+
+                msgProgress.Report($"DacFx export completed");
+
+            }
+            catch (Exception ex)
+            {
+                msgProgress.Report($"[ERROR]: {ex.Message}");
+            }
+            finally
+            {
+                // delete temp folder with all files
+                try
+                {
+                    if (Directory.Exists(tempRoot))
+                        Directory.Delete(tempRoot, recursive: true);
+                }
+                catch
+                {
+                    // best effort cleanup
+                }
+            }  
+
+            return dacResults;
+
+            //\\--------------------------------
+            /*
             var sqlConn = new SqlConnection(connectionString);
             var serverConn = new ServerConnection(sqlConn);
             Server server = new Server(serverConn);
-         
+
             // grab the server instance name
             string serverName = server.ConnectionContext.TrueName;
 
+            // Prepare SMO objects
             var options = new ScriptingOptions
             {
                 IncludeHeaders = false,
@@ -742,6 +824,7 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
             }
             
             return result;
+            */
         }
 
         private Dictionary<string, string> ScriptAdditionalSettingsInMemory(
