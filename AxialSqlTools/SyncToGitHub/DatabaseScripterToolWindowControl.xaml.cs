@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Navigation;
 using static AxialSqlTools.DatabaseScripterToolWindowControl;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView;
 
@@ -173,6 +174,12 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
         private bool _isEditingProfile = false;
 
         private ScriptFactoryAccess.ConnectionInfo SelectedProfileConnection;
+
+        private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
+        }
 
 
         #region SyncProfiles UI
@@ -624,6 +631,8 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
             {
                 conn.Open();
                 serverName = (string)(cmd.ExecuteScalar() ?? "");
+                //// named instances ????
+                //serverName.Replace(@"\", "_");
             }
             if (string.IsNullOrWhiteSpace(serverName))
                 serverName = "UnknownServer";
@@ -642,7 +651,8 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
                     // Matches: /p:ExtractTarget=SchemaObjectType
                     ExtractTarget = DacExtractTarget.SchemaObjectType,
                     // Matches: /p:VerifyExtraction=false
-                    VerifyExtraction = false
+                    VerifyExtraction = false,
+                    // IgnoreUserLoginMappings = true -- doesn't work for some reason..
                 };
 
                 dac.Extract(

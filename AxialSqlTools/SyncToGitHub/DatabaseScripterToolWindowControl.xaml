@@ -15,7 +15,18 @@
                                FontWeight="Bold" FontSize="18">
                         Sync to GitHub
                     </TextBlock>
+                    <TextBlock Margin="10" HorizontalAlignment="left" >
+                        <Run Text="Feature description in"/>
+				        <Hyperlink
+					        NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Sync-to-GitHub"
+					        RequestNavigate="buttonWikiPage_Click">
+				            <Run Text="Wiki"/>
+                        </Hyperlink>
+                    </TextBlock>
                 </StackPanel>
+
+
+
                 <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="5">
 
                     <!-- Profiles -->
@@ -133,7 +144,12 @@
                 <StackPanel Orientation="Vertical" Margin="0,5,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="Databases:" Width="80" VerticalAlignment="Center"/>
-                        <TextBox Name="ListOfDatabasesTextBox" Width="400"/>
+                        <TextBox Name="ListOfDatabasesTextBox" Width="400"/>                        
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="0,5,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="Use Ola Hallengren keywords such as ALL_DATABASES, USER_DATABASES, etc."/>                       
                     </StackPanel>
                 </StackPanel>
 
