@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -97,8 +98,44 @@ namespace AxialSqlTools
                 TextDecorations = TextDecorations.Underline,
                 Cursor = System.Windows.Input.Cursors.Hand
             };
-            link.MouseLeftButtonUp += (s, e) => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            link.MouseLeftButtonUp += (s, e) => OpenUrl(url);
             return link;
+        }
+
+        private static string ExtractUrlAfter_HYPERLINK(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return null;
+
+            int lastParen = input.LastIndexOf(')');
+            if (lastParen >= 0 && lastParen < input.Length - 1)
+            {
+                return input.Substring(lastParen + 1).Trim();
+            }
+
+            return input.Trim();
+        }
+
+        private void OpenUrl(string url)
+        {
+            try
+            {
+                if (url.StartsWith("HYPERLINK("))
+                {
+                    url = ExtractUrlAfter_HYPERLINK(url);
+                }
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+
+            } catch (Exception ex)
+            {
+                VsShellUtilities.ShowMessageBox(
+                    ServiceProvider.GlobalProvider,
+                    $"Failed to open URL:\n{url}\n\nError: {ex.Message}",
+                    "Open URL Error",
+                    OLEMSGICON.OLEMSGICON_CRITICAL,
+                    OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+            }
         }
 
         private void HyperlinkDataSource_Click(object sender, RoutedEventArgs e)
