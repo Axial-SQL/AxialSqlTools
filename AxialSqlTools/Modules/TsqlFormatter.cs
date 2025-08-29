@@ -730,7 +730,7 @@ namespace AxialSqlTools
                     for (int ti = startIdx; ti <= endIdx && ti < sqlFragment.ScriptTokenStream.Count; ti++)
                     {
                         var tok = sqlFragment.ScriptTokenStream[ti];
-                        if (tok.TokenType == TSqlTokenType.WhiteSpace)
+                        if (tok.TokenType == TSqlTokenType.WhiteSpace && tok.Column == 1)
                             tok.Text = RemoveOneIndent(tok.Text, indentString);
                     }
                 }
