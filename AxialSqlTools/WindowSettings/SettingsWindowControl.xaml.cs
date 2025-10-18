@@ -88,6 +88,7 @@ as select 1;
                 SMTP_EnableSSL.IsChecked = smtpSettings.EnableSsl;
 
                 var tsqlCodeFormatSettings = SettingsManager.GetTSqlCodeFormatSettings();
+                PreserveComments.IsChecked = tsqlCodeFormatSettings.preserveComments;
                 RemoveNewLineAfterJoin.IsChecked = tsqlCodeFormatSettings.removeNewLineAfterJoin;
                 AddTabAfterJoinOn.IsChecked = tsqlCodeFormatSettings.addTabAfterJoinOn;
                 MoveCrossJoinToNewLine.IsChecked = tsqlCodeFormatSettings.moveCrossJoinToNewLine;
@@ -286,6 +287,7 @@ as select 1;
         {
             var settings = new SettingsManager.TSqlCodeFormatSettings
             {
+                preserveComments = PreserveComments.IsChecked.GetValueOrDefault(false),
                 removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
                 addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
                 moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
@@ -400,6 +402,7 @@ as select 1;
         {
             var settings = new SettingsManager.TSqlCodeFormatSettings
             {
+                preserveComments = PreserveComments.IsChecked.GetValueOrDefault(false),
                 removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
                 addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
                 moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),

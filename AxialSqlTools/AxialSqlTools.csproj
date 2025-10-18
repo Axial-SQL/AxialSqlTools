@@ -53,6 +53,9 @@
     <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
       <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Commands\FormatQueryDialog\FormatOptionsDialog.xaml.cs">
+      <DependentUpon>FormatOptionsDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindow.cs" />
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindowCommand.cs" />
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml.cs">
@@ -259,6 +262,10 @@
     <Page Include="AskChatGPT\AskChatGptWindowControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Commands\FormatQueryDialog\FormatOptionsDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml">
       <SubType>Designer</SubType>
