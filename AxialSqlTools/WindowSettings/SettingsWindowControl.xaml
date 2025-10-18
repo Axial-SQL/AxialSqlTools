@@ -304,6 +304,10 @@
                              Columns="3"
                              Margin="5"
                              HorizontalAlignment="Left">
+                        <CheckBox x:Name="PreserveComments" Margin="5"
+                              Content="Preserve comments" 
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
                         <CheckBox x:Name="RemoveNewLineAfterJoin" Margin="5"
                               Content="Remove new line after JOIN" 
                               Checked="formatSetting_Checked"

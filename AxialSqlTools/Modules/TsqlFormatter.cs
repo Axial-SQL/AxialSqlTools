@@ -307,6 +307,7 @@ namespace AxialSqlTools
                 throw new Exception($"TSqlParser unable to load selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
+
             Sql170ScriptGenerator gen = new Sql170ScriptGenerator();
             gen.Options.AlignClauseBodies = false;
             gen.Options.SqlVersion = SqlVersion.Sql170; //TODO - try to get from current connection
@@ -314,7 +315,6 @@ namespace AxialSqlTools
             resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
 
             var formatSettings = SettingsManager.GetTSqlCodeFormatSettings();
-
             if (settingsOverride != null)
             {
                 formatSettings = settingsOverride;

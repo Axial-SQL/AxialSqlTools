@@ -14,6 +14,8 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Task = System.Threading.Tasks.Task;
 using static AxialSqlTools.AxialSqlToolsPackage;
+using System.Windows.Input;
+using System.Windows.Interop;
 
 namespace AxialSqlTools
 {
@@ -98,10 +100,30 @@ namespace AxialSqlTools
         {
                        
             ThreadHelper.ThrowIfNotOnUIThread();
-            DTE dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+            DTE dte = Package.GetGlobalService(typeof(DTE)) as DTE;            
 
             if (dte?.ActiveDocument != null)
-            {                
+            {        
+                
+                var formatSettings = SettingsManager.GetTSqlCodeFormatSettings();
+                if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+                {
+                    // Own the dialog by VS main window
+                    var dlg = new FormatOptionsDialog(formatSettings);
+                    var uiShell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+                    if (uiShell != null && uiShell.GetDialogOwnerHwnd(out var hwnd) == 0 && hwnd != IntPtr.Zero)
+                    {
+                        new WindowInteropHelper(dlg).Owner = hwnd;
+                    }
+
+                    var ok = dlg.ShowDialog();
+                    if (ok != true)
+                    {
+                        return; // user canceled
+                    }
+                    formatSettings = dlg.Settings; 
+                }
+
 
                 try
                 {
@@ -111,7 +133,7 @@ namespace AxialSqlTools
 
                     if (!string.IsNullOrEmpty(existingCommandText))
                     {
-                        string result = TSqlFormatter.FormatCode(existingCommandText);
+                        string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings);
                         selection.Delete();
                         selection.Insert(result);
                         return;
@@ -125,7 +147,7 @@ namespace AxialSqlTools
 
                         if (!string.IsNullOrEmpty(existingCommandText))
                         {
-                            string result = TSqlFormatter.FormatCode(existingCommandText);
+                            string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings);
 
 
                             EditPoint startPoint = textDoc.StartPoint.CreateEditPoint();
