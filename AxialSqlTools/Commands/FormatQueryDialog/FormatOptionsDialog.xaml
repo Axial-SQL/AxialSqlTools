@@ -1,7 +1,7 @@
 ﻿<Window x:Class="AxialSqlTools.FormatOptionsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Format Options" SizeToContent="WidthAndHeight"
+        Title="Query Format Options" SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
     <DockPanel Margin="12" MinWidth="520">
         <TextBlock DockPanel.Dock="Top" Text="Select formatting options"

@@ -115,6 +115,7 @@
         <Strings>
           <ButtonText>Format Query</ButtonText>
           <LocCanonicalName>AxialSqlTools.FormatQuery</LocCanonicalName>
+          <ToolTipText>Format SQL query (hold Shift for advanced options)</ToolTipText>
         </Strings>
       </Button>
       

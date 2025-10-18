@@ -298,8 +298,8 @@ ORDER BY sd.[name];
 
             public bool HasAnyFormattingEnabled()
             {
-                return preserveComments 
-                    || removeNewLineAfterJoin
+                // preserveComments option is not included because it belongs to a separate code branch.
+                return removeNewLineAfterJoin
                     || addTabAfterJoinOn
                     || moveCrossJoinToNewLine
                     || formatCaseAsMultiline

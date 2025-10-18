@@ -11,7 +11,7 @@ namespace AxialSqlTools
         {
             InitializeComponent();
             Settings = initial ?? new TSqlCodeFormatSettings();
-            Loaded += (_, __) => ApplySettingsToUi();
+            ApplySettingsToUi();
         }
 
         private void ApplySettingsToUi()
@@ -29,8 +29,14 @@ namespace AxialSqlTools
             BreakSprocDefinitionParametersPerLine.IsChecked = Settings.breakSprocDefinitionParametersPerLine;
         }
 
-        private void formatSetting_Checked(object sender, RoutedEventArgs e) => SyncFromUi();
-        private void formatSetting_Unchecked(object sender, RoutedEventArgs e) => SyncFromUi();
+        private void formatSetting_Checked(object sender, RoutedEventArgs e)
+        {
+            // SyncFromUi();
+        }
+        private void formatSetting_Unchecked(object sender, RoutedEventArgs e)
+        {
+            // SyncFromUi();
+        }
 
         private void SyncFromUi()
         {
