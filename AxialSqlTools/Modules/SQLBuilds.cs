@@ -118,7 +118,8 @@ namespace AxialSqlTools
                                     {
                                         SqlVersion = sheetName,
                                         UpdateName = rowData.ContainsKey("Cumulative Update or Security ID") ? rowData["Cumulative Update or Security ID"] : null,
-                                        Url = rowData.ContainsKey("KB URL") ? rowData["KB URL"] : null
+                                        Url = rowData.ContainsKey("KB URL") ? rowData["KB URL"] : null,
+                                        KbNumber = rowData.ContainsKey("KB Number") ? rowData["KB Number"] : null,
                                     };
 
                                     string BuildNumber = rowData.ContainsKey("Build Number") ? rowData["Build Number"] : null;

@@ -42,6 +42,7 @@ namespace AxialSqlTools
                 // Add Column Headers (Styled like a ListView)
                 StackPanel headerPanel = new StackPanel { Orientation = Orientation.Horizontal, Background = Brushes.LightGray };
                 headerPanel.Children.Add(CreateColumnText("Build Number", 120, FontWeights.Bold));
+                headerPanel.Children.Add(CreateColumnText("KB Number", 120, FontWeights.Bold));
                 headerPanel.Children.Add(CreateColumnText("Release Date", 120, FontWeights.Bold));
                 headerPanel.Children.Add(CreateColumnText("Update Name", 100, FontWeights.Bold));
                 headerPanel.Children.Add(CreateColumnText("URL", 150, FontWeights.Bold));
@@ -61,6 +62,7 @@ namespace AxialSqlTools
                     {
                         rowPanel.Children.Add(CreateColumnText("n/a", 120));
                     }
+                    rowPanel.Children.Add(CreateColumnText(update.KbNumber, 100));
                     rowPanel.Children.Add(CreateColumnText(update.ReleaseDate.ToString("yyyy-MM-dd"), 120));
                     rowPanel.Children.Add(CreateColumnText(update.UpdateName, 100));
 

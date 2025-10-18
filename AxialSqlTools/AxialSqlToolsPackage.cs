@@ -73,6 +73,7 @@ namespace AxialSqlTools
             public Version BuildNumber { get; set; }   // e.g. "16.0.1000"
             public DateTime ReleaseDate { get; set; }
             public string UpdateName { get; set; }    // e.g. "CU5" or "Security Update XYZ"
+            public string KbNumber { get; set; }    // e.g. "CU5" or "Security Update XYZ"
             public string Url { get; set; }
         }
 
