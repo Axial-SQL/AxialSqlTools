@@ -20,8 +20,8 @@ namespace AxialSqlTools
     public static class GridAccess
     {
         public static void SetPropertyValue(object targetObj, string fieldName, object fieldValue)
-        {                       
-           targetObj.GetType().GetProperty(fieldName).SetValue(targetObj, fieldValue); 
+        {
+            targetObj.GetType().GetProperty(fieldName).SetValue(targetObj, fieldValue);
         }
         public static object GetProperty(object obj, string field)
         {
@@ -40,7 +40,7 @@ namespace AxialSqlTools
         {
             var objType = ServiceCache.ScriptFactory.GetType();
             var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
-            var Result = (SqlScriptEditorControl)method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
+            var Result = method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
 
             var objType2 = Result.GetType();
             var field = objType2.GetField("m_sqlResultsControl", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -49,13 +49,14 @@ namespace AxialSqlTools
             return SQLResultsControl;
         }
 
-        public static QEStatusBarManager GetStatusBarManager()
+        public static object GetStatusBarManager()
         {
             var objType = ServiceCache.ScriptFactory.GetType();
             var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
-            var Result = (SqlScriptEditorControl)method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
+            var Result = method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
 
-            return Result.StatusBarManager;
+            var statusBarManagerProperty = Result.GetType().GetProperty("StatusBarManager");
+            return statusBarManagerProperty.GetValue(Result);
         }
 
         public static CollectionBase GetGridContainers()
@@ -70,17 +71,24 @@ namespace AxialSqlTools
 
         public static void ChangeStatusBarContent(int OpenTranCount, string ActualElapsedTime)
         {
-            QEStatusBarManager statusBarManager = GetStatusBarManager();
+            var statusBarManager = GetStatusBarManager();
 
-            if (OpenTranCount > 0 )
+            if (OpenTranCount > 0)
             {
                 var msg = "One transaction is still open!";
                 if (OpenTranCount > 1)
                     msg = $"{OpenTranCount} transactions are still open!";
 
-                var currentMsg = statusBarManager.StatusText;
-                statusBarManager.SetKnownState(QEStatusBarKnownStates.Executing);
-                statusBarManager.StatusText = currentMsg + " | " + msg;                
+                var currentMsg = GetProperty(statusBarManager, "StatusText");
+
+                // Get QEStatusBarKnownStates.Executing enum value using reflection
+                var statusBarManagerType = statusBarManager.GetType();
+                var setKnownStateMethod = statusBarManagerType.GetMethod("SetKnownState");
+                var qeStatusBarKnownStatesType = statusBarManagerType.Assembly.GetType("Microsoft.SqlServer.Management.UI.VSIntegration.Editors.QEStatusBarKnownStates");
+                var executingValue = Enum.Parse(qeStatusBarKnownStatesType, "Executing");
+
+                setKnownStateMethod.Invoke(statusBarManager, new object[] { executingValue });
+                SetPropertyValue(statusBarManager, "StatusText", currentMsg + " | " + msg);
 
             }
 
@@ -96,7 +104,7 @@ namespace AxialSqlTools
                 SetPropertyValue(generalPanel, "ForeColor", Color.Red);
             else
                 SetPropertyValue(generalPanel, "ForeColor", Color.Black);
-                        
+
             //TODO - need to contract font from existing property..
             Font defaultFont = new Font("Segoe UI", 9);
             Font boldFont = new Font("Segoe UI", 10, FontStyle.Bold);
@@ -105,7 +113,7 @@ namespace AxialSqlTools
             if (OpenTranCount > 0)
                 SetPropertyValue(statusStrip, "Font", boldFont);
             else
-                SetPropertyValue(statusStrip, "Font", defaultFont);            
+                SetPropertyValue(statusStrip, "Font", defaultFont);
         }
 
         public static string GetColumnSqlType(DataRow schemaRow)
@@ -113,11 +121,11 @@ namespace AxialSqlTools
 
             int sqlDataColumnSize = (int)schemaRow[2];
             int? NumericPrecision = schemaRow[3] != DBNull.Value ? Convert.ToInt32(schemaRow[3]) : (int?)null;
-            int? NumericScale = schemaRow[4] != DBNull.Value ? Convert.ToInt32(schemaRow[4]) : (int?)null; 
+            int? NumericScale = schemaRow[4] != DBNull.Value ? Convert.ToInt32(schemaRow[4]) : (int?)null;
 
             string sqlDataTypeName = ((string)schemaRow[24]).ToUpper();
 
-            if (sqlDataTypeName == "NVARCHAR" || sqlDataTypeName == "NCHAR" 
+            if (sqlDataTypeName == "NVARCHAR" || sqlDataTypeName == "NCHAR"
                 || sqlDataTypeName == "VARCHAR" || sqlDataTypeName == "CHAR"
                 || sqlDataTypeName == "VARBINARY" || sqlDataTypeName == "BINARY")
             {
@@ -173,7 +181,7 @@ namespace AxialSqlTools
                     foreach (GridColumn gridColumn in gridColumns)
                     {
                         columnSizes.Add(gridColumn.WidthInPixels);
-                    }                        
+                    }
                 }
 
                 var data = new DataTable();
@@ -223,7 +231,7 @@ namespace AxialSqlTools
                             cellData = cellData == "0" ? "False" : "True";
 
                         // leave some types as strings because the conversation from string fails
-                        if (columnType == typeof(Guid) 
+                        if (columnType == typeof(Guid)
                             || columnType == typeof(DateTime)
                             || columnType == typeof(DateTimeOffset)
                             || columnType == typeof(byte[])

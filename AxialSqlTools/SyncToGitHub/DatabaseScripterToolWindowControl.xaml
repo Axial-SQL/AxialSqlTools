@@ -6,11 +6,77 @@
              mc:Ignorable="d"
              d:DesignWidth="600"
              Name="MyToolWindow">
+    <UserControl.Resources>
+        <!-- Custom CheckBox style with explicit dark/light theme support -->
+        <Style x:Key="ThemedCheckBox" TargetType="CheckBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- CheckBox border and checkmark -->
+                            <Border x:Name="CheckBoxBorder"
+                                    Grid.Column="0"
+                                    Width="16"
+                                    Height="16"
+                                    BorderThickness="1"
+                                    BorderBrush="White"
+                                    Background="Transparent"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center">
+                                <Path x:Name="CheckMark"
+                                      Data="M 0,4 L 4,8 L 10,0"
+                                      Stroke="White"
+                                      StrokeThickness="2"
+                                      Visibility="Collapsed"
+                                      Stretch="Uniform"
+                                      Margin="2"/>
+                            </Border>
+                            
+                            <!-- Content (label text) -->
+                            <ContentPresenter x:Name="ContentPresenter"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            TextElement.Foreground="White"
+                                            Content="{TemplateBinding Content}"/>
+                        </Grid>
+                        
+                        <ControlTemplate.Triggers>
+                            <!-- Show checkmark when checked -->
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            
+                            <!-- Hover effect -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="#E0E0E0"/>
+                                <Setter TargetName="ContentPresenter" Property="TextElement.Foreground" Value="#E0E0E0"/>
+                            </Trigger>
+                            
+                            <!-- Disabled state -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="#606060"/>
+                                <Setter TargetName="CheckBoxBorder" Property="Opacity" Value="0.4"/>
+                                <Setter TargetName="CheckMark" Property="Stroke" Value="#606060"/>
+                                <Setter TargetName="ContentPresenter" Property="TextElement.Foreground" Value="#606060"/>
+                                <Setter TargetName="ContentPresenter" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    
     <Grid Margin="0">
         <!-- Frame 1: Main Sync UI -->
         <Grid Name="MainFrame" Visibility="Visible">
             <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="0">
-                <StackPanel Orientation="Horizontal" Background="#FFB4B4B4">
+                <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}">
                     <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Top"
                                FontWeight="Bold" FontSize="18">
                         Sync to GitHub
@@ -64,14 +130,12 @@
                             <StackPanel Orientation="Vertical" Margin="0,5,0,0">
                                 <TextBlock Name="RepoSyncOptionsTextBlock"
                                    Text="Sync options will appear here"
-                                   FontStyle="Italic"
-                                   Foreground="Gray"/>
+                                   FontStyle="Italic"/>
                             </StackPanel>
                             <StackPanel Orientation="Vertical" Margin="0,5,0,0">
                                 <TextBlock Name="RepoSyncDbsTextBlock"
                                    Text="List of databases will appear here"
-                                   FontStyle="Italic"
-                                   Foreground="Gray"/>
+                                   FontStyle="Italic"/>
                             </StackPanel>
                         </StackPanel>
                     </GroupBox>
@@ -106,7 +170,7 @@
         </Grid>
 
         <!-- Frame 2: Profile Editor -->
-        <Grid Name="ProfileEditorFrame" Visibility="Collapsed" Background="#FAFAFA">
+        <Grid Name="ProfileEditorFrame" Visibility="Collapsed">
             <StackPanel Margin="10">
                 <TextBlock Text="Edit Sync Profile" FontWeight="Bold" FontSize="16"/>
                 <TextBox Name="ProfileNameTextBox" Margin="0,10,0,0" />
@@ -136,7 +200,7 @@
                     <Button Content="Set Connection" Click="SetProfileServerConnection_Click"/>
                     <TextBlock Text="Connection Info:" Name="ProfileConnectionInfoTextBox"/>
                 </StackPanel>
-                
+
                 <CheckBox Name="ExportServerParamsCheckBox" Content="Export SQL Server Configuration Values" Margin="0,10,0,0"/>
                 <CheckBox Name="ExportJobsCheckBox" Content="Export SQL Server Agent Parameters - Jobs, Operators, Alerts" Margin="0,10,0,0"/>
                 <CheckBox Name="ExportLoginsCheckBox" Content="Export Logins and Permissions" Margin="0,10,0,0"/>
@@ -144,12 +208,12 @@
                 <StackPanel Orientation="Vertical" Margin="0,5,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="Databases:" Width="80" VerticalAlignment="Center"/>
-                        <TextBox Name="ListOfDatabasesTextBox" Width="400"/>                        
+                        <TextBox Name="ListOfDatabasesTextBox" Width="400"/>
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Margin="0,5,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <TextBlock Text="Use Ola Hallengren keywords such as ALL_DATABASES, USER_DATABASES, etc."/>                       
+                        <TextBlock Text="Use Ola Hallengren keywords such as ALL_DATABASES, USER_DATABASES, etc."/>
                     </StackPanel>
                 </StackPanel>
 
