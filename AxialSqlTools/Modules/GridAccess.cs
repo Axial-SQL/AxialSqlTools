@@ -224,6 +224,7 @@ namespace AxialSqlTools
 
                         // leave some types as strings because the conversation from string fails
                         if (columnType == typeof(Guid) 
+                            || columnType == typeof(TimeSpan)
                             || columnType == typeof(DateTime)
                             || columnType == typeof(DateTimeOffset)
                             || columnType == typeof(byte[])
