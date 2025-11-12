@@ -3,23 +3,91 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
-             Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
-             Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              mc:Ignorable="d" FontSize="14"
              Name="MyToolWindow">
-    <Grid>
-        <StackPanel Orientation="Vertical" >
+    <UserControl.Resources>
+        <!-- Custom CheckBox style with explicit dark/light theme support -->
+        <Style x:Key="ThemedCheckBox" TargetType="CheckBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- CheckBox border and checkmark -->
+                            <Border x:Name="CheckBoxBorder"
+                                    Grid.Column="0"
+                                    Width="16"
+                                    Height="16"
+                                    BorderThickness="1"
+                                    BorderBrush="White"
+                                    Background="Transparent"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center">
+                                <Path x:Name="CheckMark"
+                                      Data="M 0,4 L 4,8 L 10,0"
+                                      Stroke="White"
+                                      StrokeThickness="2"
+                                      Visibility="Collapsed"
+                                      Stretch="Uniform"
+                                      Margin="2"/>
+                            </Border>
+                            
+                            <!-- Content (label text) -->
+                            <ContentPresenter x:Name="ContentPresenter"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            TextElement.Foreground="White"
+                                            Content="{TemplateBinding Content}"/>
+                        </Grid>
+                        
+                        <ControlTemplate.Triggers>
+                            <!-- Show checkmark when checked -->
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            
+                            <!-- Hover effect -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="#E0E0E0"/>
+                                <Setter TargetName="ContentPresenter" Property="TextElement.Foreground" Value="#E0E0E0"/>
+                            </Trigger>
+                            
+                            <!-- Disabled state -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="#606060"/>
+                                <Setter TargetName="CheckBoxBorder" Property="Opacity" Value="0.4"/>
+                                <Setter TargetName="CheckMark" Property="Stroke" Value="#606060"/>
+                                <Setter TargetName="ContentPresenter" Property="TextElement.Foreground" Value="#606060"/>
+                                <Setter TargetName="ContentPresenter" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    
+    <DockPanel>
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                Padding="12" BorderThickness="0,0,0,1">
+            <TextBlock Text="Data Transfer"
+                       FontWeight="Bold"
+                       FontSize="20"
+                       HorizontalAlignment="Center"/>
+        </Border>
 
-            <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" >
-                <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Data Transfer</TextBlock>
-            </StackPanel>
+        <StackPanel Orientation="Vertical" >
 
             <Label Content="High-performance data transfer through bulk-load of the active result set." FontWeight="Bold"/>
 
             <Label Content="Connect to the instance in the Object Explorer, click on the source or target database, and then use the buttons below to automatically select that connection." />
 
-            <TabControl >
+            <TabControl x:Name="MainTabControl">
                 <TabItem Header="SQL Server -> SQL Server">
                     <Grid>
 
@@ -46,7 +114,8 @@
                                 </RichTextBox>
                             </StackPanel>
 
-                            <Expander Header="Additional SqlBulkCopy Options" IsExpanded="False" Margin="0,0,0,0">
+                            <Expander Header="Additional SqlBulkCopy Options" IsExpanded="False" Margin="0,0,0,0" 
+                                      x:Name="SqlBulkCopyOptionsExpander" Expanded="SqlBulkCopyOptionsExpander_Expanded">
                                 <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                                     <!-- Checkboxes for each option -->
                                     <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
@@ -130,9 +199,7 @@
 
         </StackPanel>
 
-
-
-    </Grid>
+    </DockPanel>
 
 
 </UserControl>

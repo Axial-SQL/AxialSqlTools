@@ -16,6 +16,7 @@
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Documents;
+    using System.Windows.Media;
 
     /// <summary>
     /// Interaction logic for DataTransferWindowControl.
@@ -59,6 +60,48 @@
         {
             this.InitializeComponent();
 
+            // Apply theme when control loads
+            this.Loaded += (s, e) =>
+            {
+                ApplyThemeColors();
+            };
+            
+            // Re-apply theme when control becomes visible (e.g., switching tabs or changing SSMS theme)
+            this.IsVisibleChanged += (s, e) =>
+            {
+                if (this.IsVisible)
+                {
+                    ApplyThemeColors();
+                }
+            };
+
+            // Re-apply theme when switching tabs within this page
+            MainTabControl.SelectionChanged += (s, e) =>
+            {
+                if (this.IsVisible)
+                {
+                    // CRITICAL: Use Dispatcher to ensure visual tree is updated before theming
+                    // When a tab is selected, WPF needs time to render its content into the visual tree
+                    this.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (ThemeManager.IsDarkTheme())
+                        {
+                            var bgBrush = ThemeManager.GetBackgroundBrush();
+                            var fgBrush = ThemeManager.GetForegroundBrush();
+                            
+                            // Theme the newly selected tab's content
+                            if (MainTabControl.SelectedItem is TabItem selectedTab && selectedTab.Content is DependencyObject tabContent)
+                            {
+                                ApplyThemeToChildren(tabContent, bgBrush, fgBrush);
+                            }
+
+                            // Apply custom CheckBox style
+                            ApplyCheckBoxStyle();
+                        }
+                    }), System.Windows.Threading.DispatcherPriority.Loaded);
+                }
+            };
+
             Button_CopyData.IsEnabled = false;
             Button_Cancel.Visibility = System.Windows.Visibility.Collapsed;
 
@@ -67,6 +110,284 @@
 
             TextBox_TargetConnectionToPsql.Text = "Server=127.0.0.1;Port=5432;Database=postgres;User Id=postgres;Password=<password>;";
 
+        }
+
+        private void SqlBulkCopyOptionsExpander_Expanded(object sender, RoutedEventArgs e)
+        {
+            // When expander is expanded, its content is now in the visual tree
+            // Apply theme after a brief delay to ensure visual tree is built
+            this.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (ThemeManager.IsDarkTheme() && SqlBulkCopyOptionsExpander.Content is DependencyObject expanderContent)
+                {
+                    var bgBrush = ThemeManager.GetBackgroundBrush();
+                    var fgBrush = ThemeManager.GetForegroundBrush();
+                    ApplyThemeToChildren(expanderContent, bgBrush, fgBrush);
+                    
+                    // Apply custom CheckBox style for checkboxes inside the expander
+                    ApplyCheckBoxStyle();
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private bool _themeApplied = false;
+        
+        private void ApplyThemeColors()
+        {
+            try
+            {
+                // Always check current theme state - don't cache it
+                bool isDark = ThemeManager.IsDarkTheme();
+                
+                if (!isDark)
+                {
+                    // Light mode - reset to default colors
+                    this.ClearValue(Control.BackgroundProperty);
+                    this.ClearValue(Control.ForegroundProperty);
+                    // Clear theme from children too
+                    ClearThemeFromChildren(this);
+                    return;
+                }
+
+                // Dark mode - apply dark theme colors
+                var bgBrush = ThemeManager.GetBackgroundBrush();
+                var fgBrush = ThemeManager.GetForegroundBrush();
+
+                this.Background = bgBrush;
+                this.Foreground = fgBrush;
+
+                // CRITICAL: Explicitly theme ALL tab items, not just visible ones
+                if (MainTabControl != null)
+                {
+                    foreach (TabItem tabItem in MainTabControl.Items)
+                    {
+                        // Theme the tab header
+                        tabItem.Foreground = fgBrush;
+                        
+                        // Theme the content of each tab (even if not visible)
+                        if (tabItem.Content is DependencyObject tabContent)
+                        {
+                            ApplyThemeToChildren(tabContent, bgBrush, fgBrush);
+                        }
+                    }
+                }
+
+                // Recursively apply to all other children
+                ApplyThemeToChildren(this, bgBrush, fgBrush);
+
+                // Apply custom CheckBox style for dark mode
+                ApplyCheckBoxStyle();
+            }
+            catch (Exception ex)
+            {
+                // Log but don't crash if theming fails
+                System.Diagnostics.Debug.WriteLine($"Failed to apply theme: {ex.Message}");
+            }
+        }
+
+        private void ClearThemeFromChildren(DependencyObject parent)
+        {
+            if (parent == null) return;
+
+            int childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+
+                // Clear themed properties to restore defaults
+                if (child is Label label)
+                {
+                    label.ClearValue(Label.ForegroundProperty);
+                }
+                else if (child is TextBlock textBlock)
+                {
+                    textBlock.ClearValue(TextBlock.ForegroundProperty);
+                }
+                else if (child is CheckBox checkBox)
+                {
+                    checkBox.ClearValue(CheckBox.ForegroundProperty);
+                    checkBox.ClearValue(CheckBox.BorderBrushProperty);
+                }
+                else if (child is TextBox textBox)
+                {
+                    textBox.ClearValue(TextBox.BackgroundProperty);
+                    textBox.ClearValue(TextBox.ForegroundProperty);
+                }
+                else if (child is RichTextBox richTextBox)
+                {
+                    richTextBox.ClearValue(RichTextBox.BackgroundProperty);
+                    richTextBox.ClearValue(RichTextBox.ForegroundProperty);
+                }
+                else if (child is PasswordBox passwordBox)
+                {
+                    passwordBox.ClearValue(PasswordBox.BackgroundProperty);
+                    passwordBox.ClearValue(PasswordBox.ForegroundProperty);
+                }
+                else if (child is GroupBox groupBox)
+                {
+                    groupBox.ClearValue(GroupBox.ForegroundProperty);
+                }
+                else if (child is Expander expander)
+                {
+                    expander.ClearValue(Expander.ForegroundProperty);
+                }
+                else if (child is TabControl tabControl)
+                {
+                    tabControl.ClearValue(TabControl.BackgroundProperty);
+                    tabControl.ClearValue(TabControl.ForegroundProperty);
+                }
+                else if (child is TabItem tabItem)
+                {
+                    tabItem.ClearValue(TabItem.ForegroundProperty);
+                }
+                else if (child is Button button)
+                {
+                    button.ClearValue(Button.ForegroundProperty);
+                }
+                else if (child is Grid grid)
+                {
+                    grid.ClearValue(Grid.BackgroundProperty);
+                }
+                else if (child is StackPanel stackPanel)
+                {
+                    stackPanel.ClearValue(StackPanel.BackgroundProperty);
+                }
+                else if (child is Border border)
+                {
+                    border.ClearValue(Border.BackgroundProperty);
+                }
+                else if (child is DockPanel dockPanel)
+                {
+                    dockPanel.ClearValue(DockPanel.BackgroundProperty);
+                }
+
+                ClearThemeFromChildren(child);
+            }
+        }
+
+        private void ApplyCheckBoxStyle()
+        {
+            // Use Dispatcher to ensure visual tree is fully constructed before applying style
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var checkBoxStyle = this.TryFindResource("ThemedCheckBox") as Style;
+                if (checkBoxStyle != null)
+                {
+                    ApplyCheckBoxStyleRecursive(this, checkBoxStyle);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void ApplyCheckBoxStyleRecursive(DependencyObject parent, Style style)
+        {
+            if (parent == null) return;
+
+            int childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+
+                if (child is CheckBox checkBox)
+                {
+                    checkBox.Style = style;
+                }
+
+                ApplyCheckBoxStyleRecursive(child, style);
+            }
+        }
+
+        private void ApplyThemeToChildren(DependencyObject parent, SolidColorBrush bgBrush, SolidColorBrush fgBrush)
+        {
+            if (parent == null) return;
+
+            int childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+
+                // Apply foreground to all text-bearing controls - FORCE update even if already set
+                if (child is Label label)
+                {
+                    label.Foreground = fgBrush;
+                }
+                else if (child is TextBlock textBlock)
+                {
+                    textBlock.Foreground = fgBrush;
+                }
+                else if (child is CheckBox checkBox)
+                {
+                    // Set foreground to white - this affects both the label text AND the checkmark glyph
+                    checkBox.Foreground = fgBrush;
+                    // Force the checkbox border to be visible
+                    checkBox.BorderBrush = fgBrush;
+                }
+                else if (child is TextBox textBox)
+                {
+                    textBox.Background = bgBrush;
+                    textBox.Foreground = fgBrush;
+                }
+                else if (child is RichTextBox richTextBox)
+                {
+                    richTextBox.Background = bgBrush;
+                    richTextBox.Foreground = fgBrush;
+                }
+                else if (child is PasswordBox passwordBox)
+                {
+                    passwordBox.Background = bgBrush;
+                    passwordBox.Foreground = fgBrush;
+                }
+                else if (child is GroupBox groupBox)
+                {
+                    groupBox.Foreground = fgBrush;
+                }
+                else if (child is Expander expander)
+                {
+                    expander.Foreground = fgBrush;
+                }
+                else if (child is TabControl tabControl)
+                {
+                    tabControl.Background = bgBrush;
+                    tabControl.Foreground = fgBrush;
+                }
+                else if (child is TabItem tabItem)
+                {
+                    // CRITICAL: Set foreground on TabItem itself for header text
+                    tabItem.Foreground = fgBrush;
+                }
+                else if (child is Button button)
+                {
+                    // CRITICAL: Set button foreground for text visibility
+                    if (button.IsEnabled)
+                    {
+                        button.Foreground = fgBrush;
+                        button.ClearValue(Button.BackgroundProperty); // Clear any disabled background
+                        button.Opacity = 1.0; // Full opacity for enabled buttons
+                    }
+                    else
+                    {
+                        // Disabled buttons use opacity to look grayed out
+                        button.Foreground = fgBrush; // Keep same color but use opacity
+                        button.Opacity = 0.4; // Make it look disabled with transparency
+                        button.Background = new SolidColorBrush(Color.FromRgb(60, 60, 60)); // Darker gray background
+                    }
+                }
+                else if (child is Grid grid)
+                {
+                    // Theme grid backgrounds for tab content areas
+                    grid.Background = bgBrush;
+                }
+                else if (child is Border border)
+                {
+                    // Theme borders too
+                    if (border.Background != null)
+                    {
+                        border.Background = bgBrush;
+                    }
+                }
+
+                // Recurse to theme nested controls
+                ApplyThemeToChildren(child, bgBrush, fgBrush);
+            }
         }
 
         private async void SqlToSql_CopyData_UpdateStatusAsync(object bulkCopySender, SqlRowsCopiedEventArgs eventArgs)

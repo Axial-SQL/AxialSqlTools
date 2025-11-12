@@ -14,6 +14,7 @@
     using System.Windows.Controls;
     using System.Windows.Documents;
     using System.Windows.Input;
+    using System.Windows.Media;
     using static AxialSqlTools.AxialSqlToolsPackage;
 
 
@@ -140,6 +141,232 @@
         public ToolWindowGridToEmailControl()
         {
             this.InitializeComponent();
+            
+            // Apply theme when control loads
+            this.Loaded += (s, e) =>
+            {
+                ApplyThemeColors();
+            };
+            
+            // Re-apply theme when control becomes visible (e.g., switching windows or changing SSMS theme)
+            this.IsVisibleChanged += (s, e) =>
+            {
+                if (this.IsVisible)
+                {
+                    ApplyThemeColors();
+                }
+            };
+        }
+
+        private bool _themeApplied = false;
+
+        private void ApplyThemeColors()
+        {
+            try
+            {
+                // Always check current theme state - don't cache it
+                bool isDark = ThemeManager.IsDarkTheme();
+                
+                if (!isDark)
+                {
+                    // Light mode - reset to default colors
+                    this.ClearValue(Control.BackgroundProperty);
+                    this.ClearValue(Control.ForegroundProperty);
+                    ClearThemeFromChildren(this);
+                    return;
+                }
+
+                // Dark mode - apply dark theme colors
+                var bgBrush = ThemeManager.GetBackgroundBrush();
+                var fgBrush = ThemeManager.GetForegroundBrush();
+
+                this.Background = bgBrush;
+                this.Foreground = fgBrush;
+
+                // Recursively apply to all children
+                ApplyThemeToChildren(this, bgBrush, fgBrush);
+
+                // Apply custom CheckBox style for dark mode
+                ApplyCheckBoxStyle();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to apply theme: {ex.Message}");
+            }
+        }
+
+        private void ClearThemeFromChildren(DependencyObject parent)
+        {
+            if (parent == null) return;
+
+            int childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+
+                if (child is Label label)
+                {
+                    label.ClearValue(Label.ForegroundProperty);
+                }
+                else if (child is TextBlock textBlock)
+                {
+                    textBlock.ClearValue(TextBlock.ForegroundProperty);
+                }
+                else if (child is CheckBox checkBox)
+                {
+                    checkBox.ClearValue(CheckBox.StyleProperty);
+                }
+                else if (child is TextBox textBox)
+                {
+                    textBox.ClearValue(TextBox.BackgroundProperty);
+                    textBox.ClearValue(TextBox.ForegroundProperty);
+                }
+                else if (child is RichTextBox richTextBox)
+                {
+                    richTextBox.ClearValue(RichTextBox.BackgroundProperty);
+                    richTextBox.ClearValue(RichTextBox.ForegroundProperty);
+                }
+                else if (child is Button button)
+                {
+                    button.ClearValue(Button.ForegroundProperty);
+                }
+                else if (child is Grid grid)
+                {
+                    grid.ClearValue(Grid.BackgroundProperty);
+                }
+                else if (child is StackPanel stackPanel)
+                {
+                    stackPanel.ClearValue(StackPanel.BackgroundProperty);
+                }
+                else if (child is Border border)
+                {
+                    border.ClearValue(Border.BackgroundProperty);
+                }
+                else if (child is Image image)
+                {
+                    // Clear any effects applied for dark mode
+                    image.Effect = null;
+                }
+
+                ClearThemeFromChildren(child);
+            }
+        }
+
+        private void ApplyCheckBoxStyle()
+        {
+            // Use Dispatcher to ensure visual tree is fully constructed before applying style
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var checkBoxStyle = this.TryFindResource("ThemedCheckBox") as Style;
+                if (checkBoxStyle != null)
+                {
+                    ApplyCheckBoxStyleRecursive(this, checkBoxStyle);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void ApplyCheckBoxStyleRecursive(DependencyObject parent, Style style)
+        {
+            if (parent == null) return;
+
+            int childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+
+                if (child is CheckBox checkBox)
+                {
+                    checkBox.Style = style;
+                }
+
+                ApplyCheckBoxStyleRecursive(child, style);
+            }
+        }
+
+        private void ApplyThemeToChildren(DependencyObject parent, SolidColorBrush bgBrush, SolidColorBrush fgBrush)
+        {
+            if (parent == null) return;
+
+            int childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+
+                if (child is Label label)
+                {
+                    label.Foreground = fgBrush;
+                }
+                else if (child is TextBlock textBlock)
+                {
+                    textBlock.Foreground = fgBrush;
+                }
+                else if (child is CheckBox checkBox)
+                {
+                    // Skip CheckBox - handled by custom style
+                }
+                else if (child is TextBox textBox)
+                {
+                    textBox.Background = bgBrush;
+                    textBox.Foreground = fgBrush;
+                }
+                else if (child is RichTextBox richTextBox)
+                {
+                    richTextBox.Background = bgBrush;
+                    richTextBox.Foreground = fgBrush;
+                }
+                else if (child is Button button)
+                {
+                    if (button.IsEnabled)
+                    {
+                        button.Foreground = fgBrush;
+                        button.ClearValue(Button.BackgroundProperty); // Clear any disabled background
+                        button.Opacity = 1.0; // Full opacity for enabled buttons
+                    }
+                    else
+                    {
+                        // Disabled buttons use opacity to look grayed out
+                        button.Foreground = fgBrush; // Keep same color but use opacity
+                        button.Opacity = 0.4; // Make it look disabled with transparency
+                        button.Background = new SolidColorBrush(Color.FromRgb(60, 60, 60)); // Darker gray background
+                    }
+                }
+                else if (child is Grid grid)
+                {
+                    grid.Background = bgBrush;
+                }
+                else if (child is Border border)
+                {
+                    if (border.Background != null)
+                    {
+                        border.Background = bgBrush;
+                    }
+                }
+                else if (child is Image image)
+                {
+                    // Make icons visible in dark mode by adding a light background effect
+                    if (ThemeManager.IsDarkTheme())
+                    {
+                        // Add a drop shadow or background effect to make dark icons visible
+                        // Use DropShadowEffect with white color to create a glow
+                        var effect = new System.Windows.Media.Effects.DropShadowEffect
+                        {
+                            Color = Colors.White,
+                            Direction = 0,
+                            ShadowDepth = 0,
+                            BlurRadius = 3,
+                            Opacity = 0.9
+                        };
+                        image.Effect = effect;
+                    }
+                    else
+                    {
+                        // Light mode: no effect needed
+                        image.Effect = null;
+                    }
+                }
+
+                ApplyThemeToChildren(child, bgBrush, fgBrush);
+            }
         }
 
         public void PrepareFormParameters()
