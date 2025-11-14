@@ -245,19 +245,19 @@ namespace AxialSqlTools
                 return;
             }
 
-            var diffModel = _diffBuilder.BuildDiffModel(difference.SourceDefinition ?? string.Empty, difference.TargetDefinition ?? string.Empty);
+            var diffModel = _diffBuilder.BuildDiffModel(difference.TargetDefinition ?? string.Empty, difference.SourceDefinition ?? string.Empty);
 
-            if (diffModel?.OldText?.Lines != null)
+            if (diffModel?.NewText?.Lines != null)
             {
-                foreach (var line in diffModel.OldText.Lines)
+                foreach (var line in diffModel.NewText.Lines)
                 {
                     SourceDiffLines.Add(new DiffLineViewModel(line));
                 }
             }
 
-            if (diffModel?.NewText?.Lines != null)
+            if (diffModel?.OldText?.Lines != null)
             {
-                foreach (var line in diffModel.NewText.Lines)
+                foreach (var line in diffModel.OldText.Lines)
                 {
                     TargetDiffLines.Add(new DiffLineViewModel(line));
                 }
