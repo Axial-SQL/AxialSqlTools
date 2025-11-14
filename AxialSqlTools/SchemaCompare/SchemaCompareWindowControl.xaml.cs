@@ -277,8 +277,8 @@ namespace AxialSqlTools
             Name = difference.Name?.ToString() ?? string.Empty;
             DifferenceType = difference.DifferenceType.ToString();
             Action = difference.UpdateAction.ToString();
-            SourceObject = difference.SourceObject?.ToString() ?? string.Empty;
-            TargetObject = difference.TargetObject?.ToString() ?? string.Empty;
+            SourceObject = difference.SourceObject?.Name.ToString() ?? string.Empty;
+            TargetObject = difference.TargetObject?.Name.ToString() ?? string.Empty;
             SourceDefinition = difference.SourceObject?.GetScript() ?? "";
             TargetDefinition = difference.TargetObject?.GetScript() ?? "";
         }
