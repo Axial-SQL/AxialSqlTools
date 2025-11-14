@@ -1,80 +1,79 @@
-﻿<UserControl x:Class="AxialSqlTools.SchemaCompareWindowControl"
+<UserControl x:Class="AxialSqlTools.SchemaCompareWindowControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" MinWidth="900" MinHeight="600">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- 
-        <DockPanel Margin="8">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                <Button Content="Source..." Width="90" Command="{Binding PickSourceCommand}"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding SourceDisplay}" Width="280" TextTrimming="CharacterEllipsis"/>
-                <Button Content="Target..." Width="90" Command="{Binding PickTargetCommand}"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding TargetDisplay}" Width="280" TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                <CheckBox Content="Ignore Whitespace" IsChecked="{Binding Options.IgnoreWhitespace}"/>
-                <CheckBox Content="Ignore Column Order" IsChecked="{Binding Options.IgnoreColumnOrder}"/>
-                <CheckBox Content="Include Data" IsChecked="{Binding IncludeData}"/>
-                <Button Content="Compare" Width="100" Command="{Binding CompareCommand}" />
-            </StackPanel>
-        </DockPanel>
-
-   
-        <Grid Grid.Row="1" Margin="8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="3*"/>
-            </Grid.ColumnDefinitions>
-
-            <TreeView Grid.Column="0" ItemsSource="{Binding Results}" SelectedItemChanged="Tree_SelectedItemChanged">
-                <TreeView.Resources>
-                    <HierarchicalDataTemplate DataType="{x:Type DiffuseMaterial}" ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal">
-                            <CheckBox IsChecked="{Binding IsIncluded, Mode=TwoWay}"/>
-                            <TextBlock Text="{Binding Status}" FontWeight="Bold" Width="80"/>
-                            <TextBlock Text="{Binding ObjectType}" Width="80"/>
-                            <TextBlock Text="{Binding Name}" />
-                        </StackPanel>
-                    </HierarchicalDataTemplate>
-                </TreeView.Resources>
-            </TreeView>
-
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <GroupBox Header="Source Definition">
-                    <TextBox Text="{Binding SelectedSourceDefinition}" FontFamily="Consolas" FontSize="12"
-                   IsReadOnly="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto"
-                   VerticalScrollBarVisibility="Auto"/>
-                </GroupBox>
-                <GroupBox Grid.Row="1" Header="Target Definition">
-                    <TextBox Text="{Binding SelectedTargetDefinition}" FontFamily="Consolas" FontSize="12"
-                   IsReadOnly="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto"
-                   VerticalScrollBarVisibility="Auto"/>
-                </GroupBox>
+        <Border Grid.Row="0" BorderBrush="#FFDDDDDD" BorderThickness="0,0,0,1" Padding="8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,16,0" Orientation="Vertical">
+                    <TextBlock Text="Source" FontWeight="Bold" Margin="0,0,0,4" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <Button Content="Use Selected" Width="120" Command="{Binding PickSourceCommand}" />
+                        <Button Content="Clear" Width="70" Margin="8,0,0,0" Command="{Binding ClearSourceCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding SourceDisplay}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="0,0,16,0" Orientation="Vertical">
+                    <TextBlock Text="Target" FontWeight="Bold" Margin="0,0,0,4" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <Button Content="Use Selected" Width="120" Command="{Binding PickTargetCommand}" />
+                        <Button Content="Clear" Width="70" Margin="8,0,0,0" Command="{Binding ClearTargetCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding TargetDisplay}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button Content="Swap" Width="80" Margin="0,0,8,0" Command="{Binding SwapConnectionsCommand}" />
+                    <Button Content="Compare" Width="120" Command="{Binding CompareCommand}" />
+                </StackPanel>
             </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <DataGrid Grid.Row="0" ItemsSource="{Binding Differences}" AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserAddRows="False" HeadersVisibility="Column" Margin="0,0,0,8">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" />
+                    <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="*" />
+                    <DataGridTextColumn Header="Difference Type" Binding="{Binding DifferenceType}" Width="*" />
+                    <DataGridTextColumn Header="Source Object" Binding="{Binding SourceObject}" Width="2*" />
+                    <DataGridTextColumn Header="Target Object" Binding="{Binding TargetObject}" Width="2*" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <GroupBox Grid.Row="1" Header="Deployment Script">
+                <TextBox Text="{Binding DeploymentScript}" FontFamily="Consolas" FontSize="12" AcceptsReturn="True"
+                         TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                         IsReadOnly="True" />
+            </GroupBox>
         </Grid>
 
-
-        <DockPanel Grid.Row="2" Margin="8">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <TextBlock Text="{Binding Status}" VerticalAlignment="Center"/>
-                <ProgressBar Width="180" Height="16" IsIndeterminate="{Binding IsBusy}" Visibility="{Binding BusyVisibility}"/>
-                <Button Content="Generate Script" Width="140" Command="{Binding GenerateScriptCommand}" />
-                <Button Content="Deploy" Width="100" Command="{Binding DeployCommand}" />
-                <Button Content="Save Report..." Width="120" Command="{Binding SaveReportCommand}" />
-            </StackPanel>
-        </DockPanel>
-        Connections and options -->
+        <Border Grid.Row="2" BorderBrush="#FFDDDDDD" BorderThickness="1,1,1,0" Padding="8">
+            <DockPanel>
+                <TextBlock Text="{Binding Status}" VerticalAlignment="Center" />
+                <ProgressBar Width="180" Height="16" Margin="12,0,0,0" IsIndeterminate="True"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </DockPanel>
+        </Border>
     </Grid>
 </UserControl>
