@@ -279,8 +279,8 @@ namespace AxialSqlTools
             Action = difference.UpdateAction.ToString();
             SourceObject = difference.SourceObject?.ToString() ?? string.Empty;
             TargetObject = difference.TargetObject?.ToString() ?? string.Empty;
-            SourceDefinition = SchemaCompareObjectDefinitionExtractor.GetDefinition(difference.SourceObject);
-            TargetDefinition = SchemaCompareObjectDefinitionExtractor.GetDefinition(difference.TargetObject);
+            SourceDefinition = difference.SourceObject?.GetScript() ?? "";
+            TargetDefinition = difference.TargetObject?.GetScript() ?? "";
         }
 
         public string Name { get; }
@@ -296,48 +296,6 @@ namespace AxialSqlTools
         public string SourceDefinition { get; }
 
         public string TargetDefinition { get; }
-    }
-
-    internal static class SchemaCompareObjectDefinitionExtractor
-    {
-        private static readonly string[] PreferredProperties = new[] { "Definition", "Script", "ObjectDefinition" };
-        private static readonly string[] PreferredMethods = new[] { "GetScript", "GetDefinition", "GetSourceDefinition" };
-
-        public static string GetDefinition(SchemaCompareObject schemaObject)
-        {
-            if (schemaObject == null)
-            {
-                return string.Empty;
-            }
-
-            var type = schemaObject.GetType();
-
-            foreach (var propertyName in PreferredProperties)
-            {
-                var property = type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-                if (property?.PropertyType == typeof(string))
-                {
-                    if (property.GetValue(schemaObject) is string value && !string.IsNullOrWhiteSpace(value))
-                    {
-                        return value;
-                    }
-                }
-            }
-
-            foreach (var methodName in PreferredMethods)
-            {
-                var method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
-                if (method?.ReturnType == typeof(string))
-                {
-                    if (method.Invoke(schemaObject, null) is string value && !string.IsNullOrWhiteSpace(value))
-                    {
-                        return value;
-                    }
-                }
-            }
-
-            return schemaObject.ToString() ?? string.Empty;
-        }
     }
 
     internal class DiffLineViewModel
