@@ -44,29 +44,155 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Margin="8">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="2*" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+        <TabControl Grid.Row="1" Margin="8">
+            <TabItem Header="Differences">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="2*" />
+                        <RowDefinition Height="3*" />
+                    </Grid.RowDefinitions>
 
-            <DataGrid Grid.Row="0" ItemsSource="{Binding Differences}" AutoGenerateColumns="False" IsReadOnly="True"
-                      CanUserAddRows="False" HeadersVisibility="Column" Margin="0,0,0,8">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" />
-                    <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="*" />
-                    <DataGridTextColumn Header="Difference Type" Binding="{Binding DifferenceType}" Width="*" />
-                    <DataGridTextColumn Header="Source Object" Binding="{Binding SourceObject}" Width="2*" />
-                    <DataGridTextColumn Header="Target Object" Binding="{Binding TargetObject}" Width="2*" />
-                </DataGrid.Columns>
-            </DataGrid>
+                    <DataGrid Grid.Row="0" ItemsSource="{Binding Differences}" AutoGenerateColumns="False" IsReadOnly="True"
+                              SelectedItem="{Binding SelectedDifference, Mode=TwoWay}" CanUserAddRows="False"
+                              HeadersVisibility="Column" Margin="0,0,0,8">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" />
+                            <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="*" />
+                            <DataGridTextColumn Header="Difference Type" Binding="{Binding DifferenceType}" Width="*" />
+                            <DataGridTextColumn Header="Source Object" Binding="{Binding SourceObject}" Width="2*" />
+                            <DataGridTextColumn Header="Target Object" Binding="{Binding TargetObject}" Width="2*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
 
-            <GroupBox Grid.Row="1" Header="Deployment Script">
-                <TextBox Text="{Binding DeploymentScript, Mode=OneWay}" FontFamily="Consolas" FontSize="12" AcceptsReturn="True"
-                         TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                         IsReadOnly="True" />
-            </GroupBox>
-        </Grid>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <GroupBox Header="Source Definition" Margin="0,0,4,0">
+                            <Grid>
+                                <ListView ItemsSource="{Binding SourceDiffLines}" BorderThickness="0" FontSize="12"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="FontFamily" Value="Consolas" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DiffType}" Value="Inserted">
+                                                    <Setter Property="Background" Value="#FFE1FFE1" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DiffType}" Value="Deleted">
+                                                    <Setter Property="Background" Value="#FFF7D6D6" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DiffType}" Value="Modified">
+                                                    <Setter Property="Background" Value="#FFE9F3FF" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Opacity="{Binding Opacity}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="24" />
+                                                    <ColumnDefinition Width="50" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Indicator}" HorizontalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding LineNumber}" Foreground="#FF888888" HorizontalAlignment="Right"
+                                                           Margin="0,0,8,0" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="NoWrap"
+                                                           FontFamily="Consolas" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <TextBlock Text="Select a difference to preview the source definition." Foreground="#FF666666"
+                                           FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedDifference}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </GroupBox>
+
+                        <GroupBox Grid.Column="1" Header="Target Definition" Margin="4,0,0,0">
+                            <Grid>
+                                <ListView ItemsSource="{Binding TargetDiffLines}" BorderThickness="0" FontSize="12"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
+                                    <ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="FontFamily" Value="Consolas" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DiffType}" Value="Inserted">
+                                                    <Setter Property="Background" Value="#FFE1FFE1" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DiffType}" Value="Deleted">
+                                                    <Setter Property="Background" Value="#FFF7D6D6" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DiffType}" Value="Modified">
+                                                    <Setter Property="Background" Value="#FFE9F3FF" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListView.ItemContainerStyle>
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Opacity="{Binding Opacity}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="24" />
+                                                    <ColumnDefinition Width="50" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Indicator}" HorizontalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding LineNumber}" Foreground="#FF888888" HorizontalAlignment="Right"
+                                                           Margin="0,0,8,0" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="NoWrap"
+                                                           FontFamily="Consolas" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <TextBlock Text="Select a difference to preview the target definition." Foreground="#FF666666"
+                                           FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedDifference}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Deployment Script">
+                <Grid>
+                    <TextBox Text="{Binding DeploymentScript, Mode=OneWay}" FontFamily="Consolas" FontSize="12" AcceptsReturn="True"
+                             TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                             IsReadOnly="True" />
+                </Grid>
+            </TabItem>
+        </TabControl>
 
         <Border Grid.Row="2" BorderBrush="#FFDDDDDD" BorderThickness="1,1,1,0" Padding="8">
             <DockPanel>

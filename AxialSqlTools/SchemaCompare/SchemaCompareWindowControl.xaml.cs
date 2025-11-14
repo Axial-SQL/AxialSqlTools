@@ -1,8 +1,12 @@
+using DiffPlex;
+using DiffPlex.DiffBuilder;
+using DiffPlex.DiffBuilder.Model;
 using Microsoft.SqlServer.Dac.Compare;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -30,13 +34,17 @@ namespace AxialSqlTools
     {
         private ScriptFactoryAccess.ConnectionInfo _sourceConnection;
         private ScriptFactoryAccess.ConnectionInfo _targetConnection;
+        private readonly SideBySideDiffBuilder _diffBuilder = new SideBySideDiffBuilder(new Differ());
         private bool _isBusy;
         private string _status = "Select a source and target using Object Explorer.";
         private string _deploymentScript = string.Empty;
+        private SchemaDifferenceViewModel _selectedDifference;
 
         public SchemaCompareViewModel()
         {
             Differences = new ObservableCollection<SchemaDifferenceViewModel>();
+            SourceDiffLines = new ObservableCollection<DiffLineViewModel>();
+            TargetDiffLines = new ObservableCollection<DiffLineViewModel>();
             PickSourceCommand = new RelayCommand(() => SetConnection(isSource: true));
             PickTargetCommand = new RelayCommand(() => SetConnection(isSource: false));
             ClearSourceCommand = new RelayCommand(() => SourceConnection = null, () => SourceConnection != null);
@@ -46,6 +54,10 @@ namespace AxialSqlTools
         }
 
         public ObservableCollection<SchemaDifferenceViewModel> Differences { get; }
+
+        public ObservableCollection<DiffLineViewModel> SourceDiffLines { get; }
+
+        public ObservableCollection<DiffLineViewModel> TargetDiffLines { get; }
 
         public ICommand PickSourceCommand { get; }
 
@@ -125,6 +137,20 @@ namespace AxialSqlTools
             }
         }
 
+        public SchemaDifferenceViewModel SelectedDifference
+        {
+            get => _selectedDifference;
+            set
+            {
+                if (_selectedDifference != value)
+                {
+                    _selectedDifference = value;
+                    OnPropertyChanged();
+                    UpdateDiffPreview(value);
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void SetConnection(bool isSource)
@@ -171,6 +197,9 @@ namespace AxialSqlTools
                 Status = "Comparing schemas...";
                 DeploymentScript = string.Empty;
                 Differences.Clear();
+                SelectedDifference = null;
+                SourceDiffLines.Clear();
+                TargetDiffLines.Clear();
 
                 var sourceConnectionString = SourceConnection.FullConnectionString;
                 var targetConnectionString = TargetConnection.FullConnectionString;
@@ -206,6 +235,35 @@ namespace AxialSqlTools
             }
         }
 
+        private void UpdateDiffPreview(SchemaDifferenceViewModel difference)
+        {
+            SourceDiffLines.Clear();
+            TargetDiffLines.Clear();
+
+            if (difference == null)
+            {
+                return;
+            }
+
+            var diffModel = _diffBuilder.BuildDiffModel(difference.SourceDefinition ?? string.Empty, difference.TargetDefinition ?? string.Empty);
+
+            if (diffModel?.OldText?.Lines != null)
+            {
+                foreach (var line in diffModel.OldText.Lines)
+                {
+                    SourceDiffLines.Add(new DiffLineViewModel(line));
+                }
+            }
+
+            if (diffModel?.NewText?.Lines != null)
+            {
+                foreach (var line in diffModel.NewText.Lines)
+                {
+                    TargetDiffLines.Add(new DiffLineViewModel(line));
+                }
+            }
+        }
+
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -221,6 +279,8 @@ namespace AxialSqlTools
             Action = difference.UpdateAction.ToString();
             SourceObject = difference.SourceObject?.ToString() ?? string.Empty;
             TargetObject = difference.TargetObject?.ToString() ?? string.Empty;
+            SourceDefinition = SchemaCompareObjectDefinitionExtractor.GetDefinition(difference.SourceObject);
+            TargetDefinition = SchemaCompareObjectDefinitionExtractor.GetDefinition(difference.TargetObject);
         }
 
         public string Name { get; }
@@ -232,6 +292,89 @@ namespace AxialSqlTools
         public string SourceObject { get; }
 
         public string TargetObject { get; }
+
+        public string SourceDefinition { get; }
+
+        public string TargetDefinition { get; }
+    }
+
+    internal static class SchemaCompareObjectDefinitionExtractor
+    {
+        private static readonly string[] PreferredProperties = new[] { "Definition", "Script", "ObjectDefinition" };
+        private static readonly string[] PreferredMethods = new[] { "GetScript", "GetDefinition", "GetSourceDefinition" };
+
+        public static string GetDefinition(SchemaCompareObject schemaObject)
+        {
+            if (schemaObject == null)
+            {
+                return string.Empty;
+            }
+
+            var type = schemaObject.GetType();
+
+            foreach (var propertyName in PreferredProperties)
+            {
+                var property = type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+                if (property?.PropertyType == typeof(string))
+                {
+                    if (property.GetValue(schemaObject) is string value && !string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+            }
+
+            foreach (var methodName in PreferredMethods)
+            {
+                var method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
+                if (method?.ReturnType == typeof(string))
+                {
+                    if (method.Invoke(schemaObject, null) is string value && !string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+            }
+
+            return schemaObject.ToString() ?? string.Empty;
+        }
+    }
+
+    internal class DiffLineViewModel
+    {
+        public DiffLineViewModel(DiffPiece piece)
+        {
+            Text = piece?.Text ?? string.Empty;
+            LineNumber = piece?.Position?.ToString() ?? string.Empty;
+            DiffType = piece?.Type.ToString() ?? ChangeType.Unchanged.ToString();
+            Indicator = GetIndicator(piece?.Type ?? ChangeType.Unchanged);
+            Opacity = (piece?.Type ?? ChangeType.Unchanged) == ChangeType.Imaginary ? 0.5 : 1.0;
+        }
+
+        public string Text { get; }
+
+        public string LineNumber { get; }
+
+        public string DiffType { get; }
+
+        public string Indicator { get; }
+
+        public double Opacity { get; }
+
+        private static string GetIndicator(ChangeType changeType)
+        {
+            switch (changeType)
+            {
+                case ChangeType.Deleted:
+                    return "-";
+                case ChangeType.Inserted:
+                    return "+";
+                case ChangeType.Modified:
+                    return "*";
+                default:
+                    return string.Empty;
+            }
+        }
     }
 
     internal class AsyncRelayCommand : ICommand
