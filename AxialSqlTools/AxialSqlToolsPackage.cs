@@ -282,6 +282,7 @@ namespace AxialSqlTools
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
                 await HealthDashboard_ServersCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
+                await DataImportWindowCommand.InitializeAsync(this);
                 await CheckAddinVersionCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
                 await AskChatGptCommand.InitializeAsync(this);
