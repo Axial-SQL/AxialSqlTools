@@ -62,7 +62,7 @@
             </DataGrid>
 
             <GroupBox Grid.Row="1" Header="Deployment Script">
-                <TextBox Text="{Binding DeploymentScript}" FontFamily="Consolas" FontSize="12" AcceptsReturn="True"
+                <TextBox Text="{Binding DeploymentScript, Mode=OneWay}" FontFamily="Consolas" FontSize="12" AcceptsReturn="True"
                          TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                          IsReadOnly="True" />
             </GroupBox>
