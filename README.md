@@ -12,7 +12,7 @@ If you find this extension useful and it helps streamline your workflow in SSMS,
 
 Check it out and let me know what you think!
 
-<img alt="image" src="https://github.com/user-attachments/assets/23ce2810-44cb-485d-852a-23f74ee0c3b0" />
+<img width="611" height="294" alt="image" src="https://github.com/user-attachments/assets/a304b8fa-e83e-47a3-8660-a29954c5fbd0" />
 
 ## Main Features - (see Wiki for more details)
 
@@ -47,6 +47,9 @@ Check it out and let me know what you think!
 - [**Sync to GitHub**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Sync-to-GitHub): Rudimentary, low effort, manually triggered source control.
 
 - [**Copy Column Names from Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Column-Names-from-Grid): Quickly copy the column names from the results grid to the clipboard.
+  
+- [**Database Schema Compare**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Database-Schema-Compare): DacFx-based database schema comparison tool.
+
 
 ## Query Library
 

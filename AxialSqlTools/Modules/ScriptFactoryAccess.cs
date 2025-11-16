@@ -28,7 +28,7 @@ namespace AxialSqlTools
             {
                 get
                 {
-                    return $"{ServerName} \\ {Database}";
+                    return $"[{ServerName}] \\ [{Database}]";
                 }
             }
 
