@@ -44,15 +44,63 @@ namespace AxialSqlTools
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            var btnControlAsInsert = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
-            btnControlAsInsert.Visible = true;
-            btnControlAsInsert.Caption = "Copy As #INSERT";
-            btnControlAsInsert.Click += OnClick_CopyAsInsert;
+            var copyAllPopup = (CommandBarPopup)GridCommandBar.Controls.Add(MsoControlType.msoControlPopup, Type.Missing, Type.Missing, Type.Missing, true);
+            copyAllPopup.Visible = true;
+            copyAllPopup.Caption = "Copy All As ...";
 
-            var btnControlAsCsv = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
-            btnControlAsCsv.Visible = true;
-            btnControlAsCsv.Caption = "Copy As CSV";
-            btnControlAsCsv.Click += OnClick_CopyAsCSV;
+            var btnControlAllInsert = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlAllInsert.Visible = true;
+            btnControlAllInsert.Caption = "INSERT";
+            btnControlAllInsert.Click += OnClick_CopyAllAsInsert;
+
+            var btnControlAllCsv = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlAllCsv.Visible = true;
+            btnControlAllCsv.Caption = "CSV";
+            btnControlAllCsv.Click += OnClick_CopyAllAsCsv;
+
+            var btnControlAllJson = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlAllJson.Visible = true;
+            btnControlAllJson.Caption = "JSON";
+            btnControlAllJson.Click += OnClick_CopyAllAsJson;
+
+            var btnControlAllXaml = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlAllXaml.Visible = true;
+            btnControlAllXaml.Caption = "XAML";
+            btnControlAllXaml.Click += OnClick_CopyAllAsXaml;
+
+            var btnControlAllHtml = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlAllHtml.Visible = true;
+            btnControlAllHtml.Caption = "HTML";
+            btnControlAllHtml.Click += OnClick_CopyAllAsHtml;
+
+            var copySelectedPopup = (CommandBarPopup)GridCommandBar.Controls.Add(MsoControlType.msoControlPopup, Type.Missing, Type.Missing, Type.Missing, true);
+            copySelectedPopup.Visible = true;
+            copySelectedPopup.Caption = "Copy Selected As ...";
+
+            var btnControlSelectedInsert = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlSelectedInsert.Visible = true;
+            btnControlSelectedInsert.Caption = "INSERT";
+            btnControlSelectedInsert.Click += OnClick_CopySelectedAsInsert;
+
+            var btnControlSelectedCsv = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlSelectedCsv.Visible = true;
+            btnControlSelectedCsv.Caption = "CSV";
+            btnControlSelectedCsv.Click += OnClick_CopySelectedAsCsv;
+
+            var btnControlSelectedJson = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlSelectedJson.Visible = true;
+            btnControlSelectedJson.Caption = "JSON";
+            btnControlSelectedJson.Click += OnClick_CopySelectedAsJson;
+
+            var btnControlSelectedXaml = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlSelectedXaml.Visible = true;
+            btnControlSelectedXaml.Caption = "XAML";
+            btnControlSelectedXaml.Click += OnClick_CopySelectedAsXaml;
+
+            var btnControlSelectedHtml = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlSelectedHtml.Visible = true;
+            btnControlSelectedHtml.Caption = "HTML";
+            btnControlSelectedHtml.Click += OnClick_CopySelectedAsHtml;
 
             var btnControlCCN = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlCCN.Visible = true;
@@ -66,19 +114,16 @@ namespace AxialSqlTools
 
         }
 
-        private static void OnClick_CopyAsInsert(CommandBarButton Ctrl, ref bool CancelDefault)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            CopySelectedValues("SQLINSERT");
-        }
-
-        private static void OnClick_CopyAsCSV(CommandBarButton Ctrl, ref bool CancelDefault)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            CopySelectedValues("CSV");
-        }
+        private static void OnClick_CopyAllAsInsert(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Insert);
+        private static void OnClick_CopyAllAsCsv(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Csv);
+        private static void OnClick_CopyAllAsJson(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Json);
+        private static void OnClick_CopyAllAsXaml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Xaml);
+        private static void OnClick_CopyAllAsHtml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Html);
+        private static void OnClick_CopySelectedAsInsert(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Insert);
+        private static void OnClick_CopySelectedAsCsv(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Csv);
+        private static void OnClick_CopySelectedAsJson(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Json);
+        private static void OnClick_CopySelectedAsXaml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Xaml);
+        private static void OnClick_CopySelectedAsHtml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Html);
 
         private static void OnClick_CopySelectedColumnNames(CommandBarButton Ctrl, ref bool CancelDefault)
         {
@@ -149,40 +194,97 @@ namespace AxialSqlTools
 
 
 
-        private static void CopySelectedValues (string CopyType)
+        private enum CopyScope
+        {
+            All,
+            Selected
+        }
+
+        private enum CopyFormat
+        {
+            Insert,
+            Csv,
+            Json,
+            Xaml,
+            Html
+        }
+
+        private static void CopyValues(CopyScope scope, CopyFormat format)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
             var focusGridControl = GridAccess.GetFocusGridControl();
             using (var gridResultControl = new ResultGridControlAdaptor(focusGridControl))
-            {      
-                if (CopyType == "SQLINSERT")
+            {
+                if (format == CopyFormat.Insert)
                 {
-                    var gridResultSelected = gridResultControl.GridSelectedAsQuerySql();
-                    var columnHeaders = gridResultSelected.ElementAt(0);
-                    var contentRows = gridResultSelected.Skip(1);
-
-                    var resultText = string.Join(",\r\n", contentRows.Select(r => $"({string.Join(", ", r)})"));
-                    resultText = resultText.TrimEnd(',');
-
-                    resultText = $"INSERT INTO [table] ({columnHeaders}) VALUES\r\n" + resultText;
-
-                    SetClipboardText(resultText);
-
-                }
-                else if(CopyType == "CSV")
-                {
-                    // TODO - this should copy selected cells only
-                    var datatable = gridResultControl.GridFocusAsDatatable();
-                    var resultText = datatable.ToCsv();
-
-                    SetClipboardText(resultText);
-
+                    CopyInsert(scope, gridResultControl);
+                    return;
                 }
 
-                ServiceCache.ExtensibilityModel.StatusBar.Text = "Copied";
+                var datatable = scope == CopyScope.All
+                    ? gridResultControl.GridFocusAsDatatable()
+                    : gridResultControl.GridSelectedAsDataTable();
+
+                if (datatable.Columns.Count == 0 || datatable.Rows.Count == 0)
+                {
+                    ServiceCache.ExtensibilityModel.StatusBar.Text = scope == CopyScope.All
+                        ? "No data to copy"
+                        : "No cells selected to copy";
+                    return;
+                }
+
+                string resultText = format switch
+                {
+                    CopyFormat.Csv => datatable.ToCsv(),
+                    CopyFormat.Json => datatable.ToJson(),
+                    CopyFormat.Xaml => datatable.ToXaml(),
+                    CopyFormat.Html => datatable.ToHtml(),
+                    _ => string.Empty
+                };
+
+                if (!string.IsNullOrWhiteSpace(resultText))
+                {
+                    SetClipboardText(resultText);
+                    ServiceCache.ExtensibilityModel.StatusBar.Text = "Copied";
+                }
+            }
+        }
+
+        private static void CopyInsert(CopyScope scope, ResultGridControlAdaptor gridResultControl)
+        {
+            var columnHeaders = string.Empty;
+            IEnumerable<string> contentRows = Enumerable.Empty<string>();
+
+            if (scope == CopyScope.Selected)
+            {
+                var gridResultSelected = gridResultControl.GridSelectedAsQuerySql().ToList();
+                if (gridResultSelected.Count <= 1)
+                {
+                    ServiceCache.ExtensibilityModel.StatusBar.Text = "No cells selected to copy";
+                    return;
+                }
+
+                columnHeaders = gridResultSelected.First();
+                contentRows = gridResultSelected.Skip(1).Select(r => $"({r})");
+            }
+            else
+            {
+                columnHeaders = string.Join(", ", gridResultControl.GetBracketColumns());
+                contentRows = gridResultControl.GridAsQuerySql().Select(row => $"({string.Join(", ", row)})");
+
+                if (!contentRows.Any())
+                {
+                    ServiceCache.ExtensibilityModel.StatusBar.Text = "No data to copy";
+                    return;
+                }
             }
 
+            var valuesText = string.Join(",\r\n", contentRows);
+            var resultText = $"INSERT INTO [table] ({columnHeaders}) VALUES\r\n" + valuesText;
+
+            SetClipboardText(resultText);
+            ServiceCache.ExtensibilityModel.StatusBar.Text = "Copied";
         }
 
         [STAThread]

@@ -1,12 +1,15 @@
 ﻿using Microsoft.SqlServer.Management.UI.Grid;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Web.UI.Design;
+using System.Xml.Linq;
 
 namespace AxialSqlTools
 {
@@ -28,6 +31,56 @@ namespace AxialSqlTools
                   string.Concat("\"", field.ToString().Replace("\"", "\"\""), "\""));
                 sb.AppendLine(string.Join(",", fields));
             }
+
+            return sb.ToString();
+        }
+
+        public static string ToJson(this DataTable dt)
+        {
+            var rows = dt.Rows.Cast<DataRow>()
+                .Select(row => dt.Columns.Cast<DataColumn>()
+                    .ToDictionary(column => column.ColumnName, column => row[column] == DBNull.Value ? null : row[column]));
+
+            return JsonConvert.SerializeObject(rows, Formatting.Indented);
+        }
+
+        public static string ToXml(this DataTable dt)
+        {
+            var xmlDocument = new XDocument(new XElement("DataTable",
+                new XElement("Columns", dt.Columns.Cast<DataColumn>().Select(c => new XElement("Column", c.ColumnName))),
+                new XElement("Rows", dt.Rows.Cast<DataRow>().Select(row => new XElement("Row",
+                    dt.Columns.Cast<DataColumn>().Select(column => new XElement(column.ColumnName, row[column] == DBNull.Value ? null : row[column])))))));
+
+            return xmlDocument.ToString();
+        }
+
+        public static string ToXaml(this DataTable dt) => dt.ToXml();
+
+        public static string ToHtml(this DataTable dt)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<table>");
+            sb.AppendLine("  <thead>");
+            sb.AppendLine("    <tr>");
+            foreach (DataColumn column in dt.Columns)
+            {
+                sb.AppendLine($"      <th>{WebUtility.HtmlEncode(column.ColumnName)}</th>");
+            }
+            sb.AppendLine("    </tr>");
+            sb.AppendLine("  </thead>");
+            sb.AppendLine("  <tbody>");
+            foreach (DataRow row in dt.Rows)
+            {
+                sb.AppendLine("    <tr>");
+                foreach (var field in row.ItemArray)
+                {
+                    var value = field == DBNull.Value ? string.Empty : field?.ToString() ?? string.Empty;
+                    sb.AppendLine($"      <td>{WebUtility.HtmlEncode(value)}</td>");
+                }
+                sb.AppendLine("    </tr>");
+            }
+            sb.AppendLine("  </tbody>");
+            sb.AppendLine("</table>");
 
             return sb.ToString();
         }
