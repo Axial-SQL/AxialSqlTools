@@ -30,6 +30,7 @@ namespace AxialSqlTools
         }
         public static object GetNonPublicField(object obj, string field)
         {
+            if (obj == null) return null;
             return obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance).GetValue(obj);
         }
         public static FieldInfo GetNonPublicFieldInfo(object obj, string field)
@@ -39,16 +40,32 @@ namespace AxialSqlTools
 
         public static object GetSQLResultsControl()
         {
-            var objType = ServiceCache.ScriptFactory.GetType();
-            var method1 = objType.GetMethod("GetCurrentlyActiveFrameDocView", BindingFlags.NonPublic | BindingFlags.Instance);
-            var Result = (SqlScriptEditorControl)method1.Invoke(ServiceCache.ScriptFactory, new object[] { ServiceCache.VSMonitorSelection, false, null });
+            var factoryType = ServiceCache.ScriptFactory.GetType();
+            var method = factoryType.GetMethod(
+                "GetCurrentlyActiveFrameDocView",
+                BindingFlags.NonPublic | BindingFlags.Instance);
 
-            var objType2 = Result.GetType();
-            var field = objType2.GetField("m_sqlResultsControl", BindingFlags.NonPublic | BindingFlags.Instance);
-            var SQLResultsControl = field.GetValue(Result);
+            var docView = method.Invoke(
+                ServiceCache.ScriptFactory,
+                new object[] { ServiceCache.VSMonitorSelection, false, null });
 
-            return SQLResultsControl;
+            // It might be ObjectExplorerTool, a designer, etc.
+            var scriptEditor = docView as SqlScriptEditorControl;
+            if (scriptEditor == null)
+            {
+                // No active query window - handle as you like
+                // e.g. return null, or throw a more descriptive exception
+                return null;
+            }
+
+            var field = typeof(SqlScriptEditorControl)
+                .GetField("m_sqlResultsControl",
+                    BindingFlags.NonPublic | BindingFlags.Instance);
+
+            var sqlResultsControl = field.GetValue(scriptEditor);
+            return sqlResultsControl;
         }
+
 
         public static QEStatusBarManager GetStatusBarManager()
         {
@@ -160,6 +177,8 @@ namespace AxialSqlTools
             List<DataTable> dataTables = new List<DataTable>();
 
             CollectionBase gridContainers = GetGridContainers();
+
+            if (gridContainers == null) return dataTables;
 
             foreach (var gridContainer in gridContainers)
             {

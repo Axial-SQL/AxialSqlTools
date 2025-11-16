@@ -95,6 +95,23 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
+            // 1. Get the data tables
+            List<DataTable> dataTables = GridAccess.GetDataTables();
+
+            // 2. If none, show warning and exit without opening the window
+            if (dataTables == null || dataTables.Count == 0)
+            {
+                VsShellUtilities.ShowMessageBox(
+                    this.package,
+                    "No result sets are available for email export.",
+                    "No data available",
+                    OLEMSGICON.OLEMSGICON_WARNING,
+                    OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+
+                return;
+            }
+
             // Get the instance number 0 of this tool window. This window is single instance so this instance
             // is actually the only one.
             // The last flag is set to true so that if the tool window does not exists it will be created.

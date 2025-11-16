@@ -102,25 +102,38 @@ namespace AxialSqlTools
         {
 
             // detect shift state
-            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
-
-            string filePath = ShowSaveFileDialog();
-            if (string.IsNullOrEmpty(filePath))
-            {
-                return;
-            }
+            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);      
 
             List<DataTable> dataTables = GridAccess.GetDataTables();
 
-            ExcelExport.SaveDataTableToExcel(dataTables, filePath, isShiftPressed);
+            if (dataTables.Count > 0)
+            {
 
-            VsShellUtilities.ShowMessageBox(
-                this.package,
-                "The data has been successfully exported to:\n" + filePath,
-                "Export Complete",
-                OLEMSGICON.OLEMSGICON_INFO,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                string filePath = ShowSaveFileDialog();
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    return;
+                }
+
+                ExcelExport.SaveDataTableToExcel(dataTables, filePath, isShiftPressed);
+
+                VsShellUtilities.ShowMessageBox(
+                    this.package,
+                    "The data has been successfully exported to:\n" + filePath,
+                    "Export Complete",
+                    OLEMSGICON.OLEMSGICON_INFO,
+                    OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+            }
+            else {
+                VsShellUtilities.ShowMessageBox(
+                   this.package,
+                   "No Data Available",
+                   "No result sets are available for export.",
+                   OLEMSGICON.OLEMSGICON_WARNING,
+                   OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                   OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+            }
 
         }
 
