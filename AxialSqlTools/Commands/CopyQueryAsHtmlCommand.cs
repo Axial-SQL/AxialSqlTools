@@ -231,16 +231,10 @@ namespace AxialSqlTools
 
         private static System.Drawing.Color AdjustColorForClipboard(System.Drawing.Color color)
         {
-            // Highly saturated bright colors (e.g., bright green) can be hard to read on a white
-            // background in OWA. Soften very bright colors by darkening them slightly while keeping
-            // the original hue.
-            var brightness = color.GetBrightness();
-            if (brightness > 0.85f)
-            {
-                return System.Windows.Forms.ControlPaint.Dark(color);
-            }
-
-            return color;
+            // Only adjust lime-green text, which can be too bright on white backgrounds.
+            return color.ToArgb() == System.Drawing.Color.Lime.ToArgb()
+                ? System.Drawing.Color.FromArgb(0, 180, 0)
+                : color;
         }
     }
 }
