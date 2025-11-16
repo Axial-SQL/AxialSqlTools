@@ -93,7 +93,10 @@ public static class TsqlFormatterCommentInterleaver
             // Anchor to the *next statement header* if the immediate next code token is ';'
             int anchorOrig = FindAnchorAfterComments(orig, k);
 
-            var clusterText = startsNewLine ? chunk.ToString() : chunk.ToString().TrimEnd();
+            var rawCluster = chunk.ToString();
+            var clusterText = startsNewLine
+                ? rawCluster
+                : (HasNewline(rawCluster) ? rawCluster : rawCluster.TrimEnd());
             var cluster = new CommentCluster(clusterText, startsNewLine, blankLinesBefore);
 
             if (!startsNewLine)
