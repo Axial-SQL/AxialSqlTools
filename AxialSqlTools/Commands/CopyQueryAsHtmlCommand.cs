@@ -65,7 +65,11 @@ namespace AxialSqlTools
                 return;
             }
 
-            selection.Copy();
+            // DTE's TextSelection.Copy() does not always populate the clipboard with the
+            // formatted payload (RTF/HTML) that OWA expects. Mimic the user pressing
+            // Ctrl+C by invoking the Edit.Copy command, which reliably fills the
+            // clipboard with all supported formats for the current editor.
+            dte.ExecuteCommand("Edit.Copy");
 
             var textContent = selection.Text;
             if (!hadSelection)
