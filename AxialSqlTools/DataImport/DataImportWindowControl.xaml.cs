@@ -84,7 +84,7 @@ namespace AxialSqlTools
 
             SetBusyState(true);
 
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
                 {
