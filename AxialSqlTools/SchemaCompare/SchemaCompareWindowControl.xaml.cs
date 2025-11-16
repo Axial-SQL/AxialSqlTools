@@ -51,7 +51,9 @@ namespace AxialSqlTools
             PickTargetCommand = new RelayCommand(() => SetConnection(isSource: false));
             ClearSourceCommand = new RelayCommand(() => SourceConnection = null, () => SourceConnection != null);
             ClearTargetCommand = new RelayCommand(() => TargetConnection = null, () => TargetConnection != null);
-            SwapConnectionsCommand = new RelayCommand(SwapConnections, () => SourceConnection != null || TargetConnection != null);
+            SwapConnectionsCommand = new RelayCommand(
+                SwapConnections,
+                () => !IsBusy && (SourceConnection != null || TargetConnection != null));
             CompareCommand = new AsyncRelayCommand(CompareAsync, () => HasConnections && !IsBusy);
             CancelCompareCommand = new RelayCommand(CancelCompare, () => IsBusy);
             CopyDeploymentScriptCommand = new RelayCommand(CopyDeploymentScript, () => !string.IsNullOrEmpty(DeploymentScript));
