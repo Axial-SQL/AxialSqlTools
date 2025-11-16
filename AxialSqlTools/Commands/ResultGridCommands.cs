@@ -234,14 +234,26 @@ namespace AxialSqlTools
                     return;
                 }
 
-                string resultText = format switch
+                string resultText;
+
+                switch (format)
                 {
-                    CopyFormat.Csv => datatable.ToCsv(),
-                    CopyFormat.Json => datatable.ToJson(),
-                    CopyFormat.Xaml => datatable.ToXaml(),
-                    CopyFormat.Html => datatable.ToHtml(),
-                    _ => string.Empty
-                };
+                    case CopyFormat.Csv:
+                        resultText = datatable.ToCsv();
+                        break;
+                    case CopyFormat.Json:
+                        resultText = datatable.ToJson();
+                        break;
+                    case CopyFormat.Xaml:
+                        resultText = datatable.ToXaml();
+                        break;
+                    case CopyFormat.Html:
+                        resultText = datatable.ToHtml();
+                        break;
+                    default:
+                        resultText = string.Empty;
+                        break;
+                }
 
                 if (!string.IsNullOrWhiteSpace(resultText))
                 {
