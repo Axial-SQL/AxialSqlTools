@@ -14,6 +14,7 @@ using System.Net.Http.Headers;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Windows.Forms;
 using Task = System.Threading.Tasks.Task;
@@ -250,6 +251,7 @@ namespace AxialSqlTools
         private readonly List<KeypressCommandFilter> _commandFilters = new List<KeypressCommandFilter>();
         private IVsTextManager _textManager;
         private uint _textManagerEventsCookie;
+        private IConnectionPoint _textManagerEventsConnectionPoint;
         private TextManagerEventsSink _textManagerEventsSink;
 
         public static AxialSqlToolsPackage PackageInstance { get; private set; }
@@ -420,10 +422,11 @@ namespace AxialSqlTools
                 JoinableTaskFactory.Run(async () =>
                 {
                     await JoinableTaskFactory.SwitchToMainThreadAsync();
-                    if (_textManager != null && _textManagerEventsCookie != 0)
+                    if (_textManagerEventsConnectionPoint != null && _textManagerEventsCookie != 0)
                     {
-                        _textManager.UnadviseTextManagerEvents(_textManagerEventsCookie);
+                        _textManagerEventsConnectionPoint.Unadvise(_textManagerEventsCookie);
                         _textManagerEventsCookie = 0;
+                        _textManagerEventsConnectionPoint = null;
                     }
                 });
             }
@@ -470,10 +473,15 @@ namespace AxialSqlTools
             try
             {
                 _textManager = await GetServiceAsync(typeof(SVsTextManager)) as IVsTextManager;
-                if (_textManager != null)
+                if (_textManager != null && _textManagerEventsSink == null)
                 {
-                    _textManagerEventsSink = new TextManagerEventsSink(this);
-                    ErrorHandler.ThrowOnFailure(_textManager.AdviseTextManagerEvents(_textManagerEventsSink, out _textManagerEventsCookie));
+                    if (_textManager is IConnectionPointContainer connectionPointContainer)
+                    {
+                        Guid riid = typeof(IVsTextManagerEvents).GUID;
+                        connectionPointContainer.FindConnectionPoint(ref riid, out _textManagerEventsConnectionPoint);
+                        _textManagerEventsSink = new TextManagerEventsSink(this);
+                        _textManagerEventsConnectionPoint.Advise(_textManagerEventsSink, out _textManagerEventsCookie);
+                    }
                 }
             }
             catch (Exception ex)
