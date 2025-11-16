@@ -118,6 +118,16 @@
           <ToolTipText>Format SQL query (hold Shift for advanced options)</ToolTipText>
         </Strings>
       </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialCopyQueryAsHtmlButton" priority="0x0005" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
+        <Icon guid="guidImagesMagicWand" id="bmpMagicWand" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Copy Query as HTML</ButtonText>
+          <LocCanonicalName>AxialSqlTools.CopyQueryAsHtml</LocCanonicalName>
+          <ToolTipText>Copy the current query text with styling as HTML</ToolTipText>
+        </Strings>
+      </Button>
       
       <!-- TOOLS Submenu buttons -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" priority="0x0100" type="Button">
@@ -368,8 +378,9 @@
 
       <IDSymbol name="AxialToolbar" value="0x1000" />
       <IDSymbol name="AxialToolbarGroup" value="0x2000" />
-      
+
       <IDSymbol name="AxialFormatQueryButton" value="4131" />
+      <IDSymbol name="AxialCopyQueryAsHtmlButton" value="4160" />
       <IDSymbol name="AxialSettingsButton" value="4130" />
       <IDSymbol name="AxialAboutButton" value="4129" />
       <IDSymbol name="AxialCheckNewVersion" value="4041" />
