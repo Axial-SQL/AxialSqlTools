@@ -226,6 +226,15 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDataImportCommand" priority="0x0001" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
+        <Icon guid="guidDataTransfer" id="bmpDataTransfer" />
+        <CommandFlag>DefaultInvisible</CommandFlag> <!-- WIP, hidden for now -->
+        <Strings>
+          <ButtonText>Data Import</ButtonText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDatabaseScripterCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
         <Icon guid="guidDatabaseScripter" id="bmpDatabaseScripter" />
@@ -395,12 +404,14 @@
       <IDSymbol name="AxialQueryHistoryCommand" value="4144" />
 
       <IDSymbol name="AxialAskChatGptCommand" value="4146" />
-      
+
       <IDSymbol name="AxialSqlServerBuildsCommand" value="4147" />
 
       <IDSymbol name="AxialDatabaseScripterCommand" value="4148" />
-      
+
       <IDSymbol name="AxialCompareSchemasCommand" value="4149" />
+
+      <IDSymbol name="AxialDataImportCommand" value="4150" />
 
     </GuidSymbol>
 

@@ -65,6 +65,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(QueryHistoryWindow))]
     [ProvideToolWindow(typeof(DatabaseScripterToolWindow))]
     [ProvideToolWindow(typeof(SchemaCompareWindow))]
+    [ProvideToolWindow(typeof(DataImportWindow))]
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
 
@@ -282,6 +283,7 @@ namespace AxialSqlTools
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
                 await HealthDashboard_ServersCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
+                await DataImportWindowCommand.InitializeAsync(this);
                 await CheckAddinVersionCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
                 await AskChatGptCommand.InitializeAsync(this);
@@ -401,8 +403,7 @@ namespace AxialSqlTools
             }
 
             // needed for the OxyPlot library
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);     
-            
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
             
         }
 

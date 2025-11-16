@@ -53,6 +53,12 @@
     <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
       <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DataImport\DataImportWindow.cs" />
+    <Compile Include="DataImport\DataImportWindowCommand.cs" />
+    <Compile Include="DataImport\DataImportWindowControl.xaml.cs">
+      <DependentUpon>DataImportWindowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Modules\ExcelImport.cs" />
     <Compile Include="Modules\TsqlFormatterCommentInterleaver.cs" />
     <Compile Include="Commands\FormatQueryDialog\FormatOptionsDialog.xaml.cs">
       <DependentUpon>FormatOptionsDialog.xaml</DependentUpon>
@@ -274,6 +280,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Commands\FormatQueryDialog\FormatOptionsDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataImport\DataImportWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
