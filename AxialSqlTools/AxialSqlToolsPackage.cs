@@ -247,6 +247,7 @@ namespace AxialSqlTools
         }
 
         public Dictionary<string, string> globalSnippets = new Dictionary<string, string>();
+        private readonly List<KeypressCommandFilter> _commandFilters = new List<KeypressCommandFilter>();
 
         public static AxialSqlToolsPackage PackageInstance { get; private set; }
 
@@ -428,6 +429,7 @@ namespace AxialSqlTools
                         //seems that you don't need to keep the object in memory
                         var CommandFilter = new KeypressCommandFilter(this, textView);
                         CommandFilter.AddToChain();
+                        _commandFilters.Add(CommandFilter);
                     }
                 }
                 catch (Exception ex)
