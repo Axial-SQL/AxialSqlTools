@@ -47,14 +47,16 @@ namespace AxialSqlTools
         public static string ToXml(this DataTable dt)
         {
             var xmlDocument = new XDocument(new XElement("DataTable",
-                new XElement("Columns", dt.Columns.Cast<DataColumn>().Select(c => new XElement("Column", c.ColumnName))),
+                new XElement("Columns", dt.Columns.Cast<DataColumn>().Select(c =>
+                    new XElement("Column", new XAttribute("name", c.ColumnName)))),
                 new XElement("Rows", dt.Rows.Cast<DataRow>().Select(row => new XElement("Row",
-                    dt.Columns.Cast<DataColumn>().Select(column => new XElement(column.ColumnName, row[column] == DBNull.Value ? null : row[column])))))));
+                    dt.Columns.Cast<DataColumn>().Select(column =>
+                        new XElement("Column",
+                            new XAttribute("name", column.ColumnName),
+                            row[column] == DBNull.Value ? null : row[column])))))));
 
             return xmlDocument.ToString();
         }
-
-        public static string ToXaml(this DataTable dt) => dt.ToXml();
 
         public static string ToHtml(this DataTable dt)
         {

@@ -63,10 +63,10 @@ namespace AxialSqlTools
             btnControlAllJson.Caption = "JSON";
             btnControlAllJson.Click += OnClick_CopyAllAsJson;
 
-            var btnControlAllXaml = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
-            btnControlAllXaml.Visible = true;
-            btnControlAllXaml.Caption = "XAML";
-            btnControlAllXaml.Click += OnClick_CopyAllAsXaml;
+            var btnControlAllXml = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlAllXml.Visible = true;
+            btnControlAllXml.Caption = "XML";
+            btnControlAllXml.Click += OnClick_CopyAllAsXml;
 
             var btnControlAllHtml = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlAllHtml.Visible = true;
@@ -92,10 +92,10 @@ namespace AxialSqlTools
             btnControlSelectedJson.Caption = "JSON";
             btnControlSelectedJson.Click += OnClick_CopySelectedAsJson;
 
-            var btnControlSelectedXaml = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
-            btnControlSelectedXaml.Visible = true;
-            btnControlSelectedXaml.Caption = "XAML";
-            btnControlSelectedXaml.Click += OnClick_CopySelectedAsXaml;
+            var btnControlSelectedXml = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlSelectedXml.Visible = true;
+            btnControlSelectedXml.Caption = "XML";
+            btnControlSelectedXml.Click += OnClick_CopySelectedAsXml;
 
             var btnControlSelectedHtml = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlSelectedHtml.Visible = true;
@@ -117,12 +117,12 @@ namespace AxialSqlTools
         private static void OnClick_CopyAllAsInsert(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Insert);
         private static void OnClick_CopyAllAsCsv(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Csv);
         private static void OnClick_CopyAllAsJson(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Json);
-        private static void OnClick_CopyAllAsXaml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Xaml);
+        private static void OnClick_CopyAllAsXml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Xml);
         private static void OnClick_CopyAllAsHtml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Html);
         private static void OnClick_CopySelectedAsInsert(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Insert);
         private static void OnClick_CopySelectedAsCsv(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Csv);
         private static void OnClick_CopySelectedAsJson(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Json);
-        private static void OnClick_CopySelectedAsXaml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Xaml);
+        private static void OnClick_CopySelectedAsXml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Xml);
         private static void OnClick_CopySelectedAsHtml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Html);
 
         private static void OnClick_CopySelectedColumnNames(CommandBarButton Ctrl, ref bool CancelDefault)
@@ -205,7 +205,7 @@ namespace AxialSqlTools
             Insert,
             Csv,
             Json,
-            Xaml,
+            Xml,
             Html
         }
 
@@ -244,8 +244,8 @@ namespace AxialSqlTools
                     case CopyFormat.Json:
                         resultText = datatable.ToJson();
                         break;
-                    case CopyFormat.Xaml:
-                        resultText = datatable.ToXaml();
+                    case CopyFormat.Xml:
+                        resultText = datatable.ToXml();
                         break;
                     case CopyFormat.Html:
                         resultText = datatable.ToHtml();
