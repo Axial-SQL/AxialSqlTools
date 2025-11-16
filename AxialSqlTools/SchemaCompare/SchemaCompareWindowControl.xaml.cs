@@ -279,27 +279,24 @@ namespace AxialSqlTools
 
         private void CopyDeploymentScript()
         {
-            if (!string.IsNullOrEmpty(DeploymentScript))
-            {
-                Clipboard.SetText(DeploymentScript);
-            }
+            CopyTextToClipboard(DeploymentScript);
         }
 
         private void CopySourceDefinition()
         {
-            var script = SelectedDifference?.SourceDefinition;
-            if (!string.IsNullOrEmpty(script))
-            {
-                Clipboard.SetText(script);
-            }
+            CopyTextToClipboard(SelectedDifference?.SourceDefinition);
         }
 
         private void CopyTargetDefinition()
         {
-            var script = SelectedDifference?.TargetDefinition;
-            if (!string.IsNullOrEmpty(script))
+            CopyTextToClipboard(SelectedDifference?.TargetDefinition);
+        }
+
+        private static void CopyTextToClipboard(string text)
+        {
+            if (!string.IsNullOrEmpty(text))
             {
-                Clipboard.SetText(script);
+                Clipboard.SetDataObject(text);
             }
         }
 
