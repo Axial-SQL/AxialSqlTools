@@ -1149,7 +1149,7 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
 
             // 7) Prepare blobs only for adds + modifies
             var treeItems = new List<NewTreeItem>();
-            int count = 0, total = toAdd.Count + toModify.Count;
+            int total = toAdd.Count + toModify.Count;
 
             if (total > 0)
             {

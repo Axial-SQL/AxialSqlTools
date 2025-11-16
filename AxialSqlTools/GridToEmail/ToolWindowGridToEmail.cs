@@ -34,6 +34,8 @@
 
         public void InitializeWithParameter()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             var control = this.Content as ToolWindowGridToEmailControl;
             if (control != null)
                 control.PrepareFormParameters();

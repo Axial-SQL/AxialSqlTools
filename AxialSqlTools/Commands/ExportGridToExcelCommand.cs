@@ -101,6 +101,8 @@ namespace AxialSqlTools
         private void Execute(object sender, EventArgs e)
         {
 
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             // detect shift state
             bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);      
 

@@ -145,7 +145,8 @@
         public void PrepareFormParameters()
         {
 
-            //-------------------------------------------------------------------
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             dataTables = GridAccess.GetDataTables();
 
             gridToHtmlSupported = true;

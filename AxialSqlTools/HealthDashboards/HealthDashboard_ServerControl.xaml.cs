@@ -682,6 +682,7 @@
 
         private async void buttonDeploySpWhoIsActive_Click(object sender, RoutedEventArgs e)
         {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             string FullCode = "USE [master]\nGO\n";
             bool error = false;
