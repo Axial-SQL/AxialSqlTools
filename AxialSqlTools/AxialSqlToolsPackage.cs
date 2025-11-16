@@ -317,6 +317,7 @@ namespace AxialSqlTools
                 EnvDTE.WindowEvents windowEvents = events.WindowEvents;
 
                 windowEvents.WindowCreated += new _dispWindowEvents_WindowCreatedEventHandler(WindowCreated_Event);
+                windowEvents.WindowActivated += new _dispWindowEvents_WindowActivatedEventHandler(WindowActivated_Event);
 
                 // "File.ConnectObjectExplorer"
                 // "Query.Connect"
@@ -410,7 +411,7 @@ namespace AxialSqlTools
 
         #endregion
 
-        private void WindowCreated_Event(EnvDTE.Window Window)
+        private void WindowActivated_Event(EnvDTE.Window GotFocus, EnvDTE.Window LostFocus)
         {
 
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -420,16 +421,19 @@ namespace AxialSqlTools
                 try
                 {
                     // snippet processor 
-                    var DocData = GridAccess.GetProperty(Window.Object, "DocData");
-                    var txtMgr = (IVsTextManager)GridAccess.GetProperty(DocData, "TextManager");
-
-                    IVsTextView textView;
-                    if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
+                    var DocData = GridAccess.GetProperty(GotFocus.Object, "DocData");
+                    if (DocData != null)
                     {
-                        //seems that you don't need to keep the object in memory
-                        var CommandFilter = new KeypressCommandFilter(this, textView);
-                        CommandFilter.AddToChain();
-                        _commandFilters.Add(CommandFilter);
+                        var txtMgr = (IVsTextManager)GridAccess.GetProperty(DocData, "TextManager");
+
+                        IVsTextView textView;
+                        if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
+                        {
+                            //seems that you don't need to keep the object in memory
+                            var CommandFilter = new KeypressCommandFilter(this, textView);
+                            CommandFilter.AddToChain();
+                            //_commandFilters.Add(CommandFilter);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -437,6 +441,13 @@ namespace AxialSqlTools
                     _logger.Error(ex, "An exception occurred");
                 }
             }
+
+        }
+
+        private void WindowCreated_Event(EnvDTE.Window Window)
+        {
+
+            ThreadHelper.ThrowIfNotOnUIThread();
 
             // subscribe to the execution completed event
             try

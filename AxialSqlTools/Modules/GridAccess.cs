@@ -25,7 +25,8 @@ namespace AxialSqlTools
         }
         public static object GetProperty(object obj, string field)
         {
-            return obj.GetType().GetProperty(field, BindingFlags.Public | BindingFlags.Instance).GetValue(obj);
+            if (obj == null) return null;
+            return obj.GetType().GetProperty(field, BindingFlags.Public | BindingFlags.Instance)?.GetValue(obj);
         }
         public static object GetNonPublicField(object obj, string field)
         {
