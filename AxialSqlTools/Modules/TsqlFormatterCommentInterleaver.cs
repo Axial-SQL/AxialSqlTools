@@ -243,7 +243,7 @@ public static class TsqlFormatterCommentInterleaver
         {
             // We want: at least (1 + blankLinesBefore) newlines before the comment.
             int required = 1 + cluster.BlankLinesBefore;
-            int have = TrailingNewlines(sb);
+            int have = TrailingNewlinesOrLineStart(sb);
             for (int add = have; add < required; add++)
                 sb.Append(Environment.NewLine);
         }
@@ -353,16 +353,44 @@ public static class TsqlFormatterCommentInterleaver
         return idx;
     }
 
-    private static int TrailingNewlines(StringBuilder sb)
+    private static int TrailingNewlinesOrLineStart(StringBuilder sb)
     {
+        // Counts newline characters that appear after the last non-whitespace character.
+        // This treats trailing indentation (spaces/tabs) as being on the same line, avoiding
+        // inserting an extra blank line when we're already positioned at the start of a line.
         int c = 0;
         for (int i = sb.Length - 1; i >= 0; i--)
         {
             char ch = sb[i];
-            if (ch == '\n') c++;
-            else if (ch == '\r') continue;
-            else break;
+            if (ch == '\n')
+            {
+                c++;
+            }
+            else if (ch == '\r')
+            {
+                continue;
+            }
+            else if (ch == ' ' || ch == '\t')
+            {
+                continue;
+            }
+            else
+            {
+                break;
+            }
         }
+
+        // If we reached the start without finding non-whitespace, we are effectively at line start.
+        if (c == 0 && sb.Length > 0)
+        {
+            bool onlyWhitespace = true;
+            for (int i = 0; i < sb.Length; i++)
+            {
+                if (!char.IsWhiteSpace(sb[i])) { onlyWhitespace = false; break; }
+            }
+            if (onlyWhitespace) return 1;
+        }
+
         return c;
     }
 
