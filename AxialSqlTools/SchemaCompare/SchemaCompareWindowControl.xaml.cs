@@ -1,6 +1,9 @@
+using Azure.Storage.Blobs.Models;
 using DiffPlex;
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
+using DocumentFormat.OpenXml.Drawing.Diagrams;
+using DocumentFormat.OpenXml.Math;
 using Microsoft.SqlServer.Dac.Compare;
 using System;
 using System.Collections.ObjectModel;
@@ -8,6 +11,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -218,7 +222,7 @@ namespace AxialSqlTools
                 foreach (var difference in payload.Result.Differences
                     .OrderBy(d => d.Name?.ToString() ?? d.DifferenceType.ToString()))
                 {
-                    Differences.Add(new SchemaDifferenceViewModel(difference));
+                    Differences.Add(new SchemaDifferenceViewModel(difference, payload.Result));
                 }
 
                 DeploymentScript = payload.Script;
@@ -272,15 +276,58 @@ namespace AxialSqlTools
 
     internal class SchemaDifferenceViewModel
     {
-        public SchemaDifferenceViewModel(SchemaDifference difference)
+        public SchemaDifferenceViewModel(SchemaDifference difference, SchemaComparisonResult result)
         {
             Name = difference.Name?.ToString() ?? string.Empty;
             DifferenceType = difference.DifferenceType.ToString();
             Action = difference.UpdateAction.ToString();
+
             SourceObject = difference.SourceObject?.Name.ToString() ?? string.Empty;
             TargetObject = difference.TargetObject?.Name.ToString() ?? string.Empty;
-            SourceDefinition = difference.SourceObject?.GetScript() ?? "";
-            TargetDefinition = difference.TargetObject?.GetScript() ?? "";
+
+            var sbSource = new StringBuilder();
+            GetAllSourceChidren(difference, result, sbSource);
+            SourceDefinition = sbSource.ToString();
+
+            var sbTarget = new StringBuilder();
+            GetAllTargetChidren(difference, result, sbTarget);
+            TargetDefinition = sbTarget.ToString();
+        }
+
+        public void GetAllSourceChidren(SchemaDifference difference, SchemaComparisonResult result, StringBuilder sb) 
+        {
+            string stringResult = result.GetDiffEntrySourceScript(difference);
+            if (!string.IsNullOrWhiteSpace(stringResult))
+            {
+                sb.AppendLine(stringResult);
+                sb.AppendLine("GO");
+            }
+
+            foreach (var diff in difference.Children)
+            {
+                if (diff.Included)
+                {
+                    GetAllSourceChidren(diff, result, sb);
+                }
+            }
+        }
+
+        public void GetAllTargetChidren(SchemaDifference difference, SchemaComparisonResult result, StringBuilder sb)
+        {
+            string stringResult = result.GetDiffEntryTargetScript(difference);
+            if (!string.IsNullOrWhiteSpace(stringResult))
+            {
+                sb.AppendLine(stringResult);
+                sb.AppendLine("GO");
+            }
+
+            foreach (var diff in difference.Children)
+            {
+                if (diff.Included)
+                {
+                    GetAllTargetChidren(diff, result, sb);
+                }
+            }
         }
 
         public string Name { get; }
