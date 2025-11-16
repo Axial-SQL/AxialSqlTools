@@ -38,6 +38,31 @@ namespace AxialSqlTools
             // SyncFromUi();
         }
 
+        private void SetAllFormatOptions(bool value)
+        {
+            PreserveComments.IsChecked = value;
+            RemoveNewLineAfterJoin.IsChecked = value;
+            AddTabAfterJoinOn.IsChecked = value;
+            MoveCrossJoinToNewLine.IsChecked = value;
+            FormatCaseAsMultiline.IsChecked = value;
+            AddNewLineBetweenStatementsInBlocks.IsChecked = value;
+            BreakSprocParametersPerLine.IsChecked = value;
+            UppercaseBuiltInFunctions.IsChecked = value;
+            UnindentBeginEndBlocks.IsChecked = value;
+            BreakVariableDefinitionsPerLine.IsChecked = value;
+            BreakSprocDefinitionParametersPerLine.IsChecked = value;
+        }
+
+        private void CheckAllOptions_Click(object sender, RoutedEventArgs e)
+        {
+            SetAllFormatOptions(true);
+        }
+
+        private void UncheckAllOptions_Click(object sender, RoutedEventArgs e)
+        {
+            SetAllFormatOptions(false);
+        }
+
         private void SyncFromUi()
         {
             Settings.preserveComments = PreserveComments.IsChecked == true;
