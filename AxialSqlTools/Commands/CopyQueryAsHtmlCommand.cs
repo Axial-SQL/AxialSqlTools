@@ -207,23 +207,27 @@ namespace AxialSqlTools
 
         private static string BuildClipboardHtml(string htmlBody)
         {
-            const string HeaderTemplate = "Version:0.9\\r\\nStartHTML:{0:0000000000}\\r\\nEndHTML:{1:0000000000}\\r\\nStartFragment:{2:0000000000}\\r\\nEndFragment:{3:0000000000}\\r\\n";
+            const string HeaderTemplate = "Version:0.9\\r\\nStartHTML:{0:0000000000}\\r\\nEndHTML:{1:0000000000}\\r\\nStartFragment:{2:0000000000}\\r\\nEndFragment:{3:0000000000}\\r\\n";        
+            var encoding = Encoding.UTF8;
             var prefix = "<html><body>";
             var fragmentStart = "<!--StartFragment-->";
             var fragmentEnd = "<!--EndFragment-->";
             var suffix = "</body></html>";
+            var safeHtmlBody = htmlBody ?? string.Empty;
 
-            var fullHtml = new StringBuilder();
-            fullHtml.Append(prefix);
-            fullHtml.Append(fragmentStart);
-            fullHtml.Append(htmlBody);
-            fullHtml.Append(fragmentEnd);
-            fullHtml.Append(suffix);
+            var fullHtmlBuilder = new StringBuilder();
+            fullHtmlBuilder.Append(prefix);
+            fullHtmlBuilder.Append(fragmentStart);
+            fullHtmlBuilder.Append(safeHtmlBody);
+            fullHtmlBuilder.Append(fragmentEnd);
+            fullHtmlBuilder.Append(suffix);
+            var fullHtml = fullHtmlBuilder.ToString();
 
-            var startHtml = string.Format(HeaderTemplate, 0, 0, 0, 0).Length;
-            var startFragment = startHtml + prefix.Length + fragmentStart.Length;
-            var endFragment = startFragment + (htmlBody?.Length ?? 0);
-            var endHtml = startHtml + fullHtml.Length;
+            var headerPlaceholder = string.Format(HeaderTemplate, 0, 0, 0, 0);
+            var startHtml = encoding.GetByteCount(headerPlaceholder);
+            var startFragment = startHtml + encoding.GetByteCount(prefix) + encoding.GetByteCount(fragmentStart);
+            var endFragment = startFragment + encoding.GetByteCount(safeHtmlBody);
+            var endHtml = startHtml + encoding.GetByteCount(fullHtml);
 
             var header = string.Format(HeaderTemplate, startHtml, endHtml, startFragment, endFragment);
             return header + fullHtml;
