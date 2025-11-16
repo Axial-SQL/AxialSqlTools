@@ -176,7 +176,8 @@ namespace AxialSqlTools
                 styleBuilder.Append("font-family: Consolas, monospace;");
             }
 
-            styleBuilder.Append($"color: rgb({color.R}, {color.G}, {color.B});");
+            var adjustedColor = AdjustColorForClipboard(color);
+            styleBuilder.Append($"color: rgb({adjustedColor.R}, {adjustedColor.G}, {adjustedColor.B});");
 
             var encoded = System.Web.HttpUtility.HtmlEncode(text);
             return $"<span style=\"{styleBuilder}\">{encoded}</span>";
@@ -226,6 +227,20 @@ namespace AxialSqlTools
 
             var header = string.Format(HeaderTemplate, startHtml, endHtml, startFragment, endFragment);
             return header + fullHtml;
+        }
+
+        private static System.Drawing.Color AdjustColorForClipboard(System.Drawing.Color color)
+        {
+            // Highly saturated bright colors (e.g., bright green) can be hard to read on a white
+            // background in OWA. Soften very bright colors by darkening them slightly while keeping
+            // the original hue.
+            var brightness = color.GetBrightness();
+            if (brightness > 0.85f)
+            {
+                return System.Windows.Forms.ControlPaint.Dark(color);
+            }
+
+            return color;
         }
     }
 }
