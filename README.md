@@ -25,6 +25,8 @@ Check it out and let me know what you think!
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/query-duration.png?raw=true"/>
 
 - [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Validate and format your TSQL code with Microsoft TSQL parser, making it more readable and maintainable.
+
+- [**Copy Query for Web Paste**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Query-for-Web-Paste): Preserve the text format to ensure proper rendering when inserting into HTML-aware clients such as Outlook Online, Gmail, and others.
   
 - [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access your personal collection of query templates for common tasks, reducing the time and effort required for routine work.
   
