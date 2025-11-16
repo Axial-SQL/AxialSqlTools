@@ -251,6 +251,19 @@ ORDER BY sd.[name];
             public bool EnableSsl;
         }
 
+        public enum SnippetReplaceKey
+        {
+            Enter,
+            ShiftEnter
+        }
+
+        public class SnippetSettings
+        {
+            public bool useSnippets = false;
+            public string snippetFolder = string.Empty;
+            public SnippetReplaceKey replaceKey = SnippetReplaceKey.Enter;
+        }
+
         public class ExcelExportSettings
         {
             public bool includeSourceQuery = false;
@@ -546,41 +559,73 @@ ORDER BY sd.[name];
         }
 
 
+        public static SnippetSettings GetSnippetSettings()
+        {
+            try
+            {
+                string json = GetRegisterValue("SnippetSettings");
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var settings = JsonConvert.DeserializeObject<SnippetSettings>(json);
+                    if (settings != null)
+                    {
+                        return NormalizeSnippetSettings(settings);
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return new SnippetSettings();
+        }
+
+        public static bool SaveSnippetSettings(SnippetSettings settings)
+        {
+            try
+            {
+                var normalized = NormalizeSnippetSettings(settings ?? new SnippetSettings());
+                string json = JsonConvert.SerializeObject(normalized);
+                return SaveRegisterValue("SnippetSettings", json);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static SnippetSettings NormalizeSnippetSettings(SnippetSettings settings)
+        {
+            settings.snippetFolder = settings.snippetFolder ?? string.Empty;
+            return settings;
+        }
+
         public static bool GetUseSnippets()
         {
-            bool result = false;
-            bool success = bool.TryParse(GetRegisterValue("UseSnippets"), out result);
-            return result;
+            return GetSnippetSettings().useSnippets;
         }
         public static string GetSnippetFolder()
         {
-            var folder = GetRegisterValue("SnippetFolder");
-            /*
-            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
-            {
-                folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "AxialSqlToolsTemplates");
-
-                SaveTemplatesFolder(folder);
-
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-            }
-            */
-            return folder;
+            return GetSnippetSettings().snippetFolder;
         }
         public static bool SaveSnippetUse(bool UseSnippets, string SnippetFolder)
         {
-            return SaveUseSnippets(UseSnippets) && SaveSnippetFolder(SnippetFolder);
+            var settings = GetSnippetSettings();
+            settings.useSnippets = UseSnippets;
+            settings.snippetFolder = SnippetFolder;
+            return SaveSnippetSettings(settings);
         }
         public static bool SaveUseSnippets(bool UseSnippets)
         {
-            return SaveRegisterValue("UseSnippets", UseSnippets.ToString());
+            var settings = GetSnippetSettings();
+            settings.useSnippets = UseSnippets;
+            return SaveSnippetSettings(settings);
         }
         public static bool SaveSnippetFolder(string folder)
         {
-            return SaveRegisterValue("SnippetFolder", folder);
+            var settings = GetSnippetSettings();
+            settings.snippetFolder = folder;
+            return SaveSnippetSettings(settings);
         }
 
 

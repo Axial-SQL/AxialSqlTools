@@ -68,8 +68,10 @@ as select 1;
 
                 ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
 
-                UseSnippets.IsChecked = SettingsManager.GetUseSnippets();
-                SnippetFolder.Text = SettingsManager.GetSnippetFolder();
+                var snippetSettings = SettingsManager.GetSnippetSettings();
+                UseSnippets.IsChecked = snippetSettings.useSnippets;
+                SnippetFolder.Text = snippetSettings.snippetFolder;
+                SnippetReplaceMode.SelectedValue = snippetSettings.replaceKey.ToString();
 
                 _queryHistoryConnectionString = SettingsManager.GetQueryHistoryConnectionString();
                 QueryHistoryTableName.Text = SettingsManager.GetQueryHistoryTableName();
@@ -167,7 +169,12 @@ as select 1;
 
         private void Button_SaveSnippetFolder_Click(object sender, RoutedEventArgs e)
         {
-            SettingsManager.SaveSnippetUse(UseSnippets.IsChecked.GetValueOrDefault(), SnippetFolder.Text);
+            var snippetSettings = SettingsManager.GetSnippetSettings();
+            snippetSettings.useSnippets = UseSnippets.IsChecked.GetValueOrDefault();
+            snippetSettings.snippetFolder = SnippetFolder.Text;
+            snippetSettings.replaceKey = GetSelectedSnippetReplaceKey();
+
+            SettingsManager.SaveSnippetSettings(snippetSettings);
 
             SavedMessage();
         }
@@ -196,6 +203,17 @@ as select 1;
                     "Error");
             }
 
+        }
+
+        private SettingsManager.SnippetReplaceKey GetSelectedSnippetReplaceKey()
+        {
+            var selectedValue = SnippetReplaceMode.SelectedValue as string;
+            if (Enum.TryParse(selectedValue, out SettingsManager.SnippetReplaceKey key))
+            {
+                return key;
+            }
+
+            return SettingsManager.SnippetReplaceKey.Enter;
         }
 
         static string DownloadGitHubRepoZip(string url)

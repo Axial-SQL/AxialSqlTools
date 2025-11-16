@@ -106,6 +106,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -141,11 +142,25 @@
 							Margin="5" Width="120" HorizontalAlignment="Left"
 							FontWeight="Bold"/>
 
-                    <Button Grid.Row="4" Grid.Column="0"
-							x:Name="button_SaveSnippetFolder"							
-							Click="Button_SaveSnippetFolder_Click"
-							Width="80" 
-							Height="24"
+                    <Label Grid.Row="4" Grid.Column="0"
+                                                   Content="Replace snippets when pressing:"
+                                                   VerticalAlignment="Center"
+                                                   Margin="5"/>
+
+                    <ComboBox Grid.Row="4" Grid.Column="1"
+                                                         x:Name="SnippetReplaceMode"
+                                                         SelectedValuePath="Tag"
+                                                         Margin="5"
+                                                         VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="Enter" Tag="Enter" />
+                        <ComboBoxItem Content="Shift+Enter" Tag="ShiftEnter" />
+                    </ComboBox>
+
+                    <Button Grid.Row="5" Grid.Column="0"
+                                                        x:Name="button_SaveSnippetFolder"
+                                                        Click="Button_SaveSnippetFolder_Click"
+                                                        Width="80"
+                                                        Height="24"
 							Margin="5"
 							FontWeight="Bold" 
                             HorizontalAlignment="Left">
