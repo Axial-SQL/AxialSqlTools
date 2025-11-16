@@ -50,6 +50,8 @@ Check it out and let me know what you think!
 
 - [**Copy Column Names from Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Column-Names-from-Grid): Quickly copy the column names from the results grid to the clipboard.
   
+- [**Copy Cell Values As ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Grid-Cells-As-...): Copy cell values to clipborad in multiple formats: INSERT, CSV, JSON, XML, or HTML.
+  
 - [**Database Schema Compare**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Database-Schema-Compare): DacFx-based database schema comparison tool.
 
 
