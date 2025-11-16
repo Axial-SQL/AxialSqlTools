@@ -39,6 +39,8 @@
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom">
                     <Button Content="Swap" Width="80" Margin="0,0,8,0" Command="{Binding SwapConnectionsCommand}" />
+                    <Button Content="Cancel" Width="120" Margin="0,0,8,0" Command="{Binding CancelCompareCommand}"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Button Content="Compare" Width="120" Command="{Binding CompareCommand}" />
                 </StackPanel>
             </Grid>
@@ -70,7 +72,18 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <GroupBox Header="Source Definition" Margin="0,0,4,0">
+                        <GroupBox Margin="0,0,4,0">
+                            <GroupBox.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Source Definition" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="Copy" Width="80" Margin="8,0,0,0"
+                                            Command="{Binding CopySourceDefinitionCommand}" />
+                                </Grid>
+                            </GroupBox.Header>
                             <Grid>
                                 <ListView ItemsSource="{Binding SourceDiffLines}" BorderThickness="0" FontSize="12"
                                           ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -126,7 +139,18 @@
                             </Grid>
                         </GroupBox>
 
-                        <GroupBox Grid.Column="1" Header="Target Definition" Margin="4,0,0,0">
+                        <GroupBox Grid.Column="1" Margin="4,0,0,0">
+                            <GroupBox.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Target Definition" VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" Content="Copy" Width="80" Margin="8,0,0,0"
+                                            Command="{Binding CopyTargetDefinitionCommand}" />
+                                </Grid>
+                            </GroupBox.Header>
                             <Grid>
                                 <ListView ItemsSource="{Binding TargetDiffLines}" BorderThickness="0" FontSize="12"
                                           ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -187,7 +211,14 @@
 
             <TabItem Header="Deployment Script">
                 <Grid>
-                    <TextBox Text="{Binding DeploymentScript, Mode=OneWay}" FontFamily="Consolas" FontSize="12" AcceptsReturn="True"
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                        <Button Content="Copy Script" Width="120" Command="{Binding CopyDeploymentScriptCommand}" />
+                    </StackPanel>
+                    <TextBox Grid.Row="1" Text="{Binding DeploymentScript, Mode=OneWay}" FontFamily="Consolas" FontSize="12" AcceptsReturn="True"
                              TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                              IsReadOnly="True" />
                 </Grid>
