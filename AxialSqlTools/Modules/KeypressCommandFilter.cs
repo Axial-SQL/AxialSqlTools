@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace AxialSqlTools
 {
@@ -33,11 +34,11 @@ namespace AxialSqlTools
 
         public int Exec(ref Guid cmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
         {
-            if (cmdGroup == VSConstants.VSStd2K && nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN)
+            if (cmdGroup == VSConstants.VSStd2K && nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN && ShouldProcessReturnKey())
             {
                 // Logic to handle the RETURN key press
                 // Example: get the current line's text from the editor
-                string currentLineText = GetCurrentLineText();               
+                string currentLineText = GetCurrentLineText();
 
                 if (currentLineText.Length > 0)
                 {
@@ -47,6 +48,26 @@ namespace AxialSqlTools
 
             // Pass along the command so that other command handlers can process it
             return nextCommandTarget?.Exec(ref cmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) ?? VSConstants.S_OK;
+        }
+
+        private bool ShouldProcessReturnKey()
+        {
+            var snippetSettings = SettingsManager.GetSnippetSettings();
+
+            if (!snippetSettings.useSnippets)
+            {
+                return false;
+            }
+
+            switch (snippetSettings.replaceKey)
+            {
+                case SettingsManager.SnippetReplaceKey.Enter:
+                    return true;
+                case SettingsManager.SnippetReplaceKey.ShiftEnter:
+                    return (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+                default:
+                    return false;
+            }
         }
 
         private string GetCurrentLineText()
