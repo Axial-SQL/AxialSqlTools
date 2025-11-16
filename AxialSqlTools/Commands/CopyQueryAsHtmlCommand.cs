@@ -78,11 +78,14 @@ namespace AxialSqlTools
             }
 
             var dataObject = Clipboard.GetDataObject();
+            var clipboardHtml = dataObject?.GetData(DataFormats.Html) as string;
             var rtfContent = dataObject?.GetData(DataFormats.Rtf) as string;
 
-            var htmlFragment = !string.IsNullOrWhiteSpace(rtfContent)
-                ? ConvertRtfToHtmlClipboardFragment(rtfContent)
-                : BuildClipboardHtml(WrapPlainText(textContent));
+            var htmlFragment = !string.IsNullOrWhiteSpace(clipboardHtml)
+                ? NormalizeClipboardHtml(clipboardHtml)
+                : !string.IsNullOrWhiteSpace(rtfContent)
+                    ? ConvertRtfToHtmlClipboardFragment(rtfContent)
+                    : BuildClipboardHtml(WrapPlainText(textContent));
 
             var newDataObject = new DataObject();
             newDataObject.SetData(DataFormats.UnicodeText, textContent);
@@ -205,9 +208,35 @@ namespace AxialSqlTools
                 && first.Style == second.Style;
         }
 
+        private static string NormalizeClipboardHtml(string htmlPayload)
+        {
+            const string StartMarker = "<!--StartFragment-->";
+            const string EndMarker = "<!--EndFragment-->";
+
+            if (string.IsNullOrWhiteSpace(htmlPayload))
+            {
+                return BuildClipboardHtml(string.Empty);
+            }
+
+            var startIndex = htmlPayload.IndexOf(StartMarker, StringComparison.OrdinalIgnoreCase);
+            var endIndex = htmlPayload.IndexOf(EndMarker, StringComparison.OrdinalIgnoreCase);
+
+            if (startIndex < 0 || endIndex <= startIndex)
+            {
+                return BuildClipboardHtml(WrapPlainText(htmlPayload));
+            }
+
+            var fragmentStart = startIndex + StartMarker.Length;
+            var fragmentLength = endIndex - fragmentStart;
+            var fragment = htmlPayload.Substring(fragmentStart, fragmentLength);
+
+            var adjustedFragment = ReplaceLimeGreen(fragment);
+            return BuildClipboardHtml(adjustedFragment);
+        }
+
         private static string BuildClipboardHtml(string htmlBody)
         {
-            const string HeaderTemplate = "Version:0.9\\r\\nStartHTML:{0:0000000000}\\r\\nEndHTML:{1:0000000000}\\r\\nStartFragment:{2:0000000000}\\r\\nEndFragment:{3:0000000000}\\r\\n";        
+            const string HeaderTemplate = "Version:0.9\\r\\nStartHTML:{0:0000000000}\\r\\nEndHTML:{1:0000000000}\\r\\nStartFragment:{2:0000000000}\\r\\nEndFragment:{3:0000000000}\\r\\n";
             var encoding = Encoding.UTF8;
             var prefix = "<html><body>";
             var fragmentStart = "<!--StartFragment-->";
@@ -256,6 +285,19 @@ namespace AxialSqlTools
             return color.ToArgb() == System.Drawing.Color.Lime.ToArgb()
                 ? System.Drawing.Color.FromArgb(0, 180, 0)
                 : color;
+        }
+
+        private static string ReplaceLimeGreen(string htmlFragment)
+        {
+            if (string.IsNullOrEmpty(htmlFragment))
+            {
+                return htmlFragment;
+            }
+
+            var darkerGreen = "rgb(0, 180, 0)";
+            return htmlFragment
+                .Replace("rgb(0, 255, 0)", darkerGreen)
+                .Replace("rgb(0,255,0)", darkerGreen);
         }
     }
 }
