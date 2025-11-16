@@ -39,6 +39,16 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
+            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async delegate
+            {
+                await ExecuteAsync();
+            });
+        }
+
+        private async Task ExecuteAsync()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
             if (dte?.ActiveDocument == null)
             {
@@ -70,6 +80,10 @@ namespace AxialSqlTools
             // Ctrl+C by invoking the Edit.Copy command, which reliably fills the
             // clipboard with all supported formats for the current editor.
             dte.ExecuteCommand("Edit.Copy");
+
+            // Give the clipboard a brief moment to populate before we read back
+            // the formats needed for HTML export.
+            await Task.Delay(50);
 
             var textContent = selection.Text;
             if (!hadSelection)
