@@ -230,7 +230,24 @@ namespace AxialSqlTools
             var endHtml = startHtml + encoding.GetByteCount(fullHtml);
 
             var header = string.Format(HeaderTemplate, startHtml, endHtml, startFragment, endFragment);
-            return header + fullHtml;
+            var payload = header + fullHtml;
+
+            // Defensive recalculation: if any offset is out of sync with the final payload
+            // (e.g., due to unexpected encoding differences), rebuild the header using the
+            // measured byte lengths so the clipboard HTML fragment markers remain valid.
+            var encodedPayload = encoding.GetBytes(payload);
+            var measuredStartHtml = encoding.GetByteCount(header);
+            var measuredStartFragment = measuredStartHtml + encoding.GetByteCount(prefix) + encoding.GetByteCount(fragmentStart);
+            var measuredEndFragment = measuredStartFragment + encoding.GetByteCount(safeHtmlBody);
+            var measuredEndHtml = encodedPayload.Length;
+
+            if (measuredStartHtml != startHtml || measuredStartFragment != startFragment || measuredEndFragment != endFragment || measuredEndHtml != endHtml)
+            {
+                header = string.Format(HeaderTemplate, measuredStartHtml, measuredEndHtml, measuredStartFragment, measuredEndFragment);
+                payload = header + fullHtml;
+            }
+
+            return payload;
         }
 
         private static System.Drawing.Color AdjustColorForClipboard(System.Drawing.Color color)
