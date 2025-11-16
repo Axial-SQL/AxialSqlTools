@@ -256,6 +256,7 @@
     <Content Include="Resources\attention.png" />
     <Content Include="Resources\chat.png" />
     <Content Include="Resources\compare-schemas.png" />
+    <Content Include="Resources\copy.png" />
     <Content Include="Resources\data-source-target.png" />
     <Content Include="Resources\database-scripter.png" />
     <Content Include="Resources\export-data.png" />

@@ -47,7 +47,7 @@ namespace AxialSqlTools
 
         private async Task ExecuteAsync()
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
             if (dte?.ActiveDocument == null)
@@ -83,7 +83,7 @@ namespace AxialSqlTools
 
             // Give the clipboard a brief moment to populate before we read back
             // the formats needed for HTML export.
-            await Task.Delay(50);
+            await Task.Delay(100);
 
             var textContent = selection.Text;
             if (!hadSelection)
