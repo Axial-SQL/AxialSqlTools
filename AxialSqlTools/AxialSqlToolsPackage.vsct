@@ -40,6 +40,10 @@
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" priority="0x0000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbar" />
       </Group>
+
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Copy" priority="0x0100">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
+      </Group>
       
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" priority="0x1000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
@@ -116,6 +120,16 @@
           <ButtonText>Format Query</ButtonText>
           <LocCanonicalName>AxialSqlTools.FormatQuery</LocCanonicalName>
           <ToolTipText>Format SQL query (hold Shift for advanced options)</ToolTipText>
+        </Strings>
+      </Button>
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialCopyQueryAsHtmlButton" priority="0x0005" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Copy" />
+        <Icon guid="guidCopy" id="bmpCopy" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Copy Query for Web Paste</ButtonText>
+          <LocCanonicalName>AxialSqlTools.CopyQueryForWebPaste</LocCanonicalName>
+          <ToolTipText>Copy the current query text with preserving formatting for HTML‑aware destinations</ToolTipText>
         </Strings>
       </Button>
       
@@ -345,6 +359,7 @@
       <Bitmap guid="guidSqlBuildInfo" href="Resources\sql-build-info.png" usedList="bmpSqlBuildInfo" />
       <Bitmap guid="guidDatabaseScripter" href="Resources\database-scripter.png" usedList="bmpDatabaseScripter" />
       <Bitmap guid="guidCompareSchemas" href="Resources\compare-schemas.png" usedList="bmpCompareSchemas" />
+      <Bitmap guid="guidCopy" href="Resources\copy.png" usedList="bmpCopy" />
   </Bitmaps>
 
     
@@ -368,8 +383,9 @@
 
       <IDSymbol name="AxialToolbar" value="0x1000" />
       <IDSymbol name="AxialToolbarGroup" value="0x2000" />
-      
+
       <IDSymbol name="AxialFormatQueryButton" value="4131" />
+      <IDSymbol name="AxialCopyQueryAsHtmlButton" value="4160" />
       <IDSymbol name="AxialSettingsButton" value="4130" />
       <IDSymbol name="AxialAboutButton" value="4129" />
       <IDSymbol name="AxialCheckNewVersion" value="4041" />
@@ -386,6 +402,7 @@
       <IDSymbol name="AxialToolsSubMenuGroup_DataTransfer" value="0x1204" />
       <IDSymbol name="AxialToolsSubMenuGroup_Timelines" value="0x1205" />
       <IDSymbol name="AxialToolsSubMenuGroup_AI" value="0x1206" />
+      <IDSymbol name="AxialToolsSubMenuGroup_Copy" value="0x1207" />
 
       <IDSymbol name="AxialExportButtonGridToExcel" value="4133" />
       <IDSymbol name="AxialExportButtonGridToExcelAndEmail" value="4139" />
@@ -465,6 +482,9 @@
     </GuidSymbol>
     <GuidSymbol name="guidCompareSchemas" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d7}">
       <IDSymbol name="bmpCompareSchemas" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidCopy" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d8}">
+      <IDSymbol name="bmpCopy" value="1" />
     </GuidSymbol>
 
   </Symbols>
