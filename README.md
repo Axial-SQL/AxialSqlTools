@@ -14,7 +14,7 @@ If you find this extension useful and it helps streamline your workflow in SSMS,
 
 Check it out and let me know what you think!
 
-<img width="611" height="294" alt="image" src="https://github.com/user-attachments/assets/a304b8fa-e83e-47a3-8660-a29954c5fbd0" />
+<img width="604" height="316" alt="image" src="https://github.com/user-attachments/assets/b0e5823c-f295-4b20-914e-5eee616b5ff3" />
 
 ## Main Features - (see Wiki for more details)
 
