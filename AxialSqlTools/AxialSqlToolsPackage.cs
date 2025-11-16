@@ -20,6 +20,7 @@ using Task = System.Threading.Tasks.Task;
 using Microsoft.SqlServer.Management.UI.Grid;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.OLE.Interop;
 using System.Collections;
 using NLog;
 using NLog.Targets;
@@ -246,6 +247,10 @@ namespace AxialSqlTools
         }
 
         public Dictionary<string, string> globalSnippets = new Dictionary<string, string>();
+        private readonly List<KeypressCommandFilter> _commandFilters = new List<KeypressCommandFilter>();
+        private IVsTextManager _textManager;
+        private uint _textManagerEventsCookie;
+        private TextManagerEventsSink _textManagerEventsSink;
 
         public static AxialSqlToolsPackage PackageInstance { get; private set; }
 
@@ -314,6 +319,8 @@ namespace AxialSqlTools
                 EnvDTE.WindowEvents windowEvents = events.WindowEvents;
 
                 windowEvents.WindowCreated += new _dispWindowEvents_WindowCreatedEventHandler(WindowCreated_Event);
+
+                await InitializeTextViewMonitoringAsync();
 
                 // "File.ConnectObjectExplorer"
                 // "Query.Connect"
@@ -406,34 +413,30 @@ namespace AxialSqlTools
             
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                JoinableTaskFactory.Run(async () =>
+                {
+                    await JoinableTaskFactory.SwitchToMainThreadAsync();
+                    if (_textManager != null && _textManagerEventsCookie != 0)
+                    {
+                        _textManager.UnadviseTextManagerEvents(_textManagerEventsCookie);
+                        _textManagerEventsCookie = 0;
+                    }
+                });
+            }
+
+            base.Dispose(disposing);
+        }
+
         #endregion
 
         private void WindowCreated_Event(EnvDTE.Window Window)
         {
 
             ThreadHelper.ThrowIfNotOnUIThread();
-
-            if (SettingsManager.GetUseSnippets())
-            {
-                try
-                {
-                    // snippet processor 
-                    var DocData = GridAccess.GetProperty(Window.Object, "DocData");
-                    var txtMgr = (IVsTextManager)GridAccess.GetProperty(DocData, "TextManager");
-
-                    IVsTextView textView;
-                    if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
-                    {
-                        //seems that you don't need to keep the object in memory
-                        var CommandFilter = new KeypressCommandFilter(this, textView);
-                        CommandFilter.AddToChain();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "An exception occurred");
-                }
-            }
 
             // subscribe to the execution completed event
             try
@@ -458,6 +461,91 @@ namespace AxialSqlTools
             {
                 _logger.Error(ex, "An exception occurred");
             }
+        }
+
+        private async Task InitializeTextViewMonitoringAsync()
+        {
+            await JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            try
+            {
+                _textManager = await GetServiceAsync(typeof(SVsTextManager)) as IVsTextManager;
+                if (_textManager != null)
+                {
+                    _textManagerEventsSink = new TextManagerEventsSink(this);
+                    ErrorHandler.ThrowOnFailure(_textManager.AdviseTextManagerEvents(_textManagerEventsSink, out _textManagerEventsCookie));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An exception occurred");
+            }
+        }
+
+        internal void TryAttachSnippetFilter(IVsTextView textView)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (!SettingsManager.GetUseSnippets() || textView == null)
+            {
+                return;
+            }
+
+            if (_commandFilters.Any(filter => filter.TextView == textView))
+            {
+                return;
+            }
+
+            if (!IsSqlQueryView(textView))
+            {
+                return;
+            }
+
+            var commandFilter = new KeypressCommandFilter(this, textView);
+            commandFilter.AddToChain();
+            _commandFilters.Add(commandFilter);
+        }
+
+        internal void ForgetCommandFilter(IVsTextView textView)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (textView == null)
+            {
+                return;
+            }
+
+            var existingFilter = _commandFilters.FirstOrDefault(filter => filter.TextView == textView);
+            if (existingFilter != null)
+            {
+                _commandFilters.Remove(existingFilter);
+            }
+        }
+
+        private bool IsSqlQueryView(IVsTextView textView)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (textView == null)
+            {
+                return false;
+            }
+
+            if (textView.GetBuffer(out IVsTextLines textLines) != VSConstants.S_OK || textLines == null)
+            {
+                return false;
+            }
+
+            if (textLines is IPersistFileFormat persistFileFormat)
+            {
+                persistFileFormat.GetCurFile(out string fileName, out uint _);
+                if (!string.IsNullOrEmpty(fileName))
+                {
+                    return fileName.EndsWith(".sql", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            return true;
         }
 
         public void LoadGlobalSnippets()

@@ -13,8 +13,10 @@ namespace AxialSqlTools
     public class KeypressCommandFilter : IOleCommandTarget
     {
         private IOleCommandTarget nextCommandTarget;
-        private IVsTextView textView;
-        private AxialSqlToolsPackage package;
+        private readonly IVsTextView textView;
+        private readonly AxialSqlToolsPackage package;
+
+        public IVsTextView TextView => textView;
 
         public KeypressCommandFilter(AxialSqlToolsPackage package, IVsTextView textView)
         {
