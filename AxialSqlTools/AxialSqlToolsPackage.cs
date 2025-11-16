@@ -65,6 +65,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(QueryHistoryWindow))]
     [ProvideToolWindow(typeof(DatabaseScripterToolWindow))]
     [ProvideToolWindow(typeof(SchemaCompareWindow))]
+    [ProvideToolWindow(typeof(DataImportWindow))]
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
 
@@ -402,8 +403,7 @@ namespace AxialSqlTools
             }
 
             // needed for the OxyPlot library
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);     
-            
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
             
         }
 

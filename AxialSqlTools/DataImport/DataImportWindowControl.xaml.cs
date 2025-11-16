@@ -1,4 +1,4 @@
-namespace AxialSqlTools
+﻿namespace AxialSqlTools
 {
     using Microsoft.VisualStudio.Shell;
     using Microsoft.Win32;
@@ -84,7 +84,7 @@ namespace AxialSqlTools
 
             SetBusyState(true);
 
-            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
                 {
@@ -301,7 +301,7 @@ namespace AxialSqlTools
                     throw new InvalidOperationException("Column names cannot be empty.");
                 }
 
-                string sanitized = identifier.Replace("]", "]]" );
+                string sanitized = identifier.Replace("]", "]]");
                 return $"[{sanitized}]";
             }
 

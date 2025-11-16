@@ -557,36 +557,34 @@ namespace AxialSqlTools
 
             string text = cell.InnerText;
 
-            //if (cell.DataType != null)
-            //{
-            //    switch (cell.DataType.Value)
-            //    {
-            //        case CellValues.SharedString:
-            //            if (sharedStrings?.SharedStringTable != null && int.TryParse(text, out int index))
-            //            {
-            //                if (index >= 0 && index < sharedStrings.SharedStringTable.ChildElements.Count)
-            //                {
-            //                    return sharedStrings.SharedStringTable.ChildElements[index].InnerText;
-            //                }
-            //                return text;
-            //            }
-            //            return text;
-            //        case CellValues.Boolean:
-            //            return text == "1" ? "TRUE" : text == "0" ? "FALSE" : text;
-            //        case CellValues.Date:
-            //            if (double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out double oaDate))
-            //            {
-            //                return DateTime.FromOADate(oaDate).ToString("o", CultureInfo.InvariantCulture);
-            //            }
-            //            return text;
-            //        default:
-            //            return text;
-            //    }
-            //}
+            if (cell.DataType == null)
+                return text;
 
-            if (TryReadDateFromNumber(cell, workbookPart, out DateTime dateValue))
+            CellValues type = cell.DataType.Value;
+
+            if (type == CellValues.SharedString)
             {
-                return dateValue.ToString("o", CultureInfo.InvariantCulture);
+                if (sharedStrings?.SharedStringTable != null && int.TryParse(text, out int index))
+                {
+                    if (index >= 0 && index < sharedStrings.SharedStringTable.ChildElements.Count)
+                        return sharedStrings.SharedStringTable.ChildElements[index].InnerText;
+
+                    return text;
+                }
+                return text;
+            }
+
+            if (type == CellValues.Boolean)
+            {
+                return text == "1" ? "TRUE" : text == "0" ? "FALSE" : text;
+            }
+
+            if (type == CellValues.Date)
+            {
+                if (double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out double oaDate))
+                    return DateTime.FromOADate(oaDate).ToString("o", CultureInfo.InvariantCulture);
+
+                return text;
             }
 
             return text;

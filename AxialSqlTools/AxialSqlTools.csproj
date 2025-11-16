@@ -53,6 +53,11 @@
     <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
       <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DataImport\DataImportWindow.cs" />
+    <Compile Include="DataImport\DataImportWindowCommand.cs" />
+    <Compile Include="DataImport\DataImportWindowControl.xaml.cs">
+      <DependentUpon>DataImportWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Modules\ExcelImport.cs" />
     <Compile Include="Modules\TsqlFormatterCommentInterleaver.cs" />
     <Compile Include="Commands\FormatQueryDialog\FormatOptionsDialog.xaml.cs">
@@ -78,11 +83,6 @@
     <Compile Include="Commands\RefreshTemplatesCommand.cs" />
     <Compile Include="Commands\ResultGridCommands.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
-    <Compile Include="DataImport\DataImportWindow.cs" />
-    <Compile Include="DataImport\DataImportWindowCommand.cs" />
-    <Compile Include="DataImport\DataImportWindowControl.xaml.cs">
-      <DependentUpon>DataImportWindowControl.xaml</DependentUpon>
-    </Compile>
     <Compile Include="DataTransfer\DataTransferWindow.cs" />
     <Compile Include="DataTransfer\DataTransferWindowCommand.cs" />
     <Compile Include="DataTransfer\DataTransferWindowControl.xaml.cs">
@@ -283,11 +283,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="SchemaCompare\SchemaCompareWindowControl.xaml">
+    <Page Include="DataImport\DataImportWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataImport\DataImportWindowControl.xaml">
+    <Page Include="SchemaCompare\SchemaCompareWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
