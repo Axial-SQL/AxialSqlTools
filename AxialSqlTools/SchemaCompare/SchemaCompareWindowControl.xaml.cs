@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -39,6 +40,7 @@ namespace AxialSqlTools
         private string _status = "Select a source and target using Object Explorer.";
         private string _deploymentScript = string.Empty;
         private SchemaDifferenceViewModel _selectedDifference;
+        private CancellationTokenSource _cancellationTokenSource;
 
         public SchemaCompareViewModel()
         {
@@ -51,6 +53,10 @@ namespace AxialSqlTools
             ClearTargetCommand = new RelayCommand(() => TargetConnection = null, () => TargetConnection != null);
             SwapConnectionsCommand = new RelayCommand(SwapConnections, () => SourceConnection != null || TargetConnection != null);
             CompareCommand = new AsyncRelayCommand(CompareAsync, () => HasConnections && !IsBusy);
+            CancelCompareCommand = new RelayCommand(CancelCompare, () => IsBusy);
+            CopyDeploymentScriptCommand = new RelayCommand(CopyDeploymentScript, () => !string.IsNullOrEmpty(DeploymentScript));
+            CopySourceDefinitionCommand = new RelayCommand(CopySourceDefinition, () => !string.IsNullOrEmpty(SelectedDifference?.SourceDefinition));
+            CopyTargetDefinitionCommand = new RelayCommand(CopyTargetDefinition, () => !string.IsNullOrEmpty(SelectedDifference?.TargetDefinition));
         }
 
         public ObservableCollection<SchemaDifferenceViewModel> Differences { get; }
@@ -70,6 +76,14 @@ namespace AxialSqlTools
         public ICommand SwapConnectionsCommand { get; }
 
         public ICommand CompareCommand { get; }
+
+        public ICommand CancelCompareCommand { get; }
+
+        public ICommand CopyDeploymentScriptCommand { get; }
+
+        public ICommand CopySourceDefinitionCommand { get; }
+
+        public ICommand CopyTargetDefinitionCommand { get; }
 
         public bool HasConnections => SourceConnection != null && TargetConnection != null;
 
@@ -134,6 +148,7 @@ namespace AxialSqlTools
             {
                 _deploymentScript = value;
                 OnPropertyChanged();
+                CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -147,6 +162,7 @@ namespace AxialSqlTools
                     _selectedDifference = value;
                     OnPropertyChanged();
                     UpdateDiffPreview(value);
+                    CommandManager.InvalidateRequerySuggested();
                 }
             }
         }
@@ -194,6 +210,9 @@ namespace AxialSqlTools
             try
             {
                 IsBusy = true;
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = new CancellationTokenSource();
+                var cancellationToken = _cancellationTokenSource.Token;
                 Status = "Comparing schemas...";
                 DeploymentScript = string.Empty;
                 Differences.Clear();
@@ -207,22 +226,30 @@ namespace AxialSqlTools
 
                 var payload = await Task.Run(() =>
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var sourceEndpoint = new SchemaCompareDatabaseEndpoint(sourceConnectionString);
                     var targetEndpoint = new SchemaCompareDatabaseEndpoint(targetConnectionString);
                     var comparison = new SchemaComparison(sourceEndpoint, targetEndpoint);
                     var result = comparison.Compare();
+                    cancellationToken.ThrowIfCancellationRequested();
                     var scriptResult = result.GenerateScript(targetDatabase);
+                    cancellationToken.ThrowIfCancellationRequested();
                     return (Result: result, Script: scriptResult?.Script ?? string.Empty);
-                });
+                }, cancellationToken);
 
                 foreach (var difference in payload.Result.Differences
                     .OrderBy(d => d.Name?.ToString() ?? d.DifferenceType.ToString()))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     Differences.Add(new SchemaDifferenceViewModel(difference));
                 }
 
                 DeploymentScript = payload.Script;
                 Status = Differences.Count == 0 ? "No differences were found." : $"Found {Differences.Count} difference(s).";
+            }
+            catch (OperationCanceledException)
+            {
+                Status = "Schema compare canceled.";
             }
             catch (Exception ex)
             {
@@ -231,7 +258,46 @@ namespace AxialSqlTools
             }
             finally
             {
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
                 IsBusy = false;
+            }
+        }
+
+        private void CancelCompare()
+        {
+            if (!IsBusy)
+            {
+                return;
+            }
+
+            Status = "Cancelling schema compare...";
+            _cancellationTokenSource?.Cancel();
+        }
+
+        private void CopyDeploymentScript()
+        {
+            if (!string.IsNullOrEmpty(DeploymentScript))
+            {
+                Clipboard.SetText(DeploymentScript);
+            }
+        }
+
+        private void CopySourceDefinition()
+        {
+            var script = SelectedDifference?.SourceDefinition;
+            if (!string.IsNullOrEmpty(script))
+            {
+                Clipboard.SetText(script);
+            }
+        }
+
+        private void CopyTargetDefinition()
+        {
+            var script = SelectedDifference?.TargetDefinition;
+            if (!string.IsNullOrEmpty(script))
+            {
+                Clipboard.SetText(script);
             }
         }
 
