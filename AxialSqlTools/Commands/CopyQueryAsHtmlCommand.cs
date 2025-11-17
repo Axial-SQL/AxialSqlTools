@@ -1,10 +1,11 @@
+using EnvDTE;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.ComponentModel.Design;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using EnvDTE;
-using Microsoft.VisualStudio.Shell;
+using System.Windows.Input;
 using static AxialSqlTools.AxialSqlToolsPackage;
 
 namespace AxialSqlTools
@@ -48,6 +49,8 @@ namespace AxialSqlTools
         private async Task ExecuteAsync()
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
 
             var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
             if (dte?.ActiveDocument == null)
@@ -102,6 +105,15 @@ namespace AxialSqlTools
                     : BuildClipboardHtml(WrapPlainText(textContent));
 
             var newDataObject = new DataObject();
+
+            if (isShiftPressed)
+            {
+                // Copy HTML as a text
+                htmlFragment = htmlFragment.Substring(htmlFragment.IndexOf("<html>"));
+                newDataObject.SetData(DataFormats.Text, htmlFragment);
+                Clipboard.SetDataObject(newDataObject, true);
+                return;
+            }
             newDataObject.SetData(DataFormats.UnicodeText, textContent);
             newDataObject.SetData(DataFormats.Text, textContent);
 

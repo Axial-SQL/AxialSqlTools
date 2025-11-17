@@ -129,7 +129,7 @@
         <Strings>
           <ButtonText>Copy Query for Web Paste</ButtonText>
           <LocCanonicalName>AxialSqlTools.CopyQueryForWebPaste</LocCanonicalName>
-          <ToolTipText>Copy the current query text with preserving formatting for HTML‑aware destinations</ToolTipText>
+          <ToolTipText>Copy the query with HTML formatting preserved. Hold Shift to copy the underlying HTML code instead of formatted text.</ToolTipText>
         </Strings>
       </Button>
       
