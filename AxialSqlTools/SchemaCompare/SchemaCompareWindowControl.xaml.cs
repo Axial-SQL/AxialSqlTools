@@ -249,7 +249,9 @@ namespace AxialSqlTools
                     var sourceEndpoint = new SchemaCompareDatabaseEndpoint(sourceConnectionString);
                     var targetEndpoint = new SchemaCompareDatabaseEndpoint(targetConnectionString);
                     var comparison = new SchemaComparison(sourceEndpoint, targetEndpoint);
-                    ApplyObjectTypeFilters(comparison);
+
+                    // ApplyObjectTypeFilters(comparison);
+
                     var result = comparison.Compare();
                     cancellationToken.ThrowIfCancellationRequested();
                     var scriptResult = result.GenerateScript(targetDatabase);
@@ -397,21 +399,24 @@ namespace AxialSqlTools
 
         private void ApplyObjectTypeFilters(SchemaComparison comparison)
         {
-            if (comparison?.Options?.ExcludedObjectTypes == null)
+            if (comparison?.Options?.ExcludeObjectTypes == null)
             {
                 return;
             }
 
-            comparison.Options.ExcludedObjectTypes.Clear();
+            Microsoft.SqlServer.Dac.ObjectType[] list = new Microsoft.SqlServer.Dac.ObjectType[ObjectTypeFilters.Count(f => !f.IsIncluded)];
             foreach (var filter in ObjectTypeFilters.Where(f => !f.IsIncluded))
             {
-                comparison.Options.ExcludedObjectTypes.Add(filter.ObjectType);
+                list.Append(filter.ObjectType).ToArray();
             }
+
+            comparison.Options.ExcludeObjectTypes = list.ToArray();
+
         }
 
         private IEnumerable<ObjectTypeFilterViewModel> CreateObjectTypeFilters()
         {
-            foreach (SchemaCompareObjectType objectType in Enum.GetValues(typeof(SchemaCompareObjectType)))
+            foreach (Microsoft.SqlServer.Dac.ObjectType objectType in Enum.GetValues(typeof(Microsoft.SqlServer.Dac.ObjectType)))
             {
                 yield return new ObjectTypeFilterViewModel(objectType);
             }
@@ -518,7 +523,7 @@ namespace AxialSqlTools
 
         private void SetIncludedState(SchemaDifference difference, bool isIncluded)
         {
-            difference.Included = isIncluded;
+            // difference.Included = isIncluded;
 
             foreach (var child in difference.Children)
             {
@@ -589,13 +594,13 @@ namespace AxialSqlTools
     {
         private bool _isIncluded = true;
 
-        public ObjectTypeFilterViewModel(SchemaCompareObjectType objectType)
+        public ObjectTypeFilterViewModel(Microsoft.SqlServer.Dac.ObjectType objectType)
         {
             ObjectType = objectType;
             DisplayName = objectType.ToString();
         }
 
-        public SchemaCompareObjectType ObjectType { get; }
+        public Microsoft.SqlServer.Dac.ObjectType ObjectType { get; }
 
         public string DisplayName { get; }
 
