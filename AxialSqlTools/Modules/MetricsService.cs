@@ -88,6 +88,18 @@ namespace AxialSqlTools
         public long PerfCounter_SQLCompilationsSec_Total { get; set; }
         public long PerfCounter_SQLCompilationsSec { get; set; }
 
+        public long PerfCounter_PageReadsSec_Total { get; set; }
+        public long PerfCounter_PageReadsSec { get; set; }
+        public long PerfCounter_PageWritesSec_Total { get; set; }
+        public long PerfCounter_PageWritesSec { get; set; }
+        public long PerfCounter_LogFlushesSec_Total { get; set; }
+        public long PerfCounter_LogFlushesSec { get; set; }
+        public long PerfCounter_TransactionsSec_Total { get; set; }
+        public long PerfCounter_TransactionsSec { get; set; }
+        public long PerfCounter_LockWaitsSec_Total { get; set; }
+        public long PerfCounter_LockWaitsSec { get; set; }
+        public long PerfCounter_MemoryGrantsPending { get; set; }
+
         public long PerfCounter_PLE { get; set; }
         public long PerfCounter_DataFileSize { get; set; }
         public long PerfCounter_LogFileSize { get; set; }
@@ -412,6 +424,85 @@ namespace AxialSqlTools
                             }
                         }
                     }
+
+                    string queryText_5c = $@"
+                    SELECT [counter_name], [cntr_value]
+                    FROM sys.dm_os_performance_counters
+                    WHERE [object_name] = '{perfCounterObjectName}:Buffer Manager'
+                          AND [counter_name] IN ('Page reads/sec', 'Page writes/sec')
+                    UNION ALL
+                    SELECT [counter_name], [cntr_value]
+                    FROM sys.dm_os_performance_counters
+                    WHERE [object_name] = '{perfCounterObjectName}:Databases'
+                          AND [counter_name] = 'Log Flushes/sec'
+                          AND [instance_name] = '_Total'
+                    UNION ALL
+                    SELECT [counter_name], [cntr_value]
+                    FROM sys.dm_os_performance_counters
+                    WHERE [object_name] = '{perfCounterObjectName}:General Statistics'
+                          AND [counter_name] = 'Transactions'
+                    UNION ALL
+                    SELECT [counter_name], [cntr_value]
+                    FROM sys.dm_os_performance_counters
+                    WHERE [object_name] = '{perfCounterObjectName}:Locks'
+                          AND [counter_name] = 'Lock Waits/sec'
+                          AND [instance_name] = '_Total'
+                    UNION ALL
+                    SELECT [counter_name], [cntr_value]
+                    FROM sys.dm_os_performance_counters
+                    WHERE [object_name] = '{perfCounterObjectName}:Memory Manager'
+                          AND [counter_name] = 'Memory Grants Pending'
+                    ";
+
+                    using (SqlCommand command = new SqlCommand(queryText_5c, connection))
+                    {
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    string counterName = reader.GetString(0).Trim();
+                                    long counterValue = reader.GetInt64(1);
+
+                                    switch (counterName)
+                                    {
+                                        case "Page reads/sec":
+                                            metrics.PerfCounter_PageReadsSec_Total = counterValue;
+                                            break;
+                                        case "Page writes/sec":
+                                            metrics.PerfCounter_PageWritesSec_Total = counterValue;
+                                            break;
+                                        case "Log Flushes/sec":
+                                            metrics.PerfCounter_LogFlushesSec_Total = counterValue;
+                                            break;
+                                        case "Transactions":
+                                        case "Transactions/sec":
+                                            metrics.PerfCounter_TransactionsSec_Total = counterValue;
+                                            break;
+                                        case "Lock Waits/sec":
+                                            metrics.PerfCounter_LockWaitsSec_Total = counterValue;
+                                            break;
+                                        case "Memory Grants Pending":
+                                            metrics.PerfCounter_MemoryGrantsPending = counterValue;
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    double elapsedSeconds = (metrics.PerfCounter_RefreshDateTime - prev_metrics.PerfCounter_RefreshDateTime).TotalSeconds;
+                    if (elapsedSeconds <= 0)
+                    {
+                        elapsedSeconds = 1;
+                    }
+
+                    metrics.PerfCounter_PageReadsSec = (long)((metrics.PerfCounter_PageReadsSec_Total - prev_metrics.PerfCounter_PageReadsSec_Total) / elapsedSeconds);
+                    metrics.PerfCounter_PageWritesSec = (long)((metrics.PerfCounter_PageWritesSec_Total - prev_metrics.PerfCounter_PageWritesSec_Total) / elapsedSeconds);
+                    metrics.PerfCounter_LogFlushesSec = (long)((metrics.PerfCounter_LogFlushesSec_Total - prev_metrics.PerfCounter_LogFlushesSec_Total) / elapsedSeconds);
+                    metrics.PerfCounter_TransactionsSec = (long)((metrics.PerfCounter_TransactionsSec_Total - prev_metrics.PerfCounter_TransactionsSec_Total) / elapsedSeconds);
+                    metrics.PerfCounter_LockWaitsSec = (long)((metrics.PerfCounter_LockWaitsSec_Total - prev_metrics.PerfCounter_LockWaitsSec_Total) / elapsedSeconds);
 
                     string queryText_6 = @"                
                     SELECT CAST(ISNULL(MIN(synchronization_health), 0) AS INT),

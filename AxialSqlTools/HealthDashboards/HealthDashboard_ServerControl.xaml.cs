@@ -110,6 +110,23 @@
             }
         }
 
+        public class PerformanceSample
+        {
+            public DateTime Timestamp { get; set; }
+            public double CpuUtilization { get; set; }
+            public double UserConnections { get; set; }
+            public double BatchRequestsSec { get; set; }
+            public double SqlCompilationsSec { get; set; }
+            public double PageLifeExpectancy { get; set; }
+            public double PageReadsSec { get; set; }
+            public double PageWritesSec { get; set; }
+            public double LogFlushesSec { get; set; }
+            public double TransactionsSec { get; set; }
+            public double LockWaitsSec { get; set; }
+            public double MemoryGrantsPending { get; set; }
+            public double TotalServerMemoryMb { get; set; }
+        }
+
         public string connectionString = null;
         public DateTime lastRefresh = new DateTime(2000, 1, 1, 0, 0, 0);
         private CancellationTokenSource _cancellationTokenSource;
@@ -118,6 +135,8 @@
         private bool _versionCheckCompleted = false;
         private bool _newVersionAvailable = false;
         private string _newVersionURL;
+        private readonly List<PerformanceSample> _performanceSamples = new List<PerformanceSample>();
+        private const int PerformanceWindowMinutes = 15;
 
         private WaitsStatsAggregator waitsStatsAggregator = new WaitsStatsAggregator();
 
@@ -443,6 +462,11 @@
 
             //--------------------------------------------------------------------
             //--------------------------------------------------------------------
+            if (!doEmpty && metrics != null && metrics.Completed && !metrics.HasException)
+            {
+                AddPerformanceSample(metrics);
+            }
+
             lastRefresh = DateTime.Now;
 
             //Let user know that there is an issue by blinking the title
@@ -590,6 +614,95 @@
             }
 
             this.WaitStatsModel.Model = barModelWS;
+        }
+
+        private void AddPerformanceSample(HealthDashboardServerMetric metrics)
+        {
+            var sample = new PerformanceSample
+            {
+                Timestamp = DateTime.Now,
+                CpuUtilization = metrics.CpuUtilization,
+                UserConnections = metrics.ConnectionCountTotal,
+                BatchRequestsSec = metrics.PerfCounter_BatchRequestsSec,
+                SqlCompilationsSec = metrics.PerfCounter_SQLCompilationsSec,
+                PageLifeExpectancy = metrics.PerfCounter_PLE,
+                PageReadsSec = metrics.PerfCounter_PageReadsSec,
+                PageWritesSec = metrics.PerfCounter_PageWritesSec,
+                LogFlushesSec = metrics.PerfCounter_LogFlushesSec,
+                TransactionsSec = metrics.PerfCounter_TransactionsSec,
+                LockWaitsSec = metrics.PerfCounter_LockWaitsSec,
+                MemoryGrantsPending = metrics.PerfCounter_MemoryGrantsPending,
+                TotalServerMemoryMb = metrics.PerfCounter_TotalServerMemory / 1024.0
+            };
+
+            _performanceSamples.Add(sample);
+
+            DateTime threshold = DateTime.Now.AddMinutes(-PerformanceWindowMinutes);
+            _performanceSamples.RemoveAll(s => s.Timestamp < threshold);
+
+            UpdatePerformanceCharts();
+        }
+
+        private PlotModel CreateTimeSeriesModel(string title, string yAxisTitle, Func<PerformanceSample, double> valueSelector, bool clampToZero = true)
+        {
+            var model = new PlotModel { Title = title };
+
+            model.Axes.Add(new DateTimeAxis
+            {
+                Position = AxisPosition.Bottom,
+                StringFormat = "HH:mm",
+                IntervalType = DateTimeIntervalType.Minutes,
+                IsZoomEnabled = false,
+                IsPanEnabled = false,
+                MinorIntervalType = DateTimeIntervalType.Minutes
+            });
+
+            var linearAxis = new LinearAxis
+            {
+                Position = AxisPosition.Left,
+                Title = yAxisTitle,
+                IsZoomEnabled = false,
+                IsPanEnabled = false
+            };
+
+            if (clampToZero)
+            {
+                linearAxis.Minimum = 0;
+            }
+
+            model.Axes.Add(linearAxis);
+
+            var series = new LineSeries
+            {
+                StrokeThickness = 2,
+                MarkerSize = 2,
+                MarkerType = MarkerType.Circle
+            };
+
+            foreach (var sample in _performanceSamples.OrderBy(s => s.Timestamp))
+            {
+                series.Points.Add(DateTimeAxis.CreateDataPoint(sample.Timestamp, valueSelector(sample)));
+            }
+
+            model.Series.Add(series);
+
+            return model;
+        }
+
+        private void UpdatePerformanceCharts()
+        {
+            PerfChart_CpuUtilization.Model = CreateTimeSeriesModel("CPU Utilization (%)", "%", s => s.CpuUtilization);
+            PerfChart_UserConnections.Model = CreateTimeSeriesModel("User Connections", "connections", s => s.UserConnections);
+            PerfChart_BatchRequests.Model = CreateTimeSeriesModel("Batch Requests/sec", "requests/sec", s => s.BatchRequestsSec);
+            PerfChart_SqlCompilations.Model = CreateTimeSeriesModel("SQL Compilations/sec", "compilations/sec", s => s.SqlCompilationsSec);
+            PerfChart_PageLifeExpectancy.Model = CreateTimeSeriesModel("Page Life Expectancy", "seconds", s => s.PageLifeExpectancy, clampToZero: false);
+            PerfChart_PageReads.Model = CreateTimeSeriesModel("Page Reads/sec", "pages/sec", s => s.PageReadsSec);
+            PerfChart_PageWrites.Model = CreateTimeSeriesModel("Page Writes/sec", "pages/sec", s => s.PageWritesSec);
+            PerfChart_LogFlushes.Model = CreateTimeSeriesModel("Log Flushes/sec", "flushes/sec", s => s.LogFlushesSec);
+            PerfChart_Transactions.Model = CreateTimeSeriesModel("Transactions/sec", "transactions/sec", s => s.TransactionsSec);
+            PerfChart_LockWaits.Model = CreateTimeSeriesModel("Lock Waits/sec", "waits/sec", s => s.LockWaitsSec);
+            PerfChart_MemoryGrantsPending.Model = CreateTimeSeriesModel("Memory Grants Pending", "grants", s => s.MemoryGrantsPending);
+            PerfChart_TotalServerMemory.Model = CreateTimeSeriesModel("Total Server Memory", "MB", s => s.TotalServerMemoryMb);
         }
 
         public static string FormatBytesToMB(long bytes)
