@@ -26,6 +26,7 @@
     using DocumentFormat.OpenXml.Bibliography;
     using DocumentFormat.OpenXml.Spreadsheet;
     using static AxialSqlTools.HealthDashboard_ServerControl;
+    using MarkerType = OxyPlot.MarkerType;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
