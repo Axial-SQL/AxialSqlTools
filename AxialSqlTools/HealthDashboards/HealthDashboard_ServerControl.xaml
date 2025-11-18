@@ -191,9 +191,29 @@
                                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                 </Grid>
             </TabItem>
-
+            
+            <!-- TAB 4: Performance Metrics (15 minutes) -->
+            <TabItem Header="Performance (15m)">
+                <ScrollViewer Margin="0" VerticalScrollBarVisibility="Auto">
+                    <UniformGrid Columns="3" Rows="4" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                        <oxy:PlotView x:Name="PerfChart_CpuUtilization" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_UserConnections" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_BatchRequests" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_SqlCompilations" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_PageLifeExpectancy" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_PageReads" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_PageWrites" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_LogFlushes" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_Transactions" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_LockWaits" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_MemoryGrantsPending" Height="250" Margin="5"/>
+                        <oxy:PlotView x:Name="PerfChart_TotalServerMemory" Height="250" Margin="5"/>
+                    </UniformGrid>
+                </ScrollViewer>
+            </TabItem>
+            
             <!-- TAB 2: Database Backups -->
-            <TabItem Header="Database Backups">
+            <TabItem Header="Database Backups" Visibility="Hidden">
                 <Grid Margin="0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -242,7 +262,7 @@
             </TabItem>
 
             <!-- TAB 3: Agent Jobs -->
-            <TabItem Header="Agent Jobs">
+            <TabItem Header="Agent Jobs" Visibility="Hidden">
                 <Grid Margin="0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -272,25 +292,7 @@
                 </Grid>
             </TabItem>
 
-            <!-- TAB 4: Performance Metrics (15 minutes) -->
-            <TabItem Header="Performance (15m)">
-                <ScrollViewer Margin="0" VerticalScrollBarVisibility="Auto">
-                    <UniformGrid Columns="3" Rows="4" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Top">
-                        <oxy:PlotView x:Name="PerfChart_CpuUtilization" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_UserConnections" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_BatchRequests" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_SqlCompilations" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_PageLifeExpectancy" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_PageReads" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_PageWrites" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_LogFlushes" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_Transactions" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_LockWaits" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_MemoryGrantsPending" Height="250" Margin="5"/>
-                        <oxy:PlotView x:Name="PerfChart_TotalServerMemory" Height="250" Margin="5"/>
-                    </UniformGrid>
-                </ScrollViewer>
-            </TabItem>
+
 
         </TabControl>
     </Grid>
