@@ -276,6 +276,7 @@ namespace AxialSqlTools
                 await RefreshTemplatesCommand.InitializeAsync(this);
                 await OpenTemplatesFolderCommand.InitializeAsync(this);
                 await ExportGridToExcelCommand.InitializeAsync(this);
+                await ExportGridToGoogleSheetCommand.InitializeAsync(this);
                 await SettingsWindowCommand.InitializeAsync(this);
                 await AboutWindowCommand.InitializeAsync(this);
                 await ScriptSelectedObject.InitializeAsync(this);

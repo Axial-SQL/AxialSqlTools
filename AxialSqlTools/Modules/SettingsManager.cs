@@ -294,6 +294,31 @@ ORDER BY sd.[name];
             }
         }
 
+        public class GoogleSheetsSettings
+        {
+            public bool includeSourceQuery = false;
+            public bool exportBoolsAsNumbers = false;
+            public string clientId = string.Empty;
+            public string clientSecret = string.Empty;
+            public string refreshToken = string.Empty;
+            public string defaultSpreadsheetName = "DataExport_{yyyyMMdd_HHmmss}";
+
+            public bool HasClientConfiguration()
+            {
+                return !string.IsNullOrWhiteSpace(clientId) && !string.IsNullOrWhiteSpace(clientSecret);
+            }
+
+            public string GetSpreadsheetTitle()
+            {
+                if (!string.IsNullOrWhiteSpace(defaultSpreadsheetName))
+                {
+                    return defaultSpreadsheetName;
+                }
+
+                return "DataExport_{yyyyMMdd_HHmmss}";
+            }
+        }
+
         public class TSqlCodeFormatSettings
         {
             public bool preserveComments = false;
@@ -696,6 +721,38 @@ ORDER BY sd.[name];
                 // serialize to JSON and write to registry
                 string json = JsonConvert.SerializeObject(settings);
                 return SaveRegisterValue("ExcelExportSettings", json);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static GoogleSheetsSettings GetGoogleSheetsSettings()
+        {
+            try
+            {
+                string json = GetRegisterValue("GoogleSheetsSettings");
+                if (string.IsNullOrEmpty(json))
+                {
+                    return new GoogleSheetsSettings();
+                }
+
+                var settings = JsonConvert.DeserializeObject<GoogleSheetsSettings>(json);
+                return settings ?? new GoogleSheetsSettings();
+            }
+            catch
+            {
+                return new GoogleSheetsSettings();
+            }
+        }
+
+        public static bool SaveGoogleSheetsSettings(GoogleSheetsSettings settings)
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(settings);
+                return SaveRegisterValue("GoogleSheetsSettings", json);
             }
             catch
             {
