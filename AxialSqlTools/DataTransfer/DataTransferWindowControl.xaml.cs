@@ -583,33 +583,31 @@
 
                                 if (CheckBox_SkipDataCopyToMySql.IsChecked == false)
                                 {
-                                    using (var bulkCopy = new MySqlBulkCopy(mySqlConn)
+                                    var bulkCopy = new MySqlBulkCopy(mySqlConn)
                                     {
                                         DestinationTableName = targetTable,
-                                        BatchSize = 10000,
                                         BulkCopyTimeout = 0,
                                         NotifyAfter = 10000
-                                    })
+                                    };
+
+                                    bulkCopy.MySqlRowsCopied += async (s, args) =>
                                     {
-                                        bulkCopy.MySqlRowsCopied += async (s, args) =>
-                                        {
-                                            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-                                            TimeSpan elapsed = stopwatch.Elapsed;
-                                            Label_CopyProgressToMySql.Content = $"Rows copied: {args.RowsCopied:#,0} in {(int)elapsed.TotalSeconds:#,0} sec.";
-                                        };
+                                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+                                        TimeSpan elapsed = stopwatch.Elapsed;
+                                        Label_CopyProgressToMySql.Content = $"Rows copied: {args.RowsCopied:#,0} in {(int)elapsed.TotalSeconds:#,0} sec.";
+                                    };
 
-                                        foreach (DataRow row in schemaTable.Rows)
-                                        {
-                                            string columnName = row["ColumnName"].ToString();
-                                            bulkCopy.ColumnMappings.Add(columnName, columnName);
-                                        }
-
-                                        await bulkCopy.WriteToServerAsync(reader, cancellationToken);
-
-                                        TimeSpan totalElapsed = stopwatch.Elapsed;
-                                        Label_CopyProgressToMySql.Content =
-                                            $"Completed | Total rows copied: {bulkCopy.RowsCopied:#,0} in {(int)totalElapsed.TotalSeconds:#,0} sec.";
+                                    foreach (DataRow row in schemaTable.Rows)
+                                    {
+                                        string columnName = row["ColumnName"].ToString();
+                                        bulkCopy.ColumnMappings.Add(columnName, columnName);
                                     }
+
+                                    await bulkCopy.WriteToServerAsync(reader, cancellationToken);
+
+                                    TimeSpan totalElapsed = stopwatch.Elapsed;
+                                    Label_CopyProgressToMySql.Content =
+                                        $"Completed | Total rows copied: {bulkCopy.RowsCopied:#,0} in {(int)totalElapsed.TotalSeconds:#,0} sec.";
                                 }
                             }
                         }
