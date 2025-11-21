@@ -234,6 +234,9 @@
     <PackageReference Include="NLog">
       <Version>6.0.6</Version>
     </PackageReference>
+    <PackageReference Include="MySqlConnector">
+      <Version>2.4.6</Version>
+    </PackageReference>
     <PackageReference Include="Npgsql">
       <Version>8.0.7</Version>
     </PackageReference>
