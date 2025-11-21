@@ -165,8 +165,17 @@ namespace AxialSqlTools
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
                 var createContent = new StringContent(JsonConvert.SerializeObject(createPayload), Encoding.UTF8, "application/json");
-                var createResponse = await httpClient.PostAsync("https://sheets.googleapis.com/v4/spreadsheets", createContent, cancellationToken);
-                createResponse.EnsureSuccessStatusCode();
+                var createResponse = await httpClient.PostAsync(
+                    "https://sheets.googleapis.com/v4/spreadsheets",
+                    createContent,
+                    cancellationToken);
+
+                if (!createResponse.IsSuccessStatusCode)
+                {
+                    var errorBody = await createResponse.Content.ReadAsStringAsync();
+                    throw new InvalidOperationException(
+                        $"Sheets create failed: {(int)createResponse.StatusCode} {createResponse.ReasonPhrase}\n{errorBody}");
+                }
 
                 string createJson = await createResponse.Content.ReadAsStringAsync();
                 JObject spreadsheet = JObject.Parse(createJson);
@@ -197,16 +206,25 @@ namespace AxialSqlTools
         {
             var payload = new
             {
-                range = sheetName,
+                range = $"{sheetName}!A1",
                 majorDimension = "ROWS",
                 values = values
             };
 
-            string requestUri = $"https://sheets.googleapis.com/v4/spreadsheets/{Uri.EscapeDataString(spreadsheetId)}/values/{Uri.EscapeDataString(sheetName)}!A1:append?valueInputOption=USER_ENTERED";
+            string range = $"{sheetName}!A1";
+
+            string requestUri =
+                $"https://sheets.googleapis.com/v4/spreadsheets/" +
+                $"{Uri.EscapeDataString(spreadsheetId)}/values/" +
+                $"{Uri.EscapeDataString(range)}:append?valueInputOption=USER_ENTERED";
 
             var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
             var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Append failure: {(int)response.StatusCode} {response.ReasonPhrase}\n{responseBody}");
+            }
         }
 
         private static IList<IList<object>> BuildValues(DataTable dataTable, bool exportBoolsAsNumbers)
@@ -282,7 +300,7 @@ namespace AxialSqlTools
         private static string GetSourceQueryText()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            return ScriptFactoryAccess.GetActiveQueryWindowText();
+            return ""; // ScriptFactoryAccess.GetActiveQueryWindowText();
         }
     }
 }
