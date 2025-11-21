@@ -165,9 +165,8 @@
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
         <Icon guid="guidExportData" id="bmpExportData" />
         <CommandFlag>IconAndText</CommandFlag>
-        <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
-          <ButtonText>Export Grid to New Google Sheet - TODO</ButtonText>
+          <ButtonText>Export Grid to Google Sheet</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" priority="0x0200" type="Button">

@@ -514,7 +514,67 @@
                     </Button>
                 </Grid>
             </TabItem>
-            
+
+            <TabItem Header="Google Sheets">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Margin="5">
+                        <Run Text="Authorize AxialSqlTools to create Google Sheets using an OAuth client ID from "/>
+                        <Hyperlink NavigateUri="https://console.cloud.google.com/apis/credentials" RequestNavigate="buttonWikiPage_Click">
+                            <Run Text="Google Cloud Console" />
+                        </Hyperlink>
+                        <Run Text="." />
+                    </TextBlock>
+
+                    <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="GoogleSheetsIncludeSourceQuery" Content="Include content of attached query-window on its own sheet (hold Shift to do the opposite)" Margin="5"/>
+                    <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" x:Name="GoogleSheetsExportBoolsAsNumbers" Content="Export booleans as numbers (TRUE/FALSE -> 1/0)" Margin="5"/>
+
+                    <Label Grid.Row="3" Grid.Column="0" Content="Default Spreadsheet Title:" Margin="5"/>
+                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="GoogleSheetsDefaultSpreadsheetName" ToolTip="Leave blank to use DataExport_{yyyyMMdd_HHmmss}" VerticalContentAlignment="Center" Margin="5"/>
+
+                    <Label Grid.Row="4" Grid.Column="0" Content="Client ID:" Margin="5"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" x:Name="GoogleSheetsClientId" Margin="5"/>
+
+                    <Label Grid.Row="5" Grid.Column="0" Content="Client Secret:" Margin="5"/>
+                    <PasswordBox Grid.Row="5" Grid.Column="1" x:Name="GoogleSheetsClientSecret" Margin="5"/>
+
+                    <Label Grid.Row="6" Grid.Column="0" Content="Authorization Status:" Margin="5"/>
+                    <TextBlock Grid.Row="6" Grid.Column="1" x:Name="GoogleSheetsRefreshTokenLabel" Margin="5" />
+
+                    <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="5">
+                        <Button x:Name="button_AuthorizeGoogleSheets" Click="button_AuthorizeGoogleSheets_Click" Width="160" Height="24" Margin="0,0,10,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="pack://application:,,,/AxialSqlTools;component/Resources/upload.png" Width="16" Height="16" Margin="0,0,4,0"/>
+                                <TextBlock Text="Authorize Google Sheets" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="button_SaveGoogleSheetsSettings" Click="button_SaveGoogleSheetsSettings_Click" Width="80" Height="24">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png" Width="16" Height="16" Margin="0,0,4,0"/>
+                                <TextBlock Text="Save" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
             <TabItem Header="SMTP Settings">
                 <Grid>
                     <Grid.RowDefinitions>

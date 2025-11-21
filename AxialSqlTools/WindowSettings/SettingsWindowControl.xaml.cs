@@ -9,9 +9,12 @@
     using System.IO.Compression;
     using System.Net.Http;
     using System.Text;
+    using System.Threading;
     using System.Windows;
     using System.Windows.Controls;
+    using System.Windows.Media;
     using System.Windows.Navigation;
+    using Microsoft.VisualBasic;
     using static AxialSqlTools.AxialSqlToolsPackage;
 
     /// <summary>
@@ -111,7 +114,15 @@ as select 1;
                 ExcelExportAddAutoFilter.IsChecked = excelSettings.addAutofilter;
                 ExcelExportBoolsAsNumbers.IsChecked = excelSettings.exportBoolsAsNumbers;
                 ExcelExportDefaultDirectory.Text = excelSettings.defaultDirectory;
-                ExcelExportDefaultFilename.Text = excelSettings.defaultFileName;                              
+                ExcelExportDefaultFilename.Text = excelSettings.defaultFileName;
+
+                var googleSettings = SettingsManager.GetGoogleSheetsSettings();
+                GoogleSheetsIncludeSourceQuery.IsChecked = googleSettings.includeSourceQuery;
+                GoogleSheetsExportBoolsAsNumbers.IsChecked = googleSettings.exportBoolsAsNumbers;
+                GoogleSheetsDefaultSpreadsheetName.Text = googleSettings.defaultSpreadsheetName;
+                GoogleSheetsClientId.Text = googleSettings.clientId;
+                GoogleSheetsClientSecret.Password = googleSettings.clientSecret;
+                UpdateGoogleSheetsStatus(googleSettings.refreshToken);
 
             }
             catch (Exception ex)
@@ -336,6 +347,79 @@ as select 1;
 
             SettingsManager.SaveExcelExportSettings(settings);
             SavedMessage();
+        }
+
+        private void button_SaveGoogleSheetsSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var settings = BuildGoogleSheetsSettings();
+            SettingsManager.SaveGoogleSheetsSettings(settings);
+            UpdateGoogleSheetsStatus(settings.refreshToken);
+            SavedMessage();
+        }
+
+        private async void button_AuthorizeGoogleSheets_Click(object sender, RoutedEventArgs e)
+        {
+            var settings = BuildGoogleSheetsSettings();
+
+            if (!settings.HasClientConfiguration())
+            {
+                MessageBox.Show("Client ID and Client Secret are required before authorizing Google Sheets.", "Google Sheets", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                string authorizationUrl = GoogleSheetsExport.BuildAuthorizationUrl(settings);
+                Process.Start(new ProcessStartInfo(authorizationUrl) { UseShellExecute = true });
+
+                string authorizationCode = Interaction.InputBox("Paste the authorization code provided by Google after granting access.", "Google Sheets Authorization");
+                if (string.IsNullOrWhiteSpace(authorizationCode))
+                {
+                    return;
+                }
+
+                var authResult = await GoogleSheetsExport.ExchangeAuthorizationCodeAsync(settings, authorizationCode.Trim(), CancellationToken.None);
+
+                if (!string.IsNullOrWhiteSpace(authResult.RefreshToken))
+                {
+                    settings.refreshToken = authResult.RefreshToken;
+                }
+
+                SettingsManager.SaveGoogleSheetsSettings(settings);
+                UpdateGoogleSheetsStatus(settings.refreshToken);
+                SavedMessage();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Authorization failed: {ex.Message}", "Google Sheets", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private SettingsManager.GoogleSheetsSettings BuildGoogleSheetsSettings()
+        {
+            return new SettingsManager.GoogleSheetsSettings
+            {
+                includeSourceQuery = GoogleSheetsIncludeSourceQuery.IsChecked.GetValueOrDefault(false),
+                exportBoolsAsNumbers = GoogleSheetsExportBoolsAsNumbers.IsChecked.GetValueOrDefault(false),
+                defaultSpreadsheetName = GoogleSheetsDefaultSpreadsheetName.Text,
+                clientId = GoogleSheetsClientId.Text,
+                clientSecret = GoogleSheetsClientSecret.Password,
+                refreshToken = SettingsManager.GetGoogleSheetsSettings().refreshToken
+            };
+        }
+
+        private void UpdateGoogleSheetsStatus(string refreshToken)
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                GoogleSheetsRefreshTokenLabel.Text = "Not authorized";
+                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkRed);
+            }
+            else
+            {
+                GoogleSheetsRefreshTokenLabel.Text = "Authorized";
+                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkGreen);
+            }
         }
 
         private void Hyperlink_RequestNavigateFormatQueryWiki(object sender, RequestNavigateEventArgs e)
