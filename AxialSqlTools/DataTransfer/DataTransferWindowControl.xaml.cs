@@ -603,11 +603,11 @@
                                         bulkCopy.ColumnMappings.Add(columnName, columnName);
                                     }
 
-                                    await bulkCopy.WriteToServerAsync(reader, cancellationToken);
+                                    var result = await bulkCopy.WriteToServerAsync(reader, cancellationToken);
 
                                     TimeSpan totalElapsed = stopwatch.Elapsed;
                                     Label_CopyProgressToMySql.Content =
-                                        $"Completed | Total rows copied: {bulkCopy.RowsCopied:#,0} in {(int)totalElapsed.TotalSeconds:#,0} sec.";
+                                        $"Completed | Total rows copied: {result.RowsInserted:#,0} in {(int)totalElapsed.TotalSeconds:#,0} sec.";
                                 }
                             }
                         }
