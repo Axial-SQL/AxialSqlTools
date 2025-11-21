@@ -600,7 +600,8 @@
                                     foreach (DataRow row in schemaTable.Rows)
                                     {
                                         string columnName = row["ColumnName"].ToString();
-                                        bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(columnName, columnName));
+                                        int sourceOrdinal = Convert.ToInt32(row["ColumnOrdinal"]);
+                                        bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(sourceOrdinal, columnName));
                                     }
 
                                     var result = await bulkCopy.WriteToServerAsync(reader, cancellationToken);
