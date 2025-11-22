@@ -69,6 +69,10 @@
                 Content="Break sproc definition parameters per line"
                 Checked="formatSetting_Checked"
                 Unchecked="formatSetting_Unchecked"/>
+            <CheckBox x:Name="BreakSelectFieldsAfterTopAndUnindent" Margin="5"
+                Content="Break SELECT fields after DISTINCT/TOP"
+                Checked="formatSetting_Checked"
+                Unchecked="formatSetting_Unchecked"/>
         </UniformGrid>
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"

@@ -23,7 +23,7 @@ namespace AxialSqlTools
             public List<CreateProcedureStatement> SprocDefinitionsCreate = new List<CreateProcedureStatement>();
             public List<AlterProcedureStatement> SprocDefinitionsAlter = new List<AlterProcedureStatement>();
             public List<CreateOrAlterProcedureStatement> SprocDefinitionsCreateAlter = new List<CreateOrAlterProcedureStatement>();
-            public List<QuerySpecification> SelectsWithTop = new List<QuerySpecification>();
+            public List<QuerySpecification> SelectsWithTopOrDistinct = new List<QuerySpecification>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -197,8 +197,8 @@ namespace AxialSqlTools
             public override void ExplicitVisit(QuerySpecification node)
             {
                 base.ExplicitVisit(node);
-                if (node.TopRowFilter != null)
-                    SelectsWithTop.Add(node);
+                if (node.TopRowFilter != null || node.UniqueRowFilter == UniqueRowFilter.Distinct)
+                    SelectsWithTopOrDistinct.Add(node);
             }
         }
 
@@ -836,43 +836,55 @@ namespace AxialSqlTools
 
             }
 
-            // special case #11 - split SELECT fields after TOP, fixed indent up to FROM
-            // TODO - can't get this right, so disabled for now
+            // special case #11 - split SELECT fields after DISTINCT/TOP, fixed indent up to FROM
             if (formatSettings.breakSelectFieldsAfterTopAndUnindent)
             {
-                //var tokens = sqlFragment.ScriptTokenStream;
-                //const string indent = "\t";
+                var tokens = sqlFragment.ScriptTokenStream;
+                const int indentSpacesBetweenSelectAndFields = 7;
 
-                //foreach (var qs in visitor.SelectsWithTop)
-                //{
-                //    // 1) break right after TOP(...) into "\r\n\t"
-                //    int splitIdx = qs.TopRowFilter.LastTokenIndex + 1;
-                //    if (splitIdx < tokens.Count
-                //     && tokens[splitIdx].TokenType == TSqlTokenType.WhiteSpace)
-                //    {
-                //        tokens[splitIdx].Text = "\r\n" + indent;
-                //    }
+                foreach (var qs in visitor.SelectsWithTopOrDistinct)
+                {
+                    if (qs.SelectElements == null || qs.SelectElements.Count == 0)
+                        continue;
 
-                //    //// 2) for every select‐element after the first, break before it into "\r\n\t"
-                //    //for (int i = 1; i < qs.SelectElements.Count; i++)
-                //    //{
-                //    //    var elem = qs.SelectElements[i];
-                //    //    int wsIdx = elem.FirstTokenIndex - 1;
-                //    //    if (wsIdx >= 0
-                //    //     && tokens[wsIdx].TokenType == TSqlTokenType.WhiteSpace)
-                //    //    {
-                //    //        tokens[wsIdx].Text = "\r\n" + indent;
-                //    //    }
-                //    //}
+                    string baseIndent = "";
+                    int wsBeforeSelect = qs.FirstTokenIndex - 1;
+                    if (wsBeforeSelect >= 0 && tokens[wsBeforeSelect].TokenType == TSqlTokenType.WhiteSpace)
+                    {
+                        var ws = tokens[wsBeforeSelect].Text;
+                        int lastNl = ws.LastIndexOf("\r\n");
+                        baseIndent = lastNl >= 0
+                            ? ws.Substring(lastNl + 2)
+                            : ws;
+                    }
 
-                //    //// 3) unindent FROM back to column 1
-                //    //int wsBeforeFrom = qs.FromClause.FirstTokenIndex - 1;
-                //    //if (wsBeforeFrom >= 0
-                //    // && tokens[wsBeforeFrom].TokenType == TSqlTokenType.WhiteSpace)
-                //    //{
-                //    //    tokens[wsBeforeFrom].Text = "\r\n";
-                //    //}
-                //}
+                    string fieldIndent = baseIndent + new string(' ', indentSpacesBetweenSelectAndFields);
+
+                    void ReplaceWhitespaceWithIndent(int idx, string indent)
+                    {
+                        if (idx >= 0
+                            && idx < tokens.Count
+                            && tokens[idx].TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            tokens[idx].Text = "\r\n" + indent;
+                        }
+                    }
+
+                    int firstFieldWs = qs.SelectElements[0].FirstTokenIndex - 1;
+                    ReplaceWhitespaceWithIndent(firstFieldWs, fieldIndent);
+
+                    for (int i = 1; i < qs.SelectElements.Count; i++)
+                    {
+                        int wsIdx = qs.SelectElements[i].FirstTokenIndex - 1;
+                        ReplaceWhitespaceWithIndent(wsIdx, fieldIndent);
+                    }
+
+                    if (qs.FromClause != null)
+                    {
+                        int wsBeforeFrom = qs.FromClause.FirstTokenIndex - 1;
+                        ReplaceWhitespaceWithIndent(wsBeforeFrom, baseIndent);
+                    }
+                }
             }
 
             // return full recompiled result
