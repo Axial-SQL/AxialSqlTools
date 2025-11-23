@@ -131,6 +131,7 @@
       <DependentUpon>QueryHistoryWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="QueryHistory\RelayCommand.cs" />
+    <Compile Include="PivotTable\PivotTableTabManager.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindow.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowCommand.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowControl.xaml.cs">
@@ -154,6 +155,10 @@
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2420.47" />
+    <PackageReference Include="NReco.PivotData" Version="1.5.6" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
