@@ -38,6 +38,12 @@ namespace AxialSqlTools
             return obj.GetType().GetField(field, BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
+        public static object GetTabControl(object obj, string property)
+        {
+            if (obj == null) return null;
+            return obj.GetType().GetProperty(property, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).GetValue(obj);
+        }
+
         public static object GetSQLResultsControl()
         {
             var factoryType = ServiceCache.ScriptFactory.GetType();

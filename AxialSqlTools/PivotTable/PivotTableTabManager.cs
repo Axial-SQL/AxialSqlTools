@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.Shell;
 using Microsoft.Web.WebView2.WinForms;
+using Microsoft.Web.WebView2.Core;
 using NReco.PivotData;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
 
 namespace AxialSqlTools
 {
@@ -26,7 +28,7 @@ namespace AxialSqlTools
             if (sqlResultsControl == null)
                 return;
 
-            var tabControl = GridAccess.GetNonPublicField(sqlResultsControl, "m_tabControl") as TabControl;
+            var tabControl = GridAccess.GetTabControl(sqlResultsControl, "MarshallingControl") as TabControl;
             if (tabControl == null)
                 return;
 
@@ -220,12 +222,24 @@ namespace AxialSqlTools
 
         private async Task EnsureWebViewAsync()
         {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
             if (_webViewInitTask == null)
             {
+                var userDataFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "AxialSqlTools",
+                    "WebView2");
+
+                Directory.CreateDirectory(userDataFolder);
+
+                _webView.CreationProperties = new CoreWebView2CreationProperties
+                {
+                    UserDataFolder = userDataFolder
+                };
+
                 _webViewInitTask = _webView.EnsureCoreWebView2Async();
             }
-
-            await _webViewInitTask.ConfigureAwait(true);
         }
 
         private async Task RenderPivotAsync()
@@ -234,6 +248,12 @@ namespace AxialSqlTools
                 return;
 
             await EnsureWebViewAsync();
+
+            if (_webView?.CoreWebView2 == null)
+            {
+                _statusLabel.Text = "Unable to initialize WebView2. Please reopen the Pivot Table tab.";
+                return;
+            }
 
             var rowDimensions = _rowsList.CheckedItems.Cast<string>().ToArray();
             var columnDimensions = _columnsList.CheckedItems.Cast<string>().ToArray();
@@ -252,6 +272,8 @@ namespace AxialSqlTools
 
             var pivotTable = new PivotTable(rowDimensions, columnDimensions, pivotData);
             var html = BuildPivotHtml(pivotTable, valueField, aggregationType.ToString());
+
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             _webView.CoreWebView2.NavigateToString(html);
             _statusLabel.Text = $"Rows: {rowDimensions.Length}, Columns: {columnDimensions.Length}, Field: {valueField}, Aggr: {aggregationType}";
