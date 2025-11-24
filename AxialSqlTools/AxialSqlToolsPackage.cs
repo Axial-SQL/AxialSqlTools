@@ -406,9 +406,6 @@ namespace AxialSqlTools
                 _logger.Error(ex, "An exception occurred");
             }
 
-            // needed for the OxyPlot library
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
-            
         }
 
         #endregion
@@ -510,18 +507,6 @@ namespace AxialSqlTools
 
 
         }
-
-        // I don't understand the purpose, but it works
-        private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            // add this into main module -> AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
-
-            if (args.Name.Contains("OxyPlot"))
-                return AppDomain.CurrentDomain.Load(args.Name);
-            else return null;
-        }
-        //----------------
-
 
         // This method aligns all numeric values to the right
         public static void SQLResultsControl_ScriptExecutionCompleted(object QEOLESQLExec, object b)

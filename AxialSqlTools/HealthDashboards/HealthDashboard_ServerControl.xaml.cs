@@ -13,12 +13,8 @@
     using System.Windows.Controls;
     using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
     using System.Net.Http;
-    using OxyPlot;
-    using OxyPlot.Axes;
-    using OxyPlot.Series;
     using System.Collections.Generic;
     using System.Windows.Input;
-    using OxyPlot.Legends;
     using System.Linq;
     using static HealthDashboardServerMetric;
     using System.Diagnostics;
@@ -26,7 +22,11 @@
     using DocumentFormat.OpenXml.Bibliography;
     using DocumentFormat.OpenXml.Spreadsheet;
     using static AxialSqlTools.HealthDashboard_ServerControl;
-    using MarkerType = OxyPlot.MarkerType;
+    using ScottPlot;
+    using ScottPlot.Plottable;
+    using ScottPlot.WPF;
+    using ScottPlot.Palettes;
+    using Color = System.Drawing.Color;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServerControl.
@@ -411,54 +411,39 @@
 
             //--------------------------------------------------------------------
             // Disk info graph
-            var barModel = new PlotModel { Title = "Volume(s) Utilization" };
+            var diskPlot = DiskInfoModel.Plot;
+            diskPlot.Clear();
+            diskPlot.Title("Volume(s) Utilization");
 
-            var barSeries1 = new BarSeries
-            {
-                LabelPlacement = LabelPlacement.Inside,
-                LabelFormatString = "{0:0} Gb", // Adjust this to change how the labels are formatted
-                StrokeColor = OxyColors.Black,
-                StrokeThickness = 1,
-                IsStacked = true
-            };
-            foreach (var disk in metrics.DisksInfo)
-                barSeries1.Items.Add(new BarItem { Value = disk.UsedSpaceGb, Color = OxyColors.LightPink });
-            barModel.Series.Add(barSeries1);
+            double[] positions = Enumerable.Range(0, metrics.DisksInfo.Count).Select(i => (double)i).ToArray();
+            double[] usedValues = metrics.DisksInfo.Select(disk => disk.UsedSpaceGb).ToArray();
+            double[] freeValues = metrics.DisksInfo.Select(disk => disk.FreeSpaceGb).ToArray();
+            string[] labels = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToArray();
 
-            var barSeries2 = new BarSeries
-            {
-                LabelPlacement = LabelPlacement.Inside,
-                LabelFormatString = "{0:0} Gb", // Adjust this to change how the labels are formatted
-                StrokeColor = OxyColors.Black,
-                StrokeThickness = 1,
-                IsStacked = true
-            };
-            foreach (var disk in metrics.DisksInfo)
-                barSeries2.Items.Add(new BarItem { Value = disk.FreeSpaceGb, Color = OxyColors.LightBlue });
-            barModel.Series.Add(barSeries2);
+            var usedBars = diskPlot.AddBar(usedValues, positions);
+            usedBars.Horizontal = true;
+            usedBars.Label = "Used";
+            usedBars.FillColor = Color.LightPink;
+            usedBars.BorderColor = Color.Black;
+            usedBars.ValueFormatter = x => $"{x:0} Gb";
 
+            var freeBars = diskPlot.AddBar(freeValues, positions);
+            freeBars.Horizontal = true;
+            freeBars.Label = "Free";
+            freeBars.FillColor = Color.LightBlue;
+            freeBars.BorderColor = Color.Black;
+            freeBars.ValueFormatter = x => $"{x:0} Gb";
 
-            barModel.Axes.Add(new CategoryAxis
-            {
-                Position = AxisPosition.Left,
-                Key = "DiskAxis",
-                ItemsSource = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToList(),
-                IsZoomEnabled = false,
-                IsPanEnabled = false
-            });
+            double offset = usedBars.BarWidth / 2;
+            usedBars.PositionOffset = -offset;
+            freeBars.PositionOffset = offset;
 
-            barModel.Axes.Add(new LinearAxis
-            {
-                Position = AxisPosition.Bottom,
-                MinimumPadding = 0.1,
-                MaximumPadding = 0.1,
-                AbsoluteMinimum = 0,
-                Title = "Gb",
-                IsZoomEnabled = false,
-                IsPanEnabled = false
-            });
+            diskPlot.YTicks(positions, labels);
+            diskPlot.XLabel("Gb");
+            diskPlot.SetAxisLimits(xMin: 0);
+            diskPlot.Legend(location: Alignment.UpperRight);
 
-            this.DiskInfoModel.Model = barModel;
+            DiskInfoModel.Refresh();
 
 
             //--------------------------------------------------------------------
@@ -553,68 +538,37 @@
         {
 
             var sortedKeys = aggrData.Keys.OrderBy(k => k).ToList();
+            var waitPlot = WaitStatsModel.Plot;
+            waitPlot.Clear();
+            waitPlot.Title("Real-time Wait Stats");
 
-            var barModelWS = new PlotModel { Title = "Real-time Wait Stats" };
+            double[] positions = Enumerable.Range(0, sortedKeys.Count).Select(i => (double)i).ToArray();
+            waitPlot.YTicks(positions, sortedKeys.Select(k => k.ToString("HH:mm")).ToArray());
+            waitPlot.SetAxisLimits(xMin: 0);
+            waitPlot.Legend(true);
 
-            var categoryAxis = new CategoryAxis { 
-                Position = AxisPosition.Left,
-                IsZoomEnabled = false,
-                IsPanEnabled = false
-            };
-            var valueAxis = new LinearAxis { 
-                Position = AxisPosition.Bottom, 
-                MinimumPadding = 0, 
-                AbsoluteMinimum = 0,
-                IsZoomEnabled = false,
-                IsPanEnabled = false
-            };
-
-            barModelWS.Axes.Add(categoryAxis);
-            barModelWS.Axes.Add(valueAxis);
-
-            foreach (var key in sortedKeys)
-            {
-                categoryAxis.Labels.Add(key.ToString("HH:mm"));
-            }
-
-            var LegendWS = new Legend
-            {
-                LegendTitle = "Wait Stats",
-                LegendPosition = LegendPosition.RightTop,
-                LegendPlacement = LegendPlacement.Outside,
-                LegendOrientation = LegendOrientation.Vertical,
-                LegendBackground = OxyColor.FromAColor(200, OxyColors.White),
-                LegendBorder = OxyColors.Black
-            };
-            LegendWS.LegendMaxWidth = 200;
-
-            // Legend configuration
-            barModelWS.IsLegendVisible = true; // Make the legend visible
-            barModelWS.Legends.Add(LegendWS);
+            var palette = new Category10();
+            double offsetStep = 0.1;
+            int seriesIndex = 0;
 
             foreach (var previousWaitStat in previousWaitStats)
             {
-                var barSeriesWS = new BarSeries
-                {
-                    //LabelPlacement = LabelPlacement.Inside,
-                    //LabelFormatString = "{0:0}", // Adjust this to change how the labels are formatted
-                    StrokeColor = OxyColors.Black,
-                    StrokeThickness = 1,
-                    IsStacked = true
-                };
+                double[] values = sortedKeys
+                    .Select(key => aggrData[key].FirstOrDefault(ws => ws.WaitName == previousWaitStat.WaitName)?.WaitSec ?? 0)
+                    .Select(v => (double)v)
+                    .ToArray();
 
-                barSeriesWS.Title = previousWaitStat.WaitName;
+                var barSeries = waitPlot.AddBar(values, positions);
+                barSeries.Horizontal = true;
+                barSeries.Label = previousWaitStat.WaitName;
+                barSeries.FillColor = palette.GetColor(seriesIndex % palette.Count);
+                barSeries.BorderColor = Color.Black;
+                barSeries.PositionOffset = (seriesIndex - (previousWaitStats.Count / 2.0)) * offsetStep;
 
-                foreach (var aggValue in aggrData)
-                {
-                    foreach (WaitsInfo ws in aggValue.Value)
-                        if (ws.WaitName == previousWaitStat.WaitName)
-                            barSeriesWS.Items.Add(new BarItem { Value = (double)ws.WaitSec }); //, Color = OxyColors.LightPink });
-                }
-                barModelWS.Series.Add(barSeriesWS);
+                seriesIndex++;
             }
 
-            this.WaitStatsModel.Model = barModelWS;
+            WaitStatsModel.Refresh();
         }
 
         private void AddPerformanceSample(HealthDashboardServerMetric metrics)
@@ -644,66 +598,40 @@
             UpdatePerformanceCharts();
         }
 
-        private PlotModel CreateTimeSeriesModel(string title, string yAxisTitle, Func<PerformanceSample, double> valueSelector, bool clampToZero = true)
+        private void UpdateTimeSeriesPlot(WpfPlot targetPlot, string title, string yAxisTitle, Func<PerformanceSample, double> valueSelector, bool clampToZero = true)
         {
-            var model = new PlotModel { Title = title };
+            var orderedSamples = _performanceSamples.OrderBy(s => s.Timestamp).ToList();
 
-            model.Axes.Add(new DateTimeAxis
-            {
-                Position = AxisPosition.Bottom,
-                StringFormat = "HH:mm",
-                IntervalType = DateTimeIntervalType.Minutes,
-                IsZoomEnabled = false,
-                IsPanEnabled = false,
-                MinorIntervalType = DateTimeIntervalType.Minutes
-            });
+            double[] xs = orderedSamples.Select(s => s.Timestamp.ToOADate()).ToArray();
+            double[] ys = orderedSamples.Select(valueSelector).ToArray();
 
-            var linearAxis = new LinearAxis
-            {
-                Position = AxisPosition.Left,
-                Title = yAxisTitle,
-                IsZoomEnabled = false,
-                IsPanEnabled = false
-            };
+            var plt = targetPlot.Plot;
+            plt.Clear();
+            plt.Title(title);
+            plt.XAxis.DateTimeFormat(true);
+            plt.YLabel(yAxisTitle);
+            plt.AddScatter(xs, ys, markerSize: 2, lineWidth: 2);
 
             if (clampToZero)
-            {
-                linearAxis.Minimum = 0;
-            }
+                plt.SetAxisLimits(yMin: 0);
 
-            model.Axes.Add(linearAxis);
-
-            var series = new LineSeries
-            {
-                StrokeThickness = 2,
-                MarkerSize = 2,
-                MarkerType = MarkerType.Circle
-            };
-
-            foreach (var sample in _performanceSamples.OrderBy(s => s.Timestamp))
-            {
-                series.Points.Add(DateTimeAxis.CreateDataPoint(sample.Timestamp, valueSelector(sample)));
-            }
-
-            model.Series.Add(series);
-
-            return model;
+            targetPlot.Refresh();
         }
 
         private void UpdatePerformanceCharts()
         {
-            PerfChart_CpuUtilization.Model = CreateTimeSeriesModel("CPU Utilization (%)", "%", s => s.CpuUtilization);
-            PerfChart_UserConnections.Model = CreateTimeSeriesModel("User Connections", "connections", s => s.UserConnections);
-            PerfChart_BatchRequests.Model = CreateTimeSeriesModel("Batch Requests/sec", "requests/sec", s => s.BatchRequestsSec);
-            PerfChart_SqlCompilations.Model = CreateTimeSeriesModel("SQL Compilations/sec", "compilations/sec", s => s.SqlCompilationsSec);
-            PerfChart_PageLifeExpectancy.Model = CreateTimeSeriesModel("Page Life Expectancy", "seconds", s => s.PageLifeExpectancy, clampToZero: false);
-            PerfChart_PageReads.Model = CreateTimeSeriesModel("Page Reads/sec", "pages/sec", s => s.PageReadsSec);
-            PerfChart_PageWrites.Model = CreateTimeSeriesModel("Page Writes/sec", "pages/sec", s => s.PageWritesSec);
-            PerfChart_LogFlushes.Model = CreateTimeSeriesModel("Log Flushes/sec", "flushes/sec", s => s.LogFlushesSec);
-            PerfChart_Transactions.Model = CreateTimeSeriesModel("Transactions/sec", "transactions/sec", s => s.TransactionsSec);
-            PerfChart_LockWaits.Model = CreateTimeSeriesModel("Lock Waits/sec", "waits/sec", s => s.LockWaitsSec);
-            PerfChart_MemoryGrantsPending.Model = CreateTimeSeriesModel("Memory Grants Pending", "grants", s => s.MemoryGrantsPending);
-            PerfChart_TotalServerMemory.Model = CreateTimeSeriesModel("Total Server Memory", "MB", s => s.TotalServerMemoryMb);
+            UpdateTimeSeriesPlot(PerfChart_CpuUtilization, "CPU Utilization (%)", "%", s => s.CpuUtilization);
+            UpdateTimeSeriesPlot(PerfChart_UserConnections, "User Connections", "connections", s => s.UserConnections);
+            UpdateTimeSeriesPlot(PerfChart_BatchRequests, "Batch Requests/sec", "requests/sec", s => s.BatchRequestsSec);
+            UpdateTimeSeriesPlot(PerfChart_SqlCompilations, "SQL Compilations/sec", "compilations/sec", s => s.SqlCompilationsSec);
+            UpdateTimeSeriesPlot(PerfChart_PageLifeExpectancy, "Page Life Expectancy", "seconds", s => s.PageLifeExpectancy, clampToZero: false);
+            UpdateTimeSeriesPlot(PerfChart_PageReads, "Page Reads/sec", "pages/sec", s => s.PageReadsSec);
+            UpdateTimeSeriesPlot(PerfChart_PageWrites, "Page Writes/sec", "pages/sec", s => s.PageWritesSec);
+            UpdateTimeSeriesPlot(PerfChart_LogFlushes, "Log Flushes/sec", "flushes/sec", s => s.LogFlushesSec);
+            UpdateTimeSeriesPlot(PerfChart_Transactions, "Transactions/sec", "transactions/sec", s => s.TransactionsSec);
+            UpdateTimeSeriesPlot(PerfChart_LockWaits, "Lock Waits/sec", "waits/sec", s => s.LockWaitsSec);
+            UpdateTimeSeriesPlot(PerfChart_MemoryGrantsPending, "Memory Grants Pending", "grants", s => s.MemoryGrantsPending);
+            UpdateTimeSeriesPlot(PerfChart_TotalServerMemory, "Total Server Memory", "MB", s => s.TotalServerMemoryMb);
         }
 
         public static string FormatBytesToMB(long bytes)
@@ -857,19 +785,11 @@
             ORDER BY
                 database_name DESC, backup_start_date;";
 
-            var MyModel = new PlotModel { Title = "Database Backups: Frequency and Durations Analysis" };
-
-            MyModel.Axes.Add(new DateTimeAxis
-            {
-                Position = AxisPosition.Bottom,
-                StringFormat = "dd-MM-yyyy HH:mm",
-                Title = "Date",
-                IntervalType = DateTimeIntervalType.Hours,
-                MinorIntervalType = DateTimeIntervalType.Minutes,
-                IntervalLength = 80,
-                IsZoomEnabled = false,
-                IsPanEnabled = false
-            });
+            var backupTimelinePlot = BackupTimelineModel.Plot;
+            backupTimelinePlot.Clear();
+            backupTimelinePlot.Title("Database Backups: Frequency and Durations Analysis");
+            backupTimelinePlot.XAxis.DateTimeFormat(true);
+            backupTimelinePlot.XLabel("Date");
 
             var customLabels = new Dictionary<double, string>();
             var databaseIndex = new Dictionary<string, double>();
@@ -902,71 +822,38 @@
                                 customLabels.Add(dbIndex, databaseName);
 
 
-                            var startDate = DateTimeAxis.ToDouble(reader.GetDateTime(1));
-                            var finishDate = DateTimeAxis.ToDouble(reader.GetDateTime(2));
+                            var startDate = reader.GetDateTime(1).ToOADate();
+                            var finishDate = reader.GetDateTime(2).ToOADate();
 
                             var backupType = (double)reader.GetDecimal(3);
 
-                            var LineColor = OxyColors.Blue;
+                            var LineColor = Color.Blue;
                             if (backupType == 0.1)
-                                LineColor = OxyColors.Green;
+                                LineColor = Color.Green;
                             if (backupType == 0.2)
-                                LineColor = OxyColors.DeepPink;
+                                LineColor = Color.DeepPink;
 
                             dbIndex = dbIndex + backupType;
 
-                            var scatterSeries = new ScatterSeries {
-                                MarkerType = OxyPlot.MarkerType.Circle,
-                                MarkerFill = LineColor,
-                                MarkerStrokeThickness = 1
-                            };
-
-                            // Add two points to the scatter series
-                            scatterSeries.Points.Add(new ScatterPoint(startDate, dbIndex));
-                            scatterSeries.Points.Add(new ScatterPoint(finishDate, dbIndex));
-
-                            // Add a line series to connect the dots
-                            var lineSeries = new LineSeries()
-                            {
-                                Color = LineColor,
-                                StrokeThickness = 2,
-                                LineStyle = LineStyle.Solid
-                            };
-                            lineSeries.Points.Add(new DataPoint(startDate, dbIndex));
-                            lineSeries.Points.Add(new DataPoint(finishDate, dbIndex));
-
-                            MyModel.Series.Add(lineSeries);
-                            MyModel.Series.Add(scatterSeries);
+                            var scatter = backupTimelinePlot.AddScatter(
+                                new double[] { startDate, finishDate },
+                                new double[] { dbIndex, dbIndex },
+                                color: LineColor,
+                                markerShape: MarkerShape.filledCircle,
+                                markerSize: 5,
+                                lineWidth: 2);
+                            scatter.MarkerLineWidth = 1;
 
                         }
                     }
                 }
             }
 
-            var yAxis = new LinearAxis
-            {
-                Position = AxisPosition.Left,
-                Title = "Backup Duration",
-                MajorStep = 1,
-                MinorStep = 1,
-                IsZoomEnabled = false,
-                IsPanEnabled = false,
-                
-                LabelFormatter = value =>
-                {
-                    // Return the custom label if it exists; otherwise, return the default string representation
-                    if (customLabels.TryGetValue(value, out var label))
-                    {
-                        return label;
-                    }
-                    return value.ToString();
-                }
-            };
+            backupTimelinePlot.YLabel("Backup Duration");
+            backupTimelinePlot.YTicks(customLabels.Keys.ToArray(), customLabels.Values.ToArray());
+            backupTimelinePlot.SetAxisLimits(yMin: -0.5, yMax: customLabels.Count + 0.5);
 
-            MyModel.Axes.Add(yAxis);
-
-
-            this.BackupTimelineModel.Model = MyModel;
+            BackupTimelineModel.Refresh();
 
 
             //---------------------------------------------------
@@ -984,9 +871,12 @@
             GROUP BY database_name
             ORDER BY 2 DESC";
 
-            var PieModel = new PlotModel { Title = "Database Backup Sizes"};
+            var piePlot = BackupSizeModel.Plot;
+            piePlot.Clear();
+            piePlot.Title("Database Backup Sizes");
 
-            dynamic seriesP1 = new PieSeries { StrokeThickness = 2.0, InsideLabelPosition = 0.8, AngleSpan = 360, StartAngle = 0 };
+            var pieLabels = new List<string>();
+            var pieSizes = new List<double>();
 
             using (SqlConnection sourceConn = new SqlConnection(connectionString))
             {
@@ -1005,17 +895,22 @@
                             var databaseName = reader.GetString(0);
                             var backupSize = (double)reader.GetDecimal(1);
 
-                            seriesP1.Slices.Add(new PieSlice(databaseName, backupSize) { IsExploded = true });
+                            pieLabels.Add(databaseName);
+                            pieSizes.Add(backupSize);
 
                         }
                     }
                 }
             }
+            if (pieSizes.Count > 0)
+            {
+                var pie = piePlot.AddPie(pieSizes.ToArray());
+                pie.SliceLabels = pieLabels.ToArray();
+                pie.Explode = true;
+                piePlot.Legend(true);
+            }
 
-
-            PieModel.Series.Add(seriesP1);
-
-            this.BackupSizeModel.Model = PieModel;
+            BackupSizeModel.Refresh();
 
         }
 
@@ -1063,19 +958,11 @@
 	            WITH (DATA_COMPRESSION = PAGE, ONLINE = ON, MAXDOP = 4); */
             ";
 
-            var MyModel = new PlotModel { Title = "Agent Jobs: Frequency and Durations Analysis" };
-
-            MyModel.Axes.Add(new DateTimeAxis
-            {
-                Position = AxisPosition.Bottom,
-                StringFormat = "dd-MM-yyyy HH:mm",
-                Title = "Date",
-                IntervalType = DateTimeIntervalType.Hours,
-                MinorIntervalType = DateTimeIntervalType.Minutes,
-                IntervalLength = 80,
-                IsZoomEnabled = false,
-                IsPanEnabled = false
-            });
+            var jobsPlot = AgentJobsTimelineModel.Plot;
+            jobsPlot.Clear();
+            jobsPlot.Title("Agent Jobs: Frequency and Durations Analysis");
+            jobsPlot.XAxis.DateTimeFormat(true);
+            jobsPlot.XLabel("Date");
 
             var customLabels = new Dictionary<double, string>();
             var jobIndex = new Dictionary<string, double>();
@@ -1105,72 +992,40 @@
                                 customLabels.Add(jIndex, jobName);
 
 
-                            var startDate = DateTimeAxis.ToDouble(reader.GetDateTime(1));
-                            var finishDate = DateTimeAxis.ToDouble(reader.GetDateTime(2));
+                            var startDate = reader.GetDateTime(1).ToOADate();
+                            var finishDate = reader.GetDateTime(2).ToOADate();
 
                             var resultType = reader.GetInt32(3);
 
-                            var LineColor = OxyColors.DeepPink;
+                            var LineColor = Color.DeepPink;
                             if (resultType == 0) // Failure
-                                LineColor = OxyColors.Red;
+                                LineColor = Color.Red;
                             else if (resultType == 1) // Success
-                                LineColor = OxyColors.Green;
+                                LineColor = Color.Green;
                             else if (resultType == 2) // ??
-                                LineColor = OxyColors.DeepPink;
+                                LineColor = Color.DeepPink;
                             else if (resultType == 3) // Stopped manually
-                                LineColor = OxyColors.Purple;
-                            
-                            var scatterSeries = new ScatterSeries
-                            {
-                                MarkerType = OxyPlot.MarkerType.Circle,
-                                MarkerFill = LineColor,
-                                MarkerStrokeThickness = 1
-                            };
+                                LineColor = Color.Purple;
 
-                            // Add two points to the scatter series
-                            scatterSeries.Points.Add(new ScatterPoint(startDate, jIndex));
-                            scatterSeries.Points.Add(new ScatterPoint(finishDate, jIndex));
-
-                            // Add a line series to connect the dots
-                            var lineSeries = new LineSeries()
-                            {
-                                Color = LineColor,
-                                StrokeThickness = 2,
-                                LineStyle = LineStyle.Solid
-                            };
-                            lineSeries.Points.Add(new DataPoint(startDate, jIndex));
-                            lineSeries.Points.Add(new DataPoint(finishDate, jIndex));
-
-                            MyModel.Series.Add(lineSeries);
-                            MyModel.Series.Add(scatterSeries);
+                            var scatter = jobsPlot.AddScatter(
+                                new double[] { startDate, finishDate },
+                                new double[] { jIndex, jIndex },
+                                color: LineColor,
+                                markerShape: MarkerShape.filledCircle,
+                                markerSize: 5,
+                                lineWidth: 2);
+                            scatter.MarkerLineWidth = 1;
 
                         }
                     }
                 }
             }
 
-            var yAxis = new LinearAxis
-            {
-                Position = AxisPosition.Left,
-                Title = "Job Duration",
-                MajorStep = 1,
-                MinorStep = 1,
-                IsZoomEnabled = false,
-                IsPanEnabled = false,
-                LabelFormatter = value =>
-                {
-                    // Return the custom label if it exists; otherwise, return the default string representation
-                    if (customLabels.TryGetValue(value, out var label))
-                    {
-                        return label;
-                    }
-                    return value.ToString();
-                }
-            };
+            jobsPlot.YLabel("Job Duration");
+            jobsPlot.YTicks(customLabels.Keys.ToArray(), customLabels.Values.ToArray());
+            jobsPlot.SetAxisLimits(yMin: -0.5, yMax: customLabels.Count + 0.5);
 
-            MyModel.Axes.Add(yAxis);
-
-            this.AgentJobsTimelineModel.Model = MyModel;
+            AgentJobsTimelineModel.Refresh();
 
 
         }
