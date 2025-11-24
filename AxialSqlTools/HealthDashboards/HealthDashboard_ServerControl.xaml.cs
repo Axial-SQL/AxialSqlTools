@@ -23,7 +23,7 @@
     using DocumentFormat.OpenXml.Spreadsheet;
     using static AxialSqlTools.HealthDashboard_ServerControl;
     using ScottPlot;
-    using ScottPlot.Plottable;
+    using ScottPlot.Plottables;
     using ScottPlot.WPF;
     using ScottPlot.Palettes;
     using Color = System.Drawing.Color;
@@ -438,10 +438,10 @@
             usedBars.PositionOffset = -offset;
             freeBars.PositionOffset = offset;
 
-            diskPlot.YTicks(positions, labels);
+            diskPlot.Axes.Left.SetTicks(positions, labels);
             diskPlot.XLabel("Gb");
             diskPlot.SetAxisLimits(xMin: 0);
-            diskPlot.Legend(location: Alignment.UpperRight);
+            diskPlot.ShowLegend(Alignment.UpperRight);
 
             DiskInfoModel.Refresh();
 
@@ -543,9 +543,9 @@
             waitPlot.Title("Real-time Wait Stats");
 
             double[] positions = Enumerable.Range(0, sortedKeys.Count).Select(i => (double)i).ToArray();
-            waitPlot.YTicks(positions, sortedKeys.Select(k => k.ToString("HH:mm")).ToArray());
+            waitPlot.Axes.Left.SetTicks(positions, sortedKeys.Select(k => k.ToString("HH:mm")).ToArray());
             waitPlot.SetAxisLimits(xMin: 0);
-            waitPlot.Legend(true);
+            waitPlot.ShowLegend();
 
             var palette = new Category10();
             double offsetStep = 0.1;
@@ -850,7 +850,7 @@
             }
 
             backupTimelinePlot.YLabel("Backup Duration");
-            backupTimelinePlot.YTicks(customLabels.Keys.ToArray(), customLabels.Values.ToArray());
+            backupTimelinePlot.Axes.Left.SetTicks(customLabels.Keys.ToArray(), customLabels.Values.ToArray());
             backupTimelinePlot.SetAxisLimits(yMin: -0.5, yMax: customLabels.Count + 0.5);
 
             BackupTimelineModel.Refresh();
@@ -907,7 +907,7 @@
                 var pie = piePlot.AddPie(pieSizes.ToArray());
                 pie.SliceLabels = pieLabels.ToArray();
                 pie.Explode = true;
-                piePlot.Legend(true);
+                piePlot.ShowLegend();
             }
 
             BackupSizeModel.Refresh();
@@ -1022,7 +1022,7 @@
             }
 
             jobsPlot.YLabel("Job Duration");
-            jobsPlot.YTicks(customLabels.Keys.ToArray(), customLabels.Values.ToArray());
+            jobsPlot.Axes.Left.SetTicks(customLabels.Keys.ToArray(), customLabels.Values.ToArray());
             jobsPlot.SetAxisLimits(yMin: -0.5, yMax: customLabels.Count + 0.5);
 
             AgentJobsTimelineModel.Refresh();
