@@ -844,6 +844,31 @@ namespace AxialSqlTools
                 // Prefer tabs when the surrounding block already uses tabs; otherwise fall back to 4 spaces.
                 string indentAfterSelect = "\t";
 
+                string ExtractLineIndent(string whitespace)
+                {
+                    int lastNl = whitespace.LastIndexOf("\r\n");
+                    return lastNl >= 0 ? whitespace.Substring(lastNl + 2) : whitespace;
+                }
+
+                void ReduceInnerIndent(int startIdx, int endIdx, string indentUnit, int times)
+                {
+                    if (times <= 0 || string.IsNullOrEmpty(indentUnit))
+                        return;
+
+                    for (int i = startIdx; i <= endIdx && i < tokens.Count; i++)
+                    {
+                        if (tokens[i].TokenType != TSqlTokenType.WhiteSpace)
+                            continue;
+
+                        string ws = tokens[i].Text;
+                        for (int n = 0; n < times; n++)
+                        {
+                            ws = RemoveOneIndent(ws, indentUnit);
+                        }
+                        tokens[i].Text = ws;
+                    }
+                }
+
                 foreach (var qs in visitor.SelectsWithTopOrDistinct)
                 {
                     if (qs.SelectElements == null || qs.SelectElements.Count == 0)
@@ -853,11 +878,7 @@ namespace AxialSqlTools
                     int wsBeforeSelect = qs.FirstTokenIndex - 1;
                     if (wsBeforeSelect >= 0 && tokens[wsBeforeSelect].TokenType == TSqlTokenType.WhiteSpace)
                     {
-                        var ws = tokens[wsBeforeSelect].Text;
-                        int lastNl = ws.LastIndexOf("\r\n");
-                        baseIndent = lastNl >= 0
-                            ? ws.Substring(lastNl + 2)
-                            : ws;
+                        baseIndent = ExtractLineIndent(tokens[wsBeforeSelect].Text);
                     }
 
                     string indentUnit = baseIndent.Contains("\t") ? indentAfterSelect : new string(' ', 4);
@@ -869,7 +890,19 @@ namespace AxialSqlTools
                             && idx < tokens.Count
                             && tokens[idx].TokenType == TSqlTokenType.WhiteSpace)
                         {
+                            string original = tokens[idx].Text;
+                            string originalIndent = ExtractLineIndent(original);
                             tokens[idx].Text = "\r\n" + indent;
+
+                            // If we are pulling the element to the left, keep nested structure
+                            // aligned by reducing inner whitespace by the same indent units.
+                            if (originalIndent.Length > indent.Length)
+                            {
+                                int diff = originalIndent.Length - indent.Length;
+                                int unitSize = Math.Max(1, indentUnit.Length);
+                                int times = diff / unitSize;
+                                ReduceInnerIndent(idx + 1, qs.FromClause?.FirstTokenIndex - 1 ?? qs.LastTokenIndex, indentUnit, times);
+                            }
                         }
                     }
 
