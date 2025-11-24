@@ -880,11 +880,30 @@ namespace AxialSqlTools
                     if (string.IsNullOrEmpty(ws))
                         return ws;
 
-                    while (ws.Contains("\r\n\r\n"))
+                    var lines = ws.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                    List<string> compact = new List<string>();
+                    bool previousBlank = false;
+
+                    foreach (var line in lines)
                     {
-                        ws = ws.Replace("\r\n\r\n", "\r\n");
+                        bool isBlank = string.IsNullOrWhiteSpace(line);
+
+                        if (isBlank)
+                        {
+                            if (previousBlank)
+                                continue;
+
+                            compact.Add(string.Empty);
+                        }
+                        else
+                        {
+                            compact.Add(line);
+                        }
+
+                        previousBlank = isBlank;
                     }
-                    return ws;
+
+                    return string.Join("\r\n", compact);
                 }
 
                 void CollapseRangeWhitespace(int startIdx, int endIdx)
