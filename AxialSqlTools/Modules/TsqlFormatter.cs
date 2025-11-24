@@ -840,7 +840,9 @@ namespace AxialSqlTools
             if (formatSettings.breakSelectFieldsAfterTopAndUnindent)
             {
                 var tokens = sqlFragment.ScriptTokenStream;
-                const int indentSpacesBetweenSelectAndFields = 7;
+                // Keep field indentation predictable: always one indent level past the SELECT line.
+                // Prefer tabs when the surrounding block already uses tabs; otherwise fall back to 4 spaces.
+                string indentAfterSelect = "\t";
 
                 foreach (var qs in visitor.SelectsWithTopOrDistinct)
                 {
@@ -858,7 +860,8 @@ namespace AxialSqlTools
                             : ws;
                     }
 
-                    string fieldIndent = baseIndent + new string(' ', indentSpacesBetweenSelectAndFields);
+                    string indentUnit = baseIndent.Contains("\t") ? indentAfterSelect : new string(' ', 4);
+                    string fieldIndent = baseIndent + indentUnit;
 
                     void ReplaceWhitespaceWithIndent(int idx, string indent)
                     {
