@@ -556,14 +556,16 @@
 
             var barModelWS = new PlotModel { Title = "Real-time Wait Stats" };
 
-            var categoryAxis = new CategoryAxis { 
-                Position = AxisPosition.Left,
+            var categoryAxis = new CategoryAxis
+            {
+                Position = AxisPosition.Bottom,
                 IsZoomEnabled = false,
                 IsPanEnabled = false
             };
-            var valueAxis = new LinearAxis { 
-                Position = AxisPosition.Bottom, 
-                MinimumPadding = 0, 
+            var valueAxis = new LinearAxis
+            {
+                Position = AxisPosition.Left,
+                MinimumPadding = 0,
                 AbsoluteMinimum = 0,
                 IsZoomEnabled = false,
                 IsPanEnabled = false
@@ -594,23 +596,22 @@
 
             foreach (var previousWaitStat in previousWaitStats)
             {
-                var barSeriesWS = new BarSeries
+                var barSeriesWS = new ColumnSeries
                 {
                     //LabelPlacement = LabelPlacement.Inside,
                     //LabelFormatString = "{0:0}", // Adjust this to change how the labels are formatted
                     StrokeColor = OxyColors.Black,
                     StrokeThickness = 1,
-                    IsStacked = true
+                    IsStacked = true,
+                    Title = previousWaitStat.WaitName
                 };
 
-                barSeriesWS.Title = previousWaitStat.WaitName;
-
-                foreach (var aggValue in aggrData)
+                foreach (var key in sortedKeys)
                 {
-                    foreach (WaitsInfo ws in aggValue.Value)
-                        if (ws.WaitName == previousWaitStat.WaitName)
-                            barSeriesWS.Items.Add(new BarItem { Value = (double)ws.WaitSec }); //, Color = OxyColors.LightPink });
+                    var matchingWait = aggrData[key].FirstOrDefault(ws => ws.WaitName == previousWaitStat.WaitName);
+                    barSeriesWS.Items.Add(new ColumnItem { Value = matchingWait?.WaitSec ?? 0 });
                 }
+
                 barModelWS.Series.Add(barSeriesWS);
             }
 
