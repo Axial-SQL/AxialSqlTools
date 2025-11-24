@@ -869,10 +869,46 @@ namespace AxialSqlTools
                     }
                 }
 
+                string SingleLineIndent(string indent)
+                {
+                    // collapse any accidental blank lines and keep a single newline + indent
+                    return "\r\n" + (indent ?? string.Empty);
+                }
+
+                string CollapseBlankLines(string ws)
+                {
+                    if (string.IsNullOrEmpty(ws))
+                        return ws;
+
+                    while (ws.Contains("\r\n\r\n"))
+                    {
+                        ws = ws.Replace("\r\n\r\n", "\r\n");
+                    }
+                    return ws;
+                }
+
+                void CollapseRangeWhitespace(int startIdx, int endIdx)
+                {
+                    for (int i = startIdx; i <= endIdx && i < tokens.Count; i++)
+                    {
+                        if (i < 0)
+                            continue;
+
+                        if (tokens[i].TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            tokens[i].Text = CollapseBlankLines(tokens[i].Text);
+                        }
+                    }
+                }
+
                 foreach (var qs in visitor.SelectsWithTopOrDistinct)
                 {
                     if (qs.SelectElements == null || qs.SelectElements.Count == 0)
                         continue;
+
+                    int normalizeStart = Math.Max(0, qs.SelectElements[0].FirstTokenIndex - 1);
+                    int normalizeEnd = qs.FromClause?.FirstTokenIndex - 1 ?? qs.LastTokenIndex;
+                    CollapseRangeWhitespace(normalizeStart, normalizeEnd);
 
                     string baseIndent = "";
                     int wsBeforeSelect = qs.FirstTokenIndex - 1;
@@ -892,7 +928,7 @@ namespace AxialSqlTools
                         {
                             string original = tokens[idx].Text;
                             string originalIndent = ExtractLineIndent(original);
-                            tokens[idx].Text = "\r\n" + indent;
+                            tokens[idx].Text = SingleLineIndent(indent);
 
                             // If we are pulling the element to the left, keep nested structure
                             // aligned by reducing inner whitespace by the same indent units.
