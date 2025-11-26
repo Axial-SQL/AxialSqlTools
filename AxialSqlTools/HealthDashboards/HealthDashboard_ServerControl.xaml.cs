@@ -409,41 +409,41 @@
             waitsStatsAggregator.UpdateWaitStats(metrics.WaitStatsInfo);
             UpdateWaitStatsGraph(waitsStatsAggregator.previousWaitStats, waitsStatsAggregator.GetAggregatedData());
 
-            //--------------------------------------------------------------------
-            // Disk info graph
-            var diskPlot = DiskInfoModel.Plot;
-            diskPlot.Clear();
-            diskPlot.Title("Volume(s) Utilization");
-
-            double[] positions = Enumerable.Range(0, metrics.DisksInfo.Count).Select(i => (double)i).ToArray();
-            double[] usedValues = metrics.DisksInfo.Select(disk => disk.UsedSpaceGb).ToArray();
-            double[] freeValues = metrics.DisksInfo.Select(disk => disk.FreeSpaceGb).ToArray();
-            string[] labels = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToArray();
-
-            var usedBars = diskPlot.AddBar(usedValues, positions);
-            usedBars.Horizontal = true;
-            usedBars.Label = "Used";
-            usedBars.FillColor = Color.LightPink;
-            usedBars.BorderColor = Color.Black;
-            usedBars.ValueFormatter = x => $"{x:0} Gb";
-
-            var freeBars = diskPlot.AddBar(freeValues, positions);
-            freeBars.Horizontal = true;
-            freeBars.Label = "Free";
-            freeBars.FillColor = Color.LightBlue;
-            freeBars.BorderColor = Color.Black;
-            freeBars.ValueFormatter = x => $"{x:0} Gb";
-
-            double offset = usedBars.BarWidth / 2;
-            usedBars.PositionOffset = -offset;
-            freeBars.PositionOffset = offset;
-
-            diskPlot.Axes.Left.SetTicks(positions, labels);
-            diskPlot.XLabel("Gb");
-            diskPlot.SetAxisLimits(xMin: 0);
-            diskPlot.ShowLegend(Alignment.UpperRight);
-
-            DiskInfoModel.Refresh();
+            ////--------------------------------------------------------------------
+            //// Disk info graph
+            //var diskPlot = DiskInfoModel.Plot;
+            //diskPlot.Clear();
+            //diskPlot.Title("Volume(s) Utilization");
+            //
+            //double[] positions = Enumerable.Range(0, metrics.DisksInfo.Count).Select(ii => (double)ii).ToArray();
+            //long[] usedValues = metrics.DisksInfo.Select(disk => disk.UsedSpaceGb).ToArray();
+            //long[] freeValues = metrics.DisksInfo.Select(disk => disk.FreeSpaceGb).ToArray();
+            //string[] labels = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToArray();
+            //
+            //var usedBars = diskPlot.AddBar(usedValues, positions);
+            //usedBars.Horizontal = true;
+            //usedBars.Label = "Used";
+            //usedBars.FillColor = Color.LightPink;
+            //usedBars.BorderColor = Color.Black;
+            //usedBars.ValueFormatter = x => $"{x:0} Gb";
+            //
+            //var freeBars = diskPlot.AddBar(freeValues, positions);
+            //freeBars.Horizontal = true;
+            //freeBars.Label = "Free";
+            //freeBars.FillColor = Color.LightBlue;
+            //freeBars.BorderColor = Color.Black;
+            //freeBars.ValueFormatter = x => $"{x:0} Gb";
+            //
+            //double offset = usedBars.BarWidth / 2;
+            //usedBars.PositionOffset = -offset;
+            //freeBars.PositionOffset = offset;
+            //
+            //diskPlot.Axes.Left.SetTicks(positions, labels);
+            //diskPlot.XLabel("Gb");
+            //diskPlot.SetAxisLimits(xMin: 0);
+            //diskPlot.ShowLegend(Alignment.UpperRight);
+            //
+            //DiskInfoModel.Refresh();
 
 
             //--------------------------------------------------------------------
@@ -537,38 +537,38 @@
         private void UpdateWaitStatsGraph(List<WaitsInfo> previousWaitStats, Dictionary<DateTime, List<WaitsInfo>> aggrData)
         {
 
-            var sortedKeys = aggrData.Keys.OrderBy(k => k).ToList();
-            var waitPlot = WaitStatsModel.Plot;
-            waitPlot.Clear();
-            waitPlot.Title("Real-time Wait Stats");
-
-            double[] positions = Enumerable.Range(0, sortedKeys.Count).Select(i => (double)i).ToArray();
-            waitPlot.Axes.Left.SetTicks(positions, sortedKeys.Select(k => k.ToString("HH:mm")).ToArray());
-            waitPlot.SetAxisLimits(xMin: 0);
-            waitPlot.ShowLegend();
-
-            var palette = new Category10();
-            double offsetStep = 0.1;
-            int seriesIndex = 0;
-
-            foreach (var previousWaitStat in previousWaitStats)
-            {
-                double[] values = sortedKeys
-                    .Select(key => aggrData[key].FirstOrDefault(ws => ws.WaitName == previousWaitStat.WaitName)?.WaitSec ?? 0)
-                    .Select(v => (double)v)
-                    .ToArray();
-
-                var barSeries = waitPlot.AddBar(values, positions);
-                barSeries.Horizontal = true;
-                barSeries.Label = previousWaitStat.WaitName;
-                barSeries.FillColor = palette.GetColor(seriesIndex % palette.Count);
-                barSeries.BorderColor = Color.Black;
-                barSeries.PositionOffset = (seriesIndex - (previousWaitStats.Count / 2.0)) * offsetStep;
-
-                seriesIndex++;
-            }
-
-            WaitStatsModel.Refresh();
+            //var sortedKeys = aggrData.Keys.OrderBy(k => k).ToList();
+            //var waitPlot = WaitStatsModel.Plot;
+            //waitPlot.Clear();
+            //waitPlot.Title("Real-time Wait Stats");
+            //
+            //double[] positions = Enumerable.Range(0, sortedKeys.Count).Select(i => (double)i).ToArray();
+            //waitPlot.Axes.Left.SetTicks(positions, sortedKeys.Select(k => k.ToString("HH:mm")).ToArray());
+            //waitPlot.SetAxisLimits(xMin: 0);
+            //waitPlot.ShowLegend();
+            //
+            //var palette = new Category10();
+            //double offsetStep = 0.1;
+            //int seriesIndex = 0;
+            //
+            //foreach (var previousWaitStat in previousWaitStats)
+            //{
+            //    double[] values = sortedKeys
+            //        .Select(key => aggrData[key].FirstOrDefault(ws => ws.WaitName == previousWaitStat.WaitName)?.WaitSec ?? 0)
+            //        .Select(v => (double)v)
+            //        .ToArray();
+            //
+            //    var barSeries = waitPlot.AddBar(values, positions);
+            //    barSeries.Horizontal = true;
+            //    barSeries.Label = previousWaitStat.WaitName;
+            //    barSeries.FillColor = palette.GetColor(seriesIndex % palette.Count);
+            //    barSeries.BorderColor = Color.Black;
+            //    barSeries.PositionOffset = (seriesIndex - (previousWaitStats.Count / 2.0)) * offsetStep;
+            //
+            //    seriesIndex++;
+            //}
+            //
+            //WaitStatsModel.Refresh();
         }
 
         private void AddPerformanceSample(HealthDashboardServerMetric metrics)
@@ -600,22 +600,22 @@
 
         private void UpdateTimeSeriesPlot(WpfPlot targetPlot, string title, string yAxisTitle, Func<PerformanceSample, double> valueSelector, bool clampToZero = true)
         {
-            var orderedSamples = _performanceSamples.OrderBy(s => s.Timestamp).ToList();
-
-            double[] xs = orderedSamples.Select(s => s.Timestamp.ToOADate()).ToArray();
-            double[] ys = orderedSamples.Select(valueSelector).ToArray();
-
-            var plt = targetPlot.Plot;
-            plt.Clear();
-            plt.Title(title);
-            plt.XAxis.DateTimeFormat(true);
-            plt.YLabel(yAxisTitle);
-            plt.AddScatter(xs, ys, markerSize: 2, lineWidth: 2);
-
-            if (clampToZero)
-                plt.SetAxisLimits(yMin: 0);
-
-            targetPlot.Refresh();
+            //var orderedSamples = _performanceSamples.OrderBy(s => s.Timestamp).ToList();
+            //
+            //double[] xs = orderedSamples.Select(s => s.Timestamp.ToOADate()).ToArray();
+            //double[] ys = orderedSamples.Select(valueSelector).ToArray();
+            //
+            //var plt = targetPlot.Plot;
+            //plt.Clear();
+            //plt.Title(title);
+            //plt.XAxis.DateTimeFormat(true);
+            //plt.YLabel(yAxisTitle);
+            //plt.AddScatter(xs, ys, markerSize: 2, lineWidth: 2);
+            //
+            //if (clampToZero)
+            //    plt.SetAxisLimits(yMin: 0);
+            //
+            //targetPlot.Refresh();
         }
 
         private void UpdatePerformanceCharts()
@@ -760,7 +760,7 @@
 
         private void BackupTimelineModelRefresh_Click(object sender, RoutedEventArgs e)
         {
-
+            /*
             //var ci = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
             int BackupHistoryPeriod = 1;
@@ -911,12 +911,13 @@
             }
 
             BackupSizeModel.Refresh();
+            */
 
         }
 
         private void AgentJobsTimelineModelRefresh_Click(object sender, RoutedEventArgs e)
         {
-
+            /*
             int AgentJobHistoryPeriod = 1;
             //TODO
             int.TryParse(AgentJobsTimelinePeriodNumberTextBox.Text, out AgentJobHistoryPeriod);
@@ -953,9 +954,9 @@
             ORDER BY 
                 StartTime DESC;
 
-            /* CREATE INDEX IDX_sysjobhistory_1
+            / * CREATE INDEX IDX_sysjobhistory_1
                 ON sysjobhistory(job_id, step_id, run_date, run_time) 
-	            WITH (DATA_COMPRESSION = PAGE, ONLINE = ON, MAXDOP = 4); */
+	            WITH (DATA_COMPRESSION = PAGE, ONLINE = ON, MAXDOP = 4); * /
             ";
 
             var jobsPlot = AgentJobsTimelineModel.Plot;
@@ -1026,7 +1027,7 @@
             jobsPlot.SetAxisLimits(yMin: -0.5, yMax: customLabels.Count + 0.5);
 
             AgentJobsTimelineModel.Refresh();
-
+            */
 
         }
 
