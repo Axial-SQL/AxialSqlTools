@@ -561,7 +561,7 @@
             //    var barSeries = waitPlot.AddBar(values, positions);
             //    barSeries.Horizontal = true;
             //    barSeries.Label = previousWaitStat.WaitName;
-            //    barSeries.FillColor = palette.GetColor(seriesIndex % palette.Count);
+            //    barSeries.FillColor = palette.GetColor(seriesIndex % palette.Count());
             //    barSeries.BorderColor = Color.Black;
             //    barSeries.PositionOffset = (seriesIndex - (previousWaitStats.Count / 2.0)) * offsetStep;
             //
@@ -600,22 +600,23 @@
 
         private void UpdateTimeSeriesPlot(WpfPlot targetPlot, string title, string yAxisTitle, Func<PerformanceSample, double> valueSelector, bool clampToZero = true)
         {
-            //var orderedSamples = _performanceSamples.OrderBy(s => s.Timestamp).ToList();
-            //
-            //double[] xs = orderedSamples.Select(s => s.Timestamp.ToOADate()).ToArray();
-            //double[] ys = orderedSamples.Select(valueSelector).ToArray();
-            //
-            //var plt = targetPlot.Plot;
-            //plt.Clear();
-            //plt.Title(title);
-            //plt.XAxis.DateTimeFormat(true);
-            //plt.YLabel(yAxisTitle);
-            //plt.AddScatter(xs, ys, markerSize: 2, lineWidth: 2);
-            //
+            var orderedSamples = _performanceSamples.OrderBy(s => s.Timestamp).ToList();
+            
+            double[] xs = orderedSamples.Select(s => s.Timestamp.ToOADate()).ToArray();
+            double[] ys = orderedSamples.Select(valueSelector).ToArray();
+            
+            var plt = targetPlot.Plot;
+            plt.Clear();
+            plt.Title(title);            
+            // plt.XAxis.DateTimeFormat(true);
+            plt.YLabel(yAxisTitle);
+            // plt.AddScatter(xs, ys, markerSize: 2, lineWidth: 2);
+            plt.Add.Scatter(xs, ys);
+            
             //if (clampToZero)
-            //    plt.SetAxisLimits(yMin: 0);
-            //
-            //targetPlot.Refresh();
+            //    plt.Axes.SetLimits(yMin: 0);
+
+            targetPlot.Refresh();
         }
 
         private void UpdatePerformanceCharts()

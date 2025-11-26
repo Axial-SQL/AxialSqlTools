@@ -406,6 +406,17 @@ namespace AxialSqlTools
                 _logger.Error(ex, "An exception occurred");
             }
 
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+
+        }
+
+        private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            // add this into main module -> AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+
+            if (args.Name.Contains("OxyPlot") || args.Name.Contains("SkiaSharp"))
+                return AppDomain.CurrentDomain.Load(args.Name);
+            else return null;
         }
 
         #endregion

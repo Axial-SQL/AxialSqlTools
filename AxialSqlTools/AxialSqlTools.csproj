@@ -243,9 +243,6 @@
     <PackageReference Include="ScottPlot.WPF">
       <Version>5.1.57</Version>
     </PackageReference>
-    <PackageReference Include="SkiaSharp">
-      <Version>3.119.1</Version>
-    </PackageReference>
     <PackageReference Include="SkiaSharp.Views.WPF">
       <Version>3.119.1</Version>
     </PackageReference>
