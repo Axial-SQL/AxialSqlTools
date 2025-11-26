@@ -1,31 +1,33 @@
 ﻿namespace AxialSqlTools
 {
+    using DocumentFormat.OpenXml.Bibliography;
+    using DocumentFormat.OpenXml.Spreadsheet;
+    using Microsoft.Identity.Client;
     using Microsoft.SqlServer.Management.Smo.RegSvrEnum;
     using Microsoft.SqlServer.Management.UI.VSIntegration;
+    using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
     using Microsoft.VisualStudio.Shell;
+    using ScottPlot;
+    using ScottPlot.Palettes;
+    using ScottPlot.Plottables;
+    using ScottPlot.TickGenerators;
+    using ScottPlot.WPF;
     using System;
+    using System.Collections.Generic;
     using System.Data.SqlClient;
+    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.Linq;
+    using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Windows;
-    using System.Windows.Media; 
     using System.Windows.Controls;
-    using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
-    using System.Net.Http;
-    using System.Collections.Generic;
     using System.Windows.Input;
-    using System.Linq;
-    using static HealthDashboardServerMetric;
-    using System.Diagnostics;
+    using System.Windows.Media; 
     using static AxialSqlTools.AxialSqlToolsPackage;
-    using DocumentFormat.OpenXml.Bibliography;
-    using DocumentFormat.OpenXml.Spreadsheet;
     using static AxialSqlTools.HealthDashboard_ServerControl;
-    using ScottPlot;
-    using ScottPlot.Plottables;
-    using ScottPlot.WPF;
-    using ScottPlot.Palettes;
+    using static HealthDashboardServerMetric;
     using Color = System.Drawing.Color;
 
     /// <summary>
@@ -409,41 +411,7 @@
             waitsStatsAggregator.UpdateWaitStats(metrics.WaitStatsInfo);
             UpdateWaitStatsGraph(waitsStatsAggregator.previousWaitStats, waitsStatsAggregator.GetAggregatedData());
 
-            ////--------------------------------------------------------------------
-            //// Disk info graph
-            //var diskPlot = DiskInfoModel.Plot;
-            //diskPlot.Clear();
-            //diskPlot.Title("Volume(s) Utilization");
-            //
-            //double[] positions = Enumerable.Range(0, metrics.DisksInfo.Count).Select(ii => (double)ii).ToArray();
-            //long[] usedValues = metrics.DisksInfo.Select(disk => disk.UsedSpaceGb).ToArray();
-            //long[] freeValues = metrics.DisksInfo.Select(disk => disk.FreeSpaceGb).ToArray();
-            //string[] labels = metrics.DisksInfo.Select(disk => disk.VolumeDescription).ToArray();
-            //
-            //var usedBars = diskPlot.AddBar(usedValues, positions);
-            //usedBars.Horizontal = true;
-            //usedBars.Label = "Used";
-            //usedBars.FillColor = Color.LightPink;
-            //usedBars.BorderColor = Color.Black;
-            //usedBars.ValueFormatter = x => $"{x:0} Gb";
-            //
-            //var freeBars = diskPlot.AddBar(freeValues, positions);
-            //freeBars.Horizontal = true;
-            //freeBars.Label = "Free";
-            //freeBars.FillColor = Color.LightBlue;
-            //freeBars.BorderColor = Color.Black;
-            //freeBars.ValueFormatter = x => $"{x:0} Gb";
-            //
-            //double offset = usedBars.BarWidth / 2;
-            //usedBars.PositionOffset = -offset;
-            //freeBars.PositionOffset = offset;
-            //
-            //diskPlot.Axes.Left.SetTicks(positions, labels);
-            //diskPlot.XLabel("Gb");
-            //diskPlot.SetAxisLimits(xMin: 0);
-            //diskPlot.ShowLegend(Alignment.UpperRight);
-            //
-            //DiskInfoModel.Refresh();
+            UpdateDiskSpaceGraph(metrics);          
 
 
             //--------------------------------------------------------------------
@@ -534,41 +502,194 @@
 
         }
 
+        private void UpdateDiskSpaceGraph(HealthDashboardServerMetric metrics)
+        {
+            var diskPlot = DiskInfoModel.Plot;
+            diskPlot.Clear();
+            diskPlot.Title("Volume(s) Utilization");
+
+            int count = metrics.DisksInfo.Count;
+            if (count == 0)
+            {
+                DiskInfoModel.Refresh();
+                return;
+            }
+
+            // group positions (one group per volume)
+            double[] groupPositions = Enumerable.Range(0, count)
+                .Select(i => (double)i)
+                .ToArray();
+
+            double[] usedValues = metrics.DisksInfo
+                .Select(disk => (double)disk.UsedSpaceGb)
+                .ToArray();
+
+            double[] freeValues = metrics.DisksInfo
+                .Select(disk => (double)disk.FreeSpaceGb)
+                .ToArray();
+
+            string[] labels = metrics.DisksInfo
+                .Select(disk => disk.VolumeDescription)
+                .ToArray();
+
+            // create grouped bars by offsetting positions, as in the Bar Positioning example
+            double groupOffset = 0.18; // half the distance between used/free inside a group
+
+            List<ScottPlot.Bar> usedBarsList = new List<ScottPlot.Bar>();
+            List<ScottPlot.Bar> freeBarsList = new List<ScottPlot.Bar>();
+
+            for (int i = 0; i < count; i++)
+            {
+                double center = groupPositions[i];
+
+                usedBarsList.Add(new ScottPlot.Bar
+                {
+                    Position = center - groupOffset,
+                    Value = usedValues[i],
+                    FillColor = ScottPlot.Colors.Pink
+                });
+
+                freeBarsList.Add(new ScottPlot.Bar
+                {
+                    Position = center + groupOffset,
+                    Value = freeValues[i],
+                    FillColor = ScottPlot.Colors.LightBlue
+                });
+            }
+
+            // add bar series
+            var usedBars = diskPlot.Add.Bars(usedBarsList);
+            usedBars.Horizontal = true;
+            usedBars.LegendText = "Used";
+
+            var freeBars = diskPlot.Add.Bars(freeBarsList);
+            freeBars.Horizontal = true;
+            freeBars.LegendText = "Free";
+
+            // style borders per bar (v5 styles each bar individually)
+            foreach (var bar in usedBars.Bars)
+            {
+                bar.LineWidth = 1;
+                bar.LineColor = ScottPlot.Colors.Black;
+                bar.Label = $"{bar.Value:0} Gb"; // optional value label
+            }
+
+            foreach (var bar in freeBars.Bars)
+            {
+                bar.LineWidth = 1;
+                bar.LineColor = ScottPlot.Colors.Black;
+                bar.Label = $"{bar.Value:0} Gb"; // optional value label
+            }
+
+            // style label text (borrowed from Bar with Value Labels examples)
+            usedBars.ValueLabelStyle.FontSize = 10;
+            freeBars.ValueLabelStyle.FontSize = 10;
+
+            // horizontal bar layout: left axis has volume names
+            diskPlot.Axes.Left.SetTicks(groupPositions, labels);
+
+            diskPlot.XLabel("Gb");
+
+            // remove padding on the left so bars start at the axis, like Horizontal Bar example
+            diskPlot.Axes.Margins(left: 0);
+
+            // autoscale then clamp X to start at 0
+            diskPlot.Axes.AutoScale();
+            var limits = diskPlot.Axes.GetLimits();
+            diskPlot.Axes.SetLimitsX(0, limits.Right);
+
+            // legend (v5 style)
+            diskPlot.ShowLegend(ScottPlot.Alignment.UpperRight);
+
+            DiskInfoModel.Refresh();
+
+
+        }
         private void UpdateWaitStatsGraph(List<WaitsInfo> previousWaitStats, Dictionary<DateTime, List<WaitsInfo>> aggrData)
         {
 
-            //var sortedKeys = aggrData.Keys.OrderBy(k => k).ToList();
-            //var waitPlot = WaitStatsModel.Plot;
-            //waitPlot.Clear();
-            //waitPlot.Title("Real-time Wait Stats");
-            //
-            //double[] positions = Enumerable.Range(0, sortedKeys.Count).Select(i => (double)i).ToArray();
-            //waitPlot.Axes.Left.SetTicks(positions, sortedKeys.Select(k => k.ToString("HH:mm")).ToArray());
-            //waitPlot.SetAxisLimits(xMin: 0);
-            //waitPlot.ShowLegend();
-            //
-            //var palette = new Category10();
-            //double offsetStep = 0.1;
-            //int seriesIndex = 0;
-            //
-            //foreach (var previousWaitStat in previousWaitStats)
-            //{
-            //    double[] values = sortedKeys
-            //        .Select(key => aggrData[key].FirstOrDefault(ws => ws.WaitName == previousWaitStat.WaitName)?.WaitSec ?? 0)
-            //        .Select(v => (double)v)
-            //        .ToArray();
-            //
-            //    var barSeries = waitPlot.AddBar(values, positions);
-            //    barSeries.Horizontal = true;
-            //    barSeries.Label = previousWaitStat.WaitName;
-            //    barSeries.FillColor = palette.GetColor(seriesIndex % palette.Count());
-            //    barSeries.BorderColor = Color.Black;
-            //    barSeries.PositionOffset = (seriesIndex - (previousWaitStats.Count / 2.0)) * offsetStep;
-            //
-            //    seriesIndex++;
-            //}
-            //
-            //WaitStatsModel.Refresh();
+            var plot = WaitStatsModel.Plot;
+
+            plot.Clear();
+
+            // sort timestamps
+            var sortedKeys = aggrData.Keys.OrderBy(k => k).ToList();
+
+            // positions along the vertical axis (since we will use Horizontal = true)
+            double[] positions = Enumerable.Range(0, sortedKeys.Count)
+                .Select(i => (double)i)
+                .ToArray();
+
+            // time labels on the left axis
+            string[] timeLabels = sortedKeys
+                .Select(k => k.ToString("HH:mm"))
+                .ToArray();
+
+            plot.Axes.Left.SetTicks(positions, timeLabels);
+            plot.Axes.Margins(left: 0, bottom: 0, top: 0.2);
+
+            // palette for wait types
+            var palette = new Category10();
+
+            // build legend manually - one item per wait type
+            plot.Legend.IsVisible = true;
+            plot.Legend.Orientation = ScottPlot.Orientation.Horizontal;
+            plot.Legend.Alignment = ScottPlot.Alignment.UpperRight;
+
+            plot.Legend.ManualItems.Clear();
+            for (int i = 0; i < previousWaitStats.Count; i++)
+            {
+                var wait = previousWaitStats[i];
+                var color = palette.GetColor(i % palette.Count());
+
+                plot.Legend.ManualItems.Add(new LegendItem
+                {
+                    LabelText = wait.WaitName,
+                    FillColor = color
+                });
+            }
+
+            // for each timestamp, create a horizontal stack of bars
+            for (int t = 0; t < sortedKeys.Count; t++)
+            {
+                DateTime key = sortedKeys[t];
+                var waitsAtTime = aggrData[key];
+
+                // one stacked group (all wait types) at this time position
+                List<ScottPlot.Bar> bars = new List<ScottPlot.Bar>();
+                double valueBase = 0;
+
+                for (int s = 0; s < previousWaitStats.Count; s++)
+                {
+                    string waitName = previousWaitStats[s].WaitName;
+
+                    double value = (double)(waitsAtTime.FirstOrDefault(ws => ws.WaitName == waitName)?.WaitSec ?? 0);
+
+                    if (value <= 0)
+                        continue;
+
+                    double top = valueBase + value;
+
+                    var bar = new ScottPlot.Bar
+                    {
+                        Position = positions[t],       // vertical position (y) when Horizontal = true
+                        ValueBase = valueBase,         // start of this segment
+                        Value = top,                   // end of this segment
+                        FillColor = palette.GetColor(s % palette.Count())
+                    };
+
+                    bars.Add(bar);
+                    valueBase = top;
+                }
+
+                if (bars.Count > 0)
+                {
+                    var barPlot = plot.Add.Bars(bars);
+                    barPlot.Horizontal = true;        // make it a horizontal stacked bar
+                }
+            }
+
+            WaitStatsModel.Refresh();
         }
 
         private void AddPerformanceSample(HealthDashboardServerMetric metrics)
@@ -600,21 +721,41 @@
 
         private void UpdateTimeSeriesPlot(WpfPlot targetPlot, string title, string yAxisTitle, Func<PerformanceSample, double> valueSelector, bool clampToZero = true)
         {
+            // order samples by time
             var orderedSamples = _performanceSamples.OrderBy(s => s.Timestamp).ToList();
-            
-            double[] xs = orderedSamples.Select(s => s.Timestamp.ToOADate()).ToArray();
+
+            // ScottPlot 5 can take DateTime[] directly for X
+            DateTime[] xs = orderedSamples.Select(s => s.Timestamp).ToArray();
+
             double[] ys = orderedSamples.Select(valueSelector).ToArray();
-            
+
             var plt = targetPlot.Plot;
             plt.Clear();
-            plt.Title(title);            
-            // plt.XAxis.DateTimeFormat(true);
+
+            // title and axis labels helpers (ScottPlot 5 quickstart) :contentReference[oaicite:1]{index=1}
+            plt.Title(title);
             plt.YLabel(yAxisTitle);
-            // plt.AddScatter(xs, ys, markerSize: 2, lineWidth: 2);
-            plt.Add.Scatter(xs, ys);
-            
-            //if (clampToZero)
-            //    plt.Axes.SetLimits(yMin: 0);
+            // optional, but usually useful
+            plt.XLabel("Time");
+
+            // use a DateTime bottom axis (ScottPlot 5 DateTime axis quickstart) :contentReference[oaicite:2]{index=2}
+            var dtAxis = plt.Axes.DateTimeTicksBottom();
+            var autoTicks = (ScottPlot.TickGenerators.DateTimeAutomatic)dtAxis.TickGenerator;
+            autoTicks.LabelFormatter = dt => dt.ToString("HH:mm");
+
+            // scatter with DateTime X values (ScottPlot 5 scatter examples) :contentReference[oaicite:3]{index=3}
+            var scatter = plt.Add.Scatter(xs, ys);
+            scatter.MarkerSize = 2;
+            scatter.LineWidth = 2;
+
+            // autoscale to fit data, then clamp Y to zero if requested
+            plt.Axes.AutoScale();
+
+            if (clampToZero)
+            {
+                var limits = plt.Axes.GetLimits();
+                plt.Axes.SetLimitsY(bottom: 0, top: limits.Top);
+            }
 
             targetPlot.Refresh();
         }
