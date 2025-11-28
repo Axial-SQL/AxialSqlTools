@@ -23,7 +23,7 @@ namespace AxialSqlTools
             public List<CreateProcedureStatement> SprocDefinitionsCreate = new List<CreateProcedureStatement>();
             public List<AlterProcedureStatement> SprocDefinitionsAlter = new List<AlterProcedureStatement>();
             public List<CreateOrAlterProcedureStatement> SprocDefinitionsCreateAlter = new List<CreateOrAlterProcedureStatement>();
-            public List<QuerySpecification> SelectsWithTop = new List<QuerySpecification>();
+            public List<QuerySpecification> SelectsWithTopOrDistinct = new List<QuerySpecification>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -197,8 +197,8 @@ namespace AxialSqlTools
             public override void ExplicitVisit(QuerySpecification node)
             {
                 base.ExplicitVisit(node);
-                if (node.TopRowFilter != null)
-                    SelectsWithTop.Add(node);
+                if (node.TopRowFilter != null || node.UniqueRowFilter == UniqueRowFilter.Distinct)
+                    SelectsWithTopOrDistinct.Add(node);
             }
         }
 
@@ -836,43 +836,146 @@ namespace AxialSqlTools
 
             }
 
-            // special case #11 - split SELECT fields after TOP, fixed indent up to FROM
-            // TODO - can't get this right, so disabled for now
+            // special case #11 - split SELECT fields after DISTINCT/TOP, fixed indent up to FROM
             if (formatSettings.breakSelectFieldsAfterTopAndUnindent)
             {
-                //var tokens = sqlFragment.ScriptTokenStream;
-                //const string indent = "\t";
+                var tokens = sqlFragment.ScriptTokenStream;
+                // Keep field indentation predictable: always one indent level past the SELECT line.
+                // Prefer tabs when the surrounding block already uses tabs; otherwise fall back to 4 spaces.
+                string indentAfterSelect = "\t";
 
-                //foreach (var qs in visitor.SelectsWithTop)
-                //{
-                //    // 1) break right after TOP(...) into "\r\n\t"
-                //    int splitIdx = qs.TopRowFilter.LastTokenIndex + 1;
-                //    if (splitIdx < tokens.Count
-                //     && tokens[splitIdx].TokenType == TSqlTokenType.WhiteSpace)
-                //    {
-                //        tokens[splitIdx].Text = "\r\n" + indent;
-                //    }
+                string ExtractLineIndent(string whitespace)
+                {
+                    int lastNl = whitespace.LastIndexOf("\r\n");
+                    return lastNl >= 0 ? whitespace.Substring(lastNl + 2) : whitespace;
+                }
 
-                //    //// 2) for every select‐element after the first, break before it into "\r\n\t"
-                //    //for (int i = 1; i < qs.SelectElements.Count; i++)
-                //    //{
-                //    //    var elem = qs.SelectElements[i];
-                //    //    int wsIdx = elem.FirstTokenIndex - 1;
-                //    //    if (wsIdx >= 0
-                //    //     && tokens[wsIdx].TokenType == TSqlTokenType.WhiteSpace)
-                //    //    {
-                //    //        tokens[wsIdx].Text = "\r\n" + indent;
-                //    //    }
-                //    //}
+                void ReduceInnerIndent(int startIdx, int endIdx, string indentUnit, int times)
+                {
+                    if (times <= 0 || string.IsNullOrEmpty(indentUnit))
+                        return;
 
-                //    //// 3) unindent FROM back to column 1
-                //    //int wsBeforeFrom = qs.FromClause.FirstTokenIndex - 1;
-                //    //if (wsBeforeFrom >= 0
-                //    // && tokens[wsBeforeFrom].TokenType == TSqlTokenType.WhiteSpace)
-                //    //{
-                //    //    tokens[wsBeforeFrom].Text = "\r\n";
-                //    //}
-                //}
+                    for (int i = startIdx; i <= endIdx && i < tokens.Count; i++)
+                    {
+                        if (tokens[i].TokenType != TSqlTokenType.WhiteSpace)
+                            continue;
+
+                        string ws = tokens[i].Text;
+                        for (int n = 0; n < times; n++)
+                        {
+                            ws = RemoveOneIndent(ws, indentUnit);
+                        }
+                        tokens[i].Text = ws;
+                    }
+                }
+
+                string SingleLineIndent(string indent)
+                {
+                    // collapse any accidental blank lines and keep a single newline + indent
+                    return "\r\n" + (indent ?? string.Empty);
+                }
+
+                string CollapseBlankLines(string ws)
+                {
+                    if (string.IsNullOrEmpty(ws))
+                        return ws;
+
+                    var lines = ws.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                    List<string> compact = new List<string>();
+                    bool previousBlank = false;
+
+                    foreach (var line in lines)
+                    {
+                        bool isBlank = string.IsNullOrWhiteSpace(line);
+
+                        if (isBlank)
+                        {
+                            if (previousBlank)
+                                continue;
+
+                            compact.Add(string.Empty);
+                        }
+                        else
+                        {
+                            compact.Add(line);
+                        }
+
+                        previousBlank = isBlank;
+                    }
+
+                    return string.Join("\r\n", compact);
+                }
+
+                void CollapseRangeWhitespace(int startIdx, int endIdx)
+                {
+                    for (int i = startIdx; i <= endIdx && i < tokens.Count; i++)
+                    {
+                        if (i < 0)
+                            continue;
+
+                        if (tokens[i].TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            tokens[i].Text = CollapseBlankLines(tokens[i].Text);
+                        }
+                    }
+                }
+
+                foreach (var qs in visitor.SelectsWithTopOrDistinct)
+                {
+                    if (qs.SelectElements == null || qs.SelectElements.Count == 0)
+                        continue;
+
+                    int normalizeStart = Math.Max(0, qs.SelectElements[0].FirstTokenIndex - 1);
+                    int normalizeEnd = qs.FromClause?.FirstTokenIndex - 1 ?? qs.LastTokenIndex;
+                    CollapseRangeWhitespace(normalizeStart, normalizeEnd);
+
+                    string baseIndent = "";
+                    int wsBeforeSelect = qs.FirstTokenIndex - 1;
+                    if (wsBeforeSelect >= 0 && tokens[wsBeforeSelect].TokenType == TSqlTokenType.WhiteSpace)
+                    {
+                        baseIndent = ExtractLineIndent(tokens[wsBeforeSelect].Text);
+                    }
+
+                    string indentUnit = baseIndent.Contains("\t") ? indentAfterSelect : new string(' ', 4);
+                    string fieldIndent = baseIndent + indentUnit;
+
+                    void ReplaceWhitespaceWithIndent(int idx, string indent)
+                    {
+                        if (idx >= 0
+                            && idx < tokens.Count
+                            && tokens[idx].TokenType == TSqlTokenType.WhiteSpace)
+                        {
+                            string original = tokens[idx].Text;
+                            string originalIndent = ExtractLineIndent(original);
+                            tokens[idx].Text = SingleLineIndent(indent);
+
+                            // If we are pulling the element to the left, keep nested structure
+                            // aligned by reducing inner whitespace by the same indent units.
+                            if (originalIndent.Length > indent.Length)
+                            {
+                                int diff = originalIndent.Length - indent.Length;
+                                int unitSize = Math.Max(1, indentUnit.Length);
+                                int times = diff / unitSize;
+                                ReduceInnerIndent(idx + 1, qs.FromClause?.FirstTokenIndex - 1 ?? qs.LastTokenIndex, indentUnit, times);
+                            }
+                        }
+                    }
+
+                    int firstFieldWs = qs.SelectElements[0].FirstTokenIndex - 1;
+                    ReplaceWhitespaceWithIndent(firstFieldWs, fieldIndent);
+
+                    for (int i = 1; i < qs.SelectElements.Count; i++)
+                    {
+                        int wsIdx = qs.SelectElements[i].FirstTokenIndex - 1;
+                        ReplaceWhitespaceWithIndent(wsIdx, fieldIndent);
+                    }
+
+                    if (qs.FromClause != null)
+                    {
+                        int wsBeforeFrom = qs.FromClause.FirstTokenIndex - 1;
+                        ReplaceWhitespaceWithIndent(wsBeforeFrom, baseIndent);
+                    }
+                }
             }
 
             // return full recompiled result

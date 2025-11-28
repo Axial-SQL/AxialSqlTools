@@ -363,9 +363,8 @@
                               Content="Break sproc definition parameters per line" 
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
-                        <!-- TODO -->
-                        <CheckBox x:Name="BreakSelectFieldsAfterTopAndUnindent" Margin="5" Visibility="Hidden"
-                              Content="Break SELECT fields after TOP and unindent" 
+                        <CheckBox x:Name="BreakSelectFieldsAfterTopAndUnindent" Margin="5"
+                              Content="Break SELECT fields after DISTINCT/TOP"
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
 
