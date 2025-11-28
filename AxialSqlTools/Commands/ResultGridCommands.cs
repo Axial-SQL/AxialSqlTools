@@ -102,6 +102,11 @@ namespace AxialSqlTools
             btnControlSelectedHtml.Caption = "HTML";
             btnControlSelectedHtml.Click += OnClick_CopySelectedAsHtml;
 
+            var btnControlPivot = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlPivot.Visible = true;
+            btnControlPivot.Caption = "Pivot Table";
+            btnControlPivot.Click += OnClick_OpenPivotTable;
+
             var btnControlCCN = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlCCN.Visible = true;
             btnControlCCN.Caption = "Copy Selected Column Names";
@@ -130,6 +135,21 @@ namespace AxialSqlTools
             ThreadHelper.ThrowIfNotOnUIThread();
 
             CopyColumnNames(all: false);
+        }
+
+        private static void OnClick_OpenPivotTable(CommandBarButton Ctrl, ref bool CancelDefault)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var focusGridControl = GridAccess.GetFocusGridControl();
+            if (focusGridControl == null)
+                return;
+
+            using (var gridAdaptor = new ResultGridControlAdaptor(focusGridControl))
+            {
+                var dataTable = gridAdaptor.GridFocusAsDatatable();
+                PivotTableTabManager.ShowPivotTab(dataTable);
+            }
         }
 
         private static void OnClick_CopyAllColumnNames(CommandBarButton Ctrl, ref bool CancelDefault)
