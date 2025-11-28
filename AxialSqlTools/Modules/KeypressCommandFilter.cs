@@ -32,7 +32,14 @@ namespace AxialSqlTools
                 throw new Exception("Failed to add command filter");
             }
 
-            nextTextViewFilter = nextCommandTarget as IVsTextViewFilter;
+            if (textView != null && textView.AddTextViewFilter(this, out IVsTextViewFilter downstreamFilter) == VSConstants.S_OK)
+            {
+                nextTextViewFilter = downstreamFilter;
+            }
+            else
+            {
+                nextTextViewFilter = nextCommandTarget as IVsTextViewFilter;
+            }
         }
 
         public int Exec(ref Guid cmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
