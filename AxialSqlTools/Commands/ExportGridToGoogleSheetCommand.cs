@@ -108,19 +108,25 @@ namespace AxialSqlTools
             {
                 var result = await GoogleSheetsExport.ExportToNewSpreadsheetAsync(dataTables, settings, isShiftPressed, CancellationToken.None);
 
-                string message = "The data has been exported to Google Sheets.";
-                if (!string.IsNullOrEmpty(result.SpreadsheetUrl))
+                if (string.IsNullOrEmpty(result.SpreadsheetUrl))
                 {
-                    message += $"\n\n{result.SpreadsheetUrl}";
+                    VsShellUtilities.ShowMessageBox(
+                        this.package,
+                        "The data has been exported to Google Sheets.",
+                        "Export Complete",
+                        OLEMSGICON.OLEMSGICON_INFO,
+                        OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
                 }
+                else
+                {
+                    var dialog = new GoogleSheetsExportSuccessDialog(result.SpreadsheetUrl, result.SpreadsheetTitle)
+                    {
+                        Owner = System.Windows.Application.Current?.MainWindow
+                    };
 
-                VsShellUtilities.ShowMessageBox(
-                    this.package,
-                    message,
-                    "Export Complete",
-                    OLEMSGICON.OLEMSGICON_INFO,
-                    OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                    dialog.ShowDialog();
+                }
             }
             catch (Exception ex)
             {
