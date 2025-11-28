@@ -11,9 +11,10 @@ using System.Windows.Input;
 
 namespace AxialSqlTools
 {
-    public class KeypressCommandFilter : IOleCommandTarget
+    public class KeypressCommandFilter : IOleCommandTarget, IVsTextViewFilter
     {
         private IOleCommandTarget nextCommandTarget;
+        private IVsTextViewFilter nextTextViewFilter;
         private IVsTextView textView;
         private AxialSqlToolsPackage package;
 
@@ -30,6 +31,8 @@ namespace AxialSqlTools
             {
                 throw new Exception("Failed to add command filter");
             }
+
+            nextTextViewFilter = nextCommandTarget as IVsTextViewFilter;
         }
 
         public int Exec(ref Guid cmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
@@ -130,6 +133,106 @@ namespace AxialSqlTools
             }
 
             return nextCommandTarget?.QueryStatus(ref cmdGroup, cCmds, prgCmds, pCmdText) ?? VSConstants.S_OK;
+        }
+
+        public int GetWordExtent(int iLine, int iIdx, uint dwFlags, TextSpan[] pSpan)
+        {
+            if (pSpan == null || pSpan.Length == 0)
+            {
+                return nextTextViewFilter?.GetWordExtent(iLine, iIdx, dwFlags, pSpan) ?? VSConstants.E_FAIL;
+            }
+
+            bool isDoubleClick = (dwFlags & (uint)WORDEXTFLAGS.WORDEXT_DBLCLICK) != 0;
+
+            if (isDoubleClick && textView.GetBuffer(out IVsTextLines textLines) == VSConstants.S_OK)
+            {
+                textLines.GetLengthOfLine(iLine, out int iLength);
+                textLines.GetLineText(iLine, 0, iLine, iLength, out string lineText);
+
+                if (TryGetQuotedStringSpan(lineText, iIdx, out int startIndex, out int endIndex))
+                {
+                    pSpan[0].iStartLine = iLine;
+                    pSpan[0].iStartIndex = startIndex;
+                    pSpan[0].iEndLine = iLine;
+                    pSpan[0].iEndIndex = endIndex + 1; // TextSpan end index is exclusive
+
+                    return VSConstants.S_OK;
+                }
+            }
+
+            return nextTextViewFilter?.GetWordExtent(iLine, iIdx, dwFlags, pSpan) ?? VSConstants.E_FAIL;
+        }
+
+        private static bool TryGetQuotedStringSpan(string lineText, int position, out int startIndex, out int endIndex)
+        {
+            startIndex = -1;
+            endIndex = -1;
+
+            if (string.IsNullOrEmpty(lineText) || position < 0 || position > lineText.Length)
+            {
+                return false;
+            }
+
+            int searchIndex = 0;
+
+            while (searchIndex < lineText.Length)
+            {
+                int openingQuote = lineText.IndexOf('\'', searchIndex);
+
+                if (openingQuote == -1)
+                {
+                    break;
+                }
+
+                int closingQuote = FindClosingQuote(lineText, openingQuote + 1);
+
+                if (closingQuote == -1)
+                {
+                    break;
+                }
+
+                if (position >= openingQuote && position <= closingQuote)
+                {
+                    startIndex = openingQuote;
+                    endIndex = closingQuote;
+
+                    if (openingQuote > 0 && (lineText[openingQuote - 1] == 'N' || lineText[openingQuote - 1] == 'n'))
+                    {
+                        startIndex--;
+                    }
+
+                    return true;
+                }
+
+                searchIndex = closingQuote + 1;
+            }
+
+            return false;
+        }
+
+        private static int FindClosingQuote(string lineText, int startIndex)
+        {
+            int index = startIndex;
+
+            while (index < lineText.Length)
+            {
+                int quoteIndex = lineText.IndexOf('\'', index);
+
+                if (quoteIndex == -1)
+                {
+                    return -1;
+                }
+
+                if (quoteIndex + 1 < lineText.Length && lineText[quoteIndex + 1] == '\'')
+                {
+                    index = quoteIndex + 2; // Skip escaped quotes
+                    continue;
+                }
+
+                return quoteIndex;
+            }
+
+            return -1;
         }
     }
 }
