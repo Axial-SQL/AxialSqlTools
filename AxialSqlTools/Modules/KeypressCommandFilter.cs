@@ -163,6 +163,28 @@ namespace AxialSqlTools
             return nextTextViewFilter?.GetWordExtent(iLine, iIdx, dwFlags, pSpan) ?? VSConstants.E_FAIL;
         }
 
+        public int GetPairExtents(int iLine, int iIndex, TextSpan[] pts)
+        {
+            if (nextTextViewFilter != null)
+            {
+                return nextTextViewFilter.GetPairExtents(iLine, iIndex, pts);
+            }
+
+            return VSConstants.E_NOTIMPL;
+        }
+
+        public int GetDataTipText(TextSpan[] pSpan, out string pbstrText)
+        {
+            pbstrText = null;
+
+            if (nextTextViewFilter != null)
+            {
+                return nextTextViewFilter.GetDataTipText(pSpan, out pbstrText);
+            }
+
+            return VSConstants.E_NOTIMPL;
+        }
+
         private static bool TryGetQuotedStringSpan(string lineText, int position, out int startIndex, out int endIndex)
         {
             startIndex = -1;
