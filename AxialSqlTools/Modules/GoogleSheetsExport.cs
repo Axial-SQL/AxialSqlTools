@@ -19,6 +19,8 @@ namespace AxialSqlTools
         public string SpreadsheetId { get; set; }
 
         public string SpreadsheetUrl { get; set; }
+
+        public string SpreadsheetTitle { get; set; }
     }
 
     public class GoogleSheetsAuthorizationResult
@@ -229,7 +231,8 @@ namespace AxialSqlTools
                 return new GoogleSheetsExportResult
                 {
                     SpreadsheetId = spreadsheetId,
-                    SpreadsheetUrl = spreadsheetUrl
+                    SpreadsheetUrl = spreadsheetUrl,
+                    SpreadsheetTitle = spreadsheetTitle
                 };
             }
         }

@@ -80,6 +80,9 @@
     <Compile Include="Commands\ExportGridToGoogleSheetCommand.cs" />
     <Compile Include="Commands\ExportGridToExcelCommand.cs" />
     <Compile Include="Commands\FormatQueryCommand.cs" />
+    <Compile Include="Commands\GoogleSheetsExportSuccessDialog.xaml.cs">
+      <DependentUpon>GoogleSheetsExportSuccessDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Commands\CopyQueryAsHtmlCommand.cs" />
     <Compile Include="Commands\OpenTemplatesFolderCommand.cs" />
     <Compile Include="Commands\RefreshTemplatesCommand.cs" />
@@ -286,6 +289,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Commands\FormatQueryDialog\FormatOptionsDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Commands\GoogleSheetsExportSuccessDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
