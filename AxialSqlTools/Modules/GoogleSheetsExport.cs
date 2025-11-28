@@ -335,7 +335,7 @@ namespace AxialSqlTools
         private static string GetSourceQueryText()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            return ""; // ScriptFactoryAccess.GetActiveQueryWindowText();
+            return ScriptFactoryAccess.GetActiveQueryWindowText();
         }
 
         private static object CreateFilterRequest(int sheetId, int columnCount)

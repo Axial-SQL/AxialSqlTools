@@ -16,7 +16,8 @@ namespace AxialSqlTools
             this.spreadsheetUrl = spreadsheetUrl ?? string.Empty;
             SpreadsheetLinkText.Text = string.IsNullOrWhiteSpace(spreadsheetTitle) ? spreadsheetUrl : spreadsheetTitle;
 
-            if (Uri.TryCreate(spreadsheetUrl, UriKind.Absolute, out Uri? uri))
+            Uri uri;
+            if (Uri.TryCreate(spreadsheetUrl, UriKind.Absolute, out uri))
             {
                 SpreadsheetLink.NavigateUri = uri;
             }
