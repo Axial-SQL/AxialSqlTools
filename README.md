@@ -29,6 +29,8 @@ Check it out and let me know what you think!
 - [**Copy Query for Web Paste**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Query-for-Web-Paste): Preserve the text format to ensure proper rendering when inserting into HTML-aware clients such as Outlook Online, Gmail, and others.
   
 - [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access your personal collection of query templates for common tasks, reducing the time and effort required for routine work.
+
+- [**Export Grid to Google Sheets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Google-Sheets-Export): Quickly export results from the grid view directly into Google Sheets.
   
 - [**Export Grid to Excel**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-To-Excel): Quickly export results from the grid view directly into Excel file.
   
