@@ -12,7 +12,9 @@ namespace AxialSqlTools
     [Export(typeof(IMouseProcessorProvider))]
     [Name("sql-string-double-click-selector")]
     [ContentType("text")]
-    [TextViewRole(PredefinedTextViewRoles.Document)]
+    [ContentType("code")]
+    [Order(Before = PredefinedMouseProcessorNames.WordSelection)]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
     public class SqlStringSelectionMouseProcessorProvider : IMouseProcessorProvider
     {
         public IMouseProcessor GetAssociatedProcessor(IWpfTextView wpfTextView)
@@ -69,6 +71,11 @@ namespace AxialSqlTools
 
         private SnapshotPoint? GetSnapshotAtCursor(MouseButtonEventArgs e)
         {
+            if (view.TextViewLines == null || view.TextViewLines.IsEmpty)
+            {
+                return null;
+            }
+
             Point cursorPosition = GetPositionInViewport(e);
             ITextViewLine textViewLine = view.TextViewLines.GetTextViewLineContainingYCoordinate(cursorPosition.Y);
 
