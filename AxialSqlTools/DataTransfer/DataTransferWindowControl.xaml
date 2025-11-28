@@ -126,6 +126,141 @@
 
                     </Grid>
                 </TabItem>
+                <TabItem Header="SQL Server -> MySQL">
+                    <Grid>
+
+                        <StackPanel Orientation="Vertical" >
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Source" Click="Button_SelectSourceToMySql_Click" x:Name="Button_SelectSourceToMySql" Width="120" FontWeight="Bold"/>
+                                <Label Content="Source Description" x:Name="Label_SourceDescriptionToMySql" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <DockPanel>
+                                <Label Content="Target Connection String" x:Name="Label_TargetDescriptionToMySql" VerticalAlignment="Center"/>
+                                <TextBox Height="23" x:Name="TextBox_TargetConnectionToMySql"/>
+                            </DockPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Source Query" FontWeight="Bold"/>
+                                <RichTextBox Height="100" x:Name="RichTextBox_SourceQueryToMySql">
+                                    <FlowDocument>
+                                        <Paragraph>
+                                            <Run Text=""/>
+                                        </Paragraph>
+                                    </FlowDocument>
+                                </RichTextBox>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Target Table" FontWeight="Bold"/>
+                                <CheckBox Name="CheckBox_CreateTargetTableToMySql" Content="Create table if it does not exist"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableToMySql" Content="Clear target table before inserting new records"/>
+                                <CheckBox Name="CheckBox_SkipDataCopyToMySql" Content="Create table structure only (skip data copying)"/>
+                                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableToMySql"/>
+                            </StackPanel>
+
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Copy Data" Click="ButtonToMySql_CopyData_Click"  Name="ButtonToMySql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonToMySql_Cancel_Click"  Name="ButtonToMySql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Label Content="(copy progress)" x:Name="Label_CopyProgressToMySql" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Grid>
+                </TabItem>
+                <TabItem Header="PostgreSQL -> SQL Server">
+                    <Grid>
+
+                        <StackPanel Orientation="Vertical" >
+
+                            <DockPanel>
+                                <Label Content="Source Connection String" x:Name="Label_SourceDescriptionFromPsql" VerticalAlignment="Center"/>
+                                <TextBox Height="23" x:Name="TextBox_SourceConnectionFromPsql"/>
+                            </DockPanel>
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Target" Click="Button_SelectTargetFromPsql_Click" x:Name="Button_SelectTargetFromPsql" Width="120" FontWeight="Bold"/>
+                                <Label Content="Target Description" x:Name="Label_TargetDescriptionFromPsql" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Source Query" FontWeight="Bold"/>
+                                <RichTextBox Height="100" x:Name="RichTextBox_SourceQueryFromPsql">
+                                    <FlowDocument>
+                                        <Paragraph>
+                                            <Run Text=""/>
+                                        </Paragraph>
+                                    </FlowDocument>
+                                </RichTextBox>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Target Table" FontWeight="Bold"/>
+                                <CheckBox Name="CheckBox_CreateTargetTableFromPsql" Content="Create table if it does not exist"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableFromPsql" Content="Clear target table before inserting new records"/>
+                                <CheckBox Name="CheckBox_SkipDataCopyFromPsql" Content="Create table structure only (skip data copying)"/>
+                                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableFromPsql"/>
+                            </StackPanel>
+
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Copy Data" Click="ButtonFromPsql_CopyData_Click"  Name="ButtonFromPsql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonFromPsql_Cancel_Click"  Name="ButtonFromPsql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Label Content="(copy progress)" x:Name="Label_CopyProgressFromPsql" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Grid>
+                </TabItem>
+                <TabItem Header="MySQL -> SQL Server">
+                    <Grid>
+
+                        <StackPanel Orientation="Vertical" >
+
+                            <DockPanel>
+                                <Label Content="Source Connection String" x:Name="Label_SourceDescriptionFromMySql" VerticalAlignment="Center"/>
+                                <TextBox Height="23" x:Name="TextBox_SourceConnectionFromMySql"/>
+                            </DockPanel>
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Target" Click="Button_SelectTargetFromMySql_Click" x:Name="Button_SelectTargetFromMySql" Width="120" FontWeight="Bold"/>
+                                <Label Content="Target Description" x:Name="Label_TargetDescriptionFromMySql" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Source Query" FontWeight="Bold"/>
+                                <RichTextBox Height="100" x:Name="RichTextBox_SourceQueryFromMySql">
+                                    <FlowDocument>
+                                        <Paragraph>
+                                            <Run Text=""/>
+                                        </Paragraph>
+                                    </FlowDocument>
+                                </RichTextBox>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Target Table" FontWeight="Bold"/>
+                                <CheckBox Name="CheckBox_CreateTargetTableFromMySql" Content="Create table if it does not exist"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableFromMySql" Content="Clear target table before inserting new records"/>
+                                <CheckBox Name="CheckBox_SkipDataCopyFromMySql" Content="Create table structure only (skip data copying)"/>
+                                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableFromMySql"/>
+                            </StackPanel>
+
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Copy Data" Click="ButtonFromMySql_CopyData_Click"  Name="ButtonFromMySql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonFromMySql_Cancel_Click"  Name="ButtonFromMySql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Label Content="(copy progress)" x:Name="Label_CopyProgressFromMySql" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Grid>
+                </TabItem>
             </TabControl>
 
         </StackPanel>
