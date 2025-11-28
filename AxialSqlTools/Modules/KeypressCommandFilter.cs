@@ -2,19 +2,14 @@
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace AxialSqlTools
 {
-    public class KeypressCommandFilter : IOleCommandTarget, IVsTextViewFilter
+    public class KeypressCommandFilter : IOleCommandTarget
     {
         private IOleCommandTarget nextCommandTarget;
-        private IVsTextViewFilter nextTextViewFilter;
         private IVsTextView textView;
         private AxialSqlToolsPackage package;
 
@@ -30,15 +25,6 @@ namespace AxialSqlTools
             if (textView != null && textView.AddCommandFilter(this, out nextCommandTarget) != VSConstants.S_OK)
             {
                 throw new Exception("Failed to add command filter");
-            }
-
-            if (textView != null && textView.AddTextViewFilter(this, out IVsTextViewFilter downstreamFilter) == VSConstants.S_OK)
-            {
-                nextTextViewFilter = downstreamFilter;
-            }
-            else
-            {
-                nextTextViewFilter = nextCommandTarget as IVsTextViewFilter;
             }
         }
 
@@ -140,128 +126,6 @@ namespace AxialSqlTools
             }
 
             return nextCommandTarget?.QueryStatus(ref cmdGroup, cCmds, prgCmds, pCmdText) ?? VSConstants.S_OK;
-        }
-
-        public int GetWordExtent(int iLine, int iIdx, uint dwFlags, TextSpan[] pSpan)
-        {
-            if (pSpan == null || pSpan.Length == 0)
-            {
-                return nextTextViewFilter?.GetWordExtent(iLine, iIdx, dwFlags, pSpan) ?? VSConstants.E_FAIL;
-            }
-
-            bool isDoubleClick = (WORDEXTFLAGS)dwFlags == WORDEXTFLAGS.WORDEXT_FINDWORD;
-
-            if (isDoubleClick && textView.GetBuffer(out IVsTextLines textLines) == VSConstants.S_OK)
-            {
-                textLines.GetLengthOfLine(iLine, out int iLength);
-                textLines.GetLineText(iLine, 0, iLine, iLength, out string lineText);
-
-                if (TryGetQuotedStringSpan(lineText, iIdx, out int startIndex, out int endIndex))
-                {
-                    pSpan[0].iStartLine = iLine;
-                    pSpan[0].iStartIndex = startIndex;
-                    pSpan[0].iEndLine = iLine;
-                    pSpan[0].iEndIndex = endIndex + 1; // TextSpan end index is exclusive
-
-                    return VSConstants.S_OK;
-                }
-            }
-
-            return nextTextViewFilter?.GetWordExtent(iLine, iIdx, dwFlags, pSpan) ?? VSConstants.E_FAIL;
-        }
-
-        public int GetPairExtents(int iLine, int iIndex, TextSpan[] pts)
-        {
-            if (nextTextViewFilter != null)
-            {
-                return nextTextViewFilter.GetPairExtents(iLine, iIndex, pts);
-            }
-
-            return VSConstants.E_NOTIMPL;
-        }
-
-        public int GetDataTipText(TextSpan[] pSpan, out string pbstrText)
-        {
-            pbstrText = null;
-
-            if (nextTextViewFilter != null)
-            {
-                return nextTextViewFilter.GetDataTipText(pSpan, out pbstrText);
-            }
-
-            return VSConstants.E_NOTIMPL;
-        }
-
-        private static bool TryGetQuotedStringSpan(string lineText, int position, out int startIndex, out int endIndex)
-        {
-            startIndex = -1;
-            endIndex = -1;
-
-            if (string.IsNullOrEmpty(lineText) || position < 0 || position > lineText.Length)
-            {
-                return false;
-            }
-
-            int searchIndex = 0;
-
-            while (searchIndex < lineText.Length)
-            {
-                int openingQuote = lineText.IndexOf('\'', searchIndex);
-
-                if (openingQuote == -1)
-                {
-                    break;
-                }
-
-                int closingQuote = FindClosingQuote(lineText, openingQuote + 1);
-
-                if (closingQuote == -1)
-                {
-                    break;
-                }
-
-                if (position >= openingQuote && position <= closingQuote)
-                {
-                    startIndex = openingQuote;
-                    endIndex = closingQuote;
-
-                    if (openingQuote > 0 && (lineText[openingQuote - 1] == 'N' || lineText[openingQuote - 1] == 'n'))
-                    {
-                        startIndex--;
-                    }
-
-                    return true;
-                }
-
-                searchIndex = closingQuote + 1;
-            }
-
-            return false;
-        }
-
-        private static int FindClosingQuote(string lineText, int startIndex)
-        {
-            int index = startIndex;
-
-            while (index < lineText.Length)
-            {
-                int quoteIndex = lineText.IndexOf('\'', index);
-
-                if (quoteIndex == -1)
-                {
-                    return -1;
-                }
-
-                if (quoteIndex + 1 < lineText.Length && lineText[quoteIndex + 1] == '\'')
-                {
-                    index = quoteIndex + 2; // Skip escaped quotes
-                    continue;
-                }
-
-                return quoteIndex;
-            }
-
-            return -1;
         }
     }
 }
