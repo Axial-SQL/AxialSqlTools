@@ -142,7 +142,7 @@ namespace AxialSqlTools
                 return nextTextViewFilter?.GetWordExtent(iLine, iIdx, dwFlags, pSpan) ?? VSConstants.E_FAIL;
             }
 
-            bool isDoubleClick = (dwFlags & (uint)WORDEXTFLAGS.WORDEXT_DBLCLICK) != 0;
+            bool isDoubleClick = (WORDEXTFLAGS)dwFlags == WORDEXTFLAGS.WORDEXT_FINDWORD;
 
             if (isDoubleClick && textView.GetBuffer(out IVsTextLines textLines) == VSConstants.S_OK)
             {
