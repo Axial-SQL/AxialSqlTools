@@ -26,7 +26,6 @@
     <StartAction>Program</StartAction>
     <StartProgram Condition="'$(DevEnvDir)' != ''">$(DevEnvDir)devenv.exe</StartProgram>
     <StartArguments>/rootsuffix Exp</StartArguments>
-    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -61,7 +60,7 @@
     </Compile>
     <Compile Include="Modules\ExcelImport.cs" />
     <Compile Include="Modules\TsqlFormatterCommentInterleaver.cs" />
-    <Compile Include="Commands\FormatQueryDialog\FormatOptionsDialog.xaml.cs">
+    <Compile Include="Commands\Dialogs\FormatOptionsDialog.xaml.cs">
       <DependentUpon>FormatOptionsDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="SchemaCompare\SchemaCompareWindow.cs" />
@@ -81,7 +80,7 @@
     <Compile Include="Commands\ExportGridToGoogleSheetCommand.cs" />
     <Compile Include="Commands\ExportGridToExcelCommand.cs" />
     <Compile Include="Commands\FormatQueryCommand.cs" />
-    <Compile Include="Commands\GoogleSheetsExportSuccessDialog.xaml.cs">
+    <Compile Include="Commands\Dialogs\GoogleSheetsExportSuccessDialog.xaml.cs">
       <DependentUpon>GoogleSheetsExportSuccessDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Commands\CopyQueryAsHtmlCommand.cs" />
@@ -289,11 +288,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Commands\FormatQueryDialog\FormatOptionsDialog.xaml">
+    <Page Include="Commands\Dialogs\FormatOptionsDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Commands\GoogleSheetsExportSuccessDialog.xaml">
+    <Page Include="Commands\Dialogs\GoogleSheetsExportSuccessDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
