@@ -113,6 +113,7 @@
     <Compile Include="Modules\GoogleSheetsExport.cs" />
     <Compile Include="Modules\GridAccess.cs" />
     <Compile Include="Modules\KeypressCommandFilter.cs" />
+    <Compile Include="Modules\SqlStringSelectionMouseProcessor.cs" />
     <Compile Include="Modules\MetricsService.cs" />
     <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="Modules\SettingsManager.cs" />
