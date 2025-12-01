@@ -91,10 +91,37 @@
                                 <Label Content="Source Description" x:Name="Label_SourceDescriptionToPsql" VerticalAlignment="Center"/>
                             </StackPanel>
 
-                            <DockPanel>
-                                <Label Content="Target Connection String" x:Name="Label_TargetDescriptionToPsql" VerticalAlignment="Center"/>
-                                <TextBox Height="23" x:Name="TextBox_TargetConnectionToPsql"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                                <Label Content="Target PostgreSQL Connection" x:Name="Label_TargetDescriptionToPsql" FontWeight="Bold"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Server" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Height="23" x:Name="TextBox_TargetPsqlServer" />
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Port" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Height="23" x:Name="TextBox_TargetPsqlPort" />
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Database" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Height="23" x:Name="TextBox_TargetPsqlDatabase" />
+
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Username" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Height="23" x:Name="TextBox_TargetPsqlUsername" />
+
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Password" VerticalAlignment="Center" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" Height="23" x:Name="PasswordBox_TargetPsqlPassword" />
+                                </Grid>
+                            </StackPanel>
 
                             <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
                                 <Label Content="Source Query" FontWeight="Bold"/>
@@ -136,10 +163,37 @@
                                 <Label Content="Source Description" x:Name="Label_SourceDescriptionToMySql" VerticalAlignment="Center"/>
                             </StackPanel>
 
-                            <DockPanel>
-                                <Label Content="Target Connection String" x:Name="Label_TargetDescriptionToMySql" VerticalAlignment="Center"/>
-                                <TextBox Height="23" x:Name="TextBox_TargetConnectionToMySql"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                                <Label Content="Target MySQL Connection" x:Name="Label_TargetDescriptionToMySql" FontWeight="Bold"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Server" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Height="23" x:Name="TextBox_TargetMySqlServer" />
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Port" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Height="23" x:Name="TextBox_TargetMySqlPort" />
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Database" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Height="23" x:Name="TextBox_TargetMySqlDatabase" />
+
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Username" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Height="23" x:Name="TextBox_TargetMySqlUsername" />
+
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Password" VerticalAlignment="Center" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" Height="23" x:Name="PasswordBox_TargetMySqlPassword" />
+                                </Grid>
+                            </StackPanel>
 
                             <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
                                 <Label Content="Source Query" FontWeight="Bold"/>
@@ -176,10 +230,37 @@
 
                         <StackPanel Orientation="Vertical" >
 
-                            <DockPanel>
-                                <Label Content="Source Connection String" x:Name="Label_SourceDescriptionFromPsql" VerticalAlignment="Center"/>
-                                <TextBox Height="23" x:Name="TextBox_SourceConnectionFromPsql"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                                <Label Content="Source PostgreSQL Connection" x:Name="Label_SourceDescriptionFromPsql" FontWeight="Bold"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Server" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Height="23" x:Name="TextBox_SourcePsqlServer" />
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Port" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Height="23" x:Name="TextBox_SourcePsqlPort" />
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Database" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Height="23" x:Name="TextBox_SourcePsqlDatabase" />
+
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Username" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Height="23" x:Name="TextBox_SourcePsqlUsername" />
+
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Password" VerticalAlignment="Center" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" Height="23" x:Name="PasswordBox_SourcePsqlPassword" />
+                                </Grid>
+                            </StackPanel>
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                                 <Button Height="35" Content="Select Target" Click="Button_SelectTargetFromPsql_Click" x:Name="Button_SelectTargetFromPsql" Width="120" FontWeight="Bold"/>
@@ -221,10 +302,37 @@
 
                         <StackPanel Orientation="Vertical" >
 
-                            <DockPanel>
-                                <Label Content="Source Connection String" x:Name="Label_SourceDescriptionFromMySql" VerticalAlignment="Center"/>
-                                <TextBox Height="23" x:Name="TextBox_SourceConnectionFromMySql"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                                <Label Content="Source MySQL Connection" x:Name="Label_SourceDescriptionFromMySql" FontWeight="Bold"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Server" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Height="23" x:Name="TextBox_SourceMySqlServer" />
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Port" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Height="23" x:Name="TextBox_SourceMySqlPort" />
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Database" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Height="23" x:Name="TextBox_SourceMySqlDatabase" />
+
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Username" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Height="23" x:Name="TextBox_SourceMySqlUsername" />
+
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Password" VerticalAlignment="Center" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" Height="23" x:Name="PasswordBox_SourceMySqlPassword" />
+                                </Grid>
+                            </StackPanel>
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                                 <Button Height="35" Content="Select Target" Click="Button_SelectTargetFromMySql_Click" x:Name="Button_SelectTargetFromMySql" Width="120" FontWeight="Bold"/>
