@@ -38,6 +38,9 @@
         private string sourceConnectionStringFromMySql = "";
         private string targetConnectionStringFromMySql = "";
 
+        private const int DefaultPostgresPort = 5432;
+        private const int DefaultMySqlPort = 3306;
+
 
         static class SqlBulkCopyHelper
         {
@@ -72,11 +75,29 @@
             CheckBox_TruncateTargetTableToPsql.IsChecked = true;
             CheckBox_CreateTargetTableToPsql.IsChecked = true;
 
-            TextBox_TargetConnectionToPsql.Text = "Server=127.0.0.1;Port=5432;Database=postgres;User Id=postgres;Password=<password>;";
+            TextBox_TargetPsqlServer.Text = "127.0.0.1";
+            TextBox_TargetPsqlPort.Text = DefaultPostgresPort.ToString();
+            TextBox_TargetPsqlDatabase.Text = "postgres";
+            TextBox_TargetPsqlUsername.Text = "postgres";
+            PasswordBox_TargetPsqlPassword.Password = "<password>";
 
-            TextBox_TargetConnectionToMySql.Text = "Server=127.0.0.1;Port=3306;Database=mysql;User ID=root;Password=<password>;";
-            TextBox_SourceConnectionFromPsql.Text = "Server=127.0.0.1;Port=5432;Database=postgres;User Id=postgres;Password=<password>;";
-            TextBox_SourceConnectionFromMySql.Text = "Server=127.0.0.1;Port=3306;Database=mysql;User ID=root;Password=<password>;";
+            TextBox_TargetMySqlServer.Text = "127.0.0.1";
+            TextBox_TargetMySqlPort.Text = DefaultMySqlPort.ToString();
+            TextBox_TargetMySqlDatabase.Text = "mysql";
+            TextBox_TargetMySqlUsername.Text = "root";
+            PasswordBox_TargetMySqlPassword.Password = "<password>";
+
+            TextBox_SourcePsqlServer.Text = "127.0.0.1";
+            TextBox_SourcePsqlPort.Text = DefaultPostgresPort.ToString();
+            TextBox_SourcePsqlDatabase.Text = "postgres";
+            TextBox_SourcePsqlUsername.Text = "postgres";
+            PasswordBox_SourcePsqlPassword.Password = "<password>";
+
+            TextBox_SourceMySqlServer.Text = "127.0.0.1";
+            TextBox_SourceMySqlPort.Text = DefaultMySqlPort.ToString();
+            TextBox_SourceMySqlDatabase.Text = "mysql";
+            TextBox_SourceMySqlUsername.Text = "root";
+            PasswordBox_SourceMySqlPassword.Password = "<password>";
 
         }
 
@@ -284,6 +305,80 @@
             }
         }
 
+        private int ParsePort(string portText, int defaultPort)
+        {
+            return int.TryParse(portText, out int parsedPort) ? parsedPort : defaultPort;
+        }
+
+        private string BuildPostgresConnectionString(string server, string portText, string database, string username, string password)
+        {
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host = server,
+                Port = ParsePort(portText, DefaultPostgresPort),
+                Database = database,
+                Username = username,
+                Password = password
+            };
+
+            return builder.ConnectionString;
+        }
+
+        private string BuildMySqlConnectionString(string server, string portText, string database, string username, string password)
+        {
+            uint parsedPort = (uint)ParsePort(portText, DefaultMySqlPort);
+            var builder = new MySqlConnectionStringBuilder
+            {
+                Server = server,
+                Port = parsedPort,
+                Database = database,
+                UserID = username,
+                Password = password
+            };
+
+            return builder.ConnectionString;
+        }
+
+        private string BuildTargetPostgresConnectionString()
+        {
+            return BuildPostgresConnectionString(
+                TextBox_TargetPsqlServer.Text,
+                TextBox_TargetPsqlPort.Text,
+                TextBox_TargetPsqlDatabase.Text,
+                TextBox_TargetPsqlUsername.Text,
+                PasswordBox_TargetPsqlPassword.Password);
+        }
+
+        private string BuildSourcePostgresConnectionString()
+        {
+            return BuildPostgresConnectionString(
+                TextBox_SourcePsqlServer.Text,
+                TextBox_SourcePsqlPort.Text,
+                TextBox_SourcePsqlDatabase.Text,
+                TextBox_SourcePsqlUsername.Text,
+                PasswordBox_SourcePsqlPassword.Password);
+        }
+
+        private string BuildTargetMySqlConnectionString()
+        {
+            return BuildMySqlConnectionString(
+                TextBox_TargetMySqlServer.Text,
+                TextBox_TargetMySqlPort.Text,
+                TextBox_TargetMySqlDatabase.Text,
+                TextBox_TargetMySqlUsername.Text,
+                PasswordBox_TargetMySqlPassword.Password);
+        }
+
+        private string BuildSourceMySqlConnectionString()
+        {
+            return BuildMySqlConnectionString(
+                TextBox_SourceMySqlServer.Text,
+                TextBox_SourceMySqlPort.Text,
+                TextBox_SourceMySqlDatabase.Text,
+                TextBox_SourceMySqlUsername.Text,
+                PasswordBox_SourceMySqlPassword.Password);
+        }
+
         string MapSqlServerToPostgresType(string sqlServerType)
         {
             switch (sqlServerType)
@@ -364,7 +459,7 @@
                 ButtonToPsql_CopyData.Visibility = System.Windows.Visibility.Collapsed;
                 ButtonToPsql_Cancel.Visibility = System.Windows.Visibility.Visible;
 
-                string postgresConnString = TextBox_TargetConnectionToPsql.Text;
+                string postgresConnString = BuildTargetPostgresConnectionString();
                 // Get the SQL query from the rich text box.
                 TextRange textRange = new TextRange(RichTextBox_SourceQueryToPsql.Document.ContentStart,
                                                     RichTextBox_SourceQueryToPsql.Document.ContentEnd);
@@ -530,7 +625,7 @@
                                                     RichTextBox_SourceQueryToMySql.Document.ContentEnd);
                 string sqlQuery = textRange.Text;
                 string targetTable = TextBox_TargetTableToMySql.Text;
-                string targetMySqlConnString = TextBox_TargetConnectionToMySql.Text;
+                string targetMySqlConnString = BuildTargetMySqlConnectionString();
 
                 using (var sqlConn = new SqlConnection(sourceConnectionStringMySql))
                 {
@@ -656,7 +751,7 @@
                                                     RichTextBox_SourceQueryFromPsql.Document.ContentEnd);
                 string sqlQuery = textRange.Text;
                 string targetTable = TextBox_TargetTableFromPsql.Text;
-                sourceConnectionStringFromPsql = TextBox_SourceConnectionFromPsql.Text;
+                sourceConnectionStringFromPsql = BuildSourcePostgresConnectionString();
 
                 using (var npgConn = new NpgsqlConnection(sourceConnectionStringFromPsql))
                 {
@@ -799,7 +894,7 @@
                                                     RichTextBox_SourceQueryFromMySql.Document.ContentEnd);
                 string sqlQuery = textRange.Text;
                 string targetTable = TextBox_TargetTableFromMySql.Text;
-                sourceConnectionStringFromMySql = TextBox_SourceConnectionFromMySql.Text;
+                sourceConnectionStringFromMySql = BuildSourceMySqlConnectionString();
 
                 using (var mySqlConn = new MySqlConnection(sourceConnectionStringFromMySql))
                 {
