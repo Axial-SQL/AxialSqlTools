@@ -19,6 +19,8 @@ namespace AxialSqlTools
         public string SpreadsheetId { get; set; }
 
         public string SpreadsheetUrl { get; set; }
+
+        public string SpreadsheetTitle { get; set; }
     }
 
     public class GoogleSheetsAuthorizationResult
@@ -182,22 +184,55 @@ namespace AxialSqlTools
                 string spreadsheetId = spreadsheet.Value<string>("spreadsheetId");
                 string spreadsheetUrl = spreadsheet.Value<string>("spreadsheetUrl");
 
+                Dictionary<string, int> sheetNameToId = spreadsheet["sheets"]?
+                    .OfType<JObject>()
+                    .Select(s => s["properties"] as JObject)
+                    .Where(p => p != null)
+                    .ToDictionary(
+                        p => p.Value<string>("title"),
+                        p => p.Value<int>("sheetId"),
+                        StringComparer.OrdinalIgnoreCase)
+                    ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+                List<object> batchRequests = new List<object>();
+
                 for (int i = 0; i < dataTables.Count; i++)
                 {
                     IList<IList<object>> values = BuildValues(dataTables[i], settings.exportBoolsAsNumbers);
                     await AppendValuesAsync(httpClient, spreadsheetId, sheetNames[i], values, cancellationToken);
+
+                    if (sheetNameToId.TryGetValue(sheetNames[i], out int sheetId))
+                    {
+                        int columnCount = dataTables[i].Columns.Count;
+                        batchRequests.Add(CreateFilterRequest(sheetId, columnCount));
+                        batchRequests.Add(CreateAutoResizeRequest(sheetId, columnCount));
+                    }
                 }
 
                 if (includeSource)
                 {
                     IList<IList<object>> sourceValues = BuildSourceQueryValues(sourceQuery);
-                    await AppendValuesAsync(httpClient, spreadsheetId, sheetNames.Last(), sourceValues, cancellationToken);
+                    string sourceSheetName = sheetNames.Last();
+                    await AppendValuesAsync(httpClient, spreadsheetId, sourceSheetName, sourceValues, cancellationToken);
+
+                    if (sheetNameToId.TryGetValue(sourceSheetName, out int sourceSheetId))
+                    {
+                        const int sourceColumnCount = 1;
+                        batchRequests.Add(CreateFilterRequest(sourceSheetId, sourceColumnCount));
+                        batchRequests.Add(CreateAutoResizeRequest(sourceSheetId, sourceColumnCount));
+                    }
+                }
+
+                if (batchRequests.Count > 0)
+                {
+                    await BatchUpdateAsync(httpClient, spreadsheetId, batchRequests, cancellationToken);
                 }
 
                 return new GoogleSheetsExportResult
                 {
                     SpreadsheetId = spreadsheetId,
-                    SpreadsheetUrl = spreadsheetUrl
+                    SpreadsheetUrl = spreadsheetUrl,
+                    SpreadsheetTitle = spreadsheetTitle
                 };
             }
         }
@@ -300,7 +335,63 @@ namespace AxialSqlTools
         private static string GetSourceQueryText()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            return ""; // ScriptFactoryAccess.GetActiveQueryWindowText();
+            return ScriptFactoryAccess.GetActiveQueryWindowText();
+        }
+
+        private static object CreateFilterRequest(int sheetId, int columnCount)
+        {
+            return new
+            {
+                setBasicFilter = new
+                {
+                    filter = new
+                    {
+                        range = new
+                        {
+                            sheetId = sheetId,
+                            startRowIndex = 0,
+                            endRowIndex = 1,
+                            startColumnIndex = 0,
+                            endColumnIndex = columnCount
+                        }
+                    }
+                }
+            };
+        }
+
+        private static object CreateAutoResizeRequest(int sheetId, int columnCount)
+        {
+            return new
+            {
+                autoResizeDimensions = new
+                {
+                    dimensions = new
+                    {
+                        sheetId = sheetId,
+                        dimension = "COLUMNS",
+                        startIndex = 0,
+                        endIndex = columnCount
+                    }
+                }
+            };
+        }
+
+        private static async Task BatchUpdateAsync(HttpClient httpClient, string spreadsheetId, List<object> requests, CancellationToken cancellationToken)
+        {
+            var payload = new
+            {
+                requests = requests
+            };
+
+            string requestUri = $"https://sheets.googleapis.com/v4/spreadsheets/{Uri.EscapeDataString(spreadsheetId)}:batchUpdate";
+
+            var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+            var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                throw new Exception($"BatchUpdate failure: {(int)response.StatusCode} {response.ReasonPhrase}\n{responseBody}");
+            }
         }
     }
 }

@@ -12,6 +12,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Text.RegularExpressions;
+using EnvDTE;
+using Microsoft.VisualStudio.Shell;
 
 namespace AxialSqlTools
 {
@@ -121,6 +123,33 @@ namespace AxialSqlTools
 
             return ci;
 
+        }
+
+        public static string GetActiveQueryWindowText()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            try
+            {
+                DTE application = ServiceCache.ExtensibilityModel?.Application;
+                if (application == null || application.ActiveDocument == null)
+                {
+                    return string.Empty;
+                }
+
+                TextDocument doc = application.ActiveDocument.Object("TextDocument") as TextDocument;
+                if (doc == null)
+                {
+                    return string.Empty;
+                }
+
+                EditPoint startPoint = doc.StartPoint.CreateEditPoint();
+                return startPoint.GetText(doc.EndPoint);
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         public static string GetXmlFromUIConnectionInfo(UIConnectionInfo connectionInfo)

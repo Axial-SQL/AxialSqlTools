@@ -178,6 +178,7 @@
           <LocCanonicalName>AxialSqlTools.ScriptSelectedObject</LocCanonicalName>
         </Strings>
       </Button>
+      <!--
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialFindObjectInObjectExplorer" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
         <CommandFlag>IconAndText</CommandFlag>
@@ -193,7 +194,7 @@
         <Strings>
           <ButtonText>Script Result Into a New Window - TODO</ButtonText>
         </Strings>
-      </Button>
+      </Button>-->
 
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryHistoryCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
@@ -211,14 +212,14 @@
           <ButtonText>Health Dashboard - Server</ButtonText>
         </Strings>
       </Button>
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialHealthDashboardServersCommand" priority="0x0000" type="Button">
+      <!--<Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialHealthDashboardServersCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidServerHealth" id="bmpServerHealth" />
         <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
           <ButtonText>Health Dashboard - Group of Servers</ButtonText>
         </Strings>
-      </Button>
+      </Button>-->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlServerBuildsCommand" priority="0x3000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidSqlBuildInfo" id="bmpSqlBuildInfo" />
@@ -267,7 +268,7 @@
         </Strings>
       </Button>
 
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialAskChatGptCommand" priority="0x0000" type="Button">
+      <!--<Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialAskChatGptCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_AI" />
         <Icon guid="guidChat" id="bmpChat" />
         <CommandFlag>DefaultInvisible</CommandFlag>
@@ -276,7 +277,7 @@
         </Strings>
       </Button>
 
-      <!--<Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialBackupTimelineCommand" priority="0x0000" type="Button">
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialBackupTimelineCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Timelines" />
         <Icon guid="guidDataTransfer" id="bmpDataTransfer" />
         <CommandFlag>DefaultInvisible</CommandFlag>

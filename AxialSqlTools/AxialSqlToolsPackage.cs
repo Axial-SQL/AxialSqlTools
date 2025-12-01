@@ -58,9 +58,9 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(AboutWindow))]
     [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
     [ProvideToolWindow(typeof(HealthDashboard_Server))]
-    [ProvideToolWindow(typeof(HealthDashboard_Servers))]
+    //[ProvideToolWindow(typeof(HealthDashboard_Servers))]
     [ProvideToolWindow(typeof(DataTransferWindow))]
-    [ProvideToolWindow(typeof(AskChatGptWindow))]
+    //[ProvideToolWindow(typeof(AskChatGptWindow))]
     [ProvideToolWindow(typeof(SqlServerBuildsWindow))]
     [ProvideToolWindow(typeof(QueryHistoryWindow))]
     [ProvideToolWindow(typeof(DatabaseScripterToolWindow))]
@@ -283,13 +283,13 @@ namespace AxialSqlTools
                 await ExportGridToAsInsertsCommand.InitializeAsync(this);
                 await ToolWindowGridToEmailCommand.InitializeAsync(this);
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
-                await HealthDashboard_ServersCommand.InitializeAsync(this);
+                //await HealthDashboard_ServersCommand.InitializeAsync(this);
                 await CopyQueryAsHtmlCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await DataImportWindowCommand.InitializeAsync(this);
                 await CheckAddinVersionCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
-                await AskChatGptCommand.InitializeAsync(this);
+                //await AskChatGptCommand.InitializeAsync(this);
                 await SqlServerBuildsWindowCommand.InitializeAsync(this);
                 await QueryHistoryWindowCommand.InitializeAsync(this);
                 await DatabaseScripterToolWindowCommand.InitializeAsync(this);

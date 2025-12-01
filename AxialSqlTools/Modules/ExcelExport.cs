@@ -291,7 +291,7 @@ namespace AxialSqlTools
             bool includeSource = excelSettings.includeSourceQuery ^ isShiftPressed;
 
             // now pull it or leave it empty
-            string sourceQuery = includeSource ? GetSourceQueryText() : string.Empty;
+            string sourceQuery = includeSource ? ScriptFactoryAccess.GetActiveQueryWindowText() : string.Empty;
 
             using (SpreadsheetDocument document = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
             {

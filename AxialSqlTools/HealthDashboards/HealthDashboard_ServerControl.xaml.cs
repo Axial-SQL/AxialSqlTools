@@ -463,7 +463,7 @@
 
             //--------------------------------------------------------------------
             //--------------------------------------------------------------------
-            if (!doEmpty && metrics != null && metrics.Completed && !metrics.HasException)
+            if (!doEmpty && metrics != null && metrics.Completed && !metrics.HasException && metrics.Iteration > 1)
             {
                 AddPerformanceSample(metrics);
             }
