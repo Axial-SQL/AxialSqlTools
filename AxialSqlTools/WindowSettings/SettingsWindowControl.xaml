@@ -332,7 +332,7 @@
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
                         <CheckBox x:Name="MoveCrossJoinToNewLine" Margin="5"
-                              Content="Place CROSS JOIN on a new line" 
+                              Content="Place CROSS/OUTER JOIN/APPLY on a new line" 
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
                         <CheckBox x:Name="FormatCaseAsMultiline" Margin="5"
