@@ -415,38 +415,45 @@ namespace AxialSqlTools
                     }
                 }
 
-            //special case #3 - CROSS should be on the new line
+            //special case #3 - CROSS/OUTER JOIN/APPLY should be on the new line
             if (formatSettings.moveCrossJoinToNewLine)
+            {
                 foreach (UnqualifiedJoin CrossJoin in visitor.UnqualifiedJoins)
                 {
-                    int NextTokenNumber = CrossJoin.SecondTableReference.FirstTokenIndex;
+                    MoveJoinKeywordToNewLine(
+                        sqlFragment,
+                        CrossJoin.SecondTableReference.FirstTokenIndex,
+                        CrossJoin.StartColumn,
+                        TSqlTokenType.Cross,
+                        TSqlTokenType.Outer);
+                }
 
-                    while (true)
+                foreach (QualifiedJoin qualifiedJoin in visitor.QualifiedJoins)
+                {
+                    TSqlTokenType? joinKeyword = null;
+                    switch (qualifiedJoin.QualifiedJoinType)
                     {
-
-                        TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[NextTokenNumber];
-
-                        if (NextToken.TokenType == TSqlTokenType.Cross)
-                        { // replace previos white-space with the new line and a number of spaces for offset
-
-                            TSqlParserToken PreviousToken = sqlFragment.ScriptTokenStream[NextTokenNumber - 1];
-                            if (PreviousToken.TokenType == TSqlTokenType.WhiteSpace)
-                            {
-                                PreviousToken.Text = "\r\n" + new string(' ', CrossJoin.StartColumn - 1);
-                                break;
-                            }
-
-                        }
-
-                        NextTokenNumber -= 1;
-
-                        //just in case
-                        if (NextTokenNumber < 0)
+                        case QualifiedJoinType.LeftOuter:
+                            joinKeyword = TSqlTokenType.Left;
                             break;
-
+                        case QualifiedJoinType.RightOuter:
+                            joinKeyword = TSqlTokenType.Right;
+                            break;
+                        case QualifiedJoinType.FullOuter:
+                            joinKeyword = TSqlTokenType.Full;
+                            break;
                     }
 
+                    if (joinKeyword.HasValue)
+                    {
+                        MoveJoinKeywordToNewLine(
+                            sqlFragment,
+                            qualifiedJoin.SecondTableReference.FirstTokenIndex,
+                            qualifiedJoin.StartColumn,
+                            joinKeyword.Value);
+                    }
                 }
+            }
 
             //special case #4 - CASE <new line + tab> WHEN <new line + tab + tab> THEN <new line + tab> ELSE <new line> END
             if (formatSettings.formatCaseAsMultiline)
@@ -904,6 +911,35 @@ namespace AxialSqlTools
                     lines[i] = lines[i].Substring(indentString.Length);
             }
             return string.Join("\r\n", lines);
+        }
+
+        private static void MoveJoinKeywordToNewLine(
+            TSqlFragment sqlFragment,
+            int startTokenIndex,
+            int startColumn,
+            params TSqlTokenType[] tokenTypes)
+        {
+            var tokenSet = new HashSet<TSqlTokenType>(tokenTypes);
+            int nextTokenNumber = startTokenIndex;
+
+            while (true)
+            {
+                TSqlParserToken nextToken = sqlFragment.ScriptTokenStream[nextTokenNumber];
+
+                if (tokenSet.Contains(nextToken.TokenType))
+                {
+                    TSqlParserToken previousToken = sqlFragment.ScriptTokenStream[nextTokenNumber - 1];
+                    if (previousToken.TokenType == TSqlTokenType.WhiteSpace)
+                        previousToken.Text = "\r\n" + new string(' ', startColumn - 1);
+                    break;
+                }
+
+                nextTokenNumber -= 1;
+
+                //just in case
+                if (nextTokenNumber < 0)
+                    break;
+            }
         }
 
 
