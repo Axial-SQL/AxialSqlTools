@@ -27,6 +27,7 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Linq;
 using AxialSqlTools.Properties;
+using System.Globalization;
 
 namespace AxialSqlTools
 {
@@ -539,23 +540,26 @@ namespace AxialSqlTools
                     var grid = GridAccess.GetNonPublicField(gridContainer, "m_grid") as GridControl;
                     var gridStorage = grid.GridStorage;
                     var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
+                    var setCellDataMethod = GetGridStorageSetCellDataMethod(gridStorage);
+
+                    List<int> columnsToAlignRight = new List<int> { };
+                    List<int> columnsToFormatNumbers = new List<int> { };
 
                     var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
                     if (gridColumns != null)
                     {
 
-                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "decimal", "numeric" };
-
-                        List<int> columnsToAlignRight = new List<int> { };
+                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "smallmoney", "decimal", "numeric" };                        
 
                         for (int c = 0; c < schemaTable.Rows.Count; c++)
                         {
                             int columnOrdinal = (int)schemaTable.Rows[c][1];
-                            var sqlDataTypeName = schemaTable.Rows[c][24];
+                            var sqlDataTypeName = schemaTable.Rows[c][24]?.ToString();
 
                             if (typeToAlignRight.Contains(sqlDataTypeName))
                             {
                                 columnsToAlignRight.Add(columnOrdinal);
+                                columnsToFormatNumbers.Add(columnOrdinal);
                             }
                         }
 
@@ -586,6 +590,24 @@ namespace AxialSqlTools
                                 }
                             }
 
+                        }
+                    }
+
+                    if (setCellDataMethod != null && columnsToFormatNumbers.Count > 0)
+                    {
+                        for (long rowIndex = 0; rowIndex < gridStorage.NumRows(); rowIndex++)
+                        {
+                            foreach (var columnOrdinal in columnsToFormatNumbers)
+                            {
+                                var columnIndex = columnOrdinal + 1;
+                                var cellText = gridStorage.GetCellDataAsString(rowIndex, columnIndex);
+                                if (TryFormatNumberWithGroupSeparators(cellText, out var formattedText)
+                                    //&& !string.Equals(cellText, formattedText, StringComparison.Ordinal)
+                                    )
+                                {
+                                    TrySetGridStorageCellData(gridStorage, setCellDataMethod, rowIndex, columnIndex, formattedText);
+                                }
+                            }
                         }
                     }
 
@@ -661,6 +683,91 @@ namespace AxialSqlTools
             }
 
 
+        }
+
+        private static bool TryFormatNumberWithGroupSeparators(string value, out string formattedValue)
+        {
+            formattedValue = value;
+
+            if (string.IsNullOrWhiteSpace(value) || string.Equals(value, "NULL", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var numberStyles = NumberStyles.Number | NumberStyles.AllowExponent;
+            var culture = CultureInfo.CurrentCulture;
+
+            if (!decimal.TryParse(value, numberStyles, culture, out var parsedValue)
+                && !decimal.TryParse(value, numberStyles, CultureInfo.InvariantCulture, out parsedValue))
+            {
+                return false;
+            }
+
+            int decimalPlaces = GetDecimalPlaces(value, culture);
+            var format = $"N{decimalPlaces}";
+            formattedValue = parsedValue.ToString(format, culture);
+
+            return true;
+        }
+
+        private static int GetDecimalPlaces(string value, CultureInfo culture)
+        {
+            var decimalSeparator = culture.NumberFormat.NumberDecimalSeparator;
+            var decimalIndex = value.LastIndexOf(decimalSeparator, StringComparison.Ordinal);
+
+            if (decimalIndex < 0)
+            {
+                var alternativeSeparator = decimalSeparator == "." ? "," : ".";
+                decimalIndex = value.LastIndexOf(alternativeSeparator, StringComparison.Ordinal);
+            }
+
+            if (decimalIndex < 0)
+            {
+                return 0;
+            }
+
+            return value.Length - decimalIndex - 1;
+        }
+
+        private static MethodInfo GetGridStorageSetCellDataMethod(object gridStorage)
+        {
+            if (gridStorage == null)
+            {
+                return null;
+            }
+
+            var methods = gridStorage.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var candidateNames = new[] { "SetCellDataAsString", "SetCellDataFromControl", "SetCellData" };
+
+            foreach (var candidateName in candidateNames)
+            {
+                var method = methods.FirstOrDefault(m => m.Name == candidateName && m.GetParameters().Length == 3);
+                if (method != null)
+                {
+                    return method;
+                }
+            }
+
+            return null;
+        }
+
+        private static void TrySetGridStorageCellData(object gridStorage, MethodInfo setCellDataMethod, long rowIndex, int columnIndex, string formattedText)
+        {
+            try
+            {
+                var parameters = setCellDataMethod.GetParameters();
+                var values = new object[parameters.Length];
+
+                values[0] = Convert.ChangeType(rowIndex, parameters[0].ParameterType, CultureInfo.InvariantCulture);
+                values[1] = Convert.ChangeType(columnIndex, parameters[1].ParameterType, CultureInfo.InvariantCulture);
+                values[2] = formattedText;
+
+                setCellDataMethod.Invoke(gridStorage, values);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An exception occurred");
+            }
         }
         private void CommandEvents_BeforeExecute(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
         {
