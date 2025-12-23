@@ -428,31 +428,6 @@ namespace AxialSqlTools
                         TSqlTokenType.Outer);
                 }
 
-                foreach (QualifiedJoin qualifiedJoin in visitor.QualifiedJoins)
-                {
-                    TSqlTokenType? joinKeyword = null;
-                    switch (qualifiedJoin.QualifiedJoinType)
-                    {
-                        case QualifiedJoinType.LeftOuter:
-                            joinKeyword = TSqlTokenType.Left;
-                            break;
-                        case QualifiedJoinType.RightOuter:
-                            joinKeyword = TSqlTokenType.Right;
-                            break;
-                        case QualifiedJoinType.FullOuter:
-                            joinKeyword = TSqlTokenType.Full;
-                            break;
-                    }
-
-                    if (joinKeyword.HasValue)
-                    {
-                        MoveJoinKeywordToNewLine(
-                            sqlFragment,
-                            qualifiedJoin.SecondTableReference.FirstTokenIndex,
-                            qualifiedJoin.StartColumn,
-                            joinKeyword.Value);
-                    }
-                }
             }
 
             //special case #4 - CASE <new line + tab> WHEN <new line + tab + tab> THEN <new line + tab> ELSE <new line> END
