@@ -542,14 +542,14 @@ namespace AxialSqlTools
                     var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
                     var setCellDataMethod = GetGridStorageSetCellDataMethod(gridStorage);
 
+                    List<int> columnsToAlignRight = new List<int> { };
+                    List<int> columnsToFormatNumbers = new List<int> { };
+
                     var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
                     if (gridColumns != null)
                     {
 
-                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "smallmoney", "decimal", "numeric", "float", "real" };
-
-                        List<int> columnsToAlignRight = new List<int> { };
-                        List<int> columnsToFormatNumbers = new List<int> { };
+                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "smallmoney", "decimal", "numeric" };                        
 
                         for (int c = 0; c < schemaTable.Rows.Count; c++)
                         {
@@ -602,7 +602,8 @@ namespace AxialSqlTools
                                 var columnIndex = columnOrdinal + 1;
                                 var cellText = gridStorage.GetCellDataAsString(rowIndex, columnIndex);
                                 if (TryFormatNumberWithGroupSeparators(cellText, out var formattedText)
-                                    && !string.Equals(cellText, formattedText, StringComparison.Ordinal))
+                                    //&& !string.Equals(cellText, formattedText, StringComparison.Ordinal)
+                                    )
                                 {
                                     TrySetGridStorageCellData(gridStorage, setCellDataMethod, rowIndex, columnIndex, formattedText);
                                 }
@@ -736,7 +737,7 @@ namespace AxialSqlTools
             }
 
             var methods = gridStorage.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            var candidateNames = new[] { "SetCellDataAsString", "SetCellDataFromString", "SetCellData" };
+            var candidateNames = new[] { "SetCellDataAsString", "SetCellDataFromControl", "SetCellData" };
 
             foreach (var candidateName in candidateNames)
             {
