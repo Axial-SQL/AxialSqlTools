@@ -1,7 +1,7 @@
-# Axial SQL Tools | SQL Server Management Studio 21 Productivity Addin
+# Axial SQL Tools | SQL Server Management Studio 22 Productivity Addin
 
 As an engineer with over two decades of experience in SQL Server, I've encountered my fair share of inefficiencies and limitations within SSMS. 
-Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the fourth iteration of my work, tailored specifically for SSMS 21.
+Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the fourth iteration of my work, tailored specifically for SSMS 22.
 This project is a personal endeavor to solve the issues I've faced, but I would like to incorporate valuable community feedback and ideas as well.
 
 While I recognize that this extension may overlap with existing tools, both free and paid, my passion lies in coding and tackling problems in my own unique way. The aim isn't to overshadow other solutions but to provide a complementary tool that addresses gaps and simplifies processes for engineers like myself.
@@ -68,13 +68,13 @@ These templates are designed to cover a wide range of scenarios, helping you to 
 
 To install the addin, you have two options:
 
-1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2022 for compatibility. 
+1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2022 or 2026 for compatibility. 
 The build process will automatically copy all necessary files into the SSMS extension folder, and you will be ready to use it.
 
 2. **Download the Release:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository.
 
 After obtaining the compiled files (either by compiling from source or downloading from Releases), place the folder with the compiled files into the following directory:
-`C:\Program Files\Microsoft SQL Server Management Studio 21\Release\Common7\IDE\Extensions`
+`C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Extensions`
 
 > **⚠️ Warning**
 >
