@@ -543,8 +543,8 @@ namespace AxialSqlTools
                     var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
                     if (gridColumns != null)
                     {
-
-                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "decimal", "numeric" };
+                        //Why no "flot"? Because it cannot be aligned "good" due to the varying number of digits in the decimal part.
+                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "smallmoney", "decimal", "numeric" };
 
                         List<int> columnsToAlignRight = new List<int> { };
 
