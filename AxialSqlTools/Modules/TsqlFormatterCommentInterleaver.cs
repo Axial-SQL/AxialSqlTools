@@ -183,10 +183,10 @@ public static class TsqlFormatterCommentInterleaver
 
         // Walk left across whitespace; if any contains a newline, the comment starts on a new line.
         int k = commentIndex - 1;
-        bool sawWs = false;
+        //bool sawWs = false;
         while (k >= 0 && IsWhitespaceToken(tokens[k]))
         {
-            sawWs = true;
+            //sawWs = true;
             if (HasNewline(tokens[k].Text)) return true;
             k--;
         }

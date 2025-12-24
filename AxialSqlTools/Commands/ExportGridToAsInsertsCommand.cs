@@ -146,6 +146,11 @@ namespace AxialSqlTools
                 // TODO - probably should format it too
                 buffer.AppendFormat("CREATE TABLE #tempBuffer ({0});\n", columnList.ToString());
                 buffer.AppendLine("GO");
+
+                string tempTableDDL = TSqlFormatter.FormatCode(buffer.ToString());
+                buffer.Clear();
+                buffer.AppendLine(tempTableDDL);
+
                 buffer.AppendLine("-------------------------------------------");
 
                 string prefix = "INSERT INTO #tempBuffer VALUES";

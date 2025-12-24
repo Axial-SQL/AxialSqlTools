@@ -194,6 +194,7 @@ namespace AxialSqlTools
 
             var statusStrip = GetNonPublicField(statusBarManager, "statusStrip");
             if (OpenTranCount > 0 || isColumnEncryptionSettingOn)
+            {
                 SetPropertyValue(statusStrip, "Font", boldFont);
             }
             else
