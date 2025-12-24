@@ -18,8 +18,9 @@ Check it out and let me know what you think!
 
 ## Main Features - (see Wiki for more details)
 
-- **Transaction Warning**: See right away if you left any transaction open.<br/>
-<img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/transaction-warning.png?raw=true"/>
+- **Transaction and Column Encryption Setting Warning**: <br/>
+Immediately identify open transactions and clearly see when Always Encrypted is enabled.
+<img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/transaction-warning.png?raw=true"/> <img src="https://github.com/user-attachments/assets/bfb3becf-dd68-4ed9-a2fa-a6b08a7151ab" />
 
 - **Precise Execution Time**: See milliseconds on the status bar.<br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/query-duration.png?raw=true"/>
