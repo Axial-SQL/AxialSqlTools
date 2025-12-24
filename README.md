@@ -18,11 +18,11 @@ Check it out and let me know what you think!
 
 ## Main Features - (see Wiki for more details)
 
-- **Transaction and Column Encryption Setting Warning**: <br/>
+- [**Transaction and Column Encryption Setting Warning**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Transaction-and-Column-Encryption-Setting-Warning): <br/>
 Immediately identify open transactions and clearly see when Always Encrypted is enabled.
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/transaction-warning.png?raw=true"/> <img src="https://github.com/user-attachments/assets/bfb3becf-dd68-4ed9-a2fa-a6b08a7151ab" />
 
-- **Precise Execution Time**: See milliseconds on the status bar.<br/>
+- **Precise Execution Time**: See milliseconds on the status bar.
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/query-duration.png?raw=true"/>
 
 - [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Validate and format your TSQL code with Microsoft TSQL parser, making it more readable and maintainable.
