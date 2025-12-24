@@ -67,8 +67,9 @@ namespace AxialSqlTools
 
                 // It might be ObjectExplorerTool, a designer, etc.
                 if (!(docView is SqlScriptEditorControl scriptEditor))
-    {                // No active query window - handle as you like
-                     // e.g. return null, or throw a more descriptive exception
+                {
+                    // No active query window - handle as you like
+                    // e.g. return null, or throw a more descriptive exception
                     return null;
                 }
 
