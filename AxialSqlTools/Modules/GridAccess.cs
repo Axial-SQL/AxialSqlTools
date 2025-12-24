@@ -356,7 +356,7 @@ namespace AxialSqlTools
                                 cellData = cellData == "0" ? "False" : "True";
                             }
 
-                            // leave some types as strings because the conversation from string fails
+                            // leave some types as strings because the conversion from string fails
                             if (columnType == typeof(Guid)
                                 || columnType == typeof(TimeSpan)
                                 || columnType == typeof(DateTime)
