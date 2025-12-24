@@ -148,7 +148,7 @@ namespace AxialSqlTools
             }
         }
 
-        public static void ChangeStatusBarContent(int OpenTranCount, string ActualElapsedTime)
+        public static void ChangeStatusBarContent(int OpenTranCount, bool isColumnEncryptionSettingOn, string ActualElapsedTime)
         {
             QEStatusBarManager statusBarManager = GetStatusBarManager();
 
@@ -165,13 +165,18 @@ namespace AxialSqlTools
                 statusBarManager.StatusText = currentMsg + " | " + msg;
             }
 
+            if (isColumnEncryptionSettingOn)
+            {
+                var oeMsg = "Column Encryption Setting is ON";
+                statusBarManager.StatusText = statusBarManager.StatusText + " | " + oeMsg;
+            }
+
             var statusBarManager_executionTimePanel = GetNonPublicField(statusBarManager, "executionTimePanel");
             SetPropertyValue(statusBarManager_executionTimePanel, "Text", ActualElapsedTime);
 
             var statusBarManager_completedTimePanel = GetNonPublicField(statusBarManager, "completedTimePanel");
             //statusBarManager_completedTimePanel.Visible = true;
 
-            // Can't express enough how much I don't like this...
             var generalPanel = GetNonPublicField(statusBarManager, "generalPanel");
             if (OpenTranCount > 0)
             {
@@ -187,8 +192,7 @@ namespace AxialSqlTools
             Font boldFont = new Font("Segoe UI", 10, FontStyle.Bold);
 
             var statusStrip = GetNonPublicField(statusBarManager, "statusStrip");
-            if (OpenTranCount > 0)
-            {
+            if (OpenTranCount > 0 || isColumnEncryptionSettingOn)
                 SetPropertyValue(statusStrip, "Font", boldFont);
             }
             else

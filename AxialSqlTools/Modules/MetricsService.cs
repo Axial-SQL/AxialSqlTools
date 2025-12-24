@@ -613,12 +613,15 @@ namespace AxialSqlTools
                         // Why so complex? 
                         // Some databases have 100s of files, so the query can be slow, easier to find unique folders first
                         string queryText_8 = @"WITH AllCatalogs
-                        AS (SELECT database_id,
+                        AS (SELECT mf.database_id,
                                    file_id,
                                    REVERSE(SUBSTRING(REVERSE(physical_name), CHARINDEX('\', REVERSE(physical_name)) + 1, LEN(physical_name))) AS FolderName
-                            FROM sys.master_files),
-                         NumberedCatalogs
-                        AS (SELECT database_id,
+                            FROM sys.master_files AS mf
+                                 INNER JOIN sys.databases AS d
+                                     ON mf.database_id = d.database_id
+                                    AND d.state_desc = 'ONLINE'),
+                         NumberedCatalogs AS (
+						 	SELECT database_id,
                                    file_id,
                                    FolderName,
                                    ROW_NUMBER() OVER (PARTITION BY FolderName ORDER BY database_id, file_id) AS RN
