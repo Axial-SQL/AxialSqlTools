@@ -616,10 +616,13 @@ namespace AxialSqlTools
                     }
                 }
 
+                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(connection.ConnectionString);
+                bool isColumnEncryptionSettingOn = builder.ColumnEncryptionSetting == SqlConnectionColumnEncryptionSetting.Enabled;
+
                 var editorProperties = GridAccess.GetNonPublicField(m_SqlExec, "editorProperties");
                 var editorProperties_ElapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
 
-                GridAccess.ChangeStatusBarContent(openTranCount, editorProperties_ElapsedTime);
+                GridAccess.ChangeStatusBarContent(openTranCount, isColumnEncryptionSettingOn, editorProperties_ElapsedTime);
 
             }
             catch (Exception ex)

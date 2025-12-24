@@ -86,7 +86,7 @@ namespace AxialSqlTools
             return gridContainers;
         }
 
-        public static void ChangeStatusBarContent(int OpenTranCount, string ActualElapsedTime)
+        public static void ChangeStatusBarContent(int OpenTranCount, bool isColumnEncryptionSettingOn, string ActualElapsedTime)
         {
             QEStatusBarManager statusBarManager = GetStatusBarManager();
 
@@ -100,6 +100,12 @@ namespace AxialSqlTools
                 statusBarManager.SetKnownState(QEStatusBarKnownStates.Executing);
                 statusBarManager.StatusText = currentMsg + " | " + msg;                
 
+            }
+
+            if (isColumnEncryptionSettingOn)
+            {
+                var oeMsg = "Column Encryption Setting is ON";
+                statusBarManager.StatusText = statusBarManager.StatusText + " | " + oeMsg;
             }
 
             var statusBarManager_executionTimePanel = GetNonPublicField(statusBarManager, "executionTimePanel");
@@ -120,7 +126,7 @@ namespace AxialSqlTools
             Font boldFont = new Font("Segoe UI", 10, FontStyle.Bold);
 
             var statusStrip = GetNonPublicField(statusBarManager, "statusStrip");
-            if (OpenTranCount > 0)
+            if (OpenTranCount > 0 || isColumnEncryptionSettingOn)
                 SetPropertyValue(statusStrip, "Font", boldFont);
             else
                 SetPropertyValue(statusStrip, "Font", defaultFont);            
