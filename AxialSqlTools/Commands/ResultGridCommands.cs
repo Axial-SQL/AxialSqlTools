@@ -76,7 +76,7 @@ namespace AxialSqlTools
 
             var btnControlAllInClauseList = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlAllInClauseList.Visible = true;
-            btnControlAllInClauseList.Caption = "Values as IN (...)";
+            btnControlAllInClauseList.Caption = "Values as IN (...) - hold Shift for compact list";
             btnControlAllInClauseList.Click += OnClick_CopyAllAsInClauseList;
 
             var copySelectedPopup = (CommandBarPopup)GridCommandBar.Controls.Add(MsoControlType.msoControlPopup, Type.Missing, Type.Missing, Type.Missing, true);
@@ -110,7 +110,7 @@ namespace AxialSqlTools
 
             var btnControlSelectedInClauseList = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlSelectedInClauseList.Visible = true;
-            btnControlSelectedInClauseList.Caption = "Values as IN (...)";
+            btnControlSelectedInClauseList.Caption = "Values as IN (...) - hold Shift for compact list";
             btnControlSelectedInClauseList.Click += OnClick_CopySelectedAsInClauseList;
 
             var btnControlCCN = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
