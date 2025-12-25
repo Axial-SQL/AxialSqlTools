@@ -71,6 +71,7 @@ namespace AxialSqlTools
         {
             if (ConnectionsListBox.SelectedItem is SettingsManager.DataTransferSavedConnection selected)
             {
+                DetailsPanel.IsEnabled = true;
                 NameTextBox.Text = selected.Name;
                 ProviderComboBox.SelectedItem = selected.Provider;
                 ServerTextBox.Text = selected.Server;
@@ -81,6 +82,7 @@ namespace AxialSqlTools
             }
             else
             {
+                DetailsPanel.IsEnabled = false;
                 ClearEditor();
             }
         }
