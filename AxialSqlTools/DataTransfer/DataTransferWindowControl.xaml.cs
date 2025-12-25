@@ -70,6 +70,10 @@
             this.InitializeComponent();
 
             Button_CopyData.IsEnabled = false;
+            ButtonToPsql_CopyData.IsEnabled = false;
+            ButtonToMySql_CopyData.IsEnabled = false;
+            ButtonFromPsql_CopyData.IsEnabled = false;
+            ButtonFromMySql_CopyData.IsEnabled = false;
             Button_Cancel.Visibility = System.Windows.Visibility.Collapsed;
 
             CheckBox_CreateTargetTableToPsql.IsChecked = true;
@@ -266,6 +270,7 @@
             sourceConnectionStringMySql = ci.FullConnectionString;
 
             Label_SourceDescriptionToMySql.Content = $"Server: [{ci.ServerName}] / Database: [{ci.Database}]";
+            SetCopyCommandAvailabilityToMySql();
         }
 
         private void Button_SelectTargetFromPsql_Click(object sender, RoutedEventArgs e)
@@ -275,6 +280,7 @@
             targetConnectionStringFromPsql = ci.FullConnectionString;
 
             Label_TargetDescriptionFromPsql.Content = $"Server: [{ci.ServerName}] / Database: [{ci.Database}]";
+            SetCopyCommandAvailabilityFromPsql();
         }
 
         private void Button_SelectTargetFromMySql_Click(object sender, RoutedEventArgs e)
@@ -284,6 +290,7 @@
             targetConnectionStringFromMySql = ci.FullConnectionString;
 
             Label_TargetDescriptionFromMySql.Content = $"Server: [{ci.ServerName}] / Database: [{ci.Database}]";
+            SetCopyCommandAvailabilityFromMySql();
         }
 
         private void Button_SelectTarget_Click(object sender, RoutedEventArgs e)
@@ -306,6 +313,26 @@
             {
                 Button_CopyData.IsEnabled = true;
             }
+        }
+
+        private void SetCopyCommandAvailabilityToPsql()
+        {
+            ButtonToPsql_CopyData.IsEnabled = !string.IsNullOrEmpty(sourceConnectionStringPsql);
+        }
+
+        private void SetCopyCommandAvailabilityToMySql()
+        {
+            ButtonToMySql_CopyData.IsEnabled = !string.IsNullOrEmpty(sourceConnectionStringMySql);
+        }
+
+        private void SetCopyCommandAvailabilityFromPsql()
+        {
+            ButtonFromPsql_CopyData.IsEnabled = !string.IsNullOrEmpty(targetConnectionStringFromPsql);
+        }
+
+        private void SetCopyCommandAvailabilityFromMySql()
+        {
+            ButtonFromMySql_CopyData.IsEnabled = !string.IsNullOrEmpty(targetConnectionStringFromMySql);
         }
 
         private int ParsePort(string portText, int defaultPort)
@@ -606,6 +633,7 @@
             sourceConnectionStringPsql = ci.FullConnectionString;
 
             Label_SourceDescriptionToPsql.Content = $"Server: [{ci.ServerName}] / Database: [{ci.Database}]";
+            SetCopyCommandAvailabilityToPsql();
         }
 
         private async void ButtonToMySql_CopyData_Click(object sender, RoutedEventArgs e)
