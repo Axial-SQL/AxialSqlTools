@@ -53,7 +53,7 @@ namespace AxialSqlTools
             if (ConnectionsListBox.SelectedItem is SettingsManager.DataTransferSavedConnection selected)
             {
                 ApplyEditorValues(selected);
-                RefreshListItem(selected);
+                ConnectionsListBox.Items.Refresh();
                 SaveConnections();
             }
             else
