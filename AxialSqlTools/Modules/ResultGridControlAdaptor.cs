@@ -388,10 +388,6 @@ namespace AxialSqlTools
 
         public int? GetCurrentColumnIndex()
         {
-            var columnIndex = TryGetCurrentColumnIndex();
-            if (columnIndex.HasValue && columnIndex.Value > 0 && columnIndex.Value < ColumnCount)
-                return columnIndex.Value;
-
             var firstCell = _gridControl.SelectedCells.Cast<BlockOfCells>().FirstOrDefault();
             if (firstCell != null)
                 return firstCell.X;
@@ -416,70 +412,7 @@ namespace AxialSqlTools
 
             return rowIndexes.OrderBy(row => row);
         }
-
-        private int? TryGetCurrentColumnIndex()
-        {
-            var currentCell = GridAccess.GetProperty(_gridControl, "CurrentCell")
-                ?? GridAccess.GetNonPublicField(_gridControl, "m_currentCell");
-
-            if (TryGetColumnIndexFromCell(currentCell, out var columnIndex))
-            {
-                return columnIndex;
-            }
-
-            var getCurrentCellMethod = _gridControl.GetType()
-                .GetMethod("GetCurrentCell", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-
-            if (getCurrentCellMethod != null)
-            {
-                var parameters = getCurrentCellMethod.GetParameters();
-                if (parameters.Length == 2 && parameters[0].ParameterType.IsByRef && parameters[1].ParameterType.IsByRef)
-                {
-                    var args = new object[] { 0, 0 };
-                    getCurrentCellMethod.Invoke(_gridControl, args);
-
-                    if (args[1] != null && int.TryParse(args[1].ToString(), out var currentColumn))
-                    {
-                        return currentColumn;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        private static bool TryGetColumnIndexFromCell(object cell, out int columnIndex)
-        {
-            columnIndex = 0;
-
-            if (cell == null)
-                return false;
-
-            var cellType = cell.GetType();
-            var columnProperty = cellType.GetProperty("ColumnIndex")
-                ?? cellType.GetProperty("Column")
-                ?? cellType.GetProperty("X");
-
-            if (columnProperty != null)
-            {
-                var value = columnProperty.GetValue(cell);
-                if (value != null && int.TryParse(value.ToString(), out columnIndex))
-                    return true;
-            }
-
-            var columnField = cellType.GetField("ColumnIndex")
-                ?? cellType.GetField("Column")
-                ?? cellType.GetField("X");
-
-            if (columnField != null)
-            {
-                var value = columnField.GetValue(cell);
-                if (value != null && int.TryParse(value.ToString(), out columnIndex))
-                    return true;
-            }
-
-            return false;
-        }
+        
         /*
         public void SetColumnBackground(int columnIndex, Color backgroundColor)
         {
