@@ -16,8 +16,7 @@
             </StackPanel>
 
             <Label Content="High-performance data transfer through bulk-load of the active result set." FontWeight="Bold"/>
-
-            <Label Content="Connect to the instance in the Object Explorer, click on the source or target database, and then use the buttons below to automatically select that connection." />
+            
             <StackPanel Orientation="Horizontal" Margin="5,0,5,5">
                 <Button Content="Edit Saved Connections" Width="180" Height="28" Click="Button_EditSavedConnections_Click"/>
             </StackPanel>
@@ -30,11 +29,11 @@
 
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                                <Button Height="35" Content="Select Source" Click="Button_SelectSource_Click" x:Name="Button_SelectSource" Width="120" FontWeight="Bold"/>
+                                <Button Height="35" Content="Select Source from Object Explorer" Click="Button_SelectSource_Click" x:Name="Button_SelectSource" Width="250" FontWeight="Bold"/>
                                 <Label Content="Source Description" x:Name="Label_SourceDescription" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                                <Button Height="35" Content="Select Target" x:Name="Button_SelectTarget" Click="Button_SelectTarget_Click" Width="120" FontWeight="Bold"/>
+                                <Button Height="35" Content="Select Target from Object Explorer" x:Name="Button_SelectTarget" Click="Button_SelectTarget_Click" Width="250" FontWeight="Bold"/>
                                 <Label Content="Target Description" x:Name="Label_TargetDescription" VerticalAlignment="Center"/>
                             </StackPanel>
 
@@ -90,7 +89,7 @@
                         <StackPanel Orientation="Vertical" >
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                                <Button Height="35" Content="Select Source" Click="Button_SelectSourceToPsql_Click" x:Name="Button_SelectSourceToPsql" Width="120" FontWeight="Bold"/>
+                                <Button Height="35" Content="Select Source from Object Explorer" Click="Button_SelectSourceToPsql_Click" x:Name="Button_SelectSourceToPsql" Width="250" FontWeight="Bold"/>
                                 <Label Content="Source Description" x:Name="Label_SourceDescriptionToPsql" VerticalAlignment="Center"/>
                             </StackPanel>
 
@@ -161,7 +160,7 @@
                         <StackPanel Orientation="Vertical" >
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                                <Button Height="35" Content="Select Source" Click="Button_SelectSourceToMySql_Click" x:Name="Button_SelectSourceToMySql" Width="120" FontWeight="Bold"/>
+                                <Button Height="35" Content="Select Source from Object Explorer" Click="Button_SelectSourceToMySql_Click" x:Name="Button_SelectSourceToMySql" Width="250" FontWeight="Bold"/>
                                 <Label Content="Source Description" x:Name="Label_SourceDescriptionToMySql" VerticalAlignment="Center"/>
                             </StackPanel>
 
@@ -263,7 +262,7 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                                <Button Height="35" Content="Select Target" Click="Button_SelectTargetFromPsql_Click" x:Name="Button_SelectTargetFromPsql" Width="120" FontWeight="Bold"/>
+                                <Button Height="35" Content="Select Target from Object Explorer" Click="Button_SelectTargetFromPsql_Click" x:Name="Button_SelectTargetFromPsql" Width="250" FontWeight="Bold"/>
                                 <Label Content="Target Description" x:Name="Label_TargetDescriptionFromPsql" VerticalAlignment="Center"/>
                             </StackPanel>
 
@@ -334,7 +333,7 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
-                                <Button Height="35" Content="Select Target" Click="Button_SelectTargetFromMySql_Click" x:Name="Button_SelectTargetFromMySql" Width="120" FontWeight="Bold"/>
+                                <Button Height="35" Content="Select Target from Object Explorer" Click="Button_SelectTargetFromMySql_Click" x:Name="Button_SelectTargetFromMySql" Width="250" FontWeight="Bold"/>
                                 <Label Content="Target Description" x:Name="Label_TargetDescriptionFromMySql" VerticalAlignment="Center"/>
                             </StackPanel>
 
