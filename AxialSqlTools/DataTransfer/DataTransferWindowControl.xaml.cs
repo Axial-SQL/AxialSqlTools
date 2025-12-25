@@ -72,32 +72,35 @@
             Button_CopyData.IsEnabled = false;
             Button_Cancel.Visibility = System.Windows.Visibility.Collapsed;
 
-            CheckBox_TruncateTargetTableToPsql.IsChecked = true;
             CheckBox_CreateTargetTableToPsql.IsChecked = true;
+            CheckBox_CreateTargetTableToMySql.IsChecked = true;
+            CheckBox_CreateTargetTableFromPsql.IsChecked = true;
+            CheckBox_CreateTargetTableFromMySql.IsChecked = true;
 
             TextBox_TargetPsqlServer.Text = "127.0.0.1";
             TextBox_TargetPsqlPort.Text = DefaultPostgresPort.ToString();
             TextBox_TargetPsqlDatabase.Text = "postgres";
             TextBox_TargetPsqlUsername.Text = "postgres";
-            PasswordBox_TargetPsqlPassword.Password = "<password>";
+            PasswordBox_TargetPsqlPassword.Password = "postgres";
 
             TextBox_TargetMySqlServer.Text = "127.0.0.1";
             TextBox_TargetMySqlPort.Text = DefaultMySqlPort.ToString();
             TextBox_TargetMySqlDatabase.Text = "mysql";
             TextBox_TargetMySqlUsername.Text = "root";
-            PasswordBox_TargetMySqlPassword.Password = "<password>";
+            PasswordBox_TargetMySqlPassword.Password = "root";
+            
 
             TextBox_SourcePsqlServer.Text = "127.0.0.1";
             TextBox_SourcePsqlPort.Text = DefaultPostgresPort.ToString();
             TextBox_SourcePsqlDatabase.Text = "postgres";
             TextBox_SourcePsqlUsername.Text = "postgres";
-            PasswordBox_SourcePsqlPassword.Password = "<password>";
+            PasswordBox_SourcePsqlPassword.Password = "postgres";
 
             TextBox_SourceMySqlServer.Text = "127.0.0.1";
             TextBox_SourceMySqlPort.Text = DefaultMySqlPort.ToString();
             TextBox_SourceMySqlDatabase.Text = "mysql";
             TextBox_SourceMySqlUsername.Text = "root";
-            PasswordBox_SourceMySqlPassword.Password = "<password>";
+            PasswordBox_SourceMySqlPassword.Password = "root";
 
         }
 
@@ -333,7 +336,8 @@
                 Port = parsedPort,
                 Database = database,
                 UserID = username,
-                Password = password
+                Password = password,
+                AllowLoadLocalInfile = true
             };
 
             return builder.ConnectionString;
@@ -678,6 +682,28 @@
 
                                 if (CheckBox_SkipDataCopyToMySql.IsChecked == false)
                                 {
+                                    using (var localInfileCmd = new MySqlCommand("SET GLOBAL local_infile=1;", mySqlConn))
+                                    {
+                                        await localInfileCmd.ExecuteNonQueryAsync(cancellationToken);
+                                    }
+
+                                    using (var localInfileCheckCmd = new MySqlCommand("SHOW VARIABLES LIKE 'local_infile';", mySqlConn))
+                                    using (var localInfileReader = await localInfileCheckCmd.ExecuteReaderAsync(cancellationToken))
+                                    {
+                                        if (await localInfileReader.ReadAsync(cancellationToken))
+                                        {
+                                            string localInfileValue = localInfileReader.GetString("Value");
+                                            if (!string.Equals(localInfileValue, "ON", StringComparison.OrdinalIgnoreCase) &&
+                                                !string.Equals(localInfileValue, "1", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                MessageBox.Show(
+                                                    "MySQL local infile is disabled. Enable local_infile on the server (and ensure AllowLoadLocalInfile is true) to use bulk copy.",
+                                                    "DataTransferWindow");
+                                                return;
+                                            }
+                                        }
+                                    }
+
                                     var bulkCopy = new MySqlBulkCopy(mySqlConn)
                                     {
                                         DestinationTableName = targetTable,
