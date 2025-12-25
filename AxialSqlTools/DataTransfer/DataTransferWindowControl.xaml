@@ -91,10 +91,37 @@
                                 <Label Content="Source Description" x:Name="Label_SourceDescriptionToPsql" VerticalAlignment="Center"/>
                             </StackPanel>
 
-                            <DockPanel>
-                                <Label Content="Target Connection String" x:Name="Label_TargetDescriptionToPsql" VerticalAlignment="Center"/>
-                                <TextBox Height="23" x:Name="TextBox_TargetConnectionToPsql"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                                <Label Content="Target PostgreSQL Connection" x:Name="Label_TargetDescriptionToPsql" FontWeight="Bold"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Server" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Height="23" x:Name="TextBox_TargetPsqlServer" />
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Port" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Height="23" x:Name="TextBox_TargetPsqlPort" />
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Database" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Height="23" x:Name="TextBox_TargetPsqlDatabase" />
+
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Username" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Height="23" x:Name="TextBox_TargetPsqlUsername" />
+
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Password" VerticalAlignment="Center" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" Height="23" x:Name="PasswordBox_TargetPsqlPassword" />
+                                </Grid>
+                            </StackPanel>
 
                             <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
                                 <Label Content="Source Query" FontWeight="Bold"/>
@@ -120,6 +147,222 @@
                                 <Button Height="35" Content="Copy Data" Click="ButtonToPsql_CopyData_Click"  Name="ButtonToPsql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
                                 <Button Height="35" Content="Cancel" Click="ButtonToPsql_Cancel_Click"  Name="ButtonToPsql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
                                 <Label Content="(copy progress)" x:Name="Label_CopyProgressToPsql" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Grid>
+                </TabItem>
+                <TabItem Header="SQL Server -> MySQL">
+                    <Grid>
+
+                        <StackPanel Orientation="Vertical" >
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Source" Click="Button_SelectSourceToMySql_Click" x:Name="Button_SelectSourceToMySql" Width="120" FontWeight="Bold"/>
+                                <Label Content="Source Description" x:Name="Label_SourceDescriptionToMySql" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                                <Label Content="Target MySQL Connection" x:Name="Label_TargetDescriptionToMySql" FontWeight="Bold"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Server" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Height="23" x:Name="TextBox_TargetMySqlServer" />
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Port" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Height="23" x:Name="TextBox_TargetMySqlPort" />
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Database" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Height="23" x:Name="TextBox_TargetMySqlDatabase" />
+
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Username" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Height="23" x:Name="TextBox_TargetMySqlUsername" />
+
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Password" VerticalAlignment="Center" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" Height="23" x:Name="PasswordBox_TargetMySqlPassword" />
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Source Query" FontWeight="Bold"/>
+                                <RichTextBox Height="100" x:Name="RichTextBox_SourceQueryToMySql">
+                                    <FlowDocument>
+                                        <Paragraph>
+                                            <Run Text=""/>
+                                        </Paragraph>
+                                    </FlowDocument>
+                                </RichTextBox>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Target Table" FontWeight="Bold"/>
+                                <CheckBox Name="CheckBox_CreateTargetTableToMySql" Content="Create table if it does not exist"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableToMySql" Content="Clear target table before inserting new records"/>
+                                <CheckBox Name="CheckBox_SkipDataCopyToMySql" Content="Create table structure only (skip data copying)"/>
+                                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableToMySql"/>
+                            </StackPanel>
+
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Copy Data" Click="ButtonToMySql_CopyData_Click"  Name="ButtonToMySql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonToMySql_Cancel_Click"  Name="ButtonToMySql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Label Content="(copy progress)" x:Name="Label_CopyProgressToMySql" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Grid>
+                </TabItem>
+                <TabItem Header="PostgreSQL -> SQL Server">
+                    <Grid>
+
+                        <StackPanel Orientation="Vertical" >
+
+                            <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                                <Label Content="Source PostgreSQL Connection" x:Name="Label_SourceDescriptionFromPsql" FontWeight="Bold"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Server" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Height="23" x:Name="TextBox_SourcePsqlServer" />
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Port" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Height="23" x:Name="TextBox_SourcePsqlPort" />
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Database" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Height="23" x:Name="TextBox_SourcePsqlDatabase" />
+
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Username" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Height="23" x:Name="TextBox_SourcePsqlUsername" />
+
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Password" VerticalAlignment="Center" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" Height="23" x:Name="PasswordBox_SourcePsqlPassword" />
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Target" Click="Button_SelectTargetFromPsql_Click" x:Name="Button_SelectTargetFromPsql" Width="120" FontWeight="Bold"/>
+                                <Label Content="Target Description" x:Name="Label_TargetDescriptionFromPsql" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Source Query" FontWeight="Bold"/>
+                                <RichTextBox Height="100" x:Name="RichTextBox_SourceQueryFromPsql">
+                                    <FlowDocument>
+                                        <Paragraph>
+                                            <Run Text=""/>
+                                        </Paragraph>
+                                    </FlowDocument>
+                                </RichTextBox>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Target Table" FontWeight="Bold"/>
+                                <CheckBox Name="CheckBox_CreateTargetTableFromPsql" Content="Create table if it does not exist"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableFromPsql" Content="Clear target table before inserting new records"/>
+                                <CheckBox Name="CheckBox_SkipDataCopyFromPsql" Content="Create table structure only (skip data copying)"/>
+                                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableFromPsql"/>
+                            </StackPanel>
+
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Copy Data" Click="ButtonFromPsql_CopyData_Click"  Name="ButtonFromPsql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonFromPsql_Cancel_Click"  Name="ButtonFromPsql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Label Content="(copy progress)" x:Name="Label_CopyProgressFromPsql" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Grid>
+                </TabItem>
+                <TabItem Header="MySQL -> SQL Server">
+                    <Grid>
+
+                        <StackPanel Orientation="Vertical" >
+
+                            <StackPanel Orientation="Vertical" Margin="5,5,5,5">
+                                <Label Content="Source MySQL Connection" x:Name="Label_SourceDescriptionFromMySql" FontWeight="Bold"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="Server" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Height="23" x:Name="TextBox_SourceMySqlServer" />
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Port" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Height="23" x:Name="TextBox_SourceMySqlPort" />
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="Database" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Height="23" x:Name="TextBox_SourceMySqlDatabase" />
+
+                                    <Label Grid.Row="3" Grid.Column="0" Content="Username" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Height="23" x:Name="TextBox_SourceMySqlUsername" />
+
+                                    <Label Grid.Row="4" Grid.Column="0" Content="Password" VerticalAlignment="Center" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" Height="23" x:Name="PasswordBox_SourceMySqlPassword" />
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Select Target" Click="Button_SelectTargetFromMySql_Click" x:Name="Button_SelectTargetFromMySql" Width="120" FontWeight="Bold"/>
+                                <Label Content="Target Description" x:Name="Label_TargetDescriptionFromMySql" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Source Query" FontWeight="Bold"/>
+                                <RichTextBox Height="100" x:Name="RichTextBox_SourceQueryFromMySql">
+                                    <FlowDocument>
+                                        <Paragraph>
+                                            <Run Text=""/>
+                                        </Paragraph>
+                                    </FlowDocument>
+                                </RichTextBox>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Vertical"  Margin="5,5,5,5">
+                                <Label Content="Target Table" FontWeight="Bold"/>
+                                <CheckBox Name="CheckBox_CreateTargetTableFromMySql" Content="Create table if it does not exist"/>
+                                <CheckBox Name="CheckBox_TruncateTargetTableFromMySql" Content="Clear target table before inserting new records"/>
+                                <CheckBox Name="CheckBox_SkipDataCopyFromMySql" Content="Create table structure only (skip data copying)"/>
+                                <TextBox Height="23" TextWrapping="Wrap" Text="" x:Name="TextBox_TargetTableFromMySql"/>
+                            </StackPanel>
+
+
+                            <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
+                                <Button Height="35" Content="Copy Data" Click="ButtonFromMySql_CopyData_Click"  Name="ButtonFromMySql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonFromMySql_Cancel_Click"  Name="ButtonFromMySql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Label Content="(copy progress)" x:Name="Label_CopyProgressFromMySql" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
 
                         </StackPanel>
