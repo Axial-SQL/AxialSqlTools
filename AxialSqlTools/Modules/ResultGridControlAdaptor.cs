@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Reflection;
 using System.Web.UI.Design;
 using System.Xml.Linq;
 
@@ -384,6 +385,34 @@ namespace AxialSqlTools
 
             return gridResult;
         }
+
+        public int? GetCurrentColumnIndex()
+        {
+            var firstCell = _gridControl.SelectedCells.Cast<BlockOfCells>().FirstOrDefault();
+            if (firstCell != null)
+                return firstCell.X;
+
+            return null;
+        }
+
+        public IEnumerable<long> GetSelectedRowIndexesForColumn(int columnIndex)
+        {
+            var rowIndexes = new HashSet<long>();
+
+            foreach (BlockOfCells cell in _gridControl.SelectedCells)
+            {
+                if (columnIndex < cell.X || columnIndex > cell.Right)
+                    continue;
+
+                for (var row = cell.Y; row <= cell.Bottom; row++)
+                {
+                    rowIndexes.Add(row);
+                }
+            }
+
+            return rowIndexes.OrderBy(row => row);
+        }
+        
         /*
         public void SetColumnBackground(int columnIndex, Color backgroundColor)
         {

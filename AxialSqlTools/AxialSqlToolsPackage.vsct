@@ -372,6 +372,7 @@
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcelAndEmail" editor="guidVSStd97" key1="M" mod1="Control Shift Alt" />
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" editor="guidVSStd97" key1="S" mod1="Control Shift Alt" />
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" editor="guidVSStd97" key1="T" mod1="Control Shift Alt" />
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialCopyQueryAsHtmlButton" editor="guidVSStd97" key1="C" mod1="Control Shift Alt" />
   </KeyBindings>
 
   <Symbols>
