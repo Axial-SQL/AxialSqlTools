@@ -93,6 +93,7 @@
     <Compile Include="DataTransfer\DataTransferWindowControl.xaml.cs">
       <DependentUpon>DataTransferWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DataTransfer\SavedConnectionStore.cs" />
     <Compile Include="DataTransfer\SavedConnectionManagerWindow.xaml.cs">
       <DependentUpon>SavedConnectionManagerWindow.xaml</DependentUpon>
     </Compile>

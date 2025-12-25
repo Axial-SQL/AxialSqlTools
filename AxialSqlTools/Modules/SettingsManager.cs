@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.IO;
 
 namespace AxialSqlTools
 {
@@ -759,14 +760,7 @@ ORDER BY sd.[name];
         {
             try
             {
-                string json = GetRegisterValue("DataTransferSavedConnections");
-                if (string.IsNullOrWhiteSpace(json))
-                {
-                    return new List<DataTransferSavedConnection>();
-                }
-
-                var connections = JsonConvert.DeserializeObject<List<DataTransferSavedConnection>>(json);
-                return connections ?? new List<DataTransferSavedConnection>();
+                return SavedConnectionStore.Load();
             }
             catch
             {
@@ -778,8 +772,8 @@ ORDER BY sd.[name];
         {
             try
             {
-                var json = JsonConvert.SerializeObject(connections ?? new List<DataTransferSavedConnection>());
-                return SaveRegisterValue("DataTransferSavedConnections", json);
+                SavedConnectionStore.Save(connections ?? new List<DataTransferSavedConnection>());
+                return true;
             }
             catch
             {
