@@ -142,7 +142,7 @@
                             
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                                 <Button Height="35" Content="Copy Data" Click="ButtonToPsql_CopyData_Click"  Name="ButtonToPsql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
-                                <Button Height="35" Content="Cancel" Click="ButtonToPsql_Cancel_Click"  Name="ButtonToPsql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonToPsql_Cancel_Click"  Name="ButtonToPsql_Cancel" Margin="5" Width="76" FontWeight="Bold" Visibility="Collapsed" />
                                 <Label Content="(copy progress)" x:Name="Label_CopyProgressToPsql" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
 
@@ -211,7 +211,7 @@
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                                 <Button Height="35" Content="Copy Data" Click="ButtonToMySql_CopyData_Click"  Name="ButtonToMySql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
-                                <Button Height="35" Content="Cancel" Click="ButtonToMySql_Cancel_Click"  Name="ButtonToMySql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonToMySql_Cancel_Click"  Name="ButtonToMySql_Cancel" Margin="5" Width="76" FontWeight="Bold" Visibility="Collapsed" />
                                 <Label Content="(copy progress)" x:Name="Label_CopyProgressToMySql" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
 
@@ -280,7 +280,7 @@
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                                 <Button Height="35" Content="Copy Data" Click="ButtonFromPsql_CopyData_Click"  Name="ButtonFromPsql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
-                                <Button Height="35" Content="Cancel" Click="ButtonFromPsql_Cancel_Click"  Name="ButtonFromPsql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonFromPsql_Cancel_Click"  Name="ButtonFromPsql_Cancel" Margin="5" Width="76" FontWeight="Bold" Visibility="Collapsed" />
                                 <Label Content="(copy progress)" x:Name="Label_CopyProgressFromPsql" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
 
@@ -349,7 +349,7 @@
 
                             <StackPanel Orientation="Horizontal"  Margin="5,5,5,5">
                                 <Button Height="35" Content="Copy Data" Click="ButtonFromMySql_CopyData_Click"  Name="ButtonFromMySql_CopyData" Margin="5" Width="96" FontWeight="Bold" />
-                                <Button Height="35" Content="Cancel" Click="ButtonFromMySql_Cancel_Click"  Name="ButtonFromMySql_Cancel" Margin="5" Width="76" FontWeight="Bold" />
+                                <Button Height="35" Content="Cancel" Click="ButtonFromMySql_Cancel_Click"  Name="ButtonFromMySql_Cancel" Margin="5" Width="76" FontWeight="Bold" Visibility="Collapsed" />
                                 <Label Content="(copy progress)" x:Name="Label_CopyProgressFromMySql" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
 
