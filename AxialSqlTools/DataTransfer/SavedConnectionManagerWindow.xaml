@@ -12,6 +12,11 @@
         </Grid.ColumnDefinitions>
         <StackPanel Grid.Column="0" Margin="0,0,10,0">
             <TextBlock Text="Saved Connections" FontWeight="Bold" FontSize="14" />
+            <TextBlock Text="Saved to: %LocalAppData%\\AxialSQL\\data-transfer-connections.json"
+                       Margin="0,4,0,0"
+                       FontStyle="Italic"
+                       Foreground="Gray"
+                       TextWrapping="Wrap"/>
             <ListBox Name="ConnectionsListBox"
                      Margin="0,10,0,0"
                      Height="280"
