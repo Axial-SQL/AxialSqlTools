@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using Task = System.Threading.Tasks.Task;
 
 namespace AxialSqlTools
@@ -75,7 +76,7 @@ namespace AxialSqlTools
 
             var btnControlAllInClauseList = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlAllInClauseList.Visible = true;
-            btnControlAllInClauseList.Caption = "Values as IN (...)";
+            btnControlAllInClauseList.Caption = "Values as IN (...) - hold Shift for compact list";
             btnControlAllInClauseList.Click += OnClick_CopyAllAsInClauseList;
 
             var copySelectedPopup = (CommandBarPopup)GridCommandBar.Controls.Add(MsoControlType.msoControlPopup, Type.Missing, Type.Missing, Type.Missing, true);
@@ -109,7 +110,7 @@ namespace AxialSqlTools
 
             var btnControlSelectedInClauseList = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlSelectedInClauseList.Visible = true;
-            btnControlSelectedInClauseList.Caption = "Values as IN (...)";
+            btnControlSelectedInClauseList.Caption = "Values as IN (...) - hold Shift for compact list";
             btnControlSelectedInClauseList.Click += OnClick_CopySelectedAsInClauseList;
 
             var btnControlCCN = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
@@ -358,9 +359,44 @@ namespace AxialSqlTools
                 }
             }
 
-            var resultText = $"({string.Join(", ", values)})";
+            var isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+            var resultText = isShiftPressed
+                ? BuildCompactInClause(values)
+                : $"({string.Join(",\r\n", values)})";
             SetClipboardText(resultText);
             ServiceCache.ExtensibilityModel.StatusBar.Text = "Copied";
+        }
+
+        private static string BuildCompactInClause(IReadOnlyList<object> values)
+        {
+            const int maxLineLength = 200;
+            var lines = new List<string>();
+            var currentLine = string.Empty;
+
+            foreach (var value in values)
+            {
+                var valueText = value?.ToString() ?? string.Empty;
+                var candidate = string.IsNullOrEmpty(currentLine)
+                    ? valueText
+                    : $"{currentLine}, {valueText}";
+
+                if (!string.IsNullOrEmpty(currentLine) && candidate.Length > maxLineLength)
+                {
+                    lines.Add(currentLine);
+                    currentLine = valueText;
+                }
+                else
+                {
+                    currentLine = candidate;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(currentLine))
+            {
+                lines.Add(currentLine);
+            }
+
+            return $"({string.Join(",\r\n", lines)})";
         }
 
         [STAThread]
