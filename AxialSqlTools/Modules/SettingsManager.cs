@@ -7,6 +7,8 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System.IO;
 
 namespace AxialSqlTools
 {
@@ -363,6 +365,65 @@ ORDER BY sd.[name];
             }
         }
 
+        public enum DataTransferProvider
+        {
+            PostgreSql,
+            MySql
+        }
+
+        public class DataTransferSavedConnection
+        {
+            public string Name { get; set; }
+
+            [JsonConverter(typeof(StringEnumConverter))]
+            public DataTransferProvider Provider { get; set; }
+
+            public string Server { get; set; }
+            public int Port { get; set; }
+            public string Database { get; set; }
+            public string Username { get; set; }
+
+            [JsonProperty("Password")]
+            public string EncryptedPassword { get; set; }
+
+            [JsonIgnore]
+            private string _password;
+
+            [JsonIgnore]
+            public string Password
+            {
+                get
+                {
+                    if (_password == null && !string.IsNullOrEmpty(EncryptedPassword))
+                    {
+                        var cipher = Convert.FromBase64String(EncryptedPassword);
+                        var plain = SettingsManager.Unprotect(cipher);
+                        _password = plain != null
+                            ? Encoding.UTF8.GetString(plain)
+                            : throw new InvalidOperationException("Failed to decrypt saved connection password.");
+                    }
+                    return _password;
+                }
+                set
+                {
+                    _password = value;
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        var data = Encoding.UTF8.GetBytes(value);
+                        var cipher = SettingsManager.Protect(data);
+                        EncryptedPassword = Convert.ToBase64String(cipher);
+                    }
+                    else
+                    {
+                        EncryptedPassword = null;
+                    }
+                }
+            }
+
+            [JsonIgnore]
+            public string DisplayName => $"{Name} ({Provider})";
+        }
+
         public static byte[] Protect(byte[] data)
         {
             try
@@ -693,6 +754,31 @@ ORDER BY sd.[name];
         public static bool SaveQueryHistoryTableName(string qhTableName)
         {
             return SaveRegisterValue("QueryHistoryTableName", qhTableName);
+        }
+
+        public static List<DataTransferSavedConnection> GetDataTransferSavedConnections()
+        {
+            try
+            {
+                return SavedConnectionStore.Load();
+            }
+            catch
+            {
+                return new List<DataTransferSavedConnection>();
+            }
+        }
+
+        public static bool SaveDataTransferSavedConnections(List<DataTransferSavedConnection> connections)
+        {
+            try
+            {
+                SavedConnectionStore.Save(connections ?? new List<DataTransferSavedConnection>());
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public static ExcelExportSettings GetExcelExportSettings()

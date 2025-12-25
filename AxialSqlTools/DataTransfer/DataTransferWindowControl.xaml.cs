@@ -4,6 +4,7 @@
     using MySqlConnector;
     using Npgsql;
     using System;
+    using System.Collections.Generic;
     using System.Data;
     using System.Data.SqlClient;
     using System.Diagnostics;
@@ -106,6 +107,109 @@
             TextBox_SourceMySqlUsername.Text = "root";
             PasswordBox_SourceMySqlPassword.Password = "root";
 
+        }
+
+        private void Button_EditSavedConnections_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new SavedConnectionManagerWindow
+            {
+                Owner = Window.GetWindow(this)
+            };
+            window.ShowDialog();
+        }
+
+        private void Button_PickTargetPsql_Click(object sender, RoutedEventArgs e)
+        {
+            var connection = PickSavedConnection(SettingsManager.DataTransferProvider.PostgreSql, "Select a PostgreSQL connection");
+            if (connection != null)
+            {
+                ApplyPostgresConnection(connection, isTarget: true);
+            }
+        }
+
+        private void Button_PickTargetMySql_Click(object sender, RoutedEventArgs e)
+        {
+            var connection = PickSavedConnection(SettingsManager.DataTransferProvider.MySql, "Select a MySQL connection");
+            if (connection != null)
+            {
+                ApplyMySqlConnection(connection, isTarget: true);
+            }
+        }
+
+        private void Button_PickSourcePsql_Click(object sender, RoutedEventArgs e)
+        {
+            var connection = PickSavedConnection(SettingsManager.DataTransferProvider.PostgreSql, "Select a PostgreSQL connection");
+            if (connection != null)
+            {
+                ApplyPostgresConnection(connection, isTarget: false);
+            }
+        }
+
+        private void Button_PickSourceMySql_Click(object sender, RoutedEventArgs e)
+        {
+            var connection = PickSavedConnection(SettingsManager.DataTransferProvider.MySql, "Select a MySQL connection");
+            if (connection != null)
+            {
+                ApplyMySqlConnection(connection, isTarget: false);
+            }
+        }
+
+        private SettingsManager.DataTransferSavedConnection PickSavedConnection(SettingsManager.DataTransferProvider provider, string title)
+        {
+            List<SettingsManager.DataTransferSavedConnection> connections = SettingsManager.GetDataTransferSavedConnections();
+            var filtered = connections.FindAll(conn => conn.Provider == provider);
+            if (filtered.Count == 0)
+            {
+                MessageBox.Show("No saved connections found. Use \"Edit Saved Connections\" to add one.", "Data Transfer");
+                return null;
+            }
+
+            var picker = new SavedConnectionPickerWindow(filtered, title)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            return picker.ShowDialog() == true ? picker.SelectedConnection : null;
+        }
+
+        private void ApplyPostgresConnection(SettingsManager.DataTransferSavedConnection connection, bool isTarget)
+        {
+            if (isTarget)
+            {
+                TextBox_TargetPsqlServer.Text = connection.Server;
+                TextBox_TargetPsqlPort.Text = connection.Port.ToString();
+                TextBox_TargetPsqlDatabase.Text = connection.Database;
+                TextBox_TargetPsqlUsername.Text = connection.Username;
+                PasswordBox_TargetPsqlPassword.Password = connection.Password ?? string.Empty;
+            }
+            else
+            {
+                TextBox_SourcePsqlServer.Text = connection.Server;
+                TextBox_SourcePsqlPort.Text = connection.Port.ToString();
+                TextBox_SourcePsqlDatabase.Text = connection.Database;
+                TextBox_SourcePsqlUsername.Text = connection.Username;
+                PasswordBox_SourcePsqlPassword.Password = connection.Password ?? string.Empty;
+            }
+        }
+
+        private void ApplyMySqlConnection(SettingsManager.DataTransferSavedConnection connection, bool isTarget)
+        {
+            if (isTarget)
+            {
+                TextBox_TargetMySqlServer.Text = connection.Server;
+                TextBox_TargetMySqlPort.Text = connection.Port.ToString();
+                TextBox_TargetMySqlDatabase.Text = connection.Database;
+                TextBox_TargetMySqlUsername.Text = connection.Username;
+                PasswordBox_TargetMySqlPassword.Password = connection.Password ?? string.Empty;
+            }
+            else
+            {
+                TextBox_SourceMySqlServer.Text = connection.Server;
+                TextBox_SourceMySqlPort.Text = connection.Port.ToString();
+                TextBox_SourceMySqlDatabase.Text = connection.Database;
+                TextBox_SourceMySqlUsername.Text = connection.Username;
+                PasswordBox_SourceMySqlPassword.Password = connection.Password ?? string.Empty;
+            }
         }
 
         private async void SqlToSql_CopyData_UpdateStatusAsync(object bulkCopySender, SqlRowsCopiedEventArgs eventArgs)
