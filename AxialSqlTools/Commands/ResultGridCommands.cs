@@ -73,6 +73,11 @@ namespace AxialSqlTools
             btnControlAllHtml.Caption = "HTML";
             btnControlAllHtml.Click += OnClick_CopyAllAsHtml;
 
+            var btnControlAllInClauseList = (CommandBarButton)copyAllPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlAllInClauseList.Visible = true;
+            btnControlAllInClauseList.Caption = "IN Clause List";
+            btnControlAllInClauseList.Click += OnClick_CopyAllAsInClauseList;
+
             var copySelectedPopup = (CommandBarPopup)GridCommandBar.Controls.Add(MsoControlType.msoControlPopup, Type.Missing, Type.Missing, Type.Missing, true);
             copySelectedPopup.Visible = true;
             copySelectedPopup.Caption = "Copy Selected As ...";
@@ -102,6 +107,11 @@ namespace AxialSqlTools
             btnControlSelectedHtml.Caption = "HTML";
             btnControlSelectedHtml.Click += OnClick_CopySelectedAsHtml;
 
+            var btnControlSelectedInClauseList = (CommandBarButton)copySelectedPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
+            btnControlSelectedInClauseList.Visible = true;
+            btnControlSelectedInClauseList.Caption = "IN Clause List";
+            btnControlSelectedInClauseList.Click += OnClick_CopySelectedAsInClauseList;
+
             var btnControlCCN = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlCCN.Visible = true;
             btnControlCCN.Caption = "Copy Selected Column Names";
@@ -119,11 +129,13 @@ namespace AxialSqlTools
         private static void OnClick_CopyAllAsJson(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Json);
         private static void OnClick_CopyAllAsXml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Xml);
         private static void OnClick_CopyAllAsHtml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Html);
+        private static void OnClick_CopyAllAsInClauseList(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.InClauseList);
         private static void OnClick_CopySelectedAsInsert(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Insert);
         private static void OnClick_CopySelectedAsCsv(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Csv);
         private static void OnClick_CopySelectedAsJson(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Json);
         private static void OnClick_CopySelectedAsXml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Xml);
         private static void OnClick_CopySelectedAsHtml(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.Html);
+        private static void OnClick_CopySelectedAsInClauseList(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.Selected, CopyFormat.InClauseList);
 
         private static void OnClick_CopySelectedColumnNames(CommandBarButton Ctrl, ref bool CancelDefault)
         {
@@ -206,7 +218,8 @@ namespace AxialSqlTools
             Csv,
             Json,
             Xml,
-            Html
+            Html,
+            InClauseList
         }
 
         private static void CopyValues(CopyScope scope, CopyFormat format)
@@ -219,6 +232,12 @@ namespace AxialSqlTools
                 if (format == CopyFormat.Insert)
                 {
                     CopyInsert(scope, gridResultControl);
+                    return;
+                }
+
+                if (format == CopyFormat.InClauseList)
+                {
+                    CopyInClauseList(scope, gridResultControl);
                     return;
                 }
 
@@ -295,6 +314,51 @@ namespace AxialSqlTools
             var valuesText = string.Join(",\r\n", contentRows);
             var resultText = $"INSERT INTO [table] ({columnHeaders}) VALUES\r\n" + valuesText;
 
+            SetClipboardText(resultText);
+            ServiceCache.ExtensibilityModel.StatusBar.Text = "Copied";
+        }
+
+        private static void CopyInClauseList(CopyScope scope, ResultGridControlAdaptor gridResultControl)
+        {
+            var columnIndex = gridResultControl.GetCurrentColumnIndex();
+            if (!columnIndex.HasValue)
+            {
+                ServiceCache.ExtensibilityModel.StatusBar.Text = "No column selected to copy";
+                return;
+            }
+
+            var column = columnIndex.Value;
+            var values = new List<object>();
+
+            if (scope == CopyScope.All)
+            {
+                if (gridResultControl.RowCount == 0)
+                {
+                    ServiceCache.ExtensibilityModel.StatusBar.Text = "No data to copy";
+                    return;
+                }
+
+                for (var rowIndex = 0L; rowIndex < gridResultControl.RowCount; rowIndex++)
+                {
+                    values.Add(gridResultControl.GetCellValueAsString(rowIndex, column));
+                }
+            }
+            else
+            {
+                var selectedRows = gridResultControl.GetSelectedRowIndexesForColumn(column).ToList();
+                if (selectedRows.Count == 0)
+                {
+                    ServiceCache.ExtensibilityModel.StatusBar.Text = "No cells selected to copy";
+                    return;
+                }
+
+                foreach (var rowIndex in selectedRows)
+                {
+                    values.Add(gridResultControl.GetCellValueAsString(rowIndex, column));
+                }
+            }
+
+            var resultText = $"({string.Join(", ", values)})";
             SetClipboardText(resultText);
             ServiceCache.ExtensibilityModel.StatusBar.Text = "Copied";
         }
