@@ -240,14 +240,14 @@
         </Strings>
       </Button>
 
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDataImportCommand" priority="0x0001" type="Button">
+      <!--<Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDataImportCommand" priority="0x0001" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
         <Icon guid="guidDataTransfer" id="bmpDataTransfer" />
-        <CommandFlag>DefaultInvisible</CommandFlag> <!-- WIP, hidden for now -->
+        <CommandFlag>DefaultInvisible</CommandFlag>  WIP, hidden for now 
         <Strings>
           <ButtonText>Data Import</ButtonText>
         </Strings>
-      </Button>
+      </Button>-->
 
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDatabaseScripterCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
