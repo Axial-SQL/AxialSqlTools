@@ -93,6 +93,12 @@
     <Compile Include="DataTransfer\DataTransferWindowControl.xaml.cs">
       <DependentUpon>DataTransferWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DataTransfer\SavedConnectionManagerWindow.xaml.cs">
+      <DependentUpon>SavedConnectionManagerWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DataTransfer\SavedConnectionPickerWindow.xaml.cs">
+      <DependentUpon>SavedConnectionPickerWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="GridToEmail\ToolWindowGridToEmail.cs" />
     <Compile Include="GridToEmail\ToolWindowGridToEmailCommand.cs" />
     <Compile Include="GridToEmail\ToolWindowGridToEmailControl.xaml.cs">
@@ -318,6 +324,14 @@
     <Page Include="DataTransfer\DataTransferWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="DataTransfer\SavedConnectionManagerWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataTransfer\SavedConnectionPickerWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="GridToEmail\ToolWindowGridToEmailControl.xaml">
       <SubType>Designer</SubType>

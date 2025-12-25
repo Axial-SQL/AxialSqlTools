@@ -18,6 +18,9 @@
             <Label Content="High-performance data transfer through bulk-load of the active result set." FontWeight="Bold"/>
 
             <Label Content="Connect to the instance in the Object Explorer, click on the source or target database, and then use the buttons below to automatically select that connection." />
+            <StackPanel Orientation="Horizontal" Margin="5,0,5,5">
+                <Button Content="Edit Saved Connections" Width="180" Height="28" Click="Button_EditSavedConnections_Click"/>
+            </StackPanel>
 
             <TabControl >
                 <TabItem Header="SQL Server -> SQL Server">
@@ -100,6 +103,7 @@
                                         <ColumnDefinition Width="2*" />
                                         <ColumnDefinition Width="1.5*" />
                                         <ColumnDefinition Width="1.5*" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -117,6 +121,7 @@
                                     <TextBox Grid.Row="1" Grid.Column="2" Height="23" x:Name="TextBox_TargetPsqlDatabase" Margin="0,0,8,0" />
                                     <TextBox Grid.Row="1" Grid.Column="3" Height="23" x:Name="TextBox_TargetPsqlUsername" Margin="0,0,8,0" />
                                     <PasswordBox Grid.Row="1" Grid.Column="4" Height="23" x:Name="PasswordBox_TargetPsqlPassword" />
+                                    <Button Grid.Row="1" Grid.Column="5" Height="23" Width="70" Margin="8,0,0,0" Content="Saved..." Click="Button_PickTargetPsql_Click" />
                                 </Grid>
                             </StackPanel>
 
@@ -169,6 +174,7 @@
                                         <ColumnDefinition Width="2*" />
                                         <ColumnDefinition Width="1.5*" />
                                         <ColumnDefinition Width="1.5*" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -186,6 +192,7 @@
                                     <TextBox Grid.Row="1" Grid.Column="2" Height="23" x:Name="TextBox_TargetMySqlDatabase" Margin="0,0,8,0" />
                                     <TextBox Grid.Row="1" Grid.Column="3" Height="23" x:Name="TextBox_TargetMySqlUsername" Margin="0,0,8,0" />
                                     <PasswordBox Grid.Row="1" Grid.Column="4" Height="23" x:Name="PasswordBox_TargetMySqlPassword" />
+                                    <Button Grid.Row="1" Grid.Column="5" Height="23" Width="70" Margin="8,0,0,0" Content="Saved..." Click="Button_PickTargetMySql_Click" />
                                 </Grid>
                             </StackPanel>
 
@@ -233,6 +240,7 @@
                                         <ColumnDefinition Width="2*" />
                                         <ColumnDefinition Width="1.5*" />
                                         <ColumnDefinition Width="1.5*" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -250,6 +258,7 @@
                                     <TextBox Grid.Row="1" Grid.Column="2" Height="23" x:Name="TextBox_SourcePsqlDatabase" Margin="0,0,8,0" />
                                     <TextBox Grid.Row="1" Grid.Column="3" Height="23" x:Name="TextBox_SourcePsqlUsername" Margin="0,0,8,0" />
                                     <PasswordBox Grid.Row="1" Grid.Column="4" Height="23" x:Name="PasswordBox_SourcePsqlPassword" />
+                                    <Button Grid.Row="1" Grid.Column="5" Height="23" Width="70" Margin="8,0,0,0" Content="Saved..." Click="Button_PickSourcePsql_Click" />
                                 </Grid>
                             </StackPanel>
 
@@ -302,6 +311,7 @@
                                         <ColumnDefinition Width="2*" />
                                         <ColumnDefinition Width="1.5*" />
                                         <ColumnDefinition Width="1.5*" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -319,6 +329,7 @@
                                     <TextBox Grid.Row="1" Grid.Column="2" Height="23" x:Name="TextBox_SourceMySqlDatabase" Margin="0,0,8,0" />
                                     <TextBox Grid.Row="1" Grid.Column="3" Height="23" x:Name="TextBox_SourceMySqlUsername" Margin="0,0,8,0" />
                                     <PasswordBox Grid.Row="1" Grid.Column="4" Height="23" x:Name="PasswordBox_SourceMySqlPassword" />
+                                    <Button Grid.Row="1" Grid.Column="5" Height="23" Width="70" Margin="8,0,0,0" Content="Saved..." Click="Button_PickSourceMySql_Click" />
                                 </Grid>
                             </StackPanel>
 
