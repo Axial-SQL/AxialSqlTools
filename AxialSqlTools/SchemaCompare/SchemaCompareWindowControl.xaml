@@ -50,14 +50,38 @@
             <TabItem Header="Differences">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="2*" />
                         <RowDefinition Height="3*" />
                     </Grid.RowDefinitions>
 
-                    <DataGrid Grid.Row="0" ItemsSource="{Binding Differences}" AutoGenerateColumns="False" IsReadOnly="True"
+                    <StackPanel Grid.Row="0" Margin="0,0,0,8" Orientation="Vertical">
+                        <TextBlock Text="Object types included in comparison:" FontWeight="Bold" Margin="0,0,0,4" />
+                        <ScrollViewer Height="80" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding ObjectTypeFilters}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsIncluded, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,12,4" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,4,0,0">
+                            <Button Content="Include All" Width="120" Command="{Binding IncludeAllObjectTypesCommand}" />
+                            <Button Content="Exclude All" Width="120" Margin="8,0,0,0" Command="{Binding ExcludeAllObjectTypesCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Differences}" AutoGenerateColumns="False"
                               SelectedItem="{Binding SelectedDifference, Mode=TwoWay}" CanUserAddRows="False"
                               HeadersVisibility="Column" Margin="0,0,0,8">
                         <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="Include" Binding="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="80" IsReadOnly="False" />
                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
                             <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="*" />
                             <DataGridTextColumn Header="Difference Type" Binding="{Binding DifferenceType}" Width="*" />
@@ -66,7 +90,7 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Grid Grid.Row="1">
+                    <Grid Grid.Row="2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
@@ -216,6 +240,7 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                        <Button Content="Generate Script" Width="140" Margin="0,0,8,0" Command="{Binding GenerateDeploymentScriptCommand}" />
                         <Button Content="Copy Script" Width="120" Command="{Binding CopyDeploymentScriptCommand}" />
                     </StackPanel>
                     <TextBox Grid.Row="1" Text="{Binding DeploymentScript, Mode=OneWay}" FontFamily="Consolas" FontSize="12" AcceptsReturn="True"
