@@ -815,10 +815,10 @@
 
                                 if (CheckBox_SkipDataCopyToMySql.IsChecked == false)
                                 {
-                                    using (var localInfileCmd = new MySqlCommand("SET GLOBAL local_infile=1;", mySqlConn))
-                                    {
-                                        await localInfileCmd.ExecuteNonQueryAsync(cancellationToken);
-                                    }
+                                    //using (var localInfileCmd = new MySqlCommand("SET GLOBAL local_infile=1;", mySqlConn))
+                                    //{
+                                    //    await localInfileCmd.ExecuteNonQueryAsync(cancellationToken);
+                                    //}
 
                                     using (var localInfileCheckCmd = new MySqlCommand("SHOW VARIABLES LIKE 'local_infile';", mySqlConn))
                                     using (var localInfileReader = await localInfileCheckCmd.ExecuteReaderAsync(cancellationToken))
