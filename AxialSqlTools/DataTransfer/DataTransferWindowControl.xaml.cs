@@ -518,9 +518,10 @@
         {
             switch (sqlServerType)
             {
+                case "System.Byte": return "SMALLINT"; // SQL Server tinyint (0-255)
+                case "System.Int16": return "SMALLINT"; // SQL Server smallint
                 case "System.Int32": return "INTEGER";
                 case "System.Int64": return "BIGINT";
-                case "System.Int16": return "SMALLINT";
                 case "System.Decimal": return "NUMERIC";
                 case "System.Double": return "DOUBLE PRECISION";
                 case "System.Single": return "REAL";
