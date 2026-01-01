@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Axial SQL Tools")]
-[assembly: AssemblyDescription("A productivity-enhancing tool for SQL Server Management Studio 21")]
+[assembly: AssemblyDescription("A productivity-enhancing tool for SQL Server Management Studio 22")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Axial Solutions LLC")]
 [assembly: AssemblyProduct("Axial SQL Tools")]
@@ -29,5 +29,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("4.8.0.0")]
-[assembly: AssemblyFileVersion("4.8.0.0")]
+[assembly: AssemblyVersion("4.9.0.0")]
+[assembly: AssemblyFileVersion("4.9.0.0")]
