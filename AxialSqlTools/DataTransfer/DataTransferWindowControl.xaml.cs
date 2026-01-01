@@ -574,6 +574,16 @@
             }
         }
 
+        private static object SanitizePostgresValue(object value)
+        {
+            if (value is string text && text.IndexOf('\0') >= 0)
+            {
+                return text.Replace("\0", string.Empty);
+            }
+
+            return value;
+        }
+
         private async void ButtonToPsql_CopyData_Click(object sender, RoutedEventArgs e)
         {
             // Ensure a target table name is provided.
@@ -677,6 +687,10 @@
                                             {
                                                 bool isNull = await reader.IsDBNullAsync(i, cancellationToken);
                                                 var value = isNull ? DBNull.Value : reader.GetValue(i);
+                                                if (!isNull)
+                                                {
+                                                    value = SanitizePostgresValue(value);
+                                                }
                                                 // Write each column value asynchronously.
                                                 await importer.WriteAsync(value, cancellationToken);
                                             }
