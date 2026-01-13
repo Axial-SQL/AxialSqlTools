@@ -63,6 +63,9 @@
     <Compile Include="Commands\Dialogs\FormatOptionsDialog.xaml.cs">
       <DependentUpon>FormatOptionsDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Commands\Dialogs\ScriptObjectPickerDialog.xaml.cs">
+      <DependentUpon>ScriptObjectPickerDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SchemaCompare\SchemaCompareWindow.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindowCommand.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindowControl.xaml.cs">
@@ -303,6 +306,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Commands\Dialogs\FormatOptionsDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Commands\Dialogs\ScriptObjectPickerDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
