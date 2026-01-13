@@ -245,11 +245,31 @@ namespace AxialSqlTools
                     }
                     else if (selectedObject.TypeDesc == "SQL_TRIGGER")
                     {
-                        dbObject = FindTableTrigger(db, selectedObject.ObjectName, selectedObject.SchemaName);
-                    } // Add more else-if blocks for other types like Functions, Triggers, etc.
+                        dbObject = FindTableTrigger(db, selectedObject.ParentObjectName, selectedObject.ObjectName, selectedObject.SchemaName);                    
+                    }
+                        else if (selectedObject.TypeDesc == "INDEX")
+                    {
+                        dbObject = FindTableIndex(db, selectedObject.ParentObjectName, selectedObject.ObjectName, selectedObject.SchemaName);
+                    }
+                    else if (selectedObject.TypeDesc == "PRIMARY_KEY_CONSTRAINT" || selectedObject.TypeDesc == "UNIQUE_CONSTRAINT")
+                    {
+                        dbObject = FindTableIndex(db, selectedObject.ParentObjectName, selectedObject.ObjectName, selectedObject.SchemaName);
+                    }
+                    else if (selectedObject.TypeDesc == "FOREIGN_KEY_CONSTRAINT")
+                    {
+                        dbObject = FindTableForeignKey(db, selectedObject.ParentObjectName, selectedObject.ObjectName, selectedObject.SchemaName);
+                    }
+                    else if (selectedObject.TypeDesc == "CHECK_CONSTRAINT")
+                    {
+                        dbObject = FindTableCheck(db, selectedObject.ParentObjectName, selectedObject.ObjectName, selectedObject.SchemaName);
+                    }
+                    else if (selectedObject.TypeDesc == "DEFAULT_CONSTRAINT")
+                    {
+                        dbObject = FindDefaultConstraint(db, selectedObject.ParentObjectName, selectedObject.ObjectName, selectedObject.SchemaName);
+                    }
 
 
-                    if (dbObject != null)
+                if (dbObject != null)
                     {
                         System.Collections.Specialized.StringCollection sc = scripter.Script(new Urn[] { dbObject.Urn });
 
@@ -264,14 +284,14 @@ namespace AxialSqlTools
                         // additional format to make it pretty
                         if (selectedObject.TypeDesc == "USER_TABLE")
                         {
-                            TSql160Parser sqlParser = new TSql160Parser(false);
+                            TSql170Parser sqlParser = new TSql170Parser(false);
                             IList<ParseError> parseErrors = new List<ParseError>();
                             TSqlFragment result = sqlParser.Parse(new StringReader(fullScriptResult), out parseErrors);
 
                             // leave it as is if for some reason we can't format it
                             if (parseErrors.Count == 0)
                             {
-                                Sql160ScriptGenerator gen = new Sql160ScriptGenerator();
+                                Sql170ScriptGenerator gen = new Sql170ScriptGenerator();
                                 gen.Options.AlignClauseBodies = false;
                                 gen.Options.IncludeSemicolons = false;
                                 gen.GenerateScript(result, out fullScriptResult);
@@ -285,6 +305,9 @@ namespace AxialSqlTools
 
                         doc.EndPoint.CreateEditPoint().Insert(fullScriptResult);
 
+                    }
+                    else { 
+                        throw new Exception("Unable to find this object"); 
                     }
                    
 
@@ -319,12 +342,12 @@ namespace AxialSqlTools
                 throw new ArgumentException("Selected object name cannot be empty", nameof(selectedObjectName));
             }
 
-            string objectName = UnquoteIdentifier(parts[^1]);
+            string objectName = UnquoteIdentifier(parts[parts.Count - 1]);
             string schemaName = null;
 
             if (parts.Count >= 2)
             {
-                schemaName = UnquoteIdentifier(parts[^2]);
+                schemaName = UnquoteIdentifier(parts[parts.Count - 2]);
             }
 
             return new ParsedObjectName(schemaName, objectName);
@@ -382,7 +405,7 @@ namespace AxialSqlTools
 
             if (trimmed.StartsWith("[", StringComparison.Ordinal) && trimmed.EndsWith("]", StringComparison.Ordinal))
             {
-                return trimmed.Substring(1, trimmed.Length - 2).Replace("]]", "]", StringComparison.Ordinal);
+                return trimmed.Substring(1, trimmed.Length - 2).Replace("]]", "]");
             }
 
             return trimmed;
@@ -395,15 +418,31 @@ namespace AxialSqlTools
             string schemaName)
         {
             string commandText = $@"USE [{databaseName}];
-SELECT o.type_desc,
-       s.name,
-       o.name,
-       o.object_id,
-       DB_NAME()
-FROM sys.objects o
-JOIN sys.schemas s ON o.schema_id = s.schema_id
-WHERE o.name = @objectName
-  AND (@schemaName IS NULL OR s.name = @schemaName);";
+            SELECT o.type_desc,
+                   s.name,
+                   o.name,
+                   o.object_id,
+                   DB_NAME(),
+                   parent_object_id,
+                   OBJECT_NAME(parent_object_id) as parent_object_name      
+            FROM sys.objects o
+            JOIN sys.schemas s ON o.schema_id = s.schema_id
+            WHERE o.name = @objectName
+              AND (@schemaName IS NULL OR s.name = @schemaName)";
+            commandText += @"
+            UNION ALL
+            SELECT 'INDEX' AS type_desc,
+                   s.name,
+                   i.name,
+                   o.object_id,
+                   DB_NAME(),
+                   i.object_id,
+                   OBJECT_NAME(i.object_id) 
+            FROM sys.indexes i
+            JOIN sys.objects o ON i.object_id = o.object_id
+            JOIN sys.schemas s ON o.schema_id = s.schema_id
+            WHERE i.name = @objectName
+              AND (@schemaName IS NULL OR s.name = @schemaName);";
 
             using (SqlCommand cmd = new SqlCommand(commandText, connection))
             {
@@ -416,11 +455,14 @@ WHERE o.name = @objectName
                     while (reader.Read())
                     {
                         matches.Add(new ScriptObjectSelectionItem(
-                            reader.GetString(0),
-                            reader.GetString(1),
-                            reader.GetString(2),
-                            reader.GetInt32(3),
-                            reader.GetString(4)));
+                           reader.GetString(0),
+                           reader.GetString(1),
+                           reader.GetString(2),
+                           reader.GetInt32(3),
+                           reader.GetString(4),
+                           reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
+                           reader.IsDBNull(6) ? string.Empty : reader.GetString(6)
+                       ));
                     }
                 }
 
@@ -444,20 +486,66 @@ WHERE o.name = @objectName
             return new List<ScriptObjectSelectionItem>(unique.Values);
         }
 
-        private static SqlSmoObject FindTableTrigger(Database db, string triggerName, string schemaName)
+        private static SqlSmoObject FindTableTrigger(Database db, string ParentObjectName, string triggerName, string schemaName)
         {
-            foreach (Table table in db.Tables)
-            {
-                if (!string.IsNullOrEmpty(schemaName) && !string.Equals(table.Schema, schemaName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
 
-                if (table.Triggers.Contains(triggerName))
-                {
-                    return table.Triggers[triggerName];
-                }
+            Table table = db.Tables[ParentObjectName, schemaName];
+            if (table.Triggers.Contains(triggerName))
+            {
+                return table.Triggers[triggerName];
+            }           
+
+            return null;
+        }
+
+        private static SqlSmoObject FindTableIndex(Database db, string ParentObjectName, string indexName, string schemaName)
+        {
+            Table table = db.Tables[ParentObjectName, schemaName];
+
+            if (table.Indexes.Contains(indexName))
+            {
+                return table.Indexes[indexName];
             }
+            
+
+            return null;
+        }
+
+        private static SqlSmoObject FindTableForeignKey(Database db, string ParentObjectName, string constraintName, string schemaName)
+        {
+            Table table = db.Tables[ParentObjectName, schemaName];
+            if (table.ForeignKeys.Contains(constraintName))
+            {
+                return table.ForeignKeys[constraintName];
+            }
+            
+            return null;
+        }
+
+        private static SqlSmoObject FindTableCheck(Database db, string ParentObjectName, string constraintName, string schemaName)
+        {
+            Table table = db.Tables[ParentObjectName, schemaName];
+
+            if (table.Checks.Contains(constraintName))
+            {
+                return table.Checks[constraintName];
+            }            
+
+            return null;
+        }
+
+        private static SqlSmoObject FindDefaultConstraint(Database db, string ParentObjectName, string constraintName, string schemaName)
+        {
+            Table table = db.Tables[ParentObjectName, schemaName];
+
+            foreach (Column column in table.Columns)
+            {
+                if (column.DefaultConstraint != null
+                    && string.Equals(column.DefaultConstraint.Name, constraintName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return column.DefaultConstraint;
+                }
+            }            
 
             return null;
         }
@@ -476,15 +564,17 @@ WHERE o.name = @objectName
         }
     }
 
-    internal sealed class ScriptObjectSelectionItem
+    public sealed class ScriptObjectSelectionItem
     {
-        public ScriptObjectSelectionItem(string typeDesc, string schemaName, string objectName, int objectId, string databaseName)
+        public ScriptObjectSelectionItem(string typeDesc, string schemaName, string objectName, int objectId, string databaseName, int parentObjectId, string parentObjectName)
         {
             TypeDesc = typeDesc;
             SchemaName = schemaName;
             ObjectName = objectName;
             ObjectId = objectId;
             DatabaseName = databaseName;
+            ParentObjectId = parentObjectId;
+            ParentObjectName = parentObjectName;
         }
 
         public string TypeDesc { get; }
@@ -497,6 +587,13 @@ WHERE o.name = @objectName
 
         public string DatabaseName { get; }
 
-        public string DisplayName => $"{DatabaseName}.{SchemaName}.{ObjectName} ({TypeDesc})";
+        public int ParentObjectId { get; }
+
+        public string ParentObjectName { get; }
+
+        public string DisplayName =>
+            string.IsNullOrEmpty(ParentObjectName)
+                ? $"{DatabaseName}.{SchemaName}.{ObjectName} ({TypeDesc})"
+                : $"{DatabaseName}.{SchemaName}.{ParentObjectName}.{ObjectName} ({TypeDesc})";
     }
 }
