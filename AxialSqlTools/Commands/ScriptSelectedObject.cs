@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Interop;
 using EnvDTE;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Sdk.Sfc;
@@ -110,7 +111,7 @@ namespace AxialSqlTools
                 {
                     TextSelection selection = dte.ActiveDocument.Selection as TextSelection;
 
-                    string selectedObjectName = selection.Text.Trim();
+                    string selectedObjectName = selection.Text.Trim().TrimEnd(';');
 
                     if (string.IsNullOrEmpty(selectedObjectName))
                     {
@@ -128,78 +129,62 @@ namespace AxialSqlTools
 
                     var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
-                    SqlConnection currentServerConnection = new SqlConnection(connectionInfo.FullConnectionString);
-                    currentServerConnection.Open();
+                    ScriptObjectSelectionItem selectedObject = null;
+                    ParsedObjectName parsedObjectName = ParseSelectedObjectName(selectedObjectName);
 
-                    string command = $@"
-                    SELECT [type_desc],
-                           SCHEMA_NAME([schema_id]),
-                           [name],
-                           [object_id], 
-                           DB_NAME()
-                    FROM sys.objects
-                    WHERE [object_id] = OBJECT_ID(@selectedObjectName)";
-
-                    SqlCommand cmd = new SqlCommand(command, currentServerConnection);
-                    cmd.Parameters.Add(new SqlParameter("selectedObjectName", selectedObjectName));
-
-                    string object_type = null;
-                    string object_schema = null;
-                    string object_name = null;
-                    int object_id = 0;
-                    string database_name = null;
-
-                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    using (SqlConnection currentServerConnection = new SqlConnection(connectionInfo.FullConnectionString))
                     {
-                        if (reader.Read())
+                        currentServerConnection.Open();
+                        string currentDatabase = currentServerConnection.Database;
+
+                        List<ScriptObjectSelectionItem> matches = QueryObjects(
+                            currentServerConnection,
+                            currentDatabase,
+                            parsedObjectName.ObjectName,
+                            parsedObjectName.SchemaName);
+
+                        if (!string.Equals(currentDatabase, "master", StringComparison.OrdinalIgnoreCase))
                         {
-                            object_type = reader.GetString(0);
-                            object_schema = reader.GetString(1);
-                            object_name = reader.GetString(2);
-                            object_id = reader.GetInt32(3);
-                            database_name = reader.GetString(4);
-
+                            matches.AddRange(QueryObjects(
+                                currentServerConnection,
+                                "master",
+                                parsedObjectName.ObjectName,
+                                parsedObjectName.SchemaName));
                         }
-                        reader.Close();
-                    }                    
 
-                    if (object_id == 0)
-                    {
-                        //let's check master database too
-                        // can't do in a single query with UNION because could be a collation conflict
-                        string commandMaster = $@"USE [master];
-                        SELECT [type_desc],
-                               SCHEMA_NAME([schema_id]),
-                               [name],
-                               [object_id], 
-                               DB_NAME()
-                        FROM sys.objects
-                        WHERE [object_id] = OBJECT_ID(@selectedObjectName)";
+                        matches = DeduplicateMatches(matches);
 
-                        SqlCommand cmdMaster = new SqlCommand(commandMaster, currentServerConnection);
-                        cmdMaster.Parameters.Add(new SqlParameter("selectedObjectName", selectedObjectName));
-
-                        using (SqlDataReader reader = cmdMaster.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                object_type = reader.GetString(0);
-                                object_schema = reader.GetString(1);
-                                object_name = reader.GetString(2);
-                                object_id = reader.GetInt32(3);
-                                database_name = reader.GetString(4);
-                            }
-                            reader.Close();
-                        }
-                        currentServerConnection.Close();
-
-                        if (object_id == 0)
+                        if (matches.Count == 0)
                         {
                             throw new Exception("Unable to find this object");
                         }
-                    }
 
-                    currentServerConnection.Close();
+                        if (matches.Count == 1)
+                        {
+                            selectedObject = matches[0];
+                        }
+                        else
+                        {
+                            var dialog = new ScriptObjectPickerDialog(matches);
+                            var uiShell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+                            if (uiShell != null && uiShell.GetDialogOwnerHwnd(out var hwnd) == 0 && hwnd != IntPtr.Zero)
+                            {
+                                new WindowInteropHelper(dialog).Owner = hwnd;
+                            }
+
+                            bool? result = dialog.ShowDialog();
+                            if (result != true)
+                            {
+                                return;
+                            }
+
+                            selectedObject = dialog.SelectedObject;
+                            if (selectedObject == null)
+                            {
+                                return;
+                            }
+                        }
+                    }
 
                     ServerConnection SmoConnection = new ServerConnection();
                     SmoConnection.ConnectionString = connectionInfo.FullConnectionString;
@@ -207,7 +192,7 @@ namespace AxialSqlTools
 
                     Scripter scripter = new Scripter(server) { Options = new ScriptingOptions() };
 
-                    if (object_type == "USER_TABLE")
+                    if (selectedObject.TypeDesc == "USER_TABLE")
                     {
                         scripter.Options.ScriptData = false;
                         scripter.Options.DriAllKeys = true;
@@ -226,25 +211,41 @@ namespace AxialSqlTools
                         scripter.Options.EnforceScriptingOptions = true;
                     }
                     // scripter.Options.ScriptBatchTerminator = true; -> this doesn't work for some reason..
-                       
-                    Database db = server.Databases[database_name];
+
+                    Database db = server.Databases[selectedObject.DatabaseName];
                     SqlSmoObject dbObject = null;
 
-                    if (db.Tables.Contains(object_name, object_schema))
+                    if (db.Tables.Contains(selectedObject.ObjectName, selectedObject.SchemaName))
                     {
-                        dbObject = db.Tables[object_name, object_schema];
+                        dbObject = db.Tables[selectedObject.ObjectName, selectedObject.SchemaName];
                     }
-                    else if (db.StoredProcedures.Contains(object_name, object_schema))
+                    else if (db.StoredProcedures.Contains(selectedObject.ObjectName, selectedObject.SchemaName))
                     {
-                        dbObject = db.StoredProcedures[object_name, object_schema];
+                        dbObject = db.StoredProcedures[selectedObject.ObjectName, selectedObject.SchemaName];
                     }
-                    else if (db.UserDefinedFunctions.Contains(object_name, object_schema))
+                    else if (db.UserDefinedFunctions.Contains(selectedObject.ObjectName, selectedObject.SchemaName))
                     {
-                        dbObject = db.UserDefinedFunctions[object_name, object_schema];
+                        dbObject = db.UserDefinedFunctions[selectedObject.ObjectName, selectedObject.SchemaName];
                     }
-                    else if (db.Views.Contains(object_name, object_schema))
+                    else if (db.Views.Contains(selectedObject.ObjectName, selectedObject.SchemaName))
                     {
-                        dbObject = db.Views[object_name, object_schema];
+                        dbObject = db.Views[selectedObject.ObjectName, selectedObject.SchemaName];
+                    }
+                    else if (db.Synonyms.Contains(selectedObject.ObjectName, selectedObject.SchemaName))
+                    {
+                        dbObject = db.Synonyms[selectedObject.ObjectName, selectedObject.SchemaName];
+                    }
+                    else if (db.UserDefinedTableTypes.Contains(selectedObject.ObjectName, selectedObject.SchemaName))
+                    {
+                        dbObject = db.UserDefinedTableTypes[selectedObject.ObjectName, selectedObject.SchemaName];
+                    }
+                    else if (db.UserDefinedTypes.Contains(selectedObject.ObjectName, selectedObject.SchemaName))
+                    {
+                        dbObject = db.UserDefinedTypes[selectedObject.ObjectName, selectedObject.SchemaName];
+                    }
+                    else if (selectedObject.TypeDesc == "SQL_TRIGGER")
+                    {
+                        dbObject = FindTableTrigger(db, selectedObject.ObjectName, selectedObject.SchemaName);
                     } // Add more else-if blocks for other types like Functions, Triggers, etc.
 
 
@@ -261,7 +262,7 @@ namespace AxialSqlTools
                         string fullScriptResult = sb.ToString();
 
                         // additional format to make it pretty
-                        if (object_type == "USER_TABLE")
+                        if (selectedObject.TypeDesc == "USER_TABLE")
                         {
                             TSql160Parser sqlParser = new TSql160Parser(false);
                             IList<ParseError> parseErrors = new List<ParseError>();
@@ -304,5 +305,198 @@ namespace AxialSqlTools
             }
 
         }
+
+        private static ParsedObjectName ParseSelectedObjectName(string selectedObjectName)
+        {
+            if (string.IsNullOrWhiteSpace(selectedObjectName))
+            {
+                throw new ArgumentException("Selected object name cannot be empty", nameof(selectedObjectName));
+            }
+
+            List<string> parts = SplitIdentifierParts(selectedObjectName);
+            if (parts.Count == 0)
+            {
+                throw new ArgumentException("Selected object name cannot be empty", nameof(selectedObjectName));
+            }
+
+            string objectName = UnquoteIdentifier(parts[^1]);
+            string schemaName = null;
+
+            if (parts.Count >= 2)
+            {
+                schemaName = UnquoteIdentifier(parts[^2]);
+            }
+
+            return new ParsedObjectName(schemaName, objectName);
+        }
+
+        private static List<string> SplitIdentifierParts(string identifier)
+        {
+            List<string> parts = new List<string>();
+            StringBuilder current = new StringBuilder();
+            bool inBrackets = false;
+
+            foreach (char ch in identifier)
+            {
+                if (ch == '[')
+                {
+                    inBrackets = true;
+                }
+                else if (ch == ']')
+                {
+                    inBrackets = false;
+                }
+
+                if (ch == '.' && !inBrackets)
+                {
+                    AddPart(parts, current);
+                }
+                else
+                {
+                    current.Append(ch);
+                }
+            }
+
+            AddPart(parts, current);
+            return parts;
+        }
+
+        private static void AddPart(List<string> parts, StringBuilder current)
+        {
+            if (current.Length == 0)
+            {
+                return;
+            }
+
+            parts.Add(current.ToString().Trim());
+            current.Clear();
+        }
+
+        private static string UnquoteIdentifier(string identifier)
+        {
+            string trimmed = identifier?.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+            {
+                return trimmed;
+            }
+
+            if (trimmed.StartsWith("[", StringComparison.Ordinal) && trimmed.EndsWith("]", StringComparison.Ordinal))
+            {
+                return trimmed.Substring(1, trimmed.Length - 2).Replace("]]", "]", StringComparison.Ordinal);
+            }
+
+            return trimmed;
+        }
+
+        private static List<ScriptObjectSelectionItem> QueryObjects(
+            SqlConnection connection,
+            string databaseName,
+            string objectName,
+            string schemaName)
+        {
+            string commandText = $@"USE [{databaseName}];
+SELECT o.type_desc,
+       s.name,
+       o.name,
+       o.object_id,
+       DB_NAME()
+FROM sys.objects o
+JOIN sys.schemas s ON o.schema_id = s.schema_id
+WHERE o.name = @objectName
+  AND (@schemaName IS NULL OR s.name = @schemaName);";
+
+            using (SqlCommand cmd = new SqlCommand(commandText, connection))
+            {
+                cmd.Parameters.Add(new SqlParameter("objectName", objectName));
+                cmd.Parameters.Add(new SqlParameter("schemaName", (object)schemaName ?? DBNull.Value));
+
+                List<ScriptObjectSelectionItem> matches = new List<ScriptObjectSelectionItem>();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        matches.Add(new ScriptObjectSelectionItem(
+                            reader.GetString(0),
+                            reader.GetString(1),
+                            reader.GetString(2),
+                            reader.GetInt32(3),
+                            reader.GetString(4)));
+                    }
+                }
+
+                return matches;
+            }
+        }
+
+        private static List<ScriptObjectSelectionItem> DeduplicateMatches(List<ScriptObjectSelectionItem> matches)
+        {
+            Dictionary<string, ScriptObjectSelectionItem> unique = new Dictionary<string, ScriptObjectSelectionItem>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (ScriptObjectSelectionItem match in matches)
+            {
+                string key = $"{match.DatabaseName}|{match.SchemaName}|{match.ObjectName}|{match.TypeDesc}|{match.ObjectId}";
+                if (!unique.ContainsKey(key))
+                {
+                    unique[key] = match;
+                }
+            }
+
+            return new List<ScriptObjectSelectionItem>(unique.Values);
+        }
+
+        private static SqlSmoObject FindTableTrigger(Database db, string triggerName, string schemaName)
+        {
+            foreach (Table table in db.Tables)
+            {
+                if (!string.IsNullOrEmpty(schemaName) && !string.Equals(table.Schema, schemaName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (table.Triggers.Contains(triggerName))
+                {
+                    return table.Triggers[triggerName];
+                }
+            }
+
+            return null;
+        }
+
+        private sealed class ParsedObjectName
+        {
+            public ParsedObjectName(string schemaName, string objectName)
+            {
+                SchemaName = schemaName;
+                ObjectName = objectName ?? throw new ArgumentNullException(nameof(objectName));
+            }
+
+            public string SchemaName { get; }
+
+            public string ObjectName { get; }
+        }
+    }
+
+    internal sealed class ScriptObjectSelectionItem
+    {
+        public ScriptObjectSelectionItem(string typeDesc, string schemaName, string objectName, int objectId, string databaseName)
+        {
+            TypeDesc = typeDesc;
+            SchemaName = schemaName;
+            ObjectName = objectName;
+            ObjectId = objectId;
+            DatabaseName = databaseName;
+        }
+
+        public string TypeDesc { get; }
+
+        public string SchemaName { get; }
+
+        public string ObjectName { get; }
+
+        public int ObjectId { get; }
+
+        public string DatabaseName { get; }
+
+        public string DisplayName => $"{DatabaseName}.{SchemaName}.{ObjectName} ({TypeDesc})";
     }
 }
