@@ -4,11 +4,11 @@ using System.Windows;
 
 namespace AxialSqlTools
 {
-    public partial class ScriptObjectPickerDialog : Window
+    internal partial class ScriptObjectPickerDialog : Window
     {
-        public ScriptObjectSelectionItem SelectedObject { get; private set; }
+        internal ScriptObjectSelectionItem SelectedObject { get; private set; }
 
-        public ScriptObjectPickerDialog(IEnumerable<ScriptObjectSelectionItem> matches)
+        internal ScriptObjectPickerDialog(IEnumerable<ScriptObjectSelectionItem> matches)
         {
             InitializeComponent();
 
