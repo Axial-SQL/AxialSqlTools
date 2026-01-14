@@ -1,14 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Data.SqlClient;
-using System.Globalization;
-using System.IO;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Interop;
-using EnvDTE;
+﻿using EnvDTE;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Sdk.Sfc;
 using Microsoft.SqlServer.Management.Smo;
@@ -18,6 +8,17 @@ using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.Design;
+using System.Data.SqlClient;
+using System.Globalization;
+using System.IO;
+using System.Security.AccessControl;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Interop;
 using Task = System.Threading.Tasks.Task;
 
 namespace AxialSqlTools
@@ -118,24 +119,44 @@ namespace AxialSqlTools
                         throw new Exception("Nothing has been selected");
                     }
 
-                    //Could be:
-                    // - Table
-                    // - Sproc
-                    // - Function
-
-                    // find all object with this name
-                    // script properly from a current connection
-                    // display in a single window
-
                     var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
-                    ScriptObjectSelectionItem selectedObject = null;
-                    ParsedObjectName parsedObjectName = ParseSelectedObjectName(selectedObjectName);
+                    ScriptObjectSelectionItem selectedObject = null;                    
 
                     using (SqlConnection currentServerConnection = new SqlConnection(connectionInfo.FullConnectionString))
                     {
                         currentServerConnection.Open();
-                        string currentDatabase = currentServerConnection.Database;
+
+                        string commandText = $@"
+                        SELECT PARSENAME(@FullName, 3) AS DatabaseName,
+                               PARSENAME(@FullName, 2) AS SchemaName,
+                               PARSENAME(@FullName, 1) AS ObjectName;
+                        ";
+                        
+                        string currentDatabase = string.Empty;
+
+                        ParsedObjectName parsedObjectName = null;
+
+                        using (SqlCommand cmd = new SqlCommand(commandText, currentServerConnection))
+                        {
+                            cmd.Parameters.Add(new SqlParameter("FullName", selectedObjectName));
+
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    currentDatabase = reader.IsDBNull(0) ? currentServerConnection.Database : reader.GetString(0);
+                                    parsedObjectName = new ParsedObjectName(
+                                        reader.IsDBNull(1) ? string.Empty : reader.GetString(1), 
+                                        reader.IsDBNull(2) ? string.Empty : reader.GetString(2)
+                                    );
+                                }
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(parsedObjectName.ObjectName)) {
+                            throw new Exception($"Failed to extract a table name from the provided object string: {selectedObjectName}"); 
+                        }
 
                         List<ScriptObjectSelectionItem> matches = QueryObjects(
                             currentServerConnection,
@@ -156,7 +177,7 @@ namespace AxialSqlTools
 
                         if (matches.Count == 0)
                         {
-                            throw new Exception("Unable to find this object");
+                            throw new Exception($"The specified object was not found: '{selectedObjectName}'.");
                         }
 
                         if (matches.Count == 1)
@@ -269,7 +290,7 @@ namespace AxialSqlTools
                     }
 
 
-                if (dbObject != null)
+                    if (dbObject != null)
                     {
                         System.Collections.Specialized.StringCollection sc = scripter.Script(new Urn[] { dbObject.Urn });
 
@@ -307,7 +328,7 @@ namespace AxialSqlTools
 
                     }
                     else { 
-                        throw new Exception("Unable to find this object"); 
+                        throw new Exception($"The specified object was not found: '{selectedObjectName}'."); 
                     }
                    
 
@@ -327,88 +348,6 @@ namespace AxialSqlTools
                 }
             }
 
-        }
-
-        private static ParsedObjectName ParseSelectedObjectName(string selectedObjectName)
-        {
-            if (string.IsNullOrWhiteSpace(selectedObjectName))
-            {
-                throw new ArgumentException("Selected object name cannot be empty", nameof(selectedObjectName));
-            }
-
-            List<string> parts = SplitIdentifierParts(selectedObjectName);
-            if (parts.Count == 0)
-            {
-                throw new ArgumentException("Selected object name cannot be empty", nameof(selectedObjectName));
-            }
-
-            string objectName = UnquoteIdentifier(parts[parts.Count - 1]);
-            string schemaName = null;
-
-            if (parts.Count >= 2)
-            {
-                schemaName = UnquoteIdentifier(parts[parts.Count - 2]);
-            }
-
-            return new ParsedObjectName(schemaName, objectName);
-        }
-
-        private static List<string> SplitIdentifierParts(string identifier)
-        {
-            List<string> parts = new List<string>();
-            StringBuilder current = new StringBuilder();
-            bool inBrackets = false;
-
-            foreach (char ch in identifier)
-            {
-                if (ch == '[')
-                {
-                    inBrackets = true;
-                }
-                else if (ch == ']')
-                {
-                    inBrackets = false;
-                }
-
-                if (ch == '.' && !inBrackets)
-                {
-                    AddPart(parts, current);
-                }
-                else
-                {
-                    current.Append(ch);
-                }
-            }
-
-            AddPart(parts, current);
-            return parts;
-        }
-
-        private static void AddPart(List<string> parts, StringBuilder current)
-        {
-            if (current.Length == 0)
-            {
-                return;
-            }
-
-            parts.Add(current.ToString().Trim());
-            current.Clear();
-        }
-
-        private static string UnquoteIdentifier(string identifier)
-        {
-            string trimmed = identifier?.Trim();
-            if (string.IsNullOrEmpty(trimmed))
-            {
-                return trimmed;
-            }
-
-            if (trimmed.StartsWith("[", StringComparison.Ordinal) && trimmed.EndsWith("]", StringComparison.Ordinal))
-            {
-                return trimmed.Substring(1, trimmed.Length - 2).Replace("]]", "]");
-            }
-
-            return trimmed;
         }
 
         private static List<ScriptObjectSelectionItem> QueryObjects(
@@ -447,7 +386,7 @@ namespace AxialSqlTools
             using (SqlCommand cmd = new SqlCommand(commandText, connection))
             {
                 cmd.Parameters.Add(new SqlParameter("objectName", objectName));
-                cmd.Parameters.Add(new SqlParameter("schemaName", (object)schemaName ?? DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("schemaName", string.IsNullOrWhiteSpace(schemaName) ? (object)DBNull.Value : schemaName));
 
                 List<ScriptObjectSelectionItem> matches = new List<ScriptObjectSelectionItem>();
                 using (SqlDataReader reader = cmd.ExecuteReader())
