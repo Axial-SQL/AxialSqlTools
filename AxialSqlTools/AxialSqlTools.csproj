@@ -48,11 +48,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AskChatGPT\AskChatGptCommand.cs" />
-    <Compile Include="AskChatGPT\AskChatGptWindow.cs" />
-    <Compile Include="AskChatGPT\AskChatGptWindowControl.xaml.cs">
-      <DependentUpon>AskChatGptWindowControl.xaml</DependentUpon>
-    </Compile>
     <Compile Include="DataImport\DataImportWindow.cs" />
     <Compile Include="DataImport\DataImportWindowCommand.cs" />
     <Compile Include="DataImport\DataImportWindowControl.xaml.cs">
@@ -281,7 +276,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\attention.png" />
-    <Content Include="Resources\chat.png" />
     <Content Include="Resources\compare-schemas.png" />
     <Content Include="Resources\copy.png" />
     <Content Include="Resources\data-source-target.png" />
@@ -305,10 +299,6 @@
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="AskChatGPT\AskChatGptWindowControl.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="Commands\Dialogs\FormatOptionsDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

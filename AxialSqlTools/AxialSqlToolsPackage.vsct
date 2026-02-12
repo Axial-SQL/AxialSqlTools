@@ -268,14 +268,7 @@
         </Strings>
       </Button>
 
-      <!--<Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialAskChatGptCommand" priority="0x0000" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_AI" />
-        <Icon guid="guidChat" id="bmpChat" />
-        <CommandFlag>DefaultInvisible</CommandFlag>
-        <Strings>
-          <ButtonText>Ask ChatGPT</ButtonText>
-        </Strings>
-      </Button>
+      <!--
 
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialBackupTimelineCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Timelines" />
@@ -355,7 +348,6 @@
       <Bitmap guid="guidExportGridToTempTable" href="Resources\grid-to-temp-table.png" usedList="bmpExportGridToTempTable" />
       <Bitmap guid="guidQueryHistory" href="Resources\query-history.png" usedList="bmpQueryHistory" />
       <Bitmap guid="guidOpenFolder" href="Resources\open-folder.png" usedList="bmpOpenFolder" />
-      <Bitmap guid="guidChat" href="Resources\chat.png" usedList="bmpChat" />
       <Bitmap guid="guidSqlBuildInfo" href="Resources\sql-build-info.png" usedList="bmpSqlBuildInfo" />
       <Bitmap guid="guidDatabaseScripter" href="Resources\database-scripter.png" usedList="bmpDatabaseScripter" />
       <Bitmap guid="guidCompareSchemas" href="Resources\compare-schemas.png" usedList="bmpCompareSchemas" />
@@ -421,8 +413,6 @@
 
       <IDSymbol name="AxialQueryHistoryCommand" value="4144" />
 
-      <IDSymbol name="AxialAskChatGptCommand" value="4146" />
-
       <IDSymbol name="AxialSqlServerBuildsCommand" value="4147" />
 
       <IDSymbol name="AxialDatabaseScripterCommand" value="4148" />
@@ -471,9 +461,6 @@
     </GuidSymbol>
     <GuidSymbol name="guidOpenFolder" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d3}">
       <IDSymbol name="bmpOpenFolder" value="1" />
-    </GuidSymbol>
-    <GuidSymbol name="guidChat" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d4}">
-      <IDSymbol name="bmpChat" value="1" />
     </GuidSymbol>
     <GuidSymbol name="guidSqlBuildInfo" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d5}">
       <IDSymbol name="bmpSqlBuildInfo" value="1" />
