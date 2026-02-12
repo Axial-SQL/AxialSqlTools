@@ -66,6 +66,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(DatabaseScripterToolWindow))]
     [ProvideToolWindow(typeof(SchemaCompareWindow))]
     [ProvideToolWindow(typeof(DataImportWindow))]
+    [ProvideToolWindow(typeof(QuickSearchWindow))]
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
 
@@ -294,6 +295,7 @@ namespace AxialSqlTools
                 await QueryHistoryWindowCommand.InitializeAsync(this);
                 await DatabaseScripterToolWindowCommand.InitializeAsync(this);
                 await SchemaCompareWindowCommand.InitializeAsync(this);
+                await QuickSearchWindowCommand.InitializeAsync(this);
 
             }
             catch (Exception ex)

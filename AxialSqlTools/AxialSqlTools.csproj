@@ -136,6 +136,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="QuickSearch\QuickSearchWindow.cs" />
+    <Compile Include="QuickSearch\QuickSearchWindowCommand.cs" />
+    <Compile Include="QuickSearch\QuickSearchWindowControl.xaml.cs">
+      <DependentUpon>QuickSearchWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="QueryHistory\QueryHistoryRecord.cs" />
     <Compile Include="QueryHistory\QueryHistoryViewModel.cs" />
     <Compile Include="QueryHistory\QueryHistoryWindow.cs" />
@@ -356,6 +361,10 @@
     <Page Include="HealthDashboards\HealthDashboard_ServersControl.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="QuickSearch\QuickSearchWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="QueryHistory\QueryHistoryWindowControl.xaml">
       <SubType>Designer</SubType>

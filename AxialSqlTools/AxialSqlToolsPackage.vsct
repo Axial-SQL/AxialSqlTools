@@ -196,6 +196,15 @@
         </Strings>
       </Button>-->
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQuickSearchCommand" priority="0x0001" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
+        <Icon guid="guidQueryHistory" id="bmpQueryHistory" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Quick Search</ButtonText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryHistoryCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
         <Icon guid="guidQueryHistory" id="bmpQueryHistory" />
@@ -430,6 +439,8 @@
       <IDSymbol name="AxialCompareSchemasCommand" value="4149" />
 
       <IDSymbol name="AxialDataImportCommand" value="4150" />
+
+      <IDSymbol name="AxialQuickSearchCommand" value="4151" />
 
     </GuidSymbol>
 
