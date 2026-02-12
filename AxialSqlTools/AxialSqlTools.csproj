@@ -61,6 +61,11 @@
     <Compile Include="Commands\Dialogs\ScriptObjectPickerDialog.xaml.cs">
       <DependentUpon>ScriptObjectPickerDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="QuickSearch\QuickSearchWindow.cs" />
+    <Compile Include="QuickSearch\QuickSearchWindowCommand.cs" />
+    <Compile Include="QuickSearch\QuickSearchWindowControl.xaml.cs">
+      <DependentUpon>QuickSearchWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SchemaCompare\SchemaCompareWindow.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindowCommand.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindowControl.xaml.cs">
@@ -292,6 +297,7 @@
     <Resource Include="Resources\save.png" />
     <Content Include="Resources\script.png" />
     <Resource Include="Resources\send.png" />
+    <Content Include="Resources\search.png" />
     <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />
     <Content Include="Resources\sql-build-info.png" />
@@ -312,6 +318,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="DataImport\DataImportWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="QuickSearch\QuickSearchWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
