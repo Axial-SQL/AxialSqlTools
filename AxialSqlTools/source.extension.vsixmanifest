@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
-    <Metadata>
-        <Identity Id="AxialSqlTools.6bd44f4f-87a1-4022-af05-1938b94ca8ce" Version="1.0" Language="en-US" Publisher="Axial Solutions LLC" />
-        <DisplayName>AxialSqlTools</DisplayName>
-        <Description xml:space="preserve">AxialSqlTools</Description>
-        <MoreInfo>https://github.com/Axial-SQL/AxialSqlTools</MoreInfo>
-    </Metadata>
-    <Installation AllUsers="true">
-        <InstallationTarget Id="Microsoft.VisualStudio.Ssms" Version="[22.0, )">
-            <ProductArchitecture>amd64</ProductArchitecture>
-        </InstallationTarget>
-    </Installation>
-    <Dependencies>
-        <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
-    </Dependencies>
-    <Prerequisites>
-        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[18.0, )" DisplayName="Visual Studio core editor" />
-    </Prerequisites>
-    <Assets>
-        <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
-    </Assets>
+	<Metadata>
+		<Identity Id="AxialSqlTools" Version="4.10" Language="en-US" Publisher="Alex Bochkov" />
+		<DisplayName>Axial SQL Tools</DisplayName>
+		<Description xml:space="preserve">Axial SQL Tools | SQL Server Management Studio 22 Productivity Addin</Description>
+		<MoreInfo>https://github.com/Axial-SQL/AxialSqlTools</MoreInfo>
+		<License>LICENSE</License>
+	</Metadata>
+	<Installation AllUsers="true">
+		<InstallationTarget Id="Microsoft.VisualStudio.Ssms" Version="[22.0, )">
+			<ProductArchitecture>amd64</ProductArchitecture>
+		</InstallationTarget>
+	</Installation>
+	<Dependencies>
+		<Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
+	</Dependencies>
+	<Prerequisites>
+		<Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[18.0, )" DisplayName="Visual Studio core editor" />
+	</Prerequisites>
+	<Assets>
+		<Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
+	</Assets>
 </PackageManifest>
