@@ -1,15 +1,12 @@
-using Azure.Storage.Blobs.Models;
 using DiffPlex;
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
-using DocumentFormat.OpenXml.Drawing.Diagrams;
-using DocumentFormat.OpenXml.Math;
 using Microsoft.SqlServer.Dac.Compare;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Text;
@@ -45,12 +42,15 @@ namespace AxialSqlTools
         private string _deploymentScript = string.Empty;
         private SchemaDifferenceViewModel _selectedDifference;
         private CancellationTokenSource _cancellationTokenSource;
+        private SchemaComparisonResult _comparisonResult;
+        private string _targetDatabaseName = string.Empty;
 
         public SchemaCompareViewModel()
         {
             Differences = new ObservableCollection<SchemaDifferenceViewModel>();
             SourceDiffLines = new ObservableCollection<DiffLineViewModel>();
             TargetDiffLines = new ObservableCollection<DiffLineViewModel>();
+            ObjectTypeFilters = new ObservableCollection<ObjectTypeFilterViewModel>(CreateObjectTypeFilters());
             PickSourceCommand = new RelayCommand(() => SetConnection(isSource: true));
             PickTargetCommand = new RelayCommand(() => SetConnection(isSource: false));
             ClearSourceCommand = new RelayCommand(() => SourceConnection = null, () => SourceConnection != null);
@@ -60,9 +60,12 @@ namespace AxialSqlTools
                 () => !IsBusy && (SourceConnection != null || TargetConnection != null));
             CompareCommand = new AsyncRelayCommand(CompareAsync, () => HasConnections && !IsBusy);
             CancelCompareCommand = new RelayCommand(CancelCompare, () => IsBusy);
+            GenerateDeploymentScriptCommand = new AsyncRelayCommand(GenerateDeploymentScriptAsync, () => _comparisonResult != null && Differences.Any(d => d.IsSelected));
             CopyDeploymentScriptCommand = new RelayCommand(CopyDeploymentScript, () => !string.IsNullOrEmpty(DeploymentScript));
             CopySourceDefinitionCommand = new RelayCommand(CopySourceDefinition, () => !string.IsNullOrEmpty(SelectedDifference?.SourceDefinition));
             CopyTargetDefinitionCommand = new RelayCommand(CopyTargetDefinition, () => !string.IsNullOrEmpty(SelectedDifference?.TargetDefinition));
+            IncludeAllObjectTypesCommand = new RelayCommand(() => SetAllObjectTypeFilters(true));
+            ExcludeAllObjectTypesCommand = new RelayCommand(() => SetAllObjectTypeFilters(false));
         }
 
         public ObservableCollection<SchemaDifferenceViewModel> Differences { get; }
@@ -70,6 +73,8 @@ namespace AxialSqlTools
         public ObservableCollection<DiffLineViewModel> SourceDiffLines { get; }
 
         public ObservableCollection<DiffLineViewModel> TargetDiffLines { get; }
+
+        public ObservableCollection<ObjectTypeFilterViewModel> ObjectTypeFilters { get; }
 
         public ICommand PickSourceCommand { get; }
 
@@ -85,11 +90,17 @@ namespace AxialSqlTools
 
         public ICommand CancelCompareCommand { get; }
 
+        public ICommand GenerateDeploymentScriptCommand { get; }
+
         public ICommand CopyDeploymentScriptCommand { get; }
 
         public ICommand CopySourceDefinitionCommand { get; }
 
         public ICommand CopyTargetDefinitionCommand { get; }
+
+        public ICommand IncludeAllObjectTypesCommand { get; }
+
+        public ICommand ExcludeAllObjectTypesCommand { get; }
 
         public bool HasConnections => SourceConnection != null && TargetConnection != null;
 
@@ -225,6 +236,8 @@ namespace AxialSqlTools
                 SelectedDifference = null;
                 SourceDiffLines.Clear();
                 TargetDiffLines.Clear();
+                _comparisonResult = null;
+                _targetDatabaseName = string.Empty;
 
                 var sourceConnectionString = SourceConnection.FullConnectionString;
                 var targetConnectionString = TargetConnection.FullConnectionString;
@@ -236,6 +249,9 @@ namespace AxialSqlTools
                     var sourceEndpoint = new SchemaCompareDatabaseEndpoint(sourceConnectionString);
                     var targetEndpoint = new SchemaCompareDatabaseEndpoint(targetConnectionString);
                     var comparison = new SchemaComparison(sourceEndpoint, targetEndpoint);
+
+                    // ApplyObjectTypeFilters(comparison);
+
                     var result = comparison.Compare();
                     cancellationToken.ThrowIfCancellationRequested();
                     var scriptResult = result.GenerateScript(targetDatabase);
@@ -250,7 +266,10 @@ namespace AxialSqlTools
                 }
 
                 DeploymentScript = payload.Script;
+                _comparisonResult = payload.Result;
+                _targetDatabaseName = targetDatabase;
                 Status = Differences.Count == 0 ? "No differences were found." : $"Found {Differences.Count} difference(s).";
+                CommandManager.InvalidateRequerySuggested();
             }
             catch (OperationCanceledException)
             {
@@ -278,6 +297,52 @@ namespace AxialSqlTools
 
             Status = "Cancelling schema compare...";
             _cancellationTokenSource?.Cancel();
+        }
+
+        private async Task GenerateDeploymentScriptAsync()
+        {
+            if (_comparisonResult == null)
+            {
+                Status = "Run a comparison before generating a deployment script.";
+                return;
+            }
+
+            try
+            {
+                IsBusy = true;
+                var selectedCount = Differences.Count(d => d.IsSelected);
+                if (selectedCount == 0)
+                {
+                    DeploymentScript = string.Empty;
+                    Status = "No objects selected for script generation.";
+                    return;
+                }
+
+                string script = string.Empty;
+
+                await Task.Run(() =>
+                {
+                    foreach (var difference in Differences)
+                    {
+                        difference.ApplySelection();
+                    }
+
+                    script = _comparisonResult.GenerateScript(_targetDatabaseName)?.Script ?? string.Empty;
+                });
+
+                DeploymentScript = script;
+                Status = $"Deployment script generated for {selectedCount} selected object(s).";
+            }
+            catch (Exception ex)
+            {
+                Status = ex.Message;
+                MessageBox.Show(ex.Message, "Schema Compare", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+                CommandManager.InvalidateRequerySuggested();
+            }
         }
 
         private void CopyDeploymentScript()
@@ -332,16 +397,59 @@ namespace AxialSqlTools
             }
         }
 
+        private void ApplyObjectTypeFilters(SchemaComparison comparison)
+        {
+            if (comparison?.Options?.ExcludeObjectTypes == null)
+            {
+                return;
+            }
+
+            Microsoft.SqlServer.Dac.ObjectType[] list = new Microsoft.SqlServer.Dac.ObjectType[ObjectTypeFilters.Count(f => !f.IsIncluded)];
+            foreach (var filter in ObjectTypeFilters.Where(f => !f.IsIncluded))
+            {
+                list.Append(filter.ObjectType).ToArray();
+            }
+
+            comparison.Options.ExcludeObjectTypes = list.ToArray();
+
+        }
+
+        private IEnumerable<ObjectTypeFilterViewModel> CreateObjectTypeFilters()
+        {
+            foreach (Microsoft.SqlServer.Dac.ObjectType objectType in Enum.GetValues(typeof(Microsoft.SqlServer.Dac.ObjectType)))
+            {
+                yield return new ObjectTypeFilterViewModel(objectType);
+            }
+        }
+
+        private void SetAllObjectTypeFilters(bool include)
+        {
+            foreach (var filter in ObjectTypeFilters)
+            {
+                filter.IsIncluded = include;
+            }
+
+            CommandManager.InvalidateRequerySuggested();
+        }
+
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 
-    internal class SchemaDifferenceViewModel
+    internal class SchemaDifferenceViewModel : INotifyPropertyChanged
     {
+        private readonly SchemaDifference _difference;
+        private readonly SchemaComparisonResult _result;
+        private bool _isSelected;
+
         public SchemaDifferenceViewModel(SchemaDifference difference, SchemaComparisonResult result)
         {
+            _difference = difference ?? throw new ArgumentNullException(nameof(difference));
+            _result = result ?? throw new ArgumentNullException(nameof(result));
+            _isSelected = difference.Included;
+
             Name = difference.Name?.ToString() ?? string.Empty;
             DifferenceType = difference.DifferenceType.ToString();
             Action = difference.UpdateAction.ToString();
@@ -350,35 +458,36 @@ namespace AxialSqlTools
             TargetObject = difference.TargetObject?.Name.ToString() ?? string.Empty;
 
             var sbSource = new StringBuilder();
-            GetAllSourceChidren(difference, result, sbSource);
+            GetAllSourceChidren(difference, sbSource);
             SourceDefinition = sbSource.ToString();
 
             var sbTarget = new StringBuilder();
-            GetAllTargetChidren(difference, result, sbTarget);
+            GetAllTargetChidren(difference, sbTarget);
             TargetDefinition = sbTarget.ToString();
         }
 
-        public void GetAllSourceChidren(SchemaDifference difference, SchemaComparisonResult result, StringBuilder sb) 
+        public bool IsSelected
         {
-            string stringResult = result.GetDiffEntrySourceScript(difference);
-            if (!string.IsNullOrWhiteSpace(stringResult))
+            get => _isSelected;
+            set
             {
-                sb.AppendLine(stringResult);
-                sb.AppendLine("GO");
-            }
-
-            foreach (var diff in difference.Children)
-            {
-                if (diff.Included)
+                if (_isSelected != value)
                 {
-                    GetAllSourceChidren(diff, result, sb);
+                    _isSelected = value;
+                    OnPropertyChanged();
+                    CommandManager.InvalidateRequerySuggested();
                 }
             }
         }
 
-        public void GetAllTargetChidren(SchemaDifference difference, SchemaComparisonResult result, StringBuilder sb)
+        public void ApplySelection()
         {
-            string stringResult = result.GetDiffEntryTargetScript(difference);
+            SetIncludedState(_difference, _isSelected);
+        }
+
+        private void GetAllSourceChidren(SchemaDifference difference, StringBuilder sb)
+        {
+            string stringResult = _result.GetDiffEntrySourceScript(difference);
             if (!string.IsNullOrWhiteSpace(stringResult))
             {
                 sb.AppendLine(stringResult);
@@ -389,8 +498,36 @@ namespace AxialSqlTools
             {
                 if (diff.Included)
                 {
-                    GetAllTargetChidren(diff, result, sb);
+                    GetAllSourceChidren(diff, sb);
                 }
+            }
+        }
+
+        private void GetAllTargetChidren(SchemaDifference difference, StringBuilder sb)
+        {
+            string stringResult = _result.GetDiffEntryTargetScript(difference);
+            if (!string.IsNullOrWhiteSpace(stringResult))
+            {
+                sb.AppendLine(stringResult);
+                sb.AppendLine("GO");
+            }
+
+            foreach (var diff in difference.Children)
+            {
+                if (diff.Included)
+                {
+                    GetAllTargetChidren(diff, sb);
+                }
+            }
+        }
+
+        private void SetIncludedState(SchemaDifference difference, bool isIncluded)
+        {
+            // difference.Included = isIncluded;
+
+            foreach (var child in difference.Children)
+            {
+                SetIncludedState(child, isIncluded);
             }
         }
 
@@ -407,6 +544,13 @@ namespace AxialSqlTools
         public string SourceDefinition { get; }
 
         public string TargetDefinition { get; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     internal class DiffLineViewModel
@@ -443,6 +587,42 @@ namespace AxialSqlTools
                 default:
                     return string.Empty;
             }
+        }
+    }
+
+    internal class ObjectTypeFilterViewModel : INotifyPropertyChanged
+    {
+        private bool _isIncluded = true;
+
+        public ObjectTypeFilterViewModel(Microsoft.SqlServer.Dac.ObjectType objectType)
+        {
+            ObjectType = objectType;
+            DisplayName = objectType.ToString();
+        }
+
+        public Microsoft.SqlServer.Dac.ObjectType ObjectType { get; }
+
+        public string DisplayName { get; }
+
+        public bool IsIncluded
+        {
+            get => _isIncluded;
+            set
+            {
+                if (_isIncluded != value)
+                {
+                    _isIncluded = value;
+                    OnPropertyChanged();
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 
