@@ -11,6 +11,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
@@ -46,14 +47,15 @@
             <CheckBox x:Name="CheckBox_Views" Content="Views" IsChecked="True" Margin="8,0,0,0"/>
             <CheckBox x:Name="CheckBox_Functions" Content="Functions" IsChecked="True" Margin="8,0,0,0"/>
             <CheckBox x:Name="CheckBox_Tables" Content="Tables" IsChecked="True" Margin="8,0,0,0"/>
-            <TextBlock x:Name="TextBlock_ResultCount" Margin="20,0,0,0" VerticalAlignment="Center" FontWeight="Bold"/>
+            <CheckBox x:Name="CheckBox_AgentJobSteps" Content="SQL Agent Job Steps" IsChecked="True" Margin="8,0,0,0"/>
         </StackPanel>
 
         <DataGrid Grid.Row="3"
                   x:Name="DataGrid_SearchResults"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
-                  SelectionMode="Single">
+                  SelectionMode="Single"
+                  FontFamily="Cascadia Mono">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Database" Binding="{Binding DatabaseName}" Width="130"/>
                 <DataGridTextColumn Header="Type" Binding="{Binding ObjectType}" Width="140"/>
@@ -61,7 +63,20 @@
                 <DataGridTextColumn Header="Object" Binding="{Binding ObjectName}" Width="200"/>
                 <DataGridTextColumn Header="Location" Binding="{Binding MatchLocation}" Width="120"/>
                 <DataGridTextColumn Header="Match Preview" Binding="{Binding MatchPreview}" Width="*"/>
+                <DataGridTemplateColumn Header="Script" Width="90">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Script" Click="Button_ScriptResult_Click" Padding="8,2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
+
+        <StatusBar Grid.Row="4">
+            <StatusBarItem>
+                <TextBlock x:Name="TextBlock_ResultCount" FontWeight="Bold"/>
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 </UserControl>

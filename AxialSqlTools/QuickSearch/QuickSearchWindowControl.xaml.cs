@@ -60,6 +60,7 @@ namespace AxialSqlTools
             try
             {
                 Button_Search.IsEnabled = false;
+                DataGrid_SearchResults.ItemsSource = null;
                 TextBlock_ResultCount.Text = "Searching...";
 
                 bool allDatabases = CheckBox_AllDatabases.IsChecked == true;
@@ -69,8 +70,9 @@ namespace AxialSqlTools
                 bool includeViews = CheckBox_Views.IsChecked == true;
                 bool includeFunctions = CheckBox_Functions.IsChecked == true;
                 bool includeTables = CheckBox_Tables.IsChecked == true;
+                bool includeAgentJobSteps = CheckBox_AgentJobSteps.IsChecked == true;
 
-                DataTable results = await Task.Run(() => ExecuteSearch(searchText, allDatabases, wholeWord, useWildcards, includeProcs, includeViews, includeFunctions, includeTables));
+                DataTable results = await Task.Run(() => ExecuteSearch(searchText, allDatabases, wholeWord, useWildcards, includeProcs, includeViews, includeFunctions, includeTables, includeAgentJobSteps));
                 DataGrid_SearchResults.ItemsSource = results.DefaultView;
                 TextBlock_ResultCount.Text = $"{results.Rows.Count} result(s)";
             }
@@ -85,7 +87,7 @@ namespace AxialSqlTools
             }
         }
 
-        private DataTable ExecuteSearch(string searchText, bool allDatabases, bool wholeWord, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables)
+        private DataTable ExecuteSearch(string searchText, bool allDatabases, bool wholeWord, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps)
         {
             List<string> databases = GetDatabasesToSearch(allDatabases);
             DataTable allResults = BuildResultTable();
@@ -108,7 +110,35 @@ namespace AxialSqlTools
                         row["SchemaName"],
                         row["ObjectName"],
                         row["MatchLocation"],
-                        preview);
+                        preview,
+                        row["ScriptDatabaseName"],
+                        row["ScriptSchemaName"],
+                        row["ScriptObjectName"]);
+                }
+            }
+
+            if (includeAgentJobSteps)
+            {
+                DataTable jobRows = SearchAgentJobSteps(searchText, useWildcards);
+                foreach (DataRow row in jobRows.Rows)
+                {
+                    string sourceText = row["SourceText"]?.ToString() ?? string.Empty;
+                    if (wholeWord && !Regex.IsMatch(sourceText, $@"\b{Regex.Escape(searchText)}\b", RegexOptions.IgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    string preview = BuildPreview(sourceText, searchText, useWildcards);
+                    allResults.Rows.Add(
+                        row["DatabaseName"],
+                        row["ObjectType"],
+                        row["SchemaName"],
+                        row["ObjectName"],
+                        row["MatchLocation"],
+                        preview,
+                        row["ScriptDatabaseName"],
+                        row["ScriptSchemaName"],
+                        row["ScriptObjectName"]);
                 }
             }
 
@@ -173,7 +203,10 @@ SELECT
     s.[name] AS SchemaName,
     o.[name] AS ObjectName,
     'Definition' AS MatchLocation,
-    m.[definition] AS SourceText
+    m.[definition] AS SourceText,
+    DB_NAME() AS ScriptDatabaseName,
+    s.[name] AS ScriptSchemaName,
+    o.[name] AS ScriptObjectName
 FROM sys.objects o
 INNER JOIN sys.schemas s ON s.schema_id = o.schema_id
 INNER JOIN sys.sql_modules m ON m.object_id = o.object_id
@@ -182,7 +215,7 @@ WHERE (
         (@includeViews = 1 AND o.[type] = 'V') OR
         (@includeFunctions = 1 AND o.[type] IN ('FN', 'IF', 'TF'))
       )
-  AND m.[definition] LIKE @pattern -- ESCAPE '\\'
+  AND m.[definition] LIKE @pattern
 
 UNION ALL
 
@@ -192,11 +225,14 @@ SELECT
     s.[name] AS SchemaName,
     t.[name] AS ObjectName,
     'Table Name' AS MatchLocation,
-    t.[name] AS SourceText
+    t.[name] AS SourceText,
+    DB_NAME() AS ScriptDatabaseName,
+    s.[name] AS ScriptSchemaName,
+    t.[name] AS ScriptObjectName
 FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 WHERE @includeTables = 1
-  AND t.[name] LIKE @pattern -- ESCAPE '\\'
+  AND t.[name] LIKE @pattern
 
 UNION ALL
 
@@ -206,12 +242,15 @@ SELECT
     s.[name] AS SchemaName,
     t.[name] AS ObjectName,
     'Column' AS MatchLocation,
-    c.[name] AS SourceText
+    c.[name] AS SourceText,
+    DB_NAME() AS ScriptDatabaseName,
+    s.[name] AS ScriptSchemaName,
+    t.[name] AS ScriptObjectName
 FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 INNER JOIN sys.columns c ON c.object_id = t.object_id
 WHERE @includeTables = 1
-  AND c.[name] LIKE @pattern -- ESCAPE '\\'
+  AND c.[name] LIKE @pattern
 
 UNION ALL
 
@@ -225,7 +264,10 @@ SELECT
     s.[name] AS SchemaName,
     o.[name] AS ObjectName,
     'Parameter' AS MatchLocation,
-    p.[name] AS SourceText
+    p.[name] AS SourceText,
+    DB_NAME() AS ScriptDatabaseName,
+    s.[name] AS ScriptSchemaName,
+    o.[name] AS ScriptObjectName
 FROM sys.parameters p
 INNER JOIN sys.objects o ON o.object_id = p.object_id
 INNER JOIN sys.schemas s ON s.schema_id = o.schema_id
@@ -235,7 +277,7 @@ WHERE p.parameter_id > 0
         (@includeViews = 1 AND o.[type] = 'V') OR
         (@includeFunctions = 1 AND o.[type] IN ('FN', 'IF', 'TF'))
       )
-  AND p.[name] LIKE @pattern -- ESCAPE '\\';";
+  AND p.[name] LIKE @pattern;";
 
             string pattern = BuildPattern(searchText, useWildcards);
 
@@ -249,6 +291,47 @@ WHERE p.parameter_id > 0
                 cmd.Parameters.AddWithValue("@includeViews", includeViews ? 1 : 0);
                 cmd.Parameters.AddWithValue("@includeFunctions", includeFunctions ? 1 : 0);
                 cmd.Parameters.AddWithValue("@includeTables", includeTables ? 1 : 0);
+
+                conn.Open();
+                adapter.Fill(result);
+            }
+
+            return result;
+        }
+
+        private DataTable SearchAgentJobSteps(string searchText, bool useWildcards)
+        {
+            var result = new DataTable();
+            string pattern = BuildPattern(searchText, useWildcards);
+
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(selectedConnectionString)
+            {
+                InitialCatalog = "msdb"
+            };
+
+            string sql = @"
+SELECT
+    'msdb' AS DatabaseName,
+    'SQL Agent Job Step' AS ObjectType,
+    'dbo' AS SchemaName,
+    j.[name] + N' / Step ' + CONVERT(varchar(12), js.step_id) + N' - ' + js.step_name AS ObjectName,
+    'Command' AS MatchLocation,
+    js.[command] AS SourceText,
+    N'msdb' AS ScriptDatabaseName,
+    N'dbo' AS ScriptSchemaName,
+    j.[name] AS ScriptObjectName
+FROM dbo.sysjobs j
+INNER JOIN dbo.sysjobsteps js ON js.job_id = j.job_id
+WHERE js.[command] LIKE @pattern
+   OR js.step_name LIKE @pattern
+   OR j.[name] LIKE @pattern;";
+
+            using (var conn = new SqlConnection(builder.ConnectionString))
+            using (var cmd = new SqlCommand(sql, conn))
+            using (var adapter = new SqlDataAdapter(cmd))
+            {
+                cmd.CommandTimeout = 120;
+                cmd.Parameters.AddWithValue("@pattern", pattern);
 
                 conn.Open();
                 adapter.Fill(result);
@@ -308,7 +391,27 @@ WHERE p.parameter_id > 0
             return CheckBox_StoredProcedures.IsChecked == true
                 || CheckBox_Views.IsChecked == true
                 || CheckBox_Functions.IsChecked == true
-                || CheckBox_Tables.IsChecked == true;
+                || CheckBox_Tables.IsChecked == true
+                || CheckBox_AgentJobSteps.IsChecked == true;
+        }
+
+        private void Button_ScriptResult_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is Button button) || !(button.DataContext is DataRowView rowView))
+            {
+                return;
+            }
+
+            string databaseName = rowView["ScriptDatabaseName"]?.ToString();
+            string schemaName = rowView["ScriptSchemaName"]?.ToString();
+            string objectName = rowView["ScriptObjectName"]?.ToString();
+
+            ScriptObjectPlaceholder(databaseName, schemaName, objectName);
+        }
+
+        private void ScriptObjectPlaceholder(string databaseName, string schemaName, string objectName)
+        {
+            MessageBox.Show($"TODO: Script object\nDatabase: {databaseName}\nSchema: {schemaName}\nObject: {objectName}", "Quick Search");
         }
 
         private static DataTable BuildResultTable()
@@ -320,6 +423,9 @@ WHERE p.parameter_id > 0
             table.Columns.Add("ObjectName", typeof(string));
             table.Columns.Add("MatchLocation", typeof(string));
             table.Columns.Add("MatchPreview", typeof(string));
+            table.Columns.Add("ScriptDatabaseName", typeof(string));
+            table.Columns.Add("ScriptSchemaName", typeof(string));
+            table.Columns.Add("ScriptObjectName", typeof(string));
             return table;
         }
     }
