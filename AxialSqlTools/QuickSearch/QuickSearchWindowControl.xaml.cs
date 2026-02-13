@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Microsoft.SqlServer.Management.UI.VSIntegration;
+using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
+using Microsoft.VisualStudio.Shell;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -7,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using static AxialSqlTools.ScriptFactoryAccess;
 
 namespace AxialSqlTools
 {
@@ -161,12 +165,15 @@ namespace AxialSqlTools
                 if (allDatabases)
                 {
                     string sql = @"
-SELECT [name]
-FROM sys.databases
-WHERE database_id > 4
-  AND [state] = 0
-  AND user_access = 0
-ORDER BY [name];";
+
+                    SELECT [name]
+                    FROM sys.databases
+                    WHERE [name] <> 'tempdb'
+                      AND [state] = 0 --ONLINE
+                      AND user_access = 0 --MULTI_USER
+                    ORDER BY [name];
+
+                    ";
 
                     using (var cmd = new SqlCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
@@ -216,6 +223,7 @@ WHERE (
         (@includeFunctions = 1 AND o.[type] IN ('FN', 'IF', 'TF'))
       )
   AND m.[definition] LIKE @pattern
+  AND o.is_ms_shipped = 0
 
 UNION ALL
 
@@ -402,11 +410,29 @@ WHERE js.[command] LIKE @pattern
                 return;
             }
 
-            string databaseName = rowView["ScriptDatabaseName"]?.ToString();
-            string schemaName = rowView["ScriptSchemaName"]?.ToString();
-            string objectName = rowView["ScriptObjectName"]?.ToString();
+            try
+            { 
+                string databaseName = rowView["ScriptDatabaseName"]?.ToString();
+                string schemaName = rowView["ScriptSchemaName"]?.ToString();
+                string objectName = rowView["ScriptObjectName"]?.ToString();
 
-            ScriptObjectPlaceholder(databaseName, schemaName, objectName);
+                string selectedObjectName = $"[{databaseName}].[{schemaName}].[{objectName}]";
+
+                string fullScriptResult = ScriptObjectDefinition.GetText(AxialSqlToolsPackage.PackageInstance, selectedObjectName);                               
+
+                var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
+
+                ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connectionInfo.ActiveConnectionInfo, null);
+
+                EnvDTE.TextDocument doc = (EnvDTE.TextDocument)ServiceCache.ExtensibilityModel.Application.ActiveDocument.Object(null);
+
+                doc.EndPoint.CreateEditPoint().Insert(fullScriptResult);
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show($"Scripting failed: {ex.Message}", "Script Object");
+            }           
+
         }
 
         private void ScriptObjectPlaceholder(string databaseName, string schemaName, string objectName)

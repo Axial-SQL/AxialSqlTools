@@ -43,26 +43,25 @@
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
             <Label Content="Object types:" VerticalAlignment="Center"/>
-            <CheckBox x:Name="CheckBox_StoredProcedures" Content="Stored Procedures" IsChecked="True" Margin="8,0,0,0"/>
-            <CheckBox x:Name="CheckBox_Views" Content="Views" IsChecked="True" Margin="8,0,0,0"/>
-            <CheckBox x:Name="CheckBox_Functions" Content="Functions" IsChecked="True" Margin="8,0,0,0"/>
-            <CheckBox x:Name="CheckBox_Tables" Content="Tables" IsChecked="True" Margin="8,0,0,0"/>
-            <CheckBox x:Name="CheckBox_AgentJobSteps" Content="SQL Agent Job Steps" IsChecked="True" Margin="8,0,0,0"/>
+            <CheckBox x:Name="CheckBox_StoredProcedures" Content="Stored Procedures" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            <CheckBox x:Name="CheckBox_Views" Content="Views" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            <CheckBox x:Name="CheckBox_Functions" Content="Functions" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            <CheckBox x:Name="CheckBox_Tables" Content="Tables" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            <CheckBox x:Name="CheckBox_AgentJobSteps" Content="SQL Agent Jobs" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
 
         <DataGrid Grid.Row="3"
                   x:Name="DataGrid_SearchResults"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
-                  SelectionMode="Single"
-                  FontFamily="Cascadia Mono">
+                  SelectionMode="Single">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Database" Binding="{Binding DatabaseName}" Width="130"/>
                 <DataGridTextColumn Header="Type" Binding="{Binding ObjectType}" Width="140"/>
                 <DataGridTextColumn Header="Schema" Binding="{Binding SchemaName}" Width="120"/>
                 <DataGridTextColumn Header="Object" Binding="{Binding ObjectName}" Width="200"/>
                 <DataGridTextColumn Header="Location" Binding="{Binding MatchLocation}" Width="120"/>
-                <DataGridTextColumn Header="Match Preview" Binding="{Binding MatchPreview}" Width="*"/>
+                <DataGridTextColumn Header="Match Preview" Binding="{Binding MatchPreview}" Width="*" FontFamily="Cascadia Mono"/>
                 <DataGridTemplateColumn Header="Script" Width="90">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
