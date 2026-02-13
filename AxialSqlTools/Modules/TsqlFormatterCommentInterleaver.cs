@@ -53,8 +53,9 @@ public static class TsqlFormatterCommentInterleaver
             mapOrigToFmt[origCodeIdx[iOrigKey]] = fmtCodeIdx[iFmtKey];
         }
 
-        // Collect comments from original and schedule injection BEFORE a formatted code token.
+        // Collect comments from original and schedule injection BEFORE/AFTER a formatted code token.
         var injectBeforeFmtIndex = new Dictionary<int, List<CommentCluster>>();
+        var injectAfterFmtIndex = new Dictionary<int, List<CommentCluster>>();
         var eofComments = new List<CommentCluster>();
 
         // Helper to add a comment to a bucket
@@ -62,6 +63,13 @@ public static class TsqlFormatterCommentInterleaver
         {
             if (!injectBeforeFmtIndex.TryGetValue(fmtIndex, out var list))
                 injectBeforeFmtIndex[fmtIndex] = list = new List<CommentCluster>();
+            list.Add(cluster);
+        }
+
+        void ScheduleAfter(int fmtIndex, CommentCluster cluster)
+        {
+            if (!injectAfterFmtIndex.TryGetValue(fmtIndex, out var list))
+                injectAfterFmtIndex[fmtIndex] = list = new List<CommentCluster>();
             list.Add(cluster);
         }
 
@@ -85,7 +93,21 @@ public static class TsqlFormatterCommentInterleaver
             // Anchor to the *next statement header* if the immediate next code token is ';'
             int anchorOrig = FindAnchorAfterComments(orig, k);
 
-            var cluster = new CommentCluster(chunk.ToString(), startsNewLine, blankLinesBefore);
+            var rawCluster = chunk.ToString();
+            var clusterText = startsNewLine
+                ? rawCluster
+                : (HasNewline(rawCluster) ? rawCluster : rawCluster.TrimEnd());
+            var cluster = new CommentCluster(clusterText, startsNewLine, blankLinesBefore);
+
+            if (!startsNewLine)
+            {
+                int prevCode = PrevIndex(orig, i, IsCodeToken);
+                if (prevCode >= 0 && mapOrigToFmt.TryGetValue(prevCode, out int prevFmtIndex))
+                {
+                    ScheduleAfter(prevFmtIndex, cluster);
+                    continue;
+                }
+            }
 
             if (anchorOrig >= 0 && mapOrigToFmt.TryGetValue(anchorOrig, out int fmtIndex))
                 Schedule(fmtIndex, cluster);
@@ -109,20 +131,20 @@ public static class TsqlFormatterCommentInterleaver
             {
                 foreach (var c in toInject)
                 {
-                    if (c.StartsNewLine)
-                    {
-                        // We want: at least (1 + blankLinesBefore) newlines before the comment.
-                        int required = 1 + c.BlankLinesBefore;
-                        int have = TrailingNewlines(sb);
-                        for (int add = have; add < required; add++)
-                            sb.Append(Environment.NewLine);
-                    }
-                    sb.Append(c.Text);
+                    AppendWithLayout(sb, c);
                 }
             }
 
             sb.Append(fmt[jCode].Text);
             cur++;
+
+            if (injectAfterFmtIndex.TryGetValue(jCode, out var toInjectAfter))
+            {
+                foreach (var c in toInjectAfter)
+                {
+                    AppendWithLayout(sb, c);
+                }
+            }
         }
 
         while (cur < fmt.Count) { sb.Append(fmt[cur].Text); cur++; }
@@ -154,6 +176,13 @@ public static class TsqlFormatterCommentInterleaver
         for (int i = 0; i < tokens.Count; i++)
             if (pred(tokens[i])) list.Add(i);
         return list;
+    }
+
+    private static int PrevIndex(IList<TSqlParserToken> tokens, int start, Func<TSqlParserToken, bool> pred)
+    {
+        for (int i = start; i >= 0; i--)
+            if (pred(tokens[i])) return i;
+        return -1;
     }
 
     private static int NextIndex(IList<TSqlParserToken> tokens, int start, Func<TSqlParserToken, bool> pred)
@@ -207,6 +236,27 @@ public static class TsqlFormatterCommentInterleaver
         t.TokenType == TSqlTokenType.WhiteSpace ||
         t.TokenType == TSqlTokenType.SingleLineComment ||
         t.TokenType == TSqlTokenType.MultilineComment;
+
+    private static bool EndsWithWhitespace(StringBuilder sb) =>
+        sb.Length > 0 && char.IsWhiteSpace(sb[sb.Length - 1]);
+
+    private static void AppendWithLayout(StringBuilder sb, CommentCluster cluster)
+    {
+        if (cluster.StartsNewLine)
+        {
+            // We want: at least (1 + blankLinesBefore) newlines before the comment.
+            int required = 1 + cluster.BlankLinesBefore;
+            int have = TrailingNewlinesOrLineStart(sb);
+            for (int add = have; add < required; add++)
+                sb.Append(Environment.NewLine);
+        }
+        else if (!EndsWithWhitespace(sb))
+        {
+            sb.Append(' ');
+        }
+
+        sb.Append(cluster.Text);
+    }
 
 
     // Normalized comparison key for LCS: (TokenType, normalized text).
@@ -306,16 +356,44 @@ public static class TsqlFormatterCommentInterleaver
         return idx;
     }
 
-    private static int TrailingNewlines(StringBuilder sb)
+    private static int TrailingNewlinesOrLineStart(StringBuilder sb)
     {
+        // Counts newline characters that appear after the last non-whitespace character.
+        // This treats trailing indentation (spaces/tabs) as being on the same line, avoiding
+        // inserting an extra blank line when we're already positioned at the start of a line.
         int c = 0;
         for (int i = sb.Length - 1; i >= 0; i--)
         {
             char ch = sb[i];
-            if (ch == '\n') c++;
-            else if (ch == '\r') continue;
-            else break;
+            if (ch == '\n')
+            {
+                c++;
+            }
+            else if (ch == '\r')
+            {
+                continue;
+            }
+            else if (ch == ' ' || ch == '\t')
+            {
+                continue;
+            }
+            else
+            {
+                break;
+            }
         }
+
+        // If we reached the start without finding non-whitespace, we are effectively at line start.
+        if (c == 0 && sb.Length > 0)
+        {
+            bool onlyWhitespace = true;
+            for (int i = 0; i < sb.Length; i++)
+            {
+                if (!char.IsWhiteSpace(sb[i])) { onlyWhitespace = false; break; }
+            }
+            if (onlyWhitespace) return 1;
+        }
+
         return c;
     }
 
