@@ -7,7 +7,7 @@
 		<MoreInfo>https://github.com/Axial-SQL/AxialSqlTools</MoreInfo>
 		<License>LICENSE</License>
 	</Metadata>
-	<Installation AllUsers="true">
+	<Installation>
 		<InstallationTarget Id="Microsoft.VisualStudio.Ssms" Version="[22.0, )">
 			<ProductArchitecture>amd64</ProductArchitecture>
 		</InstallationTarget>
