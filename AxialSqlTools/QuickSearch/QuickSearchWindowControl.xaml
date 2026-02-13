@@ -11,6 +11,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
@@ -42,11 +43,11 @@
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
             <Label Content="Object types:" VerticalAlignment="Center"/>
-            <CheckBox x:Name="CheckBox_StoredProcedures" Content="Stored Procedures" IsChecked="True" Margin="8,0,0,0"/>
-            <CheckBox x:Name="CheckBox_Views" Content="Views" IsChecked="True" Margin="8,0,0,0"/>
-            <CheckBox x:Name="CheckBox_Functions" Content="Functions" IsChecked="True" Margin="8,0,0,0"/>
-            <CheckBox x:Name="CheckBox_Tables" Content="Tables" IsChecked="True" Margin="8,0,0,0"/>
-            <TextBlock x:Name="TextBlock_ResultCount" Margin="20,0,0,0" VerticalAlignment="Center" FontWeight="Bold"/>
+            <CheckBox x:Name="CheckBox_StoredProcedures" Content="Stored Procedures" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            <CheckBox x:Name="CheckBox_Views" Content="Views" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            <CheckBox x:Name="CheckBox_Functions" Content="Functions" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            <CheckBox x:Name="CheckBox_Tables" Content="Tables" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            <CheckBox x:Name="CheckBox_AgentJobSteps" Content="SQL Agent Jobs" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
 
         <DataGrid Grid.Row="3"
@@ -60,8 +61,21 @@
                 <DataGridTextColumn Header="Schema" Binding="{Binding SchemaName}" Width="120"/>
                 <DataGridTextColumn Header="Object" Binding="{Binding ObjectName}" Width="200"/>
                 <DataGridTextColumn Header="Location" Binding="{Binding MatchLocation}" Width="120"/>
-                <DataGridTextColumn Header="Match Preview" Binding="{Binding MatchPreview}" Width="*"/>
+                <DataGridTextColumn Header="Match Preview" Binding="{Binding MatchPreview}" Width="*" FontFamily="Cascadia Mono"/>
+                <DataGridTemplateColumn Header="Script" Width="90">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Script" Click="Button_ScriptResult_Click" Padding="8,2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
+
+        <StatusBar Grid.Row="4">
+            <StatusBarItem>
+                <TextBlock x:Name="TextBlock_ResultCount" FontWeight="Bold"/>
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 </UserControl>

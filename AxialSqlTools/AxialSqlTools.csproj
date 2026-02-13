@@ -54,6 +54,7 @@
       <DependentUpon>DataImportWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Modules\ExcelImport.cs" />
+    <Compile Include="Modules\ScriptObjectDefinition.cs" />
     <Compile Include="Modules\TsqlFormatterCommentInterleaver.cs" />
     <Compile Include="Commands\Dialogs\FormatOptionsDialog.xaml.cs">
       <DependentUpon>FormatOptionsDialog.xaml</DependentUpon>
