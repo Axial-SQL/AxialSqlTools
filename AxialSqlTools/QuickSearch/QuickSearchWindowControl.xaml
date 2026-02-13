@@ -35,8 +35,8 @@
             <TextBox Grid.Column="1" x:Name="TextBox_SearchText" Margin="6,0,12,0" Height="24" VerticalContentAlignment="Center"/>
             <CheckBox Grid.Column="2" x:Name="CheckBox_AllDatabases" Content="All user databases on selected server" VerticalAlignment="Center" Margin="0,0,12,0" IsChecked="True"/>
             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                <CheckBox x:Name="CheckBox_WholeWord" Content="Match whole words only" Margin="0,0,12,0"/>
-                <CheckBox x:Name="CheckBox_UseWildcards" Content="Use wildcards" />
+                <CheckBox x:Name="CheckBox_WholeWord" Content="Match whole words only" Margin="0,0,12,0" Checked="CheckBox_WholeWord_Checked"/>
+                <CheckBox x:Name="CheckBox_UseWildcards" Content="Use wildcards" Checked="CheckBox_UseWildcards_Checked" />
             </StackPanel>
             <Button Grid.Column="4" x:Name="Button_Search" Content="Search" Width="90" Height="28" Click="Button_Search_Click"/>
         </Grid>
