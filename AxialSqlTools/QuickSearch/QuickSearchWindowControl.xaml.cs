@@ -43,6 +43,7 @@ namespace AxialSqlTools
             selectedDatabase = ci.Database;
             selectedServer = ci.ServerName;
             Label_ConnectionDescription.Content = $"Server: [{selectedServer}] / Database: [{selectedDatabase}]";
+            SearchInputsGrid.IsEnabled = true;
         }
 
         private async void Button_Search_Click(object sender, RoutedEventArgs e)
