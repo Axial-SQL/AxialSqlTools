@@ -47,7 +47,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Label Grid.Column="0" Content="Search for:" VerticalAlignment="Center"/>
-                <TextBox Grid.Column="1" x:Name="TextBox_SearchText" Margin="6,0,12,0" Height="24" VerticalContentAlignment="Center"/>
+                <TextBox Grid.Column="1" x:Name="TextBox_SearchText" Margin="6,0,12,0" Height="24" VerticalContentAlignment="Center" KeyDown="TextBox_SearchText_KeyDown"/>
                 <CheckBox Grid.Column="2" x:Name="CheckBox_AllDatabases" Content="All user databases on the server" VerticalAlignment="Center" Margin="0,0,12,0" IsChecked="True"/>
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                     <CheckBox x:Name="CheckBox_WholeWord" Content="Match whole words only" Margin="0,0,12,0" Checked="CheckBox_WholeWord_Checked"/>
@@ -69,7 +69,8 @@
                       x:Name="DataGrid_SearchResults"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
-                      SelectionMode="Single">
+                      SelectionMode="Single"
+                      SelectionChanged="DataGrid_SearchResults_SelectionChanged">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Database" Binding="{Binding DatabaseName}" Width="130"/>
                     <DataGridTextColumn Header="Type" Binding="{Binding ObjectType}" Width="140"/>

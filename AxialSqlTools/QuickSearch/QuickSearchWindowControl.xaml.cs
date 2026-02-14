@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Web.UI.Design;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using static AxialSqlTools.ScriptFactoryAccess;
 
 namespace AxialSqlTools
@@ -57,6 +58,11 @@ namespace AxialSqlTools
         }
 
         private async void Button_Search_Click(object sender, RoutedEventArgs e)
+        {
+            await RunSearchAsync();
+        }
+
+        private async Task RunSearchAsync()
         {
             if (searchCancellationTokenSource != null)
             {
@@ -133,6 +139,17 @@ namespace AxialSqlTools
                 searchCancellationTokenSource = null;
                 Button_Search.Content = "Search";
             }
+        }
+
+        private async void TextBox_SearchText_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            await RunSearchAsync();
         }
 
         private async Task<DataTable> ExecuteSearchAsync(string searchText, bool allDatabases, bool wholeWord, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, IProgress<string> progress, CancellationToken cancellationToken)
@@ -488,8 +505,6 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
                 string selectedObjectName = $"[{databaseName}].[{schemaName}].[{objectName}]";
 
                 string fullScriptResult = ScriptObjectDefinition.GetText(AxialSqlToolsPackage.PackageInstance, selectedObjectName);
-
-                //todo - this should be happening on row selection
                 SqlEditor.Text = fullScriptResult;
 
                 var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
@@ -505,6 +520,45 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
                 MessageBox.Show($"Scripting failed: {ex.Message}", "Script Object");
             }           
 
+        }
+
+        private void DataGrid_SearchResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (!(DataGrid_SearchResults.SelectedItem is DataRowView rowView))
+            {
+                return;
+            }
+
+            try
+            {
+                string matchLocation = rowView["MatchLocation"]?.ToString();
+                if (matchLocation == "JobStep")
+                {
+                    SqlEditor.Text = rowView["MatchPreview"]?.ToString() ?? string.Empty;
+                    return;
+                }
+
+                string databaseName = rowView["ScriptDatabaseName"]?.ToString();
+                string schemaName = rowView["ScriptSchemaName"]?.ToString();
+                string objectName = rowView["ScriptObjectName"]?.ToString();
+
+                if (string.IsNullOrWhiteSpace(databaseName)
+                    || string.IsNullOrWhiteSpace(schemaName)
+                    || string.IsNullOrWhiteSpace(objectName))
+                {
+                    SqlEditor.Text = string.Empty;
+                    return;
+                }
+
+                string selectedObjectName = $"[{databaseName}].[{schemaName}].[{objectName}]";
+                SqlEditor.Text = ScriptObjectDefinition.GetText(AxialSqlToolsPackage.PackageInstance, selectedObjectName);
+            }
+            catch
+            {
+                SqlEditor.Text = string.Empty;
+            }
         }
 
         private void ScriptObjectPlaceholder(string databaseName, string schemaName, string objectName)
