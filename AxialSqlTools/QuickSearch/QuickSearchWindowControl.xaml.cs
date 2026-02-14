@@ -234,7 +234,8 @@ namespace AxialSqlTools
 
         private async Task<DataTable> SearchDatabaseAsync(string databaseName, string searchText, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, CancellationToken cancellationToken)
         {
-            var result = new DataTable();
+
+            DataTable result = BuildResultTable();
 
             string definitionSql = $@"
 USE [{databaseName}];
@@ -357,16 +358,12 @@ WHERE p.parameter_id > 0
 
                 using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
                 {
-                    do
+                    if (reader.HasRows)
                     {
-                        if (reader.HasRows)
-                        {
-                            var chunk = new DataTable();
-                            chunk.Load(reader);
-                            aggregateResult.Merge(chunk, true, MissingSchemaAction.Add);
-                        }
+                        var chunk = new DataTable();
+                        chunk.Load(reader);
+                        aggregateResult.Merge(chunk, true, MissingSchemaAction.Add);
                     }
-                    while (await reader.NextResultAsync(cancellationToken));
                 }
             }
         }
@@ -387,7 +384,7 @@ SELECT
     'SQL Agent Job Step' AS ObjectType,
     'dbo' AS SchemaName,
     j.[name] + N' / Step ' + CONVERT(varchar(12), js.step_id) + N' - ' + js.step_name AS ObjectName,
-    'Command' AS MatchLocation,
+    'JobStep' AS MatchLocation,
     js.[command] AS SourceText,
     N'msdb' AS ScriptDatabaseName,
     N'dbo' AS ScriptSchemaName,
@@ -501,6 +498,14 @@ WHERE js.[command] LIKE @pattern
                 string databaseName = rowView["ScriptDatabaseName"]?.ToString();
                 string schemaName = rowView["ScriptSchemaName"]?.ToString();
                 string objectName = rowView["ScriptObjectName"]?.ToString();
+
+                string matchLocation = rowView["MatchLocation"]?.ToString();
+
+                if (matchLocation == "JobStep")
+                {
+                    MessageBox.Show($"TODO - WIP", "WIP");
+                    return;
+                }
 
                 string selectedObjectName = $"[{databaseName}].[{schemaName}].[{objectName}]";
 
