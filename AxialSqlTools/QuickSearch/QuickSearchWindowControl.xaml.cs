@@ -236,6 +236,12 @@ namespace AxialSqlTools
         {
 
             DataTable result = BuildResultTable();
+<<<<<<< HEAD
+=======
+
+            string definitionSql = $@"
+USE [{databaseName}];
+>>>>>>> 5a8e71b284645a32e5349bd804088bf6ce6c6780
 
             string definitionSql = $@"
 SELECT
@@ -260,8 +266,16 @@ WHERE (
         (@includeViews = 1 AND o.[type] = 'V') OR
         (@includeFunctions = 1 AND o.[type] IN ('FN', 'IF', 'TF'))
       )
+<<<<<<< HEAD
   AND m.[definition] LIKE @pattern ESCAPE '!'
   AND o.is_ms_shipped = 0 ;";
+=======
+  AND m.[definition] LIKE @pattern
+  AND o.is_ms_shipped = 0;";
+
+            string tableSql = $@"
+USE [{databaseName}];
+>>>>>>> 5a8e71b284645a32e5349bd804088bf6ce6c6780
 
             string tableSql = $@"
 SELECT
@@ -277,7 +291,14 @@ SELECT
 FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 WHERE @includeTables = 1
+<<<<<<< HEAD
   AND t.[name] LIKE @pattern ESCAPE '!';";
+=======
+  AND t.[name] LIKE @pattern;";
+
+            string columnSql = $@"
+USE [{databaseName}];
+>>>>>>> 5a8e71b284645a32e5349bd804088bf6ce6c6780
 
             string columnSql = $@"
 SELECT
@@ -294,7 +315,14 @@ FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 INNER JOIN sys.columns c ON c.object_id = t.object_id
 WHERE @includeTables = 1
+<<<<<<< HEAD
   AND c.[name] LIKE @pattern ESCAPE '!';";
+=======
+  AND c.[name] LIKE @pattern;";
+
+            string parameterSql = $@"
+USE [{databaseName}];
+>>>>>>> 5a8e71b284645a32e5349bd804088bf6ce6c6780
 
             string parameterSql = $@"
 SELECT
@@ -341,12 +369,16 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
 
             string pattern = BuildPattern(searchText, useWildcards);
 
+<<<<<<< HEAD
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(selectedConnectionString)
             {
                 InitialCatalog = databaseName
             };
 
             using (var conn = new SqlConnection(builder.ConnectionString))
+=======
+            using (var conn = new SqlConnection(selectedConnectionString))
+>>>>>>> 5a8e71b284645a32e5349bd804088bf6ce6c6780
             {
                 await conn.OpenAsync(cancellationToken);
 
@@ -354,9 +386,12 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
                 await ExecuteSearchQueryAsync(conn, tableSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
                 await ExecuteSearchQueryAsync(conn, columnSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
                 await ExecuteSearchQueryAsync(conn, parameterSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+<<<<<<< HEAD
                 
                 if (databaseName == "msdb" && includeAgentJobSteps)
                     await ExecuteSearchQueryAsync(conn, agentJobsSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+=======
+>>>>>>> 5a8e71b284645a32e5349bd804088bf6ce6c6780
             }
 
             return result;
@@ -383,6 +418,53 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
                     }
                 }
             }
+<<<<<<< HEAD
+=======
+        }
+
+        private async Task<DataTable> SearchAgentJobStepsAsync(string searchText, bool useWildcards, CancellationToken cancellationToken)
+        {
+            var result = new DataTable();
+            string pattern = BuildPattern(searchText, useWildcards);
+
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(selectedConnectionString)
+            {
+                InitialCatalog = "msdb"
+            };
+
+            string sql = @"
+SELECT
+    'msdb' AS DatabaseName,
+    'SQL Agent Job Step' AS ObjectType,
+    'dbo' AS SchemaName,
+    j.[name] + N' / Step ' + CONVERT(varchar(12), js.step_id) + N' - ' + js.step_name AS ObjectName,
+    'JobStep' AS MatchLocation,
+    js.[command] AS SourceText,
+    N'msdb' AS ScriptDatabaseName,
+    N'dbo' AS ScriptSchemaName,
+    j.[name] AS ScriptObjectName
+FROM dbo.sysjobs j
+INNER JOIN dbo.sysjobsteps js ON js.job_id = j.job_id
+WHERE js.[command] LIKE @pattern
+   OR js.step_name LIKE @pattern
+   OR j.[name] LIKE @pattern;";
+
+            using (var conn = new SqlConnection(builder.ConnectionString))
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.CommandTimeout = 120;
+                cmd.Parameters.AddWithValue("@pattern", pattern);
+
+                await conn.OpenAsync(cancellationToken);
+
+                using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
+                {
+                    result.Load(reader);
+                }
+            }
+
+            return result;
+>>>>>>> 5a8e71b284645a32e5349bd804088bf6ce6c6780
         }
 
         private static string BuildPattern(string text, bool useWildcards)
