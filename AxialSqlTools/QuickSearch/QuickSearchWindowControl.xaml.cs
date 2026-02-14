@@ -1,14 +1,18 @@
-﻿using Microsoft.SqlServer.Management.UI.VSIntegration;
+﻿using ICSharpCode.AvalonEdit.Highlighting;
+using ICSharpCode.AvalonEdit.Highlighting.Xshd;
+using Microsoft.SqlServer.Management.UI.VSIntegration;
 using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
+using System.Xml;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI.Design;
 using System.Windows;
 using System.Windows.Controls;
 using static AxialSqlTools.ScriptFactoryAccess;
@@ -28,6 +32,12 @@ namespace AxialSqlTools
 
             CheckBox_WholeWord.IsChecked = true;
 
+            using (var stream = typeof(QuickSearchWindowControl).Assembly.GetManifestResourceStream("AxialSqlTools.QuickSearch.sql.xshd"))
+            using (var reader = new XmlTextReader(stream))
+            {
+                SqlEditor.SyntaxHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
+            }
+
         }
 
         private void Button_SelectConnection_Click(object sender, RoutedEventArgs e)
@@ -43,6 +53,7 @@ namespace AxialSqlTools
             selectedDatabase = ci.Database;
             selectedServer = ci.ServerName;
             Label_ConnectionDescription.Content = $"Server: [{selectedServer}] / Database: [{selectedDatabase}]";
+            SearchInputsGrid.IsEnabled = true;
         }
 
         private async void Button_Search_Click(object sender, RoutedEventArgs e)
@@ -133,15 +144,31 @@ namespace AxialSqlTools
                 cancellationToken.ThrowIfCancellationRequested();
                 progress?.Report(dbName);
 
-                DataTable rows = await SearchDatabaseAsync(dbName, searchText, useWildcards, includeProcs, includeViews, includeFunctions, includeTables, cancellationToken);
+                DataTable rows;
+
+                try
+                {
+                    rows = await SearchDatabaseAsync(
+                        dbName,
+                        searchText,
+                        useWildcards,
+                        includeProcs,
+                        includeViews,
+                        includeFunctions,
+                        includeTables,
+                        includeAgentJobSteps,
+                        cancellationToken);
+                }
+                catch (SqlException ex)
+                {
+                    continue;
+                }
+
+
                 foreach (DataRow row in rows.Rows)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     string sourceText = row["SourceText"]?.ToString() ?? string.Empty;
-                    if (wholeWord && !Regex.IsMatch(sourceText, $@"\b{Regex.Escape(searchText)}\b", RegexOptions.IgnoreCase))
-                    {
-                        continue;
-                    }
 
                     string preview = BuildPreview(sourceText, searchText, useWildcards);
                     allResults.Rows.Add(
@@ -155,34 +182,7 @@ namespace AxialSqlTools
                         row["ScriptSchemaName"],
                         row["ScriptObjectName"]);
                 }
-            }
-
-            if (includeAgentJobSteps)
-            {
-                progress?.Report("msdb");
-                DataTable jobRows = await SearchAgentJobStepsAsync(searchText, useWildcards, cancellationToken);
-                foreach (DataRow row in jobRows.Rows)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    string sourceText = row["SourceText"]?.ToString() ?? string.Empty;
-                    if (wholeWord && !Regex.IsMatch(sourceText, $@"\b{Regex.Escape(searchText)}\b", RegexOptions.IgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    string preview = BuildPreview(sourceText, searchText, useWildcards);
-                    allResults.Rows.Add(
-                        row["DatabaseName"],
-                        row["ObjectType"],
-                        row["SchemaName"],
-                        row["ObjectName"],
-                        row["MatchLocation"],
-                        preview,
-                        row["ScriptDatabaseName"],
-                        row["ScriptSchemaName"],
-                        row["ScriptObjectName"]);
-                }
-            }
+            }           
 
             return allResults;
         }
@@ -208,7 +208,8 @@ namespace AxialSqlTools
                     FROM sys.databases
                     WHERE [name] <> 'tempdb'
                       AND [state] = 0 --ONLINE
-                      AND user_access = 0 --MULTI_USER
+                      AND [user_access] = 0 --MULTI_USER
+                      AND HAS_DBACCESS([name]) = 1
                     ORDER BY [name];
 
                     ";
@@ -231,13 +232,12 @@ namespace AxialSqlTools
             return list;
         }
 
-        private async Task<DataTable> SearchDatabaseAsync(string databaseName, string searchText, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, CancellationToken cancellationToken)
+        private async Task<DataTable> SearchDatabaseAsync(string databaseName, string searchText, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, CancellationToken cancellationToken)
         {
-            var result = new DataTable();
 
-            string sql = $@"
-USE [{databaseName}];
+            DataTable result = BuildResultTable();
 
+            string definitionSql = $@"
 SELECT
     DB_NAME() AS DatabaseName,
     CASE
@@ -260,11 +260,10 @@ WHERE (
         (@includeViews = 1 AND o.[type] = 'V') OR
         (@includeFunctions = 1 AND o.[type] IN ('FN', 'IF', 'TF'))
       )
-  AND m.[definition] LIKE @pattern
-  AND o.is_ms_shipped = 0
+  AND m.[definition] LIKE @pattern ESCAPE '!'
+  AND o.is_ms_shipped = 0 ;";
 
-UNION ALL
-
+            string tableSql = $@"
 SELECT
     DB_NAME() AS DatabaseName,
     'Table' AS ObjectType,
@@ -278,10 +277,9 @@ SELECT
 FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 WHERE @includeTables = 1
-  AND t.[name] LIKE @pattern
+  AND t.[name] LIKE @pattern ESCAPE '!';";
 
-UNION ALL
-
+            string columnSql = $@"
 SELECT
     DB_NAME() AS DatabaseName,
     'Table' AS ObjectType,
@@ -296,10 +294,9 @@ FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 INNER JOIN sys.columns c ON c.object_id = t.object_id
 WHERE @includeTables = 1
-  AND c.[name] LIKE @pattern
+  AND c.[name] LIKE @pattern ESCAPE '!';";
 
-UNION ALL
-
+            string parameterSql = $@"
 SELECT
     DB_NAME() AS DatabaseName,
     CASE
@@ -323,11 +320,50 @@ WHERE p.parameter_id > 0
         (@includeViews = 1 AND o.[type] = 'V') OR
         (@includeFunctions = 1 AND o.[type] IN ('FN', 'IF', 'TF'))
       )
-  AND p.[name] LIKE @pattern;";
+  AND p.[name] LIKE @pattern ESCAPE '!';";
+
+            string agentJobsSql = @"
+SELECT
+    'msdb' AS DatabaseName,
+    'SQL Agent Job Step' AS ObjectType,
+    'dbo' AS SchemaName,
+    j.[name] + N' / Step ' + CONVERT(varchar(12), js.step_id) + N' - ' + js.step_name AS ObjectName,
+    'JobStep' AS MatchLocation,
+    js.[command] AS SourceText,
+    N'msdb' AS ScriptDatabaseName,
+    N'dbo' AS ScriptSchemaName,
+    j.[name] AS ScriptObjectName
+FROM dbo.sysjobs j
+INNER JOIN dbo.sysjobsteps js ON js.job_id = j.job_id
+WHERE js.[command] LIKE @pattern ESCAPE '!'
+   OR js.step_name LIKE @pattern ESCAPE '!'
+   OR j.[name] LIKE @pattern;";
 
             string pattern = BuildPattern(searchText, useWildcards);
 
-            using (var conn = new SqlConnection(selectedConnectionString))
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(selectedConnectionString)
+            {
+                InitialCatalog = databaseName
+            };
+
+            using (var conn = new SqlConnection(builder.ConnectionString))
+            {
+                await conn.OpenAsync(cancellationToken);
+
+                await ExecuteSearchQueryAsync(conn, definitionSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+                await ExecuteSearchQueryAsync(conn, tableSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+                await ExecuteSearchQueryAsync(conn, columnSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+                await ExecuteSearchQueryAsync(conn, parameterSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+                
+                if (databaseName == "msdb" && includeAgentJobSteps)
+                    await ExecuteSearchQueryAsync(conn, agentJobsSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+            }
+
+            return result;
+        }
+
+        private static async Task ExecuteSearchQueryAsync(SqlConnection conn, string sql, string pattern, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, DataTable aggregateResult, CancellationToken cancellationToken)
+        {
             using (var cmd = new SqlCommand(sql, conn))
             {
                 cmd.CommandTimeout = 120;
@@ -337,73 +373,32 @@ WHERE p.parameter_id > 0
                 cmd.Parameters.AddWithValue("@includeFunctions", includeFunctions ? 1 : 0);
                 cmd.Parameters.AddWithValue("@includeTables", includeTables ? 1 : 0);
 
-                await conn.OpenAsync(cancellationToken);
-
                 using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
                 {
-                    result.Load(reader);
+                    if (reader.HasRows)
+                    {
+                        var chunk = new DataTable();
+                        chunk.Load(reader);
+                        aggregateResult.Merge(chunk, true, MissingSchemaAction.Add);
+                    }
                 }
             }
-
-            return result;
-        }
-
-        private async Task<DataTable> SearchAgentJobStepsAsync(string searchText, bool useWildcards, CancellationToken cancellationToken)
-        {
-            var result = new DataTable();
-            string pattern = BuildPattern(searchText, useWildcards);
-
-            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(selectedConnectionString)
-            {
-                InitialCatalog = "msdb"
-            };
-
-            string sql = @"
-SELECT
-    'msdb' AS DatabaseName,
-    'SQL Agent Job Step' AS ObjectType,
-    'dbo' AS SchemaName,
-    j.[name] + N' / Step ' + CONVERT(varchar(12), js.step_id) + N' - ' + js.step_name AS ObjectName,
-    'Command' AS MatchLocation,
-    js.[command] AS SourceText,
-    N'msdb' AS ScriptDatabaseName,
-    N'dbo' AS ScriptSchemaName,
-    j.[name] AS ScriptObjectName
-FROM dbo.sysjobs j
-INNER JOIN dbo.sysjobsteps js ON js.job_id = j.job_id
-WHERE js.[command] LIKE @pattern
-   OR js.step_name LIKE @pattern
-   OR j.[name] LIKE @pattern;";
-
-            using (var conn = new SqlConnection(builder.ConnectionString))
-            using (var cmd = new SqlCommand(sql, conn))
-            {
-                cmd.CommandTimeout = 120;
-                cmd.Parameters.AddWithValue("@pattern", pattern);
-
-                await conn.OpenAsync(cancellationToken);
-
-                using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
-                {
-                    result.Load(reader);
-                }
-            }
-
-            return result;
         }
 
         private static string BuildPattern(string text, bool useWildcards)
         {
+
+            string escaped = text.Replace("!", "!!");
+
             if (useWildcards)
             {
-                return text;
+                return escaped;
             }
 
-            string escaped = text
-                .Replace("\\", "\\\\")
-                .Replace("%", "\\%")
-                .Replace("_", "\\_")
-                .Replace("[", "\\[");
+            escaped = escaped
+                .Replace("%", "!%")
+                .Replace("_", "!_")
+                .Replace("[", "![");
 
             return $"%{escaped}%";
         }
@@ -479,9 +474,20 @@ WHERE js.[command] LIKE @pattern
                 string schemaName = rowView["ScriptSchemaName"]?.ToString();
                 string objectName = rowView["ScriptObjectName"]?.ToString();
 
+                string matchLocation = rowView["MatchLocation"]?.ToString();
+
+                if (matchLocation == "JobStep")
+                {
+                    MessageBox.Show($"TODO - WIP", "WIP");
+                    return;
+                }
+
                 string selectedObjectName = $"[{databaseName}].[{schemaName}].[{objectName}]";
 
-                string fullScriptResult = ScriptObjectDefinition.GetText(AxialSqlToolsPackage.PackageInstance, selectedObjectName);                               
+                string fullScriptResult = ScriptObjectDefinition.GetText(AxialSqlToolsPackage.PackageInstance, selectedObjectName);
+
+                //todo - this should be happening on row selection
+                SqlEditor.Text = fullScriptResult;
 
                 var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
 

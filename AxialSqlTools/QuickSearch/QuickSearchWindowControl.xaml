@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
              mc:Ignorable="d"
              Name="QuickSearchControl">
     <Grid>
@@ -22,6 +23,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>       
@@ -85,7 +87,14 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <StatusBar Grid.Row="4">
+            <avalonedit:TextEditor  Grid.Row="4"
+                x:Name="SqlEditor"
+                ShowLineNumbers="True"
+                FontFamily= "Cascadia Mono"
+                FontSize="13"
+                IsReadOnly="True" />
+
+            <StatusBar Grid.Row="5">
                 <StatusBarItem>
                     <TextBlock x:Name="TextBlock_ResultCount" FontWeight="Bold"/>
                 </StatusBarItem>
