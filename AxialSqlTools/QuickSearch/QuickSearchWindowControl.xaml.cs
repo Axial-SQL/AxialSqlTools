@@ -577,11 +577,6 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
             }
         }
 
-        private void ScriptObjectPlaceholder(string databaseName, string schemaName, string objectName)
-        {
-            MessageBox.Show($"TODO: Script object\nDatabase: {databaseName}\nSchema: {schemaName}\nObject: {objectName}", "Quick Search");
-        }
-
         private static DataTable BuildResultTable()
         {
             var table = new DataTable();
