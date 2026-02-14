@@ -27,6 +27,8 @@ namespace AxialSqlTools
         private string selectedServer;
         private CancellationTokenSource searchCancellationTokenSource;
 
+        private TextMarkerService textMarkerService;
+
         public QuickSearchWindowControl()
         {
             this.InitializeComponent();
@@ -37,6 +39,11 @@ namespace AxialSqlTools
             using (var reader = new XmlTextReader(stream))
             {
                 SqlEditor.SyntaxHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
+            }
+
+            if (textMarkerService == null)
+            {
+                textMarkerService = new TextMarkerService(SqlEditor);
             }
 
         }
@@ -198,7 +205,8 @@ namespace AxialSqlTools
                         preview,
                         row["ScriptDatabaseName"],
                         row["ScriptSchemaName"],
-                        row["ScriptObjectName"]);
+                        row["ScriptObjectName"],
+                        sourceText);
                 }
             }           
 
@@ -505,7 +513,6 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
                 string selectedObjectName = $"[{databaseName}].[{schemaName}].[{objectName}]";
 
                 string fullScriptResult = ScriptObjectDefinition.GetText(AxialSqlToolsPackage.PackageInstance, selectedObjectName);
-                SqlEditor.Text = fullScriptResult;
 
                 var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
@@ -532,28 +539,37 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
             }
 
             try
-            {
-                string matchLocation = rowView["MatchLocation"]?.ToString();
-                if (matchLocation == "JobStep")
+            {               
+                SqlEditor.Text = rowView["SourceText"]?.ToString();
+
+                textMarkerService.RemoveAll();
+
+                string input = TextBox_SearchText.Text ?? string.Empty;
+
+                Regex regex;
+
+                if (CheckBox_UseWildcards.IsChecked == true)
                 {
-                    SqlEditor.Text = rowView["MatchPreview"]?.ToString() ?? string.Empty;
-                    return;
+                    // Convert SQL LIKE wildcards to regex
+                    string regexPattern = Regex.Escape(input)
+                        .Replace(@"\%", ".*")
+                        .Replace(@"\_", ".");
+
+                    regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
+                }
+                else
+                {
+                    // Simple substring search like LIKE '%text%'
+                    regex = new Regex(Regex.Escape(input), RegexOptions.IgnoreCase);
                 }
 
-                string databaseName = rowView["ScriptDatabaseName"]?.ToString();
-                string schemaName = rowView["ScriptSchemaName"]?.ToString();
-                string objectName = rowView["ScriptObjectName"]?.ToString();
-
-                if (string.IsNullOrWhiteSpace(databaseName)
-                    || string.IsNullOrWhiteSpace(schemaName)
-                    || string.IsNullOrWhiteSpace(objectName))
+                foreach (Match match in regex.Matches(SqlEditor.Text))
                 {
-                    SqlEditor.Text = string.Empty;
-                    return;
+                    var marker = textMarkerService.Create(match.Index, match.Length);
+                    marker.BackgroundColor = System.Windows.Media.Colors.Yellow;
+                    marker.ForegroundColor = System.Windows.Media.Colors.Black;
                 }
 
-                string selectedObjectName = $"[{databaseName}].[{schemaName}].[{objectName}]";
-                SqlEditor.Text = ScriptObjectDefinition.GetText(AxialSqlToolsPackage.PackageInstance, selectedObjectName);
             }
             catch
             {
@@ -578,6 +594,7 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
             table.Columns.Add("ScriptDatabaseName", typeof(string));
             table.Columns.Add("ScriptSchemaName", typeof(string));
             table.Columns.Add("ScriptObjectName", typeof(string));
+            table.Columns.Add("SourceText", typeof(string));
             return table;
         }
     }

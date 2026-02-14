@@ -67,6 +67,7 @@
     <Compile Include="QuickSearch\QuickSearchWindowControl.xaml.cs">
       <DependentUpon>QuickSearchWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="QuickSearch\TextMarkerService.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindow.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindowCommand.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindowControl.xaml.cs">
