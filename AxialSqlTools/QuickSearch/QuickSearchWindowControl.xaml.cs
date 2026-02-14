@@ -235,7 +235,7 @@ namespace AxialSqlTools
         {
             var result = new DataTable();
 
-            string sql = $@"
+            string definitionSql = $@"
 USE [{databaseName}];
 
 SELECT
@@ -261,9 +261,10 @@ WHERE (
         (@includeFunctions = 1 AND o.[type] IN ('FN', 'IF', 'TF'))
       )
   AND m.[definition] LIKE @pattern
-  AND o.is_ms_shipped = 0
+  AND o.is_ms_shipped = 0;";
 
-UNION ALL
+            string tableSql = $@"
+USE [{databaseName}];
 
 SELECT
     DB_NAME() AS DatabaseName,
@@ -278,9 +279,10 @@ SELECT
 FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 WHERE @includeTables = 1
-  AND t.[name] LIKE @pattern
+  AND t.[name] LIKE @pattern;";
 
-UNION ALL
+            string columnAndParameterSql = $@"
+USE [{databaseName}];
 
 SELECT
     DB_NAME() AS DatabaseName,
@@ -296,9 +298,7 @@ FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 INNER JOIN sys.columns c ON c.object_id = t.object_id
 WHERE @includeTables = 1
-  AND c.[name] LIKE @pattern
-
-UNION ALL
+  AND c.[name] LIKE @pattern;
 
 SELECT
     DB_NAME() AS DatabaseName,
@@ -328,6 +328,19 @@ WHERE p.parameter_id > 0
             string pattern = BuildPattern(searchText, useWildcards);
 
             using (var conn = new SqlConnection(selectedConnectionString))
+            {
+                await conn.OpenAsync(cancellationToken);
+
+                await ExecuteSearchQueryAsync(conn, definitionSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+                await ExecuteSearchQueryAsync(conn, tableSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+                await ExecuteSearchQueryAsync(conn, columnAndParameterSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+            }
+
+            return result;
+        }
+
+        private static async Task ExecuteSearchQueryAsync(SqlConnection conn, string sql, string pattern, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, DataTable aggregateResult, CancellationToken cancellationToken)
+        {
             using (var cmd = new SqlCommand(sql, conn))
             {
                 cmd.CommandTimeout = 120;
@@ -337,15 +350,20 @@ WHERE p.parameter_id > 0
                 cmd.Parameters.AddWithValue("@includeFunctions", includeFunctions ? 1 : 0);
                 cmd.Parameters.AddWithValue("@includeTables", includeTables ? 1 : 0);
 
-                await conn.OpenAsync(cancellationToken);
-
                 using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
                 {
-                    result.Load(reader);
+                    do
+                    {
+                        if (reader.HasRows)
+                        {
+                            var chunk = new DataTable();
+                            chunk.Load(reader);
+                            aggregateResult.Merge(chunk, true, MissingSchemaAction.Add);
+                        }
+                    }
+                    while (await reader.NextResultAsync(cancellationToken));
                 }
             }
-
-            return result;
         }
 
         private async Task<DataTable> SearchAgentJobStepsAsync(string searchText, bool useWildcards, CancellationToken cancellationToken)
