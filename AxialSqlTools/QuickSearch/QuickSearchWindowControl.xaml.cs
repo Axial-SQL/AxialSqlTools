@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Web.UI.Design;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using static AxialSqlTools.ScriptFactoryAccess;
 
 namespace AxialSqlTools
@@ -26,6 +27,8 @@ namespace AxialSqlTools
         private string selectedServer;
         private CancellationTokenSource searchCancellationTokenSource;
 
+        private TextMarkerService textMarkerService;
+
         public QuickSearchWindowControl()
         {
             this.InitializeComponent();
@@ -36,6 +39,11 @@ namespace AxialSqlTools
             using (var reader = new XmlTextReader(stream))
             {
                 SqlEditor.SyntaxHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
+            }
+
+            if (textMarkerService == null)
+            {
+                textMarkerService = new TextMarkerService(SqlEditor);
             }
 
         }
@@ -57,6 +65,11 @@ namespace AxialSqlTools
         }
 
         private async void Button_Search_Click(object sender, RoutedEventArgs e)
+        {
+            await RunSearchAsync();
+        }
+
+        private async Task RunSearchAsync()
         {
             if (searchCancellationTokenSource != null)
             {
@@ -135,6 +148,17 @@ namespace AxialSqlTools
             }
         }
 
+        private async void TextBox_SearchText_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            await RunSearchAsync();
+        }
+
         private async Task<DataTable> ExecuteSearchAsync(string searchText, bool allDatabases, bool wholeWord, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, IProgress<string> progress, CancellationToken cancellationToken)
         {
             List<string> databases = GetDatabasesToSearch(allDatabases);
@@ -181,7 +205,8 @@ namespace AxialSqlTools
                         preview,
                         row["ScriptDatabaseName"],
                         row["ScriptSchemaName"],
-                        row["ScriptObjectName"]);
+                        row["ScriptObjectName"],
+                        sourceText);
                 }
             }           
 
@@ -489,9 +514,6 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
 
                 string fullScriptResult = ScriptObjectDefinition.GetText(AxialSqlToolsPackage.PackageInstance, selectedObjectName);
 
-                //todo - this should be happening on row selection
-                SqlEditor.Text = fullScriptResult;
-
                 var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
                 ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql, connectionInfo.ActiveConnectionInfo, null);
@@ -505,6 +527,54 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
                 MessageBox.Show($"Scripting failed: {ex.Message}", "Script Object");
             }           
 
+        }
+
+        private void DataGrid_SearchResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (!(DataGrid_SearchResults.SelectedItem is DataRowView rowView))
+            {
+                return;
+            }
+
+            try
+            {               
+                SqlEditor.Text = rowView["SourceText"]?.ToString();
+
+                textMarkerService.RemoveAll();
+
+                string input = TextBox_SearchText.Text ?? string.Empty;
+
+                Regex regex;
+
+                if (CheckBox_UseWildcards.IsChecked == true)
+                {
+                    // Convert SQL LIKE wildcards to regex
+                    string regexPattern = Regex.Escape(input)
+                        .Replace(@"\%", ".*")
+                        .Replace(@"\_", ".");
+
+                    regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
+                }
+                else
+                {
+                    // Simple substring search like LIKE '%text%'
+                    regex = new Regex(Regex.Escape(input), RegexOptions.IgnoreCase);
+                }
+
+                foreach (Match match in regex.Matches(SqlEditor.Text))
+                {
+                    var marker = textMarkerService.Create(match.Index, match.Length);
+                    marker.BackgroundColor = System.Windows.Media.Colors.Yellow;
+                    marker.ForegroundColor = System.Windows.Media.Colors.Black;
+                }
+
+            }
+            catch
+            {
+                SqlEditor.Text = string.Empty;
+            }
         }
 
         private void ScriptObjectPlaceholder(string databaseName, string schemaName, string objectName)
@@ -524,6 +594,7 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
             table.Columns.Add("ScriptDatabaseName", typeof(string));
             table.Columns.Add("ScriptSchemaName", typeof(string));
             table.Columns.Add("ScriptObjectName", typeof(string));
+            table.Columns.Add("SourceText", typeof(string));
             return table;
         }
     }
