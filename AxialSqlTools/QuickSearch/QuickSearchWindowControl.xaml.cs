@@ -25,6 +25,9 @@ namespace AxialSqlTools
         public QuickSearchWindowControl()
         {
             this.InitializeComponent();
+
+            CheckBox_WholeWord.IsChecked = true;
+
         }
 
         private void Button_SelectConnection_Click(object sender, RoutedEventArgs e)
@@ -92,7 +95,7 @@ namespace AxialSqlTools
                     TextBlock_ResultCount.Text = $"Searching [{databaseName}]...";
                 });
 
-                DataTable results = await Task.Run(() => ExecuteSearch(searchText, allDatabases, wholeWord, useWildcards, includeProcs, includeViews, includeFunctions, includeTables, includeAgentJobSteps, progress, cancellationToken), cancellationToken);
+                DataTable results = await Task.Run(() => ExecuteSearchAsync(searchText, allDatabases, wholeWord, useWildcards, includeProcs, includeViews, includeFunctions, includeTables, includeAgentJobSteps, progress, cancellationToken), cancellationToken);
                 DataGrid_SearchResults.ItemsSource = results.DefaultView;
                 TextBlock_ResultCount.Text = $"{results.Rows.Count} result(s)";
             }
@@ -102,8 +105,15 @@ namespace AxialSqlTools
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Search failed: {ex.Message}", "Quick Search");
-                TextBlock_ResultCount.Text = "Search failed";
+                if (ex.Message.Contains("Operation cancelled by user."))
+                {
+                    TextBlock_ResultCount.Text = "Search canceled";
+                }
+                else
+                {
+                    MessageBox.Show($"Search failed: {ex.Message}", "Quick Search");
+                    TextBlock_ResultCount.Text = "Search failed";
+                }           
             }
             finally
             {
@@ -113,7 +123,7 @@ namespace AxialSqlTools
             }
         }
 
-        private DataTable ExecuteSearch(string searchText, bool allDatabases, bool wholeWord, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, IProgress<string> progress, CancellationToken cancellationToken)
+        private async Task<DataTable> ExecuteSearchAsync(string searchText, bool allDatabases, bool wholeWord, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, IProgress<string> progress, CancellationToken cancellationToken)
         {
             List<string> databases = GetDatabasesToSearch(allDatabases);
             DataTable allResults = BuildResultTable();
@@ -123,7 +133,7 @@ namespace AxialSqlTools
                 cancellationToken.ThrowIfCancellationRequested();
                 progress?.Report(dbName);
 
-                DataTable rows = SearchDatabase(dbName, searchText, useWildcards, includeProcs, includeViews, includeFunctions, includeTables, cancellationToken);
+                DataTable rows = await SearchDatabaseAsync(dbName, searchText, useWildcards, includeProcs, includeViews, includeFunctions, includeTables, cancellationToken);
                 foreach (DataRow row in rows.Rows)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -150,7 +160,7 @@ namespace AxialSqlTools
             if (includeAgentJobSteps)
             {
                 progress?.Report("msdb");
-                DataTable jobRows = SearchAgentJobSteps(searchText, useWildcards, cancellationToken);
+                DataTable jobRows = await SearchAgentJobStepsAsync(searchText, useWildcards, cancellationToken);
                 foreach (DataRow row in jobRows.Rows)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -221,7 +231,7 @@ namespace AxialSqlTools
             return list;
         }
 
-        private DataTable SearchDatabase(string databaseName, string searchText, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, CancellationToken cancellationToken)
+        private async Task<DataTable> SearchDatabaseAsync(string databaseName, string searchText, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, CancellationToken cancellationToken)
         {
             var result = new DataTable();
 
@@ -319,7 +329,6 @@ WHERE p.parameter_id > 0
 
             using (var conn = new SqlConnection(selectedConnectionString))
             using (var cmd = new SqlCommand(sql, conn))
-            using (var adapter = new SqlDataAdapter(cmd))
             {
                 cmd.CommandTimeout = 120;
                 cmd.Parameters.AddWithValue("@pattern", pattern);
@@ -328,17 +337,18 @@ WHERE p.parameter_id > 0
                 cmd.Parameters.AddWithValue("@includeFunctions", includeFunctions ? 1 : 0);
                 cmd.Parameters.AddWithValue("@includeTables", includeTables ? 1 : 0);
 
-                conn.Open();
-                using (cancellationToken.Register(() => cmd.Cancel()))
+                await conn.OpenAsync(cancellationToken);
+
+                using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
                 {
-                    adapter.Fill(result);
+                    result.Load(reader);
                 }
             }
 
             return result;
         }
 
-        private DataTable SearchAgentJobSteps(string searchText, bool useWildcards, CancellationToken cancellationToken)
+        private async Task<DataTable> SearchAgentJobStepsAsync(string searchText, bool useWildcards, CancellationToken cancellationToken)
         {
             var result = new DataTable();
             string pattern = BuildPattern(searchText, useWildcards);
@@ -367,15 +377,15 @@ WHERE js.[command] LIKE @pattern
 
             using (var conn = new SqlConnection(builder.ConnectionString))
             using (var cmd = new SqlCommand(sql, conn))
-            using (var adapter = new SqlDataAdapter(cmd))
             {
                 cmd.CommandTimeout = 120;
                 cmd.Parameters.AddWithValue("@pattern", pattern);
 
-                conn.Open();
-                using (cancellationToken.Register(() => cmd.Cancel()))
+                await conn.OpenAsync(cancellationToken);
+
+                using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
                 {
-                    adapter.Fill(result);
+                    result.Load(reader);
                 }
             }
 
@@ -456,6 +466,8 @@ WHERE js.[command] LIKE @pattern
 
         private void Button_ScriptResult_Click(object sender, RoutedEventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             if (!(sender is Button button) || !(button.DataContext is DataRowView rowView))
             {
                 return;

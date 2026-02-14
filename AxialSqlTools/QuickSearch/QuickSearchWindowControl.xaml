@@ -5,77 +5,91 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              Name="QuickSearchControl">
-    <Grid Margin="5">
+    <Grid>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Height="30"
-                    Width="280"
-                    Content="Select Connections From Object Explorer"
-                    FontWeight="Bold"
-                    Click="Button_SelectConnection_Click" />
-            <Label x:Name="Label_ConnectionDescription" Margin="8,0,0,0" VerticalAlignment="Center" Content="No connection selected"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#FFB4B4B4">
+            <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" 
+                       FontSize="18">Cross-database Object Definition Search</TextBlock>
         </StackPanel>
 
-        <Grid Grid.Row="1" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Label Grid.Column="0" Content="Search for:" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="1" x:Name="TextBox_SearchText" Margin="6,0,12,0" Height="24" VerticalContentAlignment="Center"/>
-            <CheckBox Grid.Column="2" x:Name="CheckBox_AllDatabases" Content="All user databases on selected server" VerticalAlignment="Center" Margin="0,0,12,0" IsChecked="True"/>
-            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                <CheckBox x:Name="CheckBox_WholeWord" Content="Match whole words only" Margin="0,0,12,0" Checked="CheckBox_WholeWord_Checked"/>
-                <CheckBox x:Name="CheckBox_UseWildcards" Content="Use wildcards" Checked="CheckBox_UseWildcards_Checked" />
+        <Grid Grid.Row="1" Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>       
+        
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,4,0,8">
+            
+                <Button Height="30"
+                        Width="280"
+                        Content="Select Connections From Object Explorer"
+                        FontWeight="Bold"
+                        Click="Button_SelectConnection_Click" />
+                <Label x:Name="Label_ConnectionDescription" Margin="8,0,0,0" VerticalAlignment="Center" Content="No connection selected"/>
             </StackPanel>
-            <Button Grid.Column="4" x:Name="Button_Search" Content="Search" Width="90" Height="28" Click="Button_Search_Click"/>
+
+            <Grid Grid.Row="1" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0" Content="Search for:" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1" x:Name="TextBox_SearchText" Margin="6,0,12,0" Height="24" VerticalContentAlignment="Center"/>
+                <CheckBox Grid.Column="2" x:Name="CheckBox_AllDatabases" Content="All user databases on selected server" VerticalAlignment="Center" Margin="0,0,12,0" IsChecked="True"/>
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox x:Name="CheckBox_WholeWord" Content="Match whole words only" Margin="0,0,12,0" Checked="CheckBox_WholeWord_Checked"/>
+                    <CheckBox x:Name="CheckBox_UseWildcards" Content="Use wildcards" Checked="CheckBox_UseWildcards_Checked" />
+                </StackPanel>
+                <Button Grid.Column="4" x:Name="Button_Search" Content="Search" Width="90" Height="28" Click="Button_Search_Click"/>
+            </Grid>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
+                <Label Content="Object types:" VerticalAlignment="Center"/>
+                <CheckBox x:Name="CheckBox_StoredProcedures" Content="Stored Procedures" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                <CheckBox x:Name="CheckBox_Views" Content="Views" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                <CheckBox x:Name="CheckBox_Functions" Content="Functions" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                <CheckBox x:Name="CheckBox_Tables" Content="Tables" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                <CheckBox x:Name="CheckBox_AgentJobSteps" Content="SQL Agent Jobs" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <DataGrid Grid.Row="3"
+                      x:Name="DataGrid_SearchResults"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Database" Binding="{Binding DatabaseName}" Width="130"/>
+                    <DataGridTextColumn Header="Type" Binding="{Binding ObjectType}" Width="140"/>
+                    <DataGridTextColumn Header="Schema" Binding="{Binding SchemaName}" Width="120"/>
+                    <DataGridTextColumn Header="Object" Binding="{Binding ObjectName}" Width="200"/>
+                    <DataGridTextColumn Header="Location" Binding="{Binding MatchLocation}" Width="120"/>
+                    <DataGridTextColumn Header="Match Preview" Binding="{Binding MatchPreview}" Width="*" FontFamily="Cascadia Mono"/>
+                    <DataGridTemplateColumn Header="Script" Width="90">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Script" Click="Button_ScriptResult_Click" Padding="8,2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <StatusBar Grid.Row="4">
+                <StatusBarItem>
+                    <TextBlock x:Name="TextBlock_ResultCount" FontWeight="Bold"/>
+                </StatusBarItem>
+            </StatusBar>
         </Grid>
-
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
-            <Label Content="Object types:" VerticalAlignment="Center"/>
-            <CheckBox x:Name="CheckBox_StoredProcedures" Content="Stored Procedures" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
-            <CheckBox x:Name="CheckBox_Views" Content="Views" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
-            <CheckBox x:Name="CheckBox_Functions" Content="Functions" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
-            <CheckBox x:Name="CheckBox_Tables" Content="Tables" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
-            <CheckBox x:Name="CheckBox_AgentJobSteps" Content="SQL Agent Jobs" IsChecked="True" Margin="8,0,0,0" VerticalAlignment="Center"/>
-        </StackPanel>
-
-        <DataGrid Grid.Row="3"
-                  x:Name="DataGrid_SearchResults"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  SelectionMode="Single">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Database" Binding="{Binding DatabaseName}" Width="130"/>
-                <DataGridTextColumn Header="Type" Binding="{Binding ObjectType}" Width="140"/>
-                <DataGridTextColumn Header="Schema" Binding="{Binding SchemaName}" Width="120"/>
-                <DataGridTextColumn Header="Object" Binding="{Binding ObjectName}" Width="200"/>
-                <DataGridTextColumn Header="Location" Binding="{Binding MatchLocation}" Width="120"/>
-                <DataGridTextColumn Header="Match Preview" Binding="{Binding MatchPreview}" Width="*" FontFamily="Cascadia Mono"/>
-                <DataGridTemplateColumn Header="Script" Width="90">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button Content="Script" Click="Button_ScriptResult_Click" Padding="8,2"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <StatusBar Grid.Row="4">
-            <StatusBarItem>
-                <TextBlock x:Name="TextBlock_ResultCount" FontWeight="Bold"/>
-            </StatusBarItem>
-        </StatusBar>
     </Grid>
 </UserControl>
