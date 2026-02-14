@@ -281,7 +281,7 @@ INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 WHERE @includeTables = 1
   AND t.[name] LIKE @pattern;";
 
-            string columnAndParameterSql = $@"
+            string columnSql = $@"
 USE [{databaseName}];
 
 SELECT
@@ -298,7 +298,10 @@ FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 INNER JOIN sys.columns c ON c.object_id = t.object_id
 WHERE @includeTables = 1
-  AND c.[name] LIKE @pattern;
+  AND c.[name] LIKE @pattern;";
+
+            string parameterSql = $@"
+USE [{databaseName}];
 
 SELECT
     DB_NAME() AS DatabaseName,
@@ -333,7 +336,8 @@ WHERE p.parameter_id > 0
 
                 await ExecuteSearchQueryAsync(conn, definitionSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
                 await ExecuteSearchQueryAsync(conn, tableSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
-                await ExecuteSearchQueryAsync(conn, columnAndParameterSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+                await ExecuteSearchQueryAsync(conn, columnSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
+                await ExecuteSearchQueryAsync(conn, parameterSql, pattern, includeProcs, includeViews, includeFunctions, includeTables, result, cancellationToken);
             }
 
             return result;
