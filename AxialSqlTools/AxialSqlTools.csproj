@@ -68,6 +68,7 @@
       <DependentUpon>DataImportWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Modules\ExcelImport.cs" />
+    <Compile Include="Modules\ScriptObjectDefinition.cs" />
     <Compile Include="Modules\TsqlFormatterCommentInterleaver.cs" />
     <Compile Include="Commands\Dialogs\FormatOptionsDialog.xaml.cs">
       <DependentUpon>FormatOptionsDialog.xaml</DependentUpon>
@@ -75,6 +76,12 @@
     <Compile Include="Commands\Dialogs\ScriptObjectPickerDialog.xaml.cs">
       <DependentUpon>ScriptObjectPickerDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="QuickSearch\QuickSearchWindow.cs" />
+    <Compile Include="QuickSearch\QuickSearchWindowCommand.cs" />
+    <Compile Include="QuickSearch\QuickSearchWindowControl.xaml.cs">
+      <DependentUpon>QuickSearchWindowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="QuickSearch\TextMarkerService.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindow.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindowCommand.cs" />
     <Compile Include="SchemaCompare\SchemaCompareWindowControl.xaml.cs">
@@ -177,6 +184,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <EmbeddedResource Include="QuickSearch\sql.xshd" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
@@ -245,6 +253,9 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AvalonEdit">
+      <Version>6.3.1.120</Version>
+    </PackageReference>
     <PackageReference Include="DocumentFormat.OpenXml">
       <Version>3.4.1</Version>
     </PackageReference>
@@ -306,6 +317,7 @@
     <Resource Include="Resources\save.png" />
     <Content Include="Resources\script.png" />
     <Resource Include="Resources\send.png" />
+    <Content Include="Resources\search.png" />
     <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />
     <Content Include="Resources\sql-build-info.png" />
@@ -326,6 +338,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="DataImport\DataImportWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="QuickSearch\QuickSearchWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
