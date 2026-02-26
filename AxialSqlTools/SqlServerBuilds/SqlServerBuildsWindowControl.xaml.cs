@@ -92,6 +92,7 @@ namespace AxialSqlTools
         // Helper to create hyperlink column
         private TextBlock CreateHyperlink(string url, double width)
         {
+            string normalizedUrl = NormalizeUrl(url);
             TextBlock link = new TextBlock
             {
                 Text = "More Info",
@@ -100,8 +101,36 @@ namespace AxialSqlTools
                 TextDecorations = TextDecorations.Underline,
                 Cursor = System.Windows.Input.Cursors.Hand
             };
-            link.MouseLeftButtonUp += (s, e) => OpenUrl(url);
+
+            MenuItem copyUrlMenuItem = new MenuItem
+            {
+                Header = "Copy URL"
+            };
+            copyUrlMenuItem.Click += (s, e) => CopyUrlToClipboard(normalizedUrl);
+
+            ContextMenu contextMenu = new ContextMenu();
+            contextMenu.Items.Add(copyUrlMenuItem);
+            link.ContextMenu = contextMenu;
+
+            link.MouseLeftButtonUp += (s, e) => OpenUrl(normalizedUrl);
             return link;
+        }
+
+        private void CopyUrlToClipboard(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                VsShellUtilities.ShowMessageBox(
+                    ServiceProvider.GlobalProvider,
+                    "No URL is available to copy.",
+                    "Copy URL",
+                    OLEMSGICON.OLEMSGICON_WARNING,
+                    OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                return;
+            }
+
+            Clipboard.SetDataObject(url);
         }
 
         private static string ExtractUrlAfter_HYPERLINK(string input)
@@ -118,14 +147,19 @@ namespace AxialSqlTools
             return input.Trim();
         }
 
+        private static string NormalizeUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return url;
+
+            return url.StartsWith("HYPERLINK(") ? ExtractUrlAfter_HYPERLINK(url) : url;
+        }
+
         private void OpenUrl(string url)
         {
             try
             {
-                if (url.StartsWith("HYPERLINK("))
-                {
-                    url = ExtractUrlAfter_HYPERLINK(url);
-                }
+                url = NormalizeUrl(url);
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 
             } catch (Exception ex)
@@ -182,10 +216,7 @@ namespace AxialSqlTools
                     string kbNumber = update.KbNumber ?? "N/A";
                     string updateName = update.UpdateName != null ? update.UpdateName.Replace("'", "''") : "";
                     string url = update.Url != null ? update.Url.Replace("'", "''") : "";
-                    if (url.StartsWith("HYPERLINK("))
-                    {
-                        url = ExtractUrlAfter_HYPERLINK(url);
-                    }
+                    url = NormalizeUrl(url);
 
                     sb.AppendLine($"INSERT INTO #SQLBuildsData ([MajorVersion], [BuildNumber], [KbNumber], [ReleaseDate], [UpdateName], [Url]) VALUES ('{major}', '{buildNumber}', '{kbNumber}', '{releaseDate}', '{updateName}', '{url}');");
                 }
