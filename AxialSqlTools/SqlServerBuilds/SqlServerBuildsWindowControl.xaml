@@ -32,7 +32,7 @@
                 </Style>
             </TreeView.Resources>
 
-            <TreeViewItem Header="SQL Versions" IsExpanded="True" FontSize="16" FontWeight="Bold" Foreground="DarkBlue"/>
+            <TreeViewItem Header="SQL Versions" IsExpanded="True" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"/>
         </TreeView>
     </Grid>
 </UserControl>

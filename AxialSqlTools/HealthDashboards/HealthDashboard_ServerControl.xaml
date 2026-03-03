@@ -7,7 +7,9 @@
              xmlns:oxy="http://oxyplot.org/wpf"
              mc:Ignorable="d"
              d:DesignHeight="500" d:DesignWidth="1000"
-             x:Name="MyToolWindow">
+             x:Name="MyToolWindow"
+             Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
+             Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}">
 
     <Grid>
         <!-- Overall layout: header row (Auto) + main content row (*) -->
@@ -17,7 +19,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <DockPanel Grid.Row="0" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" Margin="0,0,0,5">
+        <DockPanel Grid.Row="0" Background="{DynamicResource {x:Static vsshell:VsBrushes.CommandBarGradientBeginKey}}" Margin="0,0,0,5">
             <TextBlock DockPanel.Dock="Left" Margin="5" VerticalAlignment="Center" 
                        FontWeight="Bold" FontSize="18">
                 Server Health Dashboard

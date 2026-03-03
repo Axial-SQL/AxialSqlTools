@@ -3,9 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              mc:Ignorable="d"
              d:DesignWidth="600"
-             d:DesignHeight="420">
+             d:DesignHeight="420"
+             Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
+             Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}">
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -18,11 +21,11 @@
             <TextBlock Text="Data Import" FontSize="20" FontWeight="SemiBold" />
             <TextBlock Margin="0,6,0,0"
                        TextWrapping="Wrap"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
                        Text="Use this window to import Excel spreadsheets into the database currently selected in Object Explorer." />
         </StackPanel>
 
-        <Border Grid.Row="1" Margin="0,16,0,0" Padding="12" BorderBrush="#FFD9D9D9" BorderThickness="1" CornerRadius="6">
+        <Border Grid.Row="1" Margin="0,16,0,0" Padding="12" BorderBrush="{DynamicResource {x:Static vsshell:VsBrushes.PanelBorderKey}}" BorderThickness="1" CornerRadius="6">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -66,7 +69,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Margin="0,16,0,0" Padding="12" BorderBrush="#FFE8E8E8" BorderThickness="1" CornerRadius="6">
+        <Border Grid.Row="2" Margin="0,16,0,0" Padding="12" BorderBrush="{DynamicResource {x:Static vsshell:VsBrushes.PanelBorderKey}}" BorderThickness="1" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="Process checklist" FontWeight="SemiBold" />
                 <ItemsControl Margin="0,8,0,0">
@@ -81,7 +84,7 @@
         </Border>
 
         <DockPanel Grid.Row="3" Margin="0,16,0,0">
-            <TextBlock x:Name="TextBlock_Status" VerticalAlignment="Center" Foreground="Gray" Text="Choose an Excel file to get started." />
+            <TextBlock x:Name="TextBlock_Status" VerticalAlignment="Center" Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}" Text="Choose an Excel file to get started." />
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                 <Button x:Name="Button_Clear" Content="Reset" Margin="0,0,8,0" Padding="16,4" Click="ButtonClear_OnClick" />
                 <Button x:Name="Button_Import" Content="Import" Padding="24,6" IsEnabled="False" Click="ButtonImport_OnClick" />
