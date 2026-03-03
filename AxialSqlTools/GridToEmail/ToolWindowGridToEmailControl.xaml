@@ -5,11 +5,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              mc:Ignorable="d" 
+             Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
+             Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              Name="MyToolWindow"
              FontSize="14">
     <Grid >
         <StackPanel Orientation="Vertical" >
-            <StackPanel Orientation="Horizontal" Background="#FFB4B4B4">
+            <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static vsshell:VsBrushes.CommandBarGradientBeginKey}}">
                 <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Export the grid to a file and send it via email</TextBlock>
             </StackPanel>
             <StackPanel Orientation="Vertical">
