@@ -322,6 +322,10 @@
     <Content Include="Resources\settings.png" />
     <Content Include="Resources\sql-build-info.png" />
     <Content Include="Resources\template.png" />
+    <Content Include="Resources\vsix-logo.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
