@@ -41,8 +41,10 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Export Grid to Email**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-to-Email): Similar to the previous feature, but with the added ability to send the file via email directly from SSMS.
   
 - [**Export Grid as Temp Table**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-grid-results-as-a-temp-table): Convert the grid result(s) into temp table with insert statements.
-  
-- **Script Selected Object Definition**: Quickly generate scripts for the definition of selected objects directly from the selected query text.
+
+- [**Quick Search**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Quick-Search): Quick Search helps you find SQL text quickly across one database or across all accessible databases on a server.
+- 
+- [**Script Object Definition**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Script-Object-Definition): Quickly generate scripts for the definition of selected objects directly from the selected query text.
   
 - [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics.
 
