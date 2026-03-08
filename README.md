@@ -70,21 +70,12 @@ These templates are designed to cover a wide range of scenarios, helping you to 
 
 To install the addin, you have two options:
 
-1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2022 or 2026 for compatibility. 
+1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2026 for compatibility. 
 The build process will automatically copy all necessary files into the SSMS extension folder, and you will be ready to use it.
 
-2. **Download the Release:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository.
+2. **Download the Release and Install the Extension:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository. See the [Wiki](https://github.com/Axial-SQL/AxialSqlTools/wiki) for installation steps.
 
-After obtaining the compiled files (either by compiling from source or downloading from Releases), place the folder with the compiled files into the following directory:
-`C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Extensions`
-
-> **⚠️ Warning**
->
-> If your Windows security policy has blocked the `AxialSqlTools.dll` file, you may need to unlock it by using the checkbox in the file properties.
-
-Restart SQL Server Management Studio after placing the files in the extensions directory.
-
-After installation, the Axial SQL Tools toolbar will be available in the list of toolbars within SSMS, providing quick access to all the features.<br/>
+After installation and an SSMS restart, the **Axial SQL Tools** toolbar will appear in the list of available toolbars in SSMS, providing quick access to all features.<br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/toolbar.png?raw=true"/>
 
 ## Contributing
