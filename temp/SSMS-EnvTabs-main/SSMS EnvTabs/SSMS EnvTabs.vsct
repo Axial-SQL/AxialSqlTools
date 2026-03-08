@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+  <Include href="KnownImageIds.vsct"/>
+
+  <Commands package="guidSSMS_EnvTabsPackage">
+    <Menus>
+      <Menu guid="guidSSMS_EnvTabsCmdSet" id="EnvTabs" type="Toolbar">
+        <CommandFlag>DefaultDocked</CommandFlag>
+        <Strings>
+          <ButtonText>EnvTabs</ButtonText>
+          <CommandName>EnvTabs</CommandName>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <Group guid="guidSSMS_EnvTabsCmdSet" id="EnvTabsGroup" priority="0x0600">
+        <Parent guid="guidSSMS_EnvTabsCmdSet" id="EnvTabs"/>
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidSSMS_EnvTabsCmdSet" id="cmdidOpenConfig" priority="0x0100" type="Button">
+        <Parent guid="guidSSMS_EnvTabsCmdSet" id="EnvTabsGroup" />
+        <Icon guid="ImageCatalogGuid" id="JSONScript" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Tab Config</ButtonText>
+          <ToolTipText>Opens TabGroupConfig.json file</ToolTipText>
+        </Strings>
+      </Button>
+      <Button guid="guidSSMS_EnvTabsCmdSet" id="cmdidCheckUpdates" priority="0x0110" type="Button">
+        <Parent guid="guidSSMS_EnvTabsCmdSet" id="EnvTabsGroup" />
+        <Icon guid="ImageCatalogGuid" id="Upload" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Update EnvTabs</ButtonText>
+          <ToolTipText>Check for update for EnvTabs</ToolTipText>
+        </Strings>
+      </Button>
+      <Button guid="guidSSMS_EnvTabsCmdSet" id="cmdidEditActiveConnectionRule" priority="0x0120" type="Button">
+        <Parent guid="guidSSMS_EnvTabsCmdSet" id="EnvTabsGroup" />
+        <Icon guid="ImageCatalogGuid" id="Edit" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Edit Group</ButtonText>
+          <ToolTipText>Edit group name and color for the active connection</ToolTipText>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <Symbols>
+    <GuidSymbol name="guidSSMS_EnvTabsPackage" value="{a155434a-a5a5-4d8f-b211-b26305addff6}" />
+    <GuidSymbol name="guidSSMS_EnvTabsCmdSet" value="{2E302824-2C62-4275-801B-55919612C26D}">
+      <IDSymbol name="EnvTabs" value="0x1000" />
+      <IDSymbol name="EnvTabsGroup" value="0x1050" />
+      <IDSymbol name="cmdidOpenConfig" value="0x0103" />
+      <IDSymbol name="cmdidCheckUpdates" value="0x0104" />
+      <IDSymbol name="cmdidEditActiveConnectionRule" value="0x0105" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>
