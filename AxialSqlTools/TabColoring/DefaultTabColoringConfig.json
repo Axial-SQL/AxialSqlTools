@@ -1,0 +1,26 @@
+{
+  "description": "Tab coloring rules based on SQL queries executed against active connection. No regex matching is used.",
+  "settings": {
+    "enabled": false,
+    "queryTimeoutSeconds": 5,
+    "defaultColorIndex": null
+  },
+  "queryRules": [
+    {
+      "name": "Sysadmin sessions",
+      "query": "SELECT CASE WHEN IS_SRVROLEMEMBER('sysadmin') = 1 THEN 'SA' ELSE 'NON_SA' END;",
+      "expectedValue": "SA",
+      "colorIndex": 1,
+      "priority": 100,
+      "isEnabled": true
+    },
+    {
+      "name": "Non-sysadmin sessions",
+      "query": "SELECT CASE WHEN IS_SRVROLEMEMBER('sysadmin') = 1 THEN 'SA' ELSE 'NON_SA' END;",
+      "expectedValue": "NON_SA",
+      "colorIndex": 10,
+      "priority": 90,
+      "isEnabled": true
+    }
+  ]
+}

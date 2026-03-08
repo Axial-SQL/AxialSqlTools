@@ -62,6 +62,10 @@
     <UseWinFormsOutOfProcDesigner>True</UseWinFormsOutOfProcDesigner>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="TabColoring\TabColoringConfigLoader.cs" />
+    <Compile Include="TabColoring\TabColoringConfigModels.cs" />
+    <Compile Include="TabColoring\TabColoringRdtManager.cs" />
+    <Compile Include="TabColoring\TabColoringRuleEngine.cs" />
     <Compile Include="DataImport\DataImportWindow.cs" />
     <Compile Include="DataImport\DataImportWindowCommand.cs" />
     <Compile Include="DataImport\DataImportWindowControl.xaml.cs">
@@ -185,6 +189,7 @@
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <EmbeddedResource Include="QuickSearch\sql.xshd" />
+    <EmbeddedResource Include="TabColoring\DefaultTabColoringConfig.json" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>

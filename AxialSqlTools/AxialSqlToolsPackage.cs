@@ -27,6 +27,7 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Linq;
 using AxialSqlTools.Properties;
+using AxialSqlTools.TabColoring;
 
 namespace AxialSqlTools
 {
@@ -240,6 +241,8 @@ namespace AxialSqlTools
 
         private int numberOfWindowsOpen = 0;
 
+        private TabColoringRdtManager _tabColoringRdtManager;
+
         public int GetNextToolWindowId()
         {
             numberOfWindowsOpen += 1;
@@ -270,6 +273,7 @@ namespace AxialSqlTools
             PackageInstance = this;
 
             InitializeLogging();
+            TabColoringConfigLoader.EnsureDefaultConfigExists();
 
             try
             {
@@ -296,6 +300,8 @@ namespace AxialSqlTools
                 await DatabaseScripterToolWindowCommand.InitializeAsync(this);
                 await SchemaCompareWindowCommand.InitializeAsync(this);
                 await QuickSearchWindowCommand.InitializeAsync(this);
+
+                _tabColoringRdtManager = await TabColoringRdtManager.CreateAndStartAsync(this, cancellationToken);
 
             }
             catch (Exception ex)
