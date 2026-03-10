@@ -1,0 +1,42 @@
+<Window x:Class="AxialSqlTools.ExcelExportSuccessDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        Title="Export Complete"
+        Height="220"
+        Width="560"
+        MinHeight="220"
+        MinWidth="560"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock FontSize="14" FontWeight="SemiBold" Text="The data has been successfully exported." TextWrapping="Wrap" />
+
+        <TextBlock Grid.Row="1" Margin="0,10,0,0" Text="Saved file:" FontWeight="SemiBold" />
+
+        <Border Grid.Row="2" Margin="0,6,0,0" Padding="10" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="4" Background="#FAFAFA">
+            <TextBox x:Name="FilePathText"
+                     IsReadOnly="True"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     MinHeight="58" />
+        </Border>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Width="95" Margin="0,0,8,0" Click="OpenInExcelButton_Click">Open in Excel</Button>
+            <Button Width="75" Click="OkButton_Click">OK</Button>
+        </StackPanel>
+    </Grid>
+</Window>

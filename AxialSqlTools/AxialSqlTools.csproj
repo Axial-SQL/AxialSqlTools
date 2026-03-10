@@ -102,6 +102,9 @@
     <Compile Include="Commands\Dialogs\GoogleSheetsExportSuccessDialog.xaml.cs">
       <DependentUpon>GoogleSheetsExportSuccessDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Commands\Dialogs\ExcelExportSuccessDialog.xaml.cs">
+      <DependentUpon>ExcelExportSuccessDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Commands\CopyQueryAsHtmlCommand.cs" />
     <Compile Include="Commands\OpenTemplatesFolderCommand.cs" />
     <Compile Include="Commands\RefreshTemplatesCommand.cs" />
@@ -338,6 +341,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Commands\Dialogs\GoogleSheetsExportSuccessDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Commands\Dialogs\ExcelExportSuccessDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

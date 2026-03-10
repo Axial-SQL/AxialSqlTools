@@ -119,13 +119,8 @@ namespace AxialSqlTools
 
                 ExcelExport.SaveDataTableToExcel(dataTables, filePath, isShiftPressed);
 
-                VsShellUtilities.ShowMessageBox(
-                    this.package,
-                    "The data has been successfully exported to:\n" + filePath,
-                    "Export Complete",
-                    OLEMSGICON.OLEMSGICON_INFO,
-                    OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                ExcelExportSuccessDialog exportSuccessDialog = new ExcelExportSuccessDialog(filePath);
+                exportSuccessDialog.ShowDialog();
             }
             else {
                 VsShellUtilities.ShowMessageBox(
