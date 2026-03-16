@@ -5,11 +5,147 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              mc:Ignorable="d" FontSize="14"
-             Name="MyToolWindow">
-    <Grid>
+             Name="MyToolWindow"
+             Background="{DynamicResource AxialDataTransferBackgroundBrush}"
+             Foreground="{DynamicResource AxialDataTransferForegroundBrush}">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="AxialDataTransferBackgroundBrush" Color="White" />
+        <SolidColorBrush x:Key="AxialDataTransferForegroundBrush" Color="Black" />
+        <SolidColorBrush x:Key="AxialDataTransferBorderBrush" Color="#707070" />
+        <SolidColorBrush x:Key="AxialDataTransferHeaderBackgroundBrush" Color="#F3F3F3" />
+        <SolidColorBrush x:Key="AxialDataTransferTabHeaderBackgroundBrush" Color="#F5F5F5" />
+        <SolidColorBrush x:Key="AxialDataTransferTabHeaderHoverBrush" Color="#EBEBEB" />
+        <SolidColorBrush x:Key="AxialDataTransferTabHeaderSelectedBrush" Color="#E0E0E0" />
+        <SolidColorBrush x:Key="AxialDataTransferButtonHoverBrush" Color="#F0F0F0" />
+        <SolidColorBrush x:Key="AxialDataTransferButtonPressedBrush" Color="#E6E6E6" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="Expander">
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AxialDataTransferBackgroundBrush}" />
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource AxialDataTransferBorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AxialDataTransferBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="PasswordBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource AxialDataTransferBorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AxialDataTransferBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="RichTextBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource AxialDataTransferBorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AxialDataTransferBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="FlowDocument">
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AxialDataTransferBackgroundBrush}" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="BorderBrush" Value="{DynamicResource AxialDataTransferBorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AxialDataTransferBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                CornerRadius="2">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AxialDataTransferButtonHoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AxialDataTransferButtonPressedBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.65" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="{DynamicResource AxialDataTransferBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AxialDataTransferBorderBrush}" />
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Background" Value="{DynamicResource AxialDataTransferTabHeaderBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AxialDataTransferBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="0,0,2,0">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              ContentSource="Header"
+                                              RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource AxialDataTransferTabHeaderSelectedBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsSelected" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource AxialDataTransferTabHeaderHoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AxialDataTransferForegroundBrush}" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource AxialDataTransferBackgroundBrush}">
         <StackPanel Orientation="Vertical" >
 
-            <StackPanel Orientation="Horizontal" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" >
+            <StackPanel Orientation="Horizontal" Background="{DynamicResource AxialDataTransferHeaderBackgroundBrush}" >
                 <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="18">Data Transfer</TextBlock>
             </StackPanel>
 

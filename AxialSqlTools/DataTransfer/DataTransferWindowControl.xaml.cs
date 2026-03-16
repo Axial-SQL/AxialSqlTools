@@ -1,5 +1,6 @@
 ﻿namespace AxialSqlTools
 {
+    using Microsoft.VisualStudio.PlatformUI;
     using Microsoft.VisualStudio.Shell;
     using MySqlConnector;
     using Npgsql;
@@ -17,6 +18,7 @@
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Documents;
+    using System.Windows.Media;
 
     /// <summary>
     /// Interaction logic for DataTransferWindowControl.
@@ -26,6 +28,7 @@
 
         private CancellationTokenSource _cancellationTokenSource;
         private Stopwatch stopwatch;
+        private bool _isThemeSubscribed;
 
         private string sourceConnectionString = "";
         private string targetConnectionString = "";
@@ -69,6 +72,10 @@
         public DataTransferWindowControl()
         {
             this.InitializeComponent();
+            ApplyThemeBrushResources();
+            this.Loaded += DataTransferWindowControl_Loaded;
+            this.Unloaded += DataTransferWindowControl_Unloaded;
+            this.IsVisibleChanged += DataTransferWindowControl_IsVisibleChanged;
 
             Button_CopyData.IsEnabled = false;
             ButtonToPsql_CopyData.IsEnabled = false;
@@ -107,6 +114,104 @@
             TextBox_SourceMySqlUsername.Text = "root";
             PasswordBox_SourceMySqlPassword.Password = "root";
 
+        }
+
+        private void DataTransferWindowControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            ApplyThemeBrushResources();
+            SubscribeToThemeChanges();
+        }
+
+        private void DataTransferWindowControl_Unloaded(object sender, RoutedEventArgs e)
+        {
+            UnsubscribeFromThemeChanges();
+        }
+
+        private void DataTransferWindowControl_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (IsVisible)
+            {
+                ApplyThemeBrushResources();
+            }
+        }
+
+        private void SubscribeToThemeChanges()
+        {
+            if (_isThemeSubscribed)
+            {
+                return;
+            }
+
+            VSColorTheme.ThemeChanged += OnVsThemeChanged;
+            _isThemeSubscribed = true;
+        }
+
+        private void UnsubscribeFromThemeChanges()
+        {
+            if (!_isThemeSubscribed)
+            {
+                return;
+            }
+
+            VSColorTheme.ThemeChanged -= OnVsThemeChanged;
+            _isThemeSubscribed = false;
+        }
+
+        private void OnVsThemeChanged(ThemeChangedEventArgs e)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(ApplyThemeBrushResources));
+                return;
+            }
+
+            ApplyThemeBrushResources();
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            Brush bg = VsThemeBrushResolver.ResolveBrush(this, EnvironmentColors.ToolWindowBackgroundBrushKey)
+                ?? SystemColors.WindowBrush;
+            Brush fg = VsThemeBrushResolver.ResolveBrush(this, EnvironmentColors.ToolWindowTextBrushKey)
+                ?? SystemColors.WindowTextBrush;
+            Brush border = VsThemeBrushResolver.ResolveBrush(this, EnvironmentColors.ToolWindowBorderBrushKey)
+                ?? SystemColors.ActiveBorderBrush;
+
+            Color bgColor = VsThemeBrushResolver.GetBrushColor(bg, Colors.White);
+            bool isLightTheme = VsThemeBrushResolver.GetRelativeLuminance(bgColor) > 0.6;
+
+            Color headerColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.04)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.04);
+            Color tabHeaderColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.05)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.06);
+            Color tabHoverColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.10)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.12);
+            Color tabSelectedColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.16)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.18);
+            Color buttonHoverColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.08)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.08);
+            Color buttonPressedColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.14)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.14);
+
+            Resources["AxialDataTransferBackgroundBrush"] = bg;
+            Resources["AxialDataTransferForegroundBrush"] = fg;
+            Resources["AxialDataTransferBorderBrush"] = border;
+            Resources["AxialDataTransferHeaderBackgroundBrush"] = new SolidColorBrush(headerColor);
+            Resources["AxialDataTransferTabHeaderBackgroundBrush"] = new SolidColorBrush(tabHeaderColor);
+            Resources["AxialDataTransferTabHeaderHoverBrush"] = new SolidColorBrush(tabHoverColor);
+            Resources["AxialDataTransferTabHeaderSelectedBrush"] = new SolidColorBrush(tabSelectedColor);
+            Resources["AxialDataTransferButtonHoverBrush"] = new SolidColorBrush(buttonHoverColor);
+            Resources["AxialDataTransferButtonPressedBrush"] = new SolidColorBrush(buttonPressedColor);
         }
 
         private void Button_EditSavedConnections_Click(object sender, RoutedEventArgs e)

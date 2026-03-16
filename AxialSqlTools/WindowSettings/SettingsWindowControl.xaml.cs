@@ -1,5 +1,7 @@
 ﻿namespace AxialSqlTools
 {
+    using Microsoft.VisualStudio.PlatformUI;
+    using Microsoft.VisualStudio.Shell;
     using Microsoft.Data.SqlClient;
     using Newtonsoft.Json.Linq;
     using System;
@@ -24,6 +26,7 @@
     {
 
         private string _queryHistoryConnectionString;
+        private bool _isThemeSubscribed;
 
         private string tsqlFormatExample = @"while (1=0) 
 begin 
@@ -49,9 +52,12 @@ as select 1;
         {
             this.InitializeComponent();
 
+            ApplyThemeBrushResources();
             LoadSavedSettings();
 
             this.Loaded += UserControl_Loaded;
+            this.Unloaded += UserControl_Unloaded;
+            this.IsVisibleChanged += SettingsWindowControl_IsVisibleChanged;
 
             SourceQueryPreview.Text = tsqlFormatExample;
 
@@ -61,7 +67,130 @@ as select 1;
 
         private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            ApplyThemeBrushResources();
+            SubscribeToThemeChanges();
             LoadSavedSettings();
+        }
+
+        private void UserControl_Unloaded(object sender, RoutedEventArgs e)
+        {
+            UnsubscribeFromThemeChanges();
+        }
+
+        private void SettingsWindowControl_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (IsVisible)
+            {
+                ApplyThemeBrushResources();
+            }
+        }
+
+        private void SubscribeToThemeChanges()
+        {
+            if (_isThemeSubscribed)
+            {
+                return;
+            }
+
+            VSColorTheme.ThemeChanged += OnVsThemeChanged;
+            _isThemeSubscribed = true;
+        }
+
+        private void UnsubscribeFromThemeChanges()
+        {
+            if (!_isThemeSubscribed)
+            {
+                return;
+            }
+
+            VSColorTheme.ThemeChanged -= OnVsThemeChanged;
+            _isThemeSubscribed = false;
+        }
+
+        private void OnVsThemeChanged(ThemeChangedEventArgs e)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(ApplyThemeBrushResources));
+                return;
+            }
+
+            ApplyThemeBrushResources();
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            Brush bg = VsThemeBrushResolver.ResolveBrush(this, EnvironmentColors.ToolWindowBackgroundBrushKey)
+                ?? SystemColors.WindowBrush;
+            Brush fg = VsThemeBrushResolver.ResolveBrush(this, EnvironmentColors.ToolWindowTextBrushKey)
+                ?? SystemColors.WindowTextBrush;
+            Brush border = VsThemeBrushResolver.ResolveBrush(this, EnvironmentColors.ToolWindowBorderBrushKey)
+                ?? SystemColors.ActiveBorderBrush;
+            Brush link = VsThemeBrushResolver.ResolveBrush(this, EnvironmentColors.ControlLinkTextBrushKey)
+                ?? SystemColors.HotTrackBrush;
+            Brush success = VsThemeBrushResolver.ResolveEnvironmentBrushByName(this, "SystemGreenTextBrushKey")
+                ?? new SolidColorBrush(Color.FromRgb(0x10, 0x7C, 0x10));
+            Brush error = VsThemeBrushResolver.ResolveEnvironmentBrushByName(this, "SystemRedTextBrushKey")
+                ?? new SolidColorBrush(Color.FromRgb(0xA1, 0x26, 0x0D));
+
+            Color bgColor = VsThemeBrushResolver.GetBrushColor(bg, Colors.White);
+            bool isLightTheme = VsThemeBrushResolver.GetRelativeLuminance(bgColor) > 0.6;
+
+            Color headerColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.04)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.04);
+            Color tabHeaderColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.05)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.06);
+            Color tabHoverColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.10)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.12);
+            Color tabSelectedColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.16)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.18);
+            Color buttonHoverColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.08)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.08);
+            Color buttonPressedColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.14)
+                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.14);
+
+            Resources["AxialSettingsBackgroundBrush"] = bg;
+            Resources["AxialSettingsForegroundBrush"] = fg;
+            Resources["AxialSettingsBorderBrush"] = border;
+            Resources["AxialSettingsHeaderBackgroundBrush"] = new SolidColorBrush(headerColor);
+            Resources["AxialSettingsLinkBrush"] = link;
+            Resources["AxialSettingsStatusErrorBrush"] = error;
+            Resources["AxialSettingsStatusSuccessBrush"] = success;
+            Resources["AxialSettingsTabHeaderBackgroundBrush"] = new SolidColorBrush(tabHeaderColor);
+            Resources["AxialSettingsTabHeaderHoverBrush"] = new SolidColorBrush(tabHoverColor);
+            Resources["AxialSettingsTabHeaderSelectedBrush"] = new SolidColorBrush(tabSelectedColor);
+            Resources["AxialSettingsButtonHoverBrush"] = new SolidColorBrush(buttonHoverColor);
+            Resources["AxialSettingsButtonPressedBrush"] = new SolidColorBrush(buttonPressedColor);
+
+            ApplyGoogleSheetsAuthorizationBrush();
+        }
+
+        private Brush GetThemedStatusBrush(bool isSuccess)
+        {
+            string key = isSuccess ? "AxialSettingsStatusSuccessBrush" : "AxialSettingsStatusErrorBrush";
+            return Resources[key] as Brush
+                ?? (isSuccess ? new SolidColorBrush(Color.FromRgb(0x10, 0x7C, 0x10)) : new SolidColorBrush(Color.FromRgb(0xA1, 0x26, 0x0D)));
+        }
+
+        private void ApplyGoogleSheetsAuthorizationBrush()
+        {
+            if (GoogleSheetsRefreshTokenLabel == null)
+            {
+                return;
+            }
+
+            bool isAuthorized = string.Equals(GoogleSheetsRefreshTokenLabel.Text, "Authorized", StringComparison.OrdinalIgnoreCase);
+            GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(isAuthorized);
         }
 
         private void LoadSavedSettings()
@@ -413,12 +542,12 @@ as select 1;
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
                 GoogleSheetsRefreshTokenLabel.Text = "Not authorized";
-                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkRed);
+                GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(false);
             }
             else
             {
                 GoogleSheetsRefreshTokenLabel.Text = "Authorized";
-                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkGreen);
+                GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(true);
             }
         }
 

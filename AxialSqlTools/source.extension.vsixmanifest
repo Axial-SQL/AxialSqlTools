@@ -10,7 +10,7 @@
         <Icon>Resources\vsix-logo.png</Icon>
         <PreviewImage>Resources\vsix-logo.png</PreviewImage>
     </Metadata>
-    <Installation AllUsers="true">
+    <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Ssms" Version="[22.0, )">
             <ProductArchitecture>amd64</ProductArchitecture>
         </InstallationTarget>
