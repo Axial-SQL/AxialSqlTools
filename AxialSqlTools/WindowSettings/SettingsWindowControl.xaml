@@ -5,241 +5,30 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	mc:Ignorable="d"
 	Name="MyToolWindow"
-	Background="{DynamicResource AxialSettingsBackgroundBrush}"
-	Foreground="{DynamicResource AxialSettingsForegroundBrush}">
+	Background="{DynamicResource AxialThemeBackgroundBrush}"
+	Foreground="{DynamicResource AxialThemeForegroundBrush}">
 
     <UserControl.Resources>
-        <SolidColorBrush x:Key="AxialSettingsBackgroundBrush" Color="White" />
-        <SolidColorBrush x:Key="AxialSettingsForegroundBrush" Color="Black" />
-        <SolidColorBrush x:Key="AxialSettingsBorderBrush" Color="#707070" />
-        <SolidColorBrush x:Key="AxialSettingsHeaderBackgroundBrush" Color="#F3F3F3" />
-        <SolidColorBrush x:Key="AxialSettingsLinkBrush" Color="#0067C0" />
-        <SolidColorBrush x:Key="AxialSettingsStatusErrorBrush" Color="#A1260D" />
-        <SolidColorBrush x:Key="AxialSettingsStatusSuccessBrush" Color="#107C10" />
-        <SolidColorBrush x:Key="AxialSettingsTabHeaderBackgroundBrush" Color="#F5F5F5" />
-        <SolidColorBrush x:Key="AxialSettingsTabHeaderHoverBrush" Color="#EBEBEB" />
-        <SolidColorBrush x:Key="AxialSettingsTabHeaderSelectedBrush" Color="#E0E0E0" />
-        <SolidColorBrush x:Key="AxialSettingsButtonHoverBrush" Color="#F0F0F0" />
-        <SolidColorBrush x:Key="AxialSettingsButtonPressedBrush" Color="#E6E6E6" />
-
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-        </Style>
-
-        <Style TargetType="Label">
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-        </Style>
-
-        <Style TargetType="Hyperlink">
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsLinkBrush}" />
-        </Style>
-
-        <Style TargetType="Button">
-            <Setter Property="BorderBrush" Value="{DynamicResource AxialSettingsBorderBrush}" />
-            <Setter Property="Background" Value="{DynamicResource AxialSettingsBackgroundBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="8,3" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                CornerRadius="2">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              RecognizesAccessKey="True" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AxialSettingsButtonHoverBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AxialSettingsButtonPressedBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.65" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-        </Style>
-
-        <Style TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="{DynamicResource AxialSettingsBorderBrush}" />
-            <Setter Property="Background" Value="{DynamicResource AxialSettingsBackgroundBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-        </Style>
-
-        <Style TargetType="PasswordBox">
-            <Setter Property="BorderBrush" Value="{DynamicResource AxialSettingsBorderBrush}" />
-            <Setter Property="Background" Value="{DynamicResource AxialSettingsBackgroundBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-        </Style>
-
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-            <Setter Property="Background" Value="{DynamicResource AxialSettingsBackgroundBrush}" />
-            <Setter Property="Padding" Value="6,3" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBoxItem">
-                        <Border x:Name="ItemBorder"
-                                Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AxialSettingsButtonHoverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AxialSettingsTabHeaderSelectedBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="ComboBox">
-            <Setter Property="BorderBrush" Value="{DynamicResource AxialSettingsBorderBrush}" />
-            <Setter Property="Background" Value="{DynamicResource AxialSettingsBackgroundBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-            <Setter Property="Padding" Value="4,2" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBox">
-                        <Grid>
-                            <Border x:Name="ComboBorder"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="1">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="24" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <ContentPresenter Margin="6,0,0,0"
-                                                      VerticalAlignment="Center"
-                                                      HorizontalAlignment="Left"
-                                                      Content="{TemplateBinding SelectionBoxItem}"
-                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                                      ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" />
-
-                                    <Border Grid.Column="1"
-                                            Background="{DynamicResource AxialSettingsBackgroundBrush}"
-                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="1,0,0,0">
-                                        <Path HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Fill="{DynamicResource AxialSettingsForegroundBrush}"
-                                              Data="M 0 0 L 8 0 L 4 5 Z" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-
-                            <Popup x:Name="PART_Popup"
-                                   Placement="Bottom"
-                                   IsOpen="{TemplateBinding IsDropDownOpen}"
-                                   AllowsTransparency="True"
-                                   Focusable="False"
-                                   PopupAnimation="Slide">
-                                <Border Background="{DynamicResource AxialSettingsBackgroundBrush}"
-                                        BorderBrush="{DynamicResource AxialSettingsBorderBrush}"
-                                        BorderThickness="1">
-                                    <ScrollViewer>
-                                        <ItemsPresenter />
-                                    </ScrollViewer>
-                                </Border>
-                            </Popup>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ComboBorder" Property="Background" Value="{DynamicResource AxialSettingsButtonHoverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.6" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="TabControl">
-            <Setter Property="Background" Value="{DynamicResource AxialSettingsBackgroundBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AxialSettingsBorderBrush}" />
-        </Style>
-
-        <Style TargetType="TabItem">
-            <Setter Property="Background" Value="{DynamicResource AxialSettingsTabHeaderBackgroundBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AxialSettingsBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="12,4" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="TabBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                Margin="0,0,2,0">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              ContentSource="Header"
-                                              RecognizesAccessKey="True" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource AxialSettingsTabHeaderSelectedBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-                            </Trigger>
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsMouseOver" Value="True" />
-                                    <Condition Property="IsSelected" Value="False" />
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource AxialSettingsTabHeaderHoverBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource AxialSettingsForegroundBrush}" />
-                            </MultiTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </UserControl.Resources>
     
-    <DockPanel Background="{DynamicResource AxialSettingsBackgroundBrush}">
+    <DockPanel Background="{DynamicResource AxialThemeBackgroundBrush}">
         <Border DockPanel.Dock="Top"
-                Background="{DynamicResource AxialSettingsHeaderBackgroundBrush}"
-                Padding="12" BorderBrush="{DynamicResource AxialSettingsBorderBrush}" BorderThickness="0,0,0,1">
+                Background="{DynamicResource AxialThemeHeaderBackgroundBrush}"
+                Padding="12" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="0,0,0,1">
             <TextBlock Text="Axial SQL Tools - Settings"
 					   FontWeight="Bold"
 					   FontSize="20"
-					   HorizontalAlignment="Center"/>
+					   HorizontalAlignment="Left"/>
         </Border>
 
         <TabControl Margin="5"
-                    Background="{DynamicResource AxialSettingsBackgroundBrush}"
-                    BorderBrush="{DynamicResource AxialSettingsBorderBrush}"
+                    Background="{DynamicResource AxialThemeBackgroundBrush}"
+                    BorderBrush="{DynamicResource AxialThemeBorderBrush}"
 					BorderThickness="1">
 
             <TabItem Header="Query Templates">
@@ -290,11 +79,9 @@
 							FontWeight="Bold"
                             HorizontalAlignment="Left">
 							<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-								<Image
-								Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
-								Width="16"
-								Height="16"
-								Margin="0,0,4,0"/>
+                                <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                                    <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+                                </Viewbox>
 								<TextBlock Text="Save" VerticalAlignment="Center"/>
 							</StackPanel>
                     </Button>
@@ -387,11 +174,9 @@
 							FontWeight="Bold" 
                             HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image
-							Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
-							Width="16"
-							Height="16"
-							Margin="0,0,4,0"/>
+                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                                <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+                            </Viewbox>
 							<TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -497,11 +282,9 @@
                 Margin="5"
                 FontWeight="Bold" HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image
-                    Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
-                    Width="16"
-                    Height="16"
-                    Margin="0,0,4,0"/>
+							<Viewbox Width="16" Height="16" Margin="0,0,4,0">
+								<Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+							</Viewbox>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -603,11 +386,9 @@
                         HorizontalAlignment="Left"
                         FontWeight="Bold">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image
-                                Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
-                                Width="16"
-                                Height="16"
-                                Margin="0,0,4,0"/>
+							<Viewbox Width="16" Height="16" Margin="0,0,4,0">
+								<Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+							</Viewbox>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -726,11 +507,9 @@
 						HorizontalAlignment="Left"
 						FontWeight="Bold">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image
-								Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
-								Width="16"
-								Height="16"
-								Margin="0,0,4,0"/>
+                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                                <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+                            </Viewbox>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -789,7 +568,9 @@
                         </Button>
                         <Button x:Name="button_SaveGoogleSheetsSettings" Click="button_SaveGoogleSheetsSettings_Click" Width="80" Height="24">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png" Width="16" Height="16" Margin="0,0,4,0"/>
+								<Viewbox Width="16" Height="16" Margin="0,0,4,0">
+									<Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+								</Viewbox>
                                 <TextBlock Text="Save" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -874,11 +655,9 @@
                             VerticalAlignment="Top"
 							FontWeight="Bold">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image
-								Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
-								Width="16"
-								Height="16"
-								Margin="0,0,4,0"/>
+                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                                <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+                            </Viewbox>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -929,11 +708,9 @@
                         VerticalAlignment="Top"
 				        FontWeight="Bold">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image
-					        Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
-					        Width="16"
-					        Height="16"
-					        Margin="0,0,4,0"/>
+                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                                <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+                            </Viewbox>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>

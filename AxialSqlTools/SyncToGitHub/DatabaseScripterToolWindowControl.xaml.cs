@@ -26,6 +26,8 @@ namespace AxialSqlTools
 {
     public partial class DatabaseScripterToolWindowControl : UserControl
     {
+        private readonly ToolWindowThemeController _themeController;
+
         // ripped out of Ola script using AI - https://github.com/olahallengren/sql-server-maintenance-solution/
         private string _dbPullQuery = @"
 SET NOCOUNT ON;
@@ -421,12 +423,18 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
         public DatabaseScripterToolWindowControl()
         {
             InitializeComponent();
+            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
             ProgressListBox.ItemsSource = _progressMessages;
 
             _profiles = new ObservableCollection<GitHubSyncProfile>(ProfileStore.Load());
             ProfilesComboBox.ItemsSource = _profiles;
 
             UpdateMainFrameState();
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            ToolWindowThemeResources.ApplySharedTheme(this);
         }
 
         private async void RunButton_Click(object sender, RoutedEventArgs e)
