@@ -1,10 +1,71 @@
 namespace AxialSqlTools
 {
     using System;
+    using System.Diagnostics;
+    using System.Reflection;
     using System.Windows;
     using System.Windows.Media;
+    using System.Windows.Navigation;
     using Microsoft.VisualStudio.PlatformUI;
     using Microsoft.VisualStudio.Shell;
+
+    internal static class VsThemeBrushResolver
+    {
+        public static Brush ResolveBrush(FrameworkElement scope, object resourceKey)
+        {
+            if (resourceKey == null)
+            {
+                return null;
+            }
+
+            return scope?.TryFindResource(resourceKey) as Brush
+                ?? Application.Current?.TryFindResource(resourceKey) as Brush;
+        }
+
+        public static Brush ResolveEnvironmentBrushByName(FrameworkElement scope, string keyName)
+        {
+            if (string.IsNullOrWhiteSpace(keyName))
+            {
+                return null;
+            }
+
+            PropertyInfo property = typeof(EnvironmentColors).GetProperty(keyName, BindingFlags.Public | BindingFlags.Static);
+            object key = property?.GetValue(null);
+            return ResolveBrush(scope, key);
+        }
+
+        public static Color GetBrushColor(Brush brush, Color fallback)
+        {
+            if (brush is SolidColorBrush solidBrush)
+            {
+                return solidBrush.Color;
+            }
+
+            return fallback;
+        }
+
+        public static double GetRelativeLuminance(Color color)
+        {
+            double r = color.R / 255.0;
+            double g = color.G / 255.0;
+            double b = color.B / 255.0;
+
+            double rLinear = r <= 0.03928 ? r / 12.92 : Math.Pow((r + 0.055) / 1.055, 2.4);
+            double gLinear = g <= 0.03928 ? g / 12.92 : Math.Pow((g + 0.055) / 1.055, 2.4);
+            double bLinear = b <= 0.03928 ? b / 12.92 : Math.Pow((b + 0.055) / 1.055, 2.4);
+
+            return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+        }
+
+        public static Color BlendColors(Color baseColor, Color blendColor, double blendAmount)
+        {
+            blendAmount = Math.Max(0.0, Math.Min(1.0, blendAmount));
+            byte r = (byte)Math.Round((baseColor.R * (1.0 - blendAmount)) + (blendColor.R * blendAmount));
+            byte g = (byte)Math.Round((baseColor.G * (1.0 - blendAmount)) + (blendColor.G * blendAmount));
+            byte b = (byte)Math.Round((baseColor.B * (1.0 - blendAmount)) + (blendColor.B * blendAmount));
+            return Color.FromRgb(r, g, b);
+        }
+    }
 
     internal static class ToolWindowThemeResources
     {
@@ -27,7 +88,9 @@ namespace AxialSqlTools
                 ?? new SolidColorBrush(Color.FromRgb(0xA1, 0x26, 0x0D));
 
             Color bgColor = VsThemeBrushResolver.GetBrushColor(bg, Colors.White);
+            Color fgColor = VsThemeBrushResolver.GetBrushColor(fg, Colors.Black);
             Color accentColor = VsThemeBrushResolver.GetBrushColor(accent, Color.FromRgb(0x00, 0x7A, 0xCC));
+            Color successColor = VsThemeBrushResolver.GetBrushColor(success, Color.FromRgb(0x10, 0x7C, 0x10));
             Color errorColor = VsThemeBrushResolver.GetBrushColor(error, Color.FromRgb(0xA1, 0x26, 0x0D));
             bool isLightTheme = VsThemeBrushResolver.GetRelativeLuminance(bgColor) > 0.6;
 
@@ -82,6 +145,24 @@ namespace AxialSqlTools
             Color gridSelectionColor = isLightTheme
                 ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.12)
                 : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.14);
+            Color diffInsertedBackgroundColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, successColor, 0.20)
+                : VsThemeBrushResolver.BlendColors(bgColor, successColor, 0.36);
+            Color diffDeletedBackgroundColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, errorColor, 0.20)
+                : VsThemeBrushResolver.BlendColors(bgColor, errorColor, 0.36);
+            Color diffModifiedBackgroundColor = isLightTheme
+                ? VsThemeBrushResolver.BlendColors(bgColor, fgColor, 0.10)
+                : VsThemeBrushResolver.BlendColors(bgColor, fgColor, 0.20);
+            Color diffInsertedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffInsertedBackgroundColor) > 0.52
+                ? Colors.Black
+                : Colors.White;
+            Color diffDeletedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffDeletedBackgroundColor) > 0.52
+                ? Colors.Black
+                : Colors.White;
+            Color diffModifiedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffModifiedBackgroundColor) > 0.52
+                ? Colors.Black
+                : Colors.White;
 
             control.Resources["AxialThemeBackgroundBrush"] = bg;
             control.Resources["AxialThemeForegroundBrush"] = fg;
@@ -109,6 +190,12 @@ namespace AxialSqlTools
             control.Resources["AxialThemeGridHeaderBackgroundBrush"] = new SolidColorBrush(gridHeaderColor);
             control.Resources["AxialThemeGridAlternateRowBrush"] = new SolidColorBrush(gridAlternateRowColor);
             control.Resources["AxialThemeGridSelectionBrush"] = new SolidColorBrush(gridSelectionColor);
+            control.Resources["AxialThemeDiffInsertedBackgroundBrush"] = new SolidColorBrush(diffInsertedBackgroundColor);
+            control.Resources["AxialThemeDiffInsertedForegroundBrush"] = new SolidColorBrush(diffInsertedForegroundColor);
+            control.Resources["AxialThemeDiffDeletedBackgroundBrush"] = new SolidColorBrush(diffDeletedBackgroundColor);
+            control.Resources["AxialThemeDiffDeletedForegroundBrush"] = new SolidColorBrush(diffDeletedForegroundColor);
+            control.Resources["AxialThemeDiffModifiedBackgroundBrush"] = new SolidColorBrush(diffModifiedBackgroundColor);
+            control.Resources["AxialThemeDiffModifiedForegroundBrush"] = new SolidColorBrush(diffModifiedForegroundColor);
         }
     }
 
@@ -192,6 +279,37 @@ namespace AxialSqlTools
             control.Unloaded -= OnUnloaded;
             control.IsVisibleChanged -= OnIsVisibleChanged;
             UnsubscribeFromThemeChanges();
+        }
+    }
+
+    internal static class ToolWindowNavigation
+    {
+        public static bool OpenExternalUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return false;
+            }
+
+            Process.Start(new ProcessStartInfo(url)
+            {
+                UseShellExecute = true,
+            });
+
+            return true;
+        }
+
+        public static void HandleRequestNavigate(RequestNavigateEventArgs e)
+        {
+            if (e == null)
+            {
+                return;
+            }
+
+            if (OpenExternalUrl(e.Uri?.AbsoluteUri))
+            {
+                e.Handled = true;
+            }
         }
     }
 }

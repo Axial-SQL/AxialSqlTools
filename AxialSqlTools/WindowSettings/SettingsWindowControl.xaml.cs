@@ -3,7 +3,6 @@
     using Microsoft.Data.SqlClient;
     using Newtonsoft.Json.Linq;
     using System;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.IO.Compression;
@@ -312,8 +311,7 @@ as select 1;
 
         private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-            e.Handled = true;
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
         private void ButtonSaveSmtpSettings_Click(object sender, RoutedEventArgs e)
@@ -397,7 +395,7 @@ as select 1;
             try
             {
                 string authorizationUrl = GoogleSheetsExport.BuildAuthorizationUrl(settings);
-                Process.Start(new ProcessStartInfo(authorizationUrl) { UseShellExecute = true });
+                ToolWindowNavigation.OpenExternalUrl(authorizationUrl);
 
                 string authorizationCode = Interaction.InputBox("Paste the authorization code provided by Google after granting access.", "Google Sheets Authorization");
                 if (string.IsNullOrWhiteSpace(authorizationCode))
@@ -451,8 +449,7 @@ as select 1;
 
         private void Hyperlink_RequestNavigateFormatQueryWiki(object sender, RequestNavigateEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-            e.Handled = true;
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
         private void Button_SaveOpenAi_Click(object sender, RoutedEventArgs e)

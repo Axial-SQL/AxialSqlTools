@@ -120,17 +120,7 @@
 
         private void WikiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(e.Uri?.AbsoluteUri))
-            {
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
-            {
-                UseShellExecute = true,
-            });
-
-            e.Handled = true;
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
         private void Button_EditSavedConnections_Click(object sender, RoutedEventArgs e)

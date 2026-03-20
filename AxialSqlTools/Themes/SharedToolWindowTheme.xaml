@@ -27,6 +27,12 @@
     <SolidColorBrush x:Key="AxialThemeGridHeaderBackgroundBrush" Color="#F3F3F3" />
     <SolidColorBrush x:Key="AxialThemeGridAlternateRowBrush" Color="#FAFAFA" />
     <SolidColorBrush x:Key="AxialThemeGridSelectionBrush" Color="#E0E0E0" />
+    <SolidColorBrush x:Key="AxialThemeDiffInsertedBackgroundBrush" Color="#E1FFE1" />
+    <SolidColorBrush x:Key="AxialThemeDiffInsertedForegroundBrush" Color="#000000" />
+    <SolidColorBrush x:Key="AxialThemeDiffDeletedBackgroundBrush" Color="#F7D6D6" />
+    <SolidColorBrush x:Key="AxialThemeDiffDeletedForegroundBrush" Color="#000000" />
+    <SolidColorBrush x:Key="AxialThemeDiffModifiedBackgroundBrush" Color="#E6E6E6" />
+    <SolidColorBrush x:Key="AxialThemeDiffModifiedForegroundBrush" Color="#000000" />
 
     <Style TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />

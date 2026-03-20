@@ -8,7 +8,6 @@ using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -181,8 +180,7 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
 
         private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-            e.Handled = true;
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
 
@@ -228,11 +226,7 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
 
         private void RepoUrlHyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
         {
-            if (e.Uri != null)
-            {
-                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-            }
-            e.Handled = true;
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
 

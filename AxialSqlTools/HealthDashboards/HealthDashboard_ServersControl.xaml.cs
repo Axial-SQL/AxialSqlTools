@@ -5,12 +5,15 @@
     using System.Diagnostics.CodeAnalysis;
     using System.Windows;
     using System.Windows.Controls;
+    using System.Windows.Navigation;
 
     /// <summary>
     /// Interaction logic for HealthDashboard_ServersControl.
     /// </summary>
     public partial class HealthDashboard_ServersControl : UserControl
     {
+        private readonly ToolWindowThemeController _themeController;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HealthDashboard_ServersControl"/> class.
         /// </summary>
@@ -21,6 +24,7 @@
         public HealthDashboard_ServersControl()
         {
             this.InitializeComponent();
+            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
 
             Items = new ObservableCollection<MyRowModel>();
             // Bind the collection to the DataGrid
@@ -32,6 +36,16 @@
             // Add more items as needed
 
 
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            ToolWindowThemeResources.ApplySharedTheme(this);
+        }
+
+        private void WikiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
         /// <summary>

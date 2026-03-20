@@ -144,7 +144,6 @@
     <Compile Include="Modules\KeypressCommandFilter.cs" />
     <Compile Include="Modules\MetricsService.cs" />
     <Compile Include="Modules\ToolWindowThemeSupport.cs" />
-    <Compile Include="Modules\VsThemeBrushResolver.cs" />
     <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="Modules\SettingsManager.cs" />
     <Compile Include="Modules\SQLBuilds.cs" />
