@@ -5,17 +5,35 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
              mc:Ignorable="d"
-             Name="QuickSearchControl">
-    <Grid>
+             Name="QuickSearchControl"
+             Background="{DynamicResource AxialThemeBackgroundBrush}"
+             Foreground="{DynamicResource AxialThemeForegroundBrush}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource AxialThemeBackgroundBrush}">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#FFB4B4B4">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}">
             <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" 
                        FontSize="18">Search for Object Definitions Across Multiple Databases</TextBlock>
+            <TextBlock Margin="10" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <Run Text="Feature description in"/>
+                <Run Text=" "/>
+                <Hyperlink NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Quick-Search"
+                           RequestNavigate="WikiLink_RequestNavigate">
+                    <Run Text="Wiki"/>
+                </Hyperlink>
+            </TextBlock>
         </StackPanel>
 
         <Grid Grid.Row="1" Margin="5">
@@ -53,7 +71,7 @@
                     <CheckBox x:Name="CheckBox_WholeWord" Content="Match whole words only" Margin="0,0,12,0" Checked="CheckBox_WholeWord_Checked"/>
                     <CheckBox x:Name="CheckBox_UseWildcards" Content="Use wildcards" Checked="CheckBox_UseWildcards_Checked" />
                 </StackPanel>
-                <Button Grid.Column="4" x:Name="Button_Search" Content="Search" Width="90" Height="28" Click="Button_Search_Click"/>
+                <Button Grid.Column="4" x:Name="Button_Search" Content="Search" Width="90" Height="28" Click="Button_Search_Click" Style="{DynamicResource AxialPrimaryButtonStyle}"/>
             </Grid>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
@@ -67,6 +85,7 @@
 
             <DataGrid Grid.Row="3"
                       x:Name="DataGrid_SearchResults"
+                      Style="{DynamicResource AxialThemedDataGridStyle}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       SelectionMode="Single"
@@ -93,9 +112,13 @@
                 ShowLineNumbers="True"
                 FontFamily= "Consolas"
                 FontSize="13"
+                Background="{DynamicResource AxialThemeBackgroundBrush}"
+                Foreground="{DynamicResource AxialThemeForegroundBrush}"
                 IsReadOnly="True" />
 
-            <StatusBar Grid.Row="5">
+            <StatusBar Grid.Row="5"
+                       Background="{DynamicResource AxialThemeBackgroundBrush}"
+                       Foreground="{DynamicResource AxialThemeForegroundBrush}">
                 <StatusBarItem>
                     <TextBlock x:Name="TextBlock_ResultCount" FontWeight="Bold"/>
                 </StatusBarItem>

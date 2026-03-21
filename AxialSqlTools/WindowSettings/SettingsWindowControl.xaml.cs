@@ -3,7 +3,6 @@
     using Microsoft.Data.SqlClient;
     using Newtonsoft.Json.Linq;
     using System;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.IO.Compression;
@@ -24,6 +23,7 @@
     {
 
         private string _queryHistoryConnectionString;
+        private readonly ToolWindowThemeController _themeController;
 
         private string tsqlFormatExample = @"while (1=0) 
 begin 
@@ -49,6 +49,7 @@ as select 1;
         {
             this.InitializeComponent();
 
+            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
             LoadSavedSettings();
 
             this.Loaded += UserControl_Loaded;
@@ -62,6 +63,31 @@ as select 1;
         private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
         {
             LoadSavedSettings();
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            ToolWindowThemeResources.ApplySharedTheme(this);
+
+            ApplyGoogleSheetsAuthorizationBrush();
+        }
+
+        private Brush GetThemedStatusBrush(bool isSuccess)
+        {
+            string key = isSuccess ? "AxialThemeStatusSuccessBrush" : "AxialThemeStatusErrorBrush";
+            return Resources[key] as Brush
+                ?? (isSuccess ? new SolidColorBrush(Color.FromRgb(0x10, 0x7C, 0x10)) : new SolidColorBrush(Color.FromRgb(0xA1, 0x26, 0x0D)));
+        }
+
+        private void ApplyGoogleSheetsAuthorizationBrush()
+        {
+            if (GoogleSheetsRefreshTokenLabel == null)
+            {
+                return;
+            }
+
+            bool isAuthorized = string.Equals(GoogleSheetsRefreshTokenLabel.Text, "Authorized", StringComparison.OrdinalIgnoreCase);
+            GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(isAuthorized);
         }
 
         private void LoadSavedSettings()
@@ -285,8 +311,7 @@ as select 1;
 
         private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-            e.Handled = true;
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
         private void ButtonSaveSmtpSettings_Click(object sender, RoutedEventArgs e)
@@ -370,7 +395,7 @@ as select 1;
             try
             {
                 string authorizationUrl = GoogleSheetsExport.BuildAuthorizationUrl(settings);
-                Process.Start(new ProcessStartInfo(authorizationUrl) { UseShellExecute = true });
+                ToolWindowNavigation.OpenExternalUrl(authorizationUrl);
 
                 string authorizationCode = Interaction.InputBox("Paste the authorization code provided by Google after granting access.", "Google Sheets Authorization");
                 if (string.IsNullOrWhiteSpace(authorizationCode))
@@ -413,19 +438,18 @@ as select 1;
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
                 GoogleSheetsRefreshTokenLabel.Text = "Not authorized";
-                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkRed);
+                GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(false);
             }
             else
             {
                 GoogleSheetsRefreshTokenLabel.Text = "Authorized";
-                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkGreen);
+                GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(true);
             }
         }
 
         private void Hyperlink_RequestNavigateFormatQueryWiki(object sender, RequestNavigateEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-            e.Handled = true;
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
         private void Button_SaveOpenAi_Click(object sender, RoutedEventArgs e)

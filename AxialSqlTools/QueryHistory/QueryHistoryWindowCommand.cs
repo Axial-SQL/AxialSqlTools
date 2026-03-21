@@ -90,14 +90,27 @@ namespace AxialSqlTools
             {
                 await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                ToolWindowPane window = await this.package.ShowToolWindowAsync(typeof(QueryHistoryWindow), 0, true, this.package.DisposalToken);
-                if ((null == window) || (null == window.Frame))
+                try
                 {
-                    throw new NotSupportedException("Cannot create tool window");
-                }
+                    ToolWindowPane window = await this.package.ShowToolWindowAsync(typeof(QueryHistoryWindow), 0, true, this.package.DisposalToken);
+                    if ((null == window) || (null == window.Frame))
+                    {
+                        throw new NotSupportedException("Cannot create tool window");
+                    }
 
-                IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
-                windowFrame.SetProperty((int)__VSFPROPID.VSFPROPID_FrameMode, VSFRAMEMODE.VSFM_MdiChild);
+                    IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
+                    windowFrame.SetProperty((int)__VSFPROPID.VSFPROPID_FrameMode, VSFRAMEMODE.VSFM_MdiChild);
+                }
+                catch (Exception ex)
+                {
+                    VsShellUtilities.ShowMessageBox(
+                        this.package,
+                        "Failed to open Query History. " + ex.Message,
+                        "Axial SQL Tools",
+                        OLEMSGICON.OLEMSGICON_CRITICAL,
+                        OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                }
 
             });
         }
