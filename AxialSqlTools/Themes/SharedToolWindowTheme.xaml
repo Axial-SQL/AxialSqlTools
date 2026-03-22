@@ -130,7 +130,7 @@
 
     <Style TargetType="ComboBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeButtonBackgroundBrush}" />
         <Setter Property="Padding" Value="6,3" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -139,6 +139,7 @@
                 <ControlTemplate TargetType="ComboBoxItem">
                     <Border x:Name="ItemBorder"
                             Background="{TemplateBinding Background}"
+                            TextElement.Foreground="{TemplateBinding Foreground}"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
@@ -146,9 +147,11 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AxialThemeButtonHoverBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AxialThemeTabHeaderSelectedBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -158,9 +161,10 @@
 
     <Style TargetType="ComboBox">
         <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeButtonBackgroundBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
         <Setter Property="Padding" Value="4,2" />
+        <Setter Property="MaxDropDownHeight" Value="300" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
@@ -178,12 +182,13 @@
                                 <ContentPresenter Margin="6,0,0,0"
                                                   VerticalAlignment="Center"
                                                   HorizontalAlignment="Left"
+                                                  IsHitTestVisible="False"
                                                   Content="{TemplateBinding SelectionBoxItem}"
                                                   ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                                   ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" />
 
                                 <Border Grid.Column="1"
-                                        Background="{DynamicResource AxialThemeBackgroundBrush}"
+                                    Background="{DynamicResource AxialThemeButtonBackgroundBrush}"
                                         BorderBrush="{TemplateBinding BorderBrush}"
                                         BorderThickness="1,0,0,0">
                                     <Path HorizontalAlignment="Center"
@@ -194,17 +199,31 @@
                             </Grid>
                         </Border>
 
+                        <ToggleButton Grid.ColumnSpan="2"
+                                      Focusable="False"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="Transparent" BorderThickness="0" />
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+
                         <Popup x:Name="PART_Popup"
                                Placement="Bottom"
+                               PlacementTarget="{Binding ElementName=ComboBorder}"
                                IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True"
                                Focusable="False"
                                PopupAnimation="Slide">
-                            <Border Background="{DynamicResource AxialThemeBackgroundBrush}"
+                                <Border Background="{DynamicResource AxialThemeButtonBackgroundBrush}"
                                     BorderBrush="{DynamicResource AxialThemeBorderBrush}"
-                                    BorderThickness="1">
-                                <ScrollViewer>
-                                    <ItemsPresenter />
+                                    BorderThickness="1"
+                                    MinWidth="{Binding ActualWidth, ElementName=ComboBorder}">
+                                <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
                                 </ScrollViewer>
                             </Border>
                         </Popup>
