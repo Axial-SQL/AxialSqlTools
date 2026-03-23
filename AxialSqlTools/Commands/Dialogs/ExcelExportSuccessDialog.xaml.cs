@@ -7,14 +7,22 @@ namespace AxialSqlTools
 {
     public partial class ExcelExportSuccessDialog : Window
     {
+        private readonly ToolWindowThemeController _themeController;
         private readonly string filePath;
 
         public ExcelExportSuccessDialog(string filePath)
         {
             InitializeComponent();
 
+            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
+
             this.filePath = filePath ?? string.Empty;
             FilePathText.Text = this.filePath;
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            ToolWindowThemeResources.ApplySharedTheme(this);
         }
 
         private void OpenInExcelButton_Click(object sender, RoutedEventArgs e)
