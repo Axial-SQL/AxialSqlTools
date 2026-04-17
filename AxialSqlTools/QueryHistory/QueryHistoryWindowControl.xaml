@@ -7,39 +7,9 @@
              mc:Ignorable="d"
              d:DesignHeight="800"
              d:DesignWidth="1000"
-             Name="MyToolWindow"
-             Background="{DynamicResource AxialThemeBackgroundBrush}"
-             Foreground="{DynamicResource AxialThemeForegroundBrush}">
+             Name="MyToolWindow">
 
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
-
-    <DockPanel Background="{DynamicResource AxialThemeBackgroundBrush}">
-        <StackPanel DockPanel.Dock="Top"
-                    Orientation="Horizontal"
-                    Background="{DynamicResource AxialThemeHeaderBackgroundBrush}">
-            <TextBlock Margin="5"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Top"
-                       FontWeight="Bold"
-                       FontSize="18"
-                       Text="Query History" />
-            <TextBlock Margin="10"
-                       HorizontalAlignment="Left">
-                <Run Text="Feature description in" />
-                <Hyperlink NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-History"
-                           RequestNavigate="WikiLink_RequestNavigate">
-                    <Run Text="Wiki" />
-                </Hyperlink>
-            </TextBlock>
-        </StackPanel>
-
-        <Grid>
+    <Grid>
         <!-- Main grid has three rows: 
              Row 0 = Auto (filter controls split into two lines)
              Row 1 = *    (result count + DataGrid)
@@ -65,7 +35,7 @@
             <!-- First filter row: From date, Server, Query -->
             <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
                 <Label Content="From:"  Width="40" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <DatePicker Width="132"
+                <DatePicker Width="120"
                             SelectedDate="{Binding FilterFromDate, Mode=TwoWay}"
                             SelectedDateChanged="DatePicker_SelectedDateChanged"/>
 
@@ -87,7 +57,7 @@
             <!-- Second filter row: To date, Database, Buttons -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,6,0,0">
                 <Label Content="To:" Width="40" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <DatePicker Width="132"
+                <DatePicker Width="120"
                             SelectedDate="{Binding FilterToDate, Mode=TwoWay}"
                             SelectedDateChanged="DatePicker_SelectedDateChanged"/>
 
@@ -100,12 +70,11 @@
 
                 <Button Content="Refresh"
                         Margin="65,0,4,0"
-                        Width="90"
-                        Style="{DynamicResource AxialPrimaryButtonStyle}"
+                        Width="80" Height="26"
                         Command="{Binding RefreshCommand}"/>
 
                 <Button Content="Clear"
-                    Width="90"
+                        Width="70" Height="26"
                         Command="{Binding ClearFilterCommand}"/>
             </StackPanel>
         </Grid>
@@ -132,11 +101,7 @@
                       ItemsSource="{Binding QueryHistoryRecords}"
                       SelectedItem="{Binding SelectedRecord, Mode=TwoWay}"
                       AutoGenerateColumns="False"
-                    SelectionMode="Single"
-                    Style="{DynamicResource AxialThemedDataGridStyle}"
-                    ColumnHeaderStyle="{DynamicResource AxialThemedDataGridColumnHeaderStyle}"
-                    CellStyle="{DynamicResource AxialThemedDataGridCellStyle}"
-                    RowStyle="{DynamicResource AxialThemedDataGridRowStyle}">
+                      SelectionMode="Single">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID"
                                         Binding="{Binding Id}"
@@ -174,7 +139,6 @@
                                         MaxWidth="300">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}"/>
                                 <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                                 <Setter Property="TextWrapping" Value="Wrap"/>
                                 <Setter Property="LineHeight" Value="16"/>
@@ -198,6 +162,5 @@
                  VerticalScrollBarVisibility="Auto"
                  FontFamily="Consolas"
                  FontSize="12"/>
-        </Grid>
-    </DockPanel>
+    </Grid>
 </UserControl>

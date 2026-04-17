@@ -17,8 +17,6 @@
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Documents;
-    using System.Windows.Media;
-    using System.Windows.Navigation;
 
     /// <summary>
     /// Interaction logic for DataTransferWindowControl.
@@ -28,7 +26,6 @@
 
         private CancellationTokenSource _cancellationTokenSource;
         private Stopwatch stopwatch;
-        private readonly ToolWindowThemeController _themeController;
 
         private string sourceConnectionString = "";
         private string targetConnectionString = "";
@@ -72,7 +69,6 @@
         public DataTransferWindowControl()
         {
             this.InitializeComponent();
-            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
 
             Button_CopyData.IsEnabled = false;
             ButtonToPsql_CopyData.IsEnabled = false;
@@ -111,16 +107,6 @@
             TextBox_SourceMySqlUsername.Text = "root";
             PasswordBox_SourceMySqlPassword.Password = "root";
 
-        }
-
-        private void ApplyThemeBrushResources()
-        {
-            ToolWindowThemeResources.ApplySharedTheme(this);
-        }
-
-        private void WikiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
-        {
-            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
         private void Button_EditSavedConnections_Click(object sender, RoutedEventArgs e)

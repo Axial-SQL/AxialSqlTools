@@ -76,7 +76,7 @@ The build process will automatically copy all necessary files into the SSMS exte
 2. **Download the Release and Install the Extension:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository. See the [Wiki](https://github.com/Axial-SQL/AxialSqlTools/wiki) for installation steps.
 
 After installation and an SSMS restart, the **Axial SQL Tools** toolbar will appear in the list of available toolbars in SSMS, providing quick access to all features.<br/>
-<img width="824" height="399" alt="image" src="https://github.com/user-attachments/assets/dc57882f-5a01-46dd-ac99-865ca246a255" />
+<img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/toolbar.png?raw=true"/>
 
 ## Contributing
 

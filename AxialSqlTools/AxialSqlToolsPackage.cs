@@ -67,6 +67,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(SchemaCompareWindow))]
     [ProvideToolWindow(typeof(DataImportWindow))]
     [ProvideToolWindow(typeof(QuickSearchWindow))]
+    [ProvideToolWindow(typeof(SnippetManagerWindow))]
     public sealed class AxialSqlToolsPackage : AsyncPackage
     {
 
@@ -249,6 +250,7 @@ namespace AxialSqlTools
 
         public Dictionary<string, string> globalSnippets = new Dictionary<string, string>();
         private readonly List<KeypressCommandFilter> _commandFilters = new List<KeypressCommandFilter>();
+        private readonly HashSet<IVsTextView> _registeredTextViews = new HashSet<IVsTextView>();
 
         public static AxialSqlToolsPackage PackageInstance { get; private set; }
 
@@ -296,6 +298,8 @@ namespace AxialSqlTools
                 await DatabaseScripterToolWindowCommand.InitializeAsync(this);
                 await SchemaCompareWindowCommand.InitializeAsync(this);
                 await QuickSearchWindowCommand.InitializeAsync(this);
+                await SnippetManagerWindowCommand.InitializeAsync(this);
+                await SelectCurrentStatementCommand.InitializeAsync(this);
 
             }
             catch (Exception ex)
@@ -322,6 +326,7 @@ namespace AxialSqlTools
 
                 windowEvents.WindowCreated += new _dispWindowEvents_WindowCreatedEventHandler(WindowCreated_Event);
                 windowEvents.WindowActivated += new _dispWindowEvents_WindowActivatedEventHandler(WindowActivated_Event);
+                windowEvents.WindowClosing += new _dispWindowEvents_WindowClosingEventHandler(WindowClosing_Event);
 
                 // "File.ConnectObjectExplorer"
                 // "Query.Connect"
@@ -341,6 +346,7 @@ namespace AxialSqlTools
 
                 //---------------------------------------------------------------------------
                 LoadGlobalSnippets();
+                SnippetService.ReloadSnippets();
 
                 //---------------------------------------------------------------------------
                 RefreshTemplatesList();
@@ -424,7 +430,7 @@ namespace AxialSqlTools
             {
                 try
                 {
-                    // snippet processor 
+                    // snippet processor
                     var DocData = GridAccess.GetProperty(GotFocus.Object, "DocData");
                     if (DocData != null)
                     {
@@ -433,10 +439,13 @@ namespace AxialSqlTools
                         IVsTextView textView;
                         if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
                         {
-                            //seems that you don't need to keep the object in memory
-                            var CommandFilter = new KeypressCommandFilter(this, textView);
-                            CommandFilter.AddToChain();
-                            //_commandFilters.Add(CommandFilter);
+                            // Prevent duplicate filters on the same text view
+                            if (!_registeredTextViews.Contains(textView))
+                            {
+                                _registeredTextViews.Add(textView);
+                                var CommandFilter = new KeypressCommandFilter(this, textView);
+                                CommandFilter.AddToChain();
+                            }
                         }
                     }
                 }
@@ -446,6 +455,45 @@ namespace AxialSqlTools
                 }
             }
 
+            // Apply connection-based coloring (document tab + status bar)
+            try
+            {
+                string windowKind = null;
+                try { windowKind = GotFocus?.Kind; } catch { }
+
+                if (GotFocus != null && windowKind == "Document")
+                {
+                    // Color status bar for the active tab
+                    var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
+                    if (connectionInfo != null)
+                    {
+                        GridAccess.ApplyConnectionColor(connectionInfo.ServerName, connectionInfo.Database);
+                    }
+
+                    // Color all document tabs (each tab's Header contains its own connection info)
+                    GridAccess.ColorAllDocumentTabs();
+                    GridAccess.ScheduleReapplyAllTabColors();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An exception occurred applying connection color");
+            }
+
+        }
+
+        private void WindowClosing_Event(EnvDTE.Window Window)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            // Re-color remaining tabs after a tab closes
+            try
+            {
+                GridAccess.ScheduleReapplyAllTabColors();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An exception occurred in WindowClosing_Event");
+            }
         }
 
         private void WindowCreated_Event(EnvDTE.Window Window)
@@ -625,6 +673,11 @@ namespace AxialSqlTools
                 var editorProperties_ElapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
 
                 GridAccess.ChangeStatusBarContent(openTranCount, isColumnEncryptionSettingOn, editorProperties_ElapsedTime);
+
+                // Re-apply connection color after status bar update
+                string dataSource = (string)GridAccess.GetProperty(connection, "DataSource");
+                string database = (string)GridAccess.GetProperty(connection, "Database");
+                GridAccess.ApplyConnectionColor(dataSource, database);
 
             }
             catch (Exception ex)

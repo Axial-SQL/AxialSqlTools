@@ -3,22 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              xmlns:oxy="http://oxyplot.org/wpf"
              mc:Ignorable="d"
              d:DesignHeight="500" d:DesignWidth="1000"
-             x:Name="MyToolWindow"
-             Background="{DynamicResource AxialThemeBackgroundBrush}"
-             Foreground="{DynamicResource AxialThemeForegroundBrush}">
+             x:Name="MyToolWindow">
 
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
-
-    <Grid Background="{DynamicResource AxialThemeBackgroundBrush}">
+    <Grid>
         <!-- Overall layout: header row (Auto) + main content row (*) -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -26,18 +17,10 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <DockPanel Grid.Row="0" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}" Margin="0,0,0,5">
+        <DockPanel Grid.Row="0" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" Margin="0,0,0,5">
             <TextBlock DockPanel.Dock="Left" Margin="5" VerticalAlignment="Center" 
                        FontWeight="Bold" FontSize="18">
                 Server Health Dashboard
-            </TextBlock>
-            <TextBlock DockPanel.Dock="Left" Margin="10,5,0,5" VerticalAlignment="Center">
-                <Run Text="Feature description in"/>
-                <Run Text=" "/>
-                <Hyperlink NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard"
-                           RequestNavigate="WikiLink_RequestNavigate">
-                    <Run Text="Wiki"/>
-                </Hyperlink>
             </TextBlock>
             <Label DockPanel.Dock="Left" Margin="5" VerticalAlignment="Center" 
                    Content="(have not been updated yet)" x:Name="LastUpdateLabel"/>

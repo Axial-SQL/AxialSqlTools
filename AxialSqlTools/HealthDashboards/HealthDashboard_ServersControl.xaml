@@ -3,35 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="1000"
-             Name="MyToolWindow"
-             Background="{DynamicResource AxialThemeBackgroundBrush}"
-             Foreground="{DynamicResource AxialThemeForegroundBrush}">
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
-    <Grid Background="{DynamicResource AxialThemeBackgroundBrush}">
+             Name="MyToolWindow">
+    <Grid>
         <StackPanel Orientation="Vertical">
-            <StackPanel Orientation="Horizontal" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}">
-                <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Top"
-                           FontWeight="Bold" FontSize="18">Health Dashboard - Servers</TextBlock>
-                <TextBlock Margin="10" HorizontalAlignment="Left" VerticalAlignment="Center">
-                    <Run Text="Feature description in"/>
-                    <Run Text=" "/>
-                    <Hyperlink NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard"
-                               RequestNavigate="WikiLink_RequestNavigate">
-                        <Run Text="Wiki"/>
-                    </Hyperlink>
-                </TextBlock>
-            </StackPanel>
+            <TextBlock Margin="10" HorizontalAlignment="Center">HealthDashboard_Servers</TextBlock>
 
-            <DataGrid x:Name="MyDataGrid" AutoGenerateColumns="False" Height="220" Margin="5"
-                      Style="{DynamicResource AxialThemedDataGridStyle}">
+            <DataGrid x:Name="MyDataGrid"  AutoGenerateColumns="False" Height="220">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Column 1" Binding="{Binding Property1}" Width="200" />
                     <DataGridTextColumn Header="Column 2" Binding="{Binding Property2}" Width="200" />

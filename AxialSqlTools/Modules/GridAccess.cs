@@ -203,6 +203,269 @@ namespace AxialSqlTools
             }
         }
 
+        public static Color? FindMatchingConnectionColor(string serverName, string databaseName)
+        {
+            var rules = SettingsManager.GetConnectionColorRules();
+
+            foreach (var rule in rules)
+            {
+                if (!rule.IsEnabled)
+                    continue;
+
+                bool hasServerPattern = !string.IsNullOrEmpty(rule.ServerNamePattern);
+                bool hasDatabasePattern = !string.IsNullOrEmpty(rule.DatabaseNamePattern);
+
+                if (!hasServerPattern && !hasDatabasePattern)
+                    continue;
+
+                bool serverMatch = !hasServerPattern ||
+                    (!string.IsNullOrEmpty(serverName) && serverName.IndexOf(rule.ServerNamePattern, StringComparison.OrdinalIgnoreCase) >= 0);
+
+                bool databaseMatch = !hasDatabasePattern ||
+                    (!string.IsNullOrEmpty(databaseName) && databaseName.IndexOf(rule.DatabaseNamePattern, StringComparison.OrdinalIgnoreCase) >= 0);
+
+                if (serverMatch && databaseMatch)
+                {
+                    try
+                    {
+                        return ColorTranslator.FromHtml(rule.StatusBarColor);
+                    }
+                    catch { }
+                }
+            }
+
+            return null;
+        }
+
+        public static void ApplyConnectionColor(string serverName, string databaseName)
+        {
+            // Status bar coloring - only for query windows
+            try
+            {
+                var SQLResultsControl = GetSQLResultsControl();
+                if (SQLResultsControl == null)
+                    return;
+
+                Color? matchedColor = FindMatchingConnectionColor(serverName, databaseName);
+
+                var statusBarManager = GetStatusBarManager();
+                if (statusBarManager == null)
+                    return;
+
+                var statusStripObj = GetNonPublicField(statusBarManager, "statusStrip");
+                if (statusStripObj is StatusStrip statusStrip)
+                {
+                    if (matchedColor != null)
+                    {
+                        statusStrip.BackColor = matchedColor.Value;
+                    }
+                    else
+                    {
+                        statusStrip.BackColor = SystemColors.Control;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, "Error in ApplyConnectionColor");
+            }
+        }
+
+        private static System.Windows.Threading.DispatcherTimer _reapplyTimer;
+        private static int _reapplyRetryCount;
+
+        public static void ColorAllDocumentTabs()
+        {
+            try
+            {
+                var wpfApp = System.Windows.Application.Current;
+                if (wpfApp == null) return;
+                var mainWindow = wpfApp.MainWindow;
+                if (mainWindow == null) return;
+
+                ColorAllTabs(mainWindow);
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, "Error in ColorAllDocumentTabs");
+            }
+        }
+
+        private static void ColorAllTabs(System.Windows.DependencyObject mainWindow)
+        {
+            var tabItems = new List<System.Windows.DependencyObject>();
+            FindElementsByTypeName(mainWindow, "DocumentTabItem", tabItems);
+
+            if (tabItems.Count > 0)
+            {
+                foreach (var tabItem in tabItems)
+                {
+                    var headerCtrl = tabItem as System.Windows.Controls.HeaderedContentControl;
+                    string header = headerCtrl?.Header?.ToString();
+                    if (string.IsNullOrEmpty(header)) continue;
+
+                    var parts = header.Split(new[] { " - " }, 2, StringSplitOptions.None);
+                    if (parts.Length < 2)
+                    {
+                        var border0 = FindChildByTypeName(tabItem, "SimpleCurvedBorder")
+                                   ?? FindChildByTypeName(tabItem, "TopCurvedBorder");
+                        ApplyColorToElement(border0 ?? tabItem, null);
+                        continue;
+                    }
+
+                    string connectionPart = parts[1].Trim();
+                    int parenIdx = connectionPart.IndexOf(" (");
+                    if (parenIdx > 0)
+                        connectionPart = connectionPart.Substring(0, parenIdx);
+
+                    Color? color = FindMatchingConnectionColor(connectionPart, connectionPart);
+
+                    var curvedBorder = FindChildByTypeName(tabItem, "SimpleCurvedBorder")
+                                   ?? FindChildByTypeName(tabItem, "TopCurvedBorder");
+                    ApplyColorToElement(curvedBorder ?? tabItem, color);
+                }
+            }
+            else
+            {
+                ColorSingleTabFallback(mainWindow);
+            }
+        }
+
+        private static void ColorSingleTabFallback(System.Windows.DependencyObject root)
+        {
+            try
+            {
+                var docGroups = new List<System.Windows.DependencyObject>();
+                FindElementsByTypeName(root, "DocumentGroupControl", docGroups);
+                if (docGroups.Count == 0) return;
+
+                foreach (var docGroup in docGroups)
+                {
+                    var header = FindChildByTypeName(docGroup, "DragUndockHeader");
+                    if (header == null) continue;
+
+                    var fe = header as System.Windows.FrameworkElement;
+                    if (fe == null || fe.ActualHeight <= 0 || fe.Visibility != System.Windows.Visibility.Visible)
+                        continue;
+
+                    string headerTitle = fe.DataContext?.ToString();
+                    Color? color = null;
+
+                    if (!string.IsNullOrEmpty(headerTitle))
+                    {
+                        var parts = headerTitle.Split(new[] { " - " }, 2, StringSplitOptions.None);
+                        if (parts.Length >= 2)
+                        {
+                            string connectionPart = parts[1].Trim();
+                            int parenIdx = connectionPart.IndexOf(" (");
+                            if (parenIdx > 0)
+                                connectionPart = connectionPart.Substring(0, parenIdx);
+                            color = FindMatchingConnectionColor(connectionPart, connectionPart);
+                        }
+                    }
+
+                    ApplyColorToElement(header, color);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, "Error in ColorSingleTabFallback");
+            }
+        }
+
+        private static void ApplyColorToElement(System.Windows.DependencyObject element, Color? matchedColor)
+        {
+            if (element is System.Windows.Controls.Control ctrl)
+            {
+                if (matchedColor.HasValue)
+                {
+                    var wpfColor = System.Windows.Media.Color.FromRgb(
+                        matchedColor.Value.R, matchedColor.Value.G, matchedColor.Value.B);
+                    var brush = new System.Windows.Media.SolidColorBrush(wpfColor);
+                    brush.Freeze();
+                    ctrl.Background = brush;
+                }
+                else
+                {
+                    ctrl.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
+                }
+            }
+            else if (element is System.Windows.Controls.Border border)
+            {
+                if (matchedColor.HasValue)
+                {
+                    var wpfColor = System.Windows.Media.Color.FromRgb(
+                        matchedColor.Value.R, matchedColor.Value.G, matchedColor.Value.B);
+                    var brush = new System.Windows.Media.SolidColorBrush(wpfColor);
+                    brush.Freeze();
+                    border.Background = brush;
+                }
+                else
+                {
+                    border.ClearValue(System.Windows.Controls.Border.BackgroundProperty);
+                }
+            }
+        }
+
+        private static System.Windows.DependencyObject FindChildByTypeName(System.Windows.DependencyObject parent, string typeName)
+        {
+            if (parent == null) return null;
+
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child.GetType().Name == typeName)
+                    return child;
+            }
+            for (int i = 0; i < count; i++)
+            {
+                var result = FindChildByTypeName(System.Windows.Media.VisualTreeHelper.GetChild(parent, i), typeName);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        private static void FindElementsByTypeName(System.Windows.DependencyObject obj, string typeName, List<System.Windows.DependencyObject> results)
+        {
+            if (obj == null) return;
+
+            if (obj.GetType().Name == typeName)
+            {
+                results.Add(obj);
+            }
+
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(obj);
+            for (int i = 0; i < count; i++)
+            {
+                FindElementsByTypeName(System.Windows.Media.VisualTreeHelper.GetChild(obj, i), typeName, results);
+            }
+        }
+
+        public static void ScheduleReapplyAllTabColors()
+        {
+            if (_reapplyTimer == null)
+            {
+                _reapplyTimer = new System.Windows.Threading.DispatcherTimer();
+                _reapplyTimer.Interval = TimeSpan.FromMilliseconds(150);
+                _reapplyTimer.Tick += (s, e) =>
+                {
+                    _reapplyRetryCount++;
+                    try { ColorAllDocumentTabs(); } catch { }
+
+                    if (_reapplyRetryCount >= 4)
+                    {
+                        _reapplyTimer.Stop();
+                    }
+                };
+            }
+
+            _reapplyRetryCount = 0;
+            _reapplyTimer.Stop();
+            _reapplyTimer.Start();
+        }
+
         public static string GetColumnSqlType(DataRow schemaRow)
         {
             int sqlDataColumnSize = (int)schemaRow[2];

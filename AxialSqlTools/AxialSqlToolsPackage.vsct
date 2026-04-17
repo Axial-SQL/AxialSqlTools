@@ -206,6 +206,26 @@
         </Strings>
       </Button>-->
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSnippetManagerCommand" priority="0x0010" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
+        <Icon guid="guidImagesTemplate" id="bmpTemplate" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Snippet Manager</ButtonText>
+        </Strings>
+      </Button>
+
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSelectCurrentStatementCommand" priority="0x0020" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
+        <Icon guid="guidImagesTemplate" id="bmpTemplate" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Select Current Statement</ButtonText>
+          <LocCanonicalName>AxialSqlTools.SelectCurrentStatement</LocCanonicalName>
+          <ToolTipText>Select the SQL statement at the cursor position (Shift+F5)</ToolTipText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryHistoryCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
         <Icon guid="guidQueryHistory" id="bmpQueryHistory" />
@@ -375,6 +395,7 @@
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" editor="guidVSStd97" key1="S" mod1="Control Shift Alt" />
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" editor="guidVSStd97" key1="T" mod1="Control Shift Alt" />
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialCopyQueryAsHtmlButton" editor="guidVSStd97" key1="C" mod1="Control Shift Alt" />
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialSelectCurrentStatementCommand" editor="guidVSStd97" key1="VK_F5" mod1="Shift" />
   </KeyBindings>
 
   <Symbols>
@@ -432,6 +453,10 @@
       <IDSymbol name="AxialDataImportCommand" value="4150" />
       
       <IDSymbol name="AxialQuickSearch" value="4151" />
+
+      <IDSymbol name="AxialSelectCurrentStatementCommand" value="4152" />
+
+      <IDSymbol name="AxialSnippetManagerCommand" value="4153" />
 
     </GuidSymbol>
 

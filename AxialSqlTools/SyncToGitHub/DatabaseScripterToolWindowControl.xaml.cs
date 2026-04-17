@@ -8,6 +8,7 @@ using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -25,8 +26,6 @@ namespace AxialSqlTools
 {
     public partial class DatabaseScripterToolWindowControl : UserControl
     {
-        private readonly ToolWindowThemeController _themeController;
-
         // ripped out of Ola script using AI - https://github.com/olahallengren/sql-server-maintenance-solution/
         private string _dbPullQuery = @"
 SET NOCOUNT ON;
@@ -180,7 +179,8 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
 
         private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
         {
-            ToolWindowNavigation.HandleRequestNavigate(e);
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
         }
 
 
@@ -226,7 +226,11 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
 
         private void RepoUrlHyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
         {
-            ToolWindowNavigation.HandleRequestNavigate(e);
+            if (e.Uri != null)
+            {
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            }
+            e.Handled = true;
         }
 
 
@@ -417,18 +421,12 @@ WHERE NOT EXISTS (SELECT 1 FROM @ExcludeNames AS e WHERE e.database_name = i.dat
         public DatabaseScripterToolWindowControl()
         {
             InitializeComponent();
-            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
             ProgressListBox.ItemsSource = _progressMessages;
 
             _profiles = new ObservableCollection<GitHubSyncProfile>(ProfileStore.Load());
             ProfilesComboBox.ItemsSource = _profiles;
 
             UpdateMainFrameState();
-        }
-
-        private void ApplyThemeBrushResources()
-        {
-            ToolWindowThemeResources.ApplySharedTheme(this);
         }
 
         private async void RunButton_Click(object sender, RoutedEventArgs e)

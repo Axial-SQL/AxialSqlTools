@@ -14,7 +14,6 @@
     using System.Windows.Controls;
     using System.Windows.Documents;
     using System.Windows.Input;
-    using System.Windows.Navigation;
     using static AxialSqlTools.AxialSqlToolsPackage;
 
 
@@ -23,7 +22,6 @@
     /// </summary>
     public partial class ToolWindowGridToEmailControl : UserControl
     {
-        private readonly ToolWindowThemeController _themeController;
 
         private ScriptFactoryAccess.ConnectionInfo connectionInfo;
         private string exportedFilename;
@@ -142,12 +140,6 @@
         public ToolWindowGridToEmailControl()
         {
             this.InitializeComponent();
-            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
-        }
-
-        private void ApplyThemeBrushResources()
-        {
-            ToolWindowThemeResources.ApplySharedTheme(this);
         }
 
         public void PrepareFormParameters()
@@ -548,11 +540,6 @@
                 }
             }
 
-        }
-
-        private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
-        {
-            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
 
