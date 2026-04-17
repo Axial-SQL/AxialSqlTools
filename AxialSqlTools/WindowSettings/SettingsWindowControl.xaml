@@ -4,31 +4,20 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	mc:Ignorable="d"
-	Name="MyToolWindow"
-	Background="{DynamicResource AxialThemeBackgroundBrush}"
-	Foreground="{DynamicResource AxialThemeForegroundBrush}">
-
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
+	Name="MyToolWindow">
     
-    <DockPanel Background="{DynamicResource AxialThemeBackgroundBrush}">
+    <DockPanel>
         <Border DockPanel.Dock="Top"
-                Background="{DynamicResource AxialThemeHeaderBackgroundBrush}"
-                Padding="12" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="0,0,0,1">
+				Background="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
+				Padding="12" BorderBrush="Black" BorderThickness="0,0,0,1">
             <TextBlock Text="Axial SQL Tools - Settings"
 					   FontWeight="Bold"
 					   FontSize="20"
-					   HorizontalAlignment="Left"/>
+					   HorizontalAlignment="Center"/>
         </Border>
 
         <TabControl Margin="5"
-                    Background="{DynamicResource AxialThemeBackgroundBrush}"
-                    BorderBrush="{DynamicResource AxialThemeBorderBrush}"
+					BorderBrush="LightGray"
 					BorderThickness="1">
 
             <TabItem Header="Query Templates">
@@ -79,9 +68,11 @@
 							FontWeight="Bold"
                             HorizontalAlignment="Left">
 							<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                    <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
-                                </Viewbox>
+								<Image
+								Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+								Width="16"
+								Height="16"
+								Margin="0,0,4,0"/>
 								<TextBlock Text="Save" VerticalAlignment="Center"/>
 							</StackPanel>
                     </Button>
@@ -107,7 +98,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Code Snippets">
+            <TabItem Header="Code Snippets" Visibility="Collapsed">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -174,9 +165,11 @@
 							FontWeight="Bold" 
                             HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
-                            </Viewbox>
+                            <Image
+							Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+							Width="16"
+							Height="16"
+							Margin="0,0,4,0"/>
 							<TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -282,9 +275,11 @@
                 Margin="5"
                 FontWeight="Bold" HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-							<Viewbox Width="16" Height="16" Margin="0,0,4,0">
-								<Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
-							</Viewbox>
+                            <Image
+                    Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+                    Width="16"
+                    Height="16"
+                    Margin="0,0,4,0"/>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -386,9 +381,11 @@
                         HorizontalAlignment="Left"
                         FontWeight="Bold">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-							<Viewbox Width="16" Height="16" Margin="0,0,4,0">
-								<Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
-							</Viewbox>
+                            <Image
+                                Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,4,0"/>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -507,9 +504,11 @@
 						HorizontalAlignment="Left"
 						FontWeight="Bold">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
-                            </Viewbox>
+                            <Image
+								Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+								Width="16"
+								Height="16"
+								Margin="0,0,4,0"/>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -568,13 +567,127 @@
                         </Button>
                         <Button x:Name="button_SaveGoogleSheetsSettings" Click="button_SaveGoogleSheetsSettings_Click" Width="80" Height="24">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-								<Viewbox Width="16" Height="16" Margin="0,0,4,0">
-									<Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
-								</Viewbox>
+                                <Image Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png" Width="16" Height="16" Margin="0,0,4,0"/>
                                 <TextBlock Text="Save" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Connection Colors">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock TextWrapping="Wrap"
+                                   Text="Color the status bar of query windows based on the server and/or database name. If both fields are filled, both must match. Leave a field empty to match anything."/>
+                        <TextBlock Margin="0,5,0,0" TextWrapping="Wrap" Foreground="Gray" FontStyle="Italic"
+                                   Text="Examples: Server='PROD' matches SQL-PROD-01. Database='master' matches any connection to master. Server='PROD' + Database='Sales' matches only Sales on PROD servers. First matching rule wins."/>
+                    </StackPanel>
+
+                    <!-- Add new rule area -->
+                    <GroupBox Grid.Row="1" Header="Add new rule" Margin="0,0,0,10" Padding="8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Server name contains:"
+                                       VerticalAlignment="Center" Margin="0,0,8,4"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="NewRuleServerPattern"
+                                     VerticalContentAlignment="Center" Padding="4,2" Margin="0,0,0,4"
+                                     ToolTip="e.g. PROD, DEV, localhost, 192.168.1 (leave empty to match any server)"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Database name contains:"
+                                       VerticalAlignment="Center" Margin="0,0,8,4"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="NewRuleDatabasePattern"
+                                     VerticalContentAlignment="Center" Padding="4,2" Margin="0,0,0,4"
+                                     ToolTip="e.g. master, MyDB, _prod (leave empty to match any database)"/>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                        Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="Status bar color:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <Border x:Name="NewRuleColorPreview" Width="30" Height="22"
+                                        Background="#FF4444" BorderBrush="Gray" BorderThickness="1"
+                                        CornerRadius="2" Margin="0,0,5,0"
+                                        Cursor="Hand" MouseLeftButtonUp="NewRuleColorPreview_Click"
+                                        ToolTip="Click to pick a color"/>
+                                <Button Content="Pick color..." Click="NewRuleColorPreview_Click" Margin="0,0,15,0"/>
+                                <Button Content="+ Add" Click="ButtonAddColorRule_Click" FontWeight="Bold" Width="60"/>
+                            </StackPanel>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- Rules list -->
+                    <GroupBox Grid.Row="2" Header="Configured rules" Padding="5">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,5,0,0">
+                                <Button Content="Edit selected" Click="ButtonEditColorRule_Click"
+                                        Width="100" Margin="0,0,5,0" FontWeight="Bold"/>
+                                <Button Content="Remove selected" Click="ButtonRemoveColorRule_Click"
+                                        Width="120" Margin="0,0,5,0"/>
+                            </StackPanel>
+                            <ListView x:Name="ConnectionColorRulesListView"
+                                      SelectionMode="Single">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="" Width="40">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsEnabled}" />
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Server contains" Width="180"
+                                                        DisplayMemberBinding="{Binding ServerNamePattern}"/>
+                                        <GridViewColumn Header="Database contains" Width="180"
+                                                        DisplayMemberBinding="{Binding DatabaseNamePattern}"/>
+                                        <GridViewColumn Header="Color" Width="70">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="50" Height="18" CornerRadius="2"
+                                                            Background="{Binding StatusBarColor}"
+                                                            BorderBrush="Gray" BorderThickness="1"
+                                                            Cursor="Hand"
+                                                            MouseLeftButtonUp="RuleColorPreview_Click"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </DockPanel>
+                    </GroupBox>
+
+                    <Button Grid.Row="3"
+                            x:Name="button_SaveConnectionColorRules"
+                            Click="Button_SaveConnectionColorRules_Click"
+                            Width="80"
+                            Height="24"
+                            Margin="0,10,0,0"
+                            HorizontalAlignment="Left"
+                            FontWeight="Bold">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Image
+                                Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,4,0"/>
+                            <TextBlock Text="Save" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </Grid>
             </TabItem>
 
@@ -655,9 +768,11 @@
                             VerticalAlignment="Top"
 							FontWeight="Bold">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
-                            </Viewbox>
+                            <Image
+								Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+								Width="16"
+								Height="16"
+								Margin="0,0,4,0"/>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -708,9 +823,11 @@
                         VerticalAlignment="Top"
 				        FontWeight="Bold">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
-                            </Viewbox>
+                            <Image
+					        Source="pack://application:,,,/AxialSqlTools;component/Resources/save.png"
+					        Width="16"
+					        Height="16"
+					        Margin="0,0,4,0"/>
                             <TextBlock Text="Save" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>

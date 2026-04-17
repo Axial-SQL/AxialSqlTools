@@ -22,7 +22,6 @@
     using System.Linq;
     using static HealthDashboardServerMetric;
     using System.Diagnostics;
-    using System.Windows.Navigation;
     using static AxialSqlTools.AxialSqlToolsPackage;
     using DocumentFormat.OpenXml.Bibliography;
     using DocumentFormat.OpenXml.Spreadsheet;
@@ -34,19 +33,6 @@
     /// </summary>
     public partial class HealthDashboard_ServerControl : UserControl
     {
-        private readonly ToolWindowThemeController _themeController;
-        private Brush _statusDefaultBrush;
-        private Brush _statusErrorBrush;
-        private Brush _statusSuccessBrush;
-        private OxyColor _plotTextColor;
-        private OxyColor _plotBackgroundColor;
-        private OxyColor _plotBorderColor;
-        private OxyColor _plotGridlineColor;
-        private OxyColor _plotAccentColor;
-        private OxyColor _plotSuccessColor;
-        private OxyColor _plotErrorColor;
-        private OxyColor _plotNeutralColor;
-        private OxyColor _plotSecondaryColor;
 
         public class WaitsStatsAggregator
         {
@@ -193,7 +179,6 @@
         public HealthDashboard_ServerControl()
         {
             this.InitializeComponent();
-            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
 
             BackupTimelinePeriodNumberTextBox.Text = "1";
             AgentJobsTimelinePeriodNumberTextBox.Text = "1";
@@ -204,25 +189,6 @@
             DatabaseBackupHistoryIncludeDIFF.IsChecked = true;
             DatabaseBackupHistoryIncludeLOG.IsChecked = true;
            
-        }
-
-        private void ApplyThemeBrushResources()
-        {
-            ToolWindowThemeResources.ApplySharedTheme(this);
-
-            _statusDefaultBrush = GetThemeBrush("AxialThemeForegroundBrush", SystemColors.WindowTextBrush);
-            _statusErrorBrush = GetThemeBrush("AxialThemeStatusErrorBrush", Brushes.Red);
-            _statusSuccessBrush = GetThemeBrush("AxialThemeStatusSuccessBrush", Brushes.Green);
-
-            _plotTextColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(_statusDefaultBrush, System.Windows.Media.Colors.Black));
-            _plotBackgroundColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(GetThemeBrush("AxialThemeBackgroundBrush", SystemColors.WindowBrush), System.Windows.Media.Colors.White));
-            _plotBorderColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(GetThemeBrush("AxialThemeBorderBrush", SystemColors.ActiveBorderBrush), System.Windows.Media.Colors.Gray));
-            _plotGridlineColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(GetThemeBrush("AxialThemeSubtleBorderBrush", SystemColors.InactiveBorderBrush), System.Windows.Media.Colors.DarkGray));
-            _plotAccentColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(GetThemeBrush("AxialThemeAccentBrush", Brushes.SteelBlue), System.Windows.Media.Colors.SteelBlue));
-            _plotSuccessColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(_statusSuccessBrush, System.Windows.Media.Color.FromRgb(0x10, 0x7C, 0x10)));
-            _plotErrorColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(_statusErrorBrush, System.Windows.Media.Color.FromRgb(0xA1, 0x26, 0x0D)));
-            _plotNeutralColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(GetThemeBrush("AxialThemeDiffModifiedBackgroundBrush", Brushes.Gray), System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80)));
-            _plotSecondaryColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(GetThemeBrush("AxialThemeLinkBrush", Brushes.DodgerBlue), System.Windows.Media.Colors.DodgerBlue));
         }
 
         public void StartMonitoring()
@@ -288,7 +254,7 @@
                 if (metrics.HasException)
                 {
                     LabelInternalException.Content = metrics.ExecutionException;
-                    LabelInternalException.Foreground = _statusErrorBrush;
+                    LabelInternalException.Foreground = Brushes.Red;
                     LabelInternalException.FontWeight = System.Windows.FontWeights.Bold;
 
                     return;
@@ -346,30 +312,30 @@
 
             if (metrics.BlockedRequestsCount > 0)
             {
-                Label_BlockedRequestCount.Foreground = _statusErrorBrush;
+                Label_BlockedRequestCount.Foreground = Brushes.Red;
                 Label_BlockedRequestCount.Content = metrics.BlockedRequestsCount.ToString();
 
                 ServerHasIssues = true;
 
             }
             else {
-                Label_BlockedRequestCount.Foreground = _statusDefaultBrush;
+                Label_BlockedRequestCount.Foreground = Brushes.Black;
                 Label_BlockedRequestCount.Content = "-";
             }
 
             if (metrics.BlockingTotalWaitTime > 0)
             {
-                Label_BlockedTotalWaitTime.Foreground = _statusErrorBrush;
+                Label_BlockedTotalWaitTime.Foreground = Brushes.Red;
                 Label_BlockedTotalWaitTime.Content = metrics.BlockingTotalWaitTime.ToString();
             }
             else
             {
-                Label_BlockedTotalWaitTime.Foreground = _statusDefaultBrush;
+                Label_BlockedTotalWaitTime.Foreground = Brushes.Black;
                 Label_BlockedTotalWaitTime.Content = "-";
             }
 
             //-------------------------------------------------
-            Label_DatabaseStatus.Foreground = _statusDefaultBrush;
+            Label_DatabaseStatus.Foreground = Brushes.Black;
             if (metrics.CountUserDatabasesTotal == 0)
                 Label_DatabaseStatus.Content = "no user databases";
             else if (metrics.CountUserDatabasesTotal == metrics.CountUserDatabasesOkay)
@@ -377,7 +343,7 @@
                 Label_DatabaseStatus.Content = $"OK - {metrics.CountUserDatabasesTotal} database(s)";
             } else
             {
-                Label_DatabaseStatus.Foreground = _statusErrorBrush;
+                Label_DatabaseStatus.Foreground = Brushes.Red;
                 Label_DatabaseStatus.Content = $"{metrics.CountUserDatabasesOkay} out of {metrics.CountUserDatabasesTotal} available";
                 ServerHasIssues = true;
             }
@@ -394,10 +360,10 @@
                 string agStatus = "HEALTHY";
                 if (metrics.AlwaysOn_Health == 2)
                 {
-                    Label_AlwaysOnHealth.Foreground = _statusSuccessBrush;
+                    Label_AlwaysOnHealth.Foreground = Brushes.Black;
                 } else
                 {
-                    Label_AlwaysOnHealth.Foreground = _statusErrorBrush;
+                    Label_AlwaysOnHealth.Foreground = Brushes.Red;
                     if (metrics.AlwaysOn_Health == 1)
                         agStatus = "PARTIALLY HEALTHY";
                     else agStatus = "NOT HEALTHY";
@@ -451,24 +417,24 @@
             {
                 LabelPlacement = LabelPlacement.Inside,
                 LabelFormatString = "{0:0} Gb", // Adjust this to change how the labels are formatted
-                StrokeColor = _plotBorderColor,
+                StrokeColor = OxyColors.Black,
                 StrokeThickness = 1,
                 IsStacked = true
             };
             foreach (var disk in metrics.DisksInfo)
-                barSeries1.Items.Add(new BarItem { Value = disk.UsedSpaceGb, Color = _plotErrorColor });
+                barSeries1.Items.Add(new BarItem { Value = disk.UsedSpaceGb, Color = OxyColors.LightPink });
             barModel.Series.Add(barSeries1);
 
             var barSeries2 = new BarSeries
             {
                 LabelPlacement = LabelPlacement.Inside,
                 LabelFormatString = "{0:0} Gb", // Adjust this to change how the labels are formatted
-                StrokeColor = _plotBorderColor,
+                StrokeColor = OxyColors.Black,
                 StrokeThickness = 1,
                 IsStacked = true
             };
             foreach (var disk in metrics.DisksInfo)
-                barSeries2.Items.Add(new BarItem { Value = disk.FreeSpaceGb, Color = _plotSuccessColor });
+                barSeries2.Items.Add(new BarItem { Value = disk.FreeSpaceGb, Color = OxyColors.LightBlue });
             barModel.Series.Add(barSeries2);
 
 
@@ -491,8 +457,6 @@
                 IsZoomEnabled = false,
                 IsPanEnabled = false
             });
-
-            ApplyPlotTheme(barModel);
 
             this.DiskInfoModel.Model = barModel;
 
@@ -619,9 +583,8 @@
                 LegendPosition = LegendPosition.RightTop,
                 LegendPlacement = LegendPlacement.Outside,
                 LegendOrientation = LegendOrientation.Vertical,
-                LegendBackground = OxyColor.FromAColor(220, _plotBackgroundColor),
-                LegendBorder = _plotBorderColor,
-                TextColor = _plotTextColor
+                LegendBackground = OxyColor.FromAColor(200, OxyColors.White),
+                LegendBorder = OxyColors.Black
             };
             LegendWS.LegendMaxWidth = 200;
 
@@ -635,7 +598,7 @@
                 {
                     //LabelPlacement = LabelPlacement.Inside,
                     //LabelFormatString = "{0:0}", // Adjust this to change how the labels are formatted
-                    StrokeColor = _plotBorderColor,
+                    StrokeColor = OxyColors.Black,
                     StrokeThickness = 1,
                     IsStacked = true
                 };
@@ -650,8 +613,6 @@
                 }
                 barModelWS.Series.Add(barSeriesWS);
             }
-
-            ApplyPlotTheme(barModelWS);
 
             this.WaitStatsModel.Model = barModelWS;
         }
@@ -716,9 +677,7 @@
             {
                 StrokeThickness = 2,
                 MarkerSize = 2,
-                MarkerType = MarkerType.Circle,
-                Color = _plotAccentColor,
-                MarkerFill = _plotAccentColor
+                MarkerType = MarkerType.Circle
             };
 
             foreach (var sample in _performanceSamples.OrderBy(s => s.Timestamp))
@@ -727,7 +686,6 @@
             }
 
             model.Series.Add(series);
-            ApplyPlotTheme(model);
 
             return model;
         }
@@ -949,11 +907,11 @@
 
                             var backupType = (double)reader.GetDecimal(3);
 
-                            var LineColor = _plotAccentColor;
+                            var LineColor = OxyColors.Blue;
                             if (backupType == 0.1)
-                                LineColor = _plotSuccessColor;
+                                LineColor = OxyColors.Green;
                             if (backupType == 0.2)
-                                LineColor = _plotErrorColor;
+                                LineColor = OxyColors.DeepPink;
 
                             dbIndex = dbIndex + backupType;
 
@@ -1006,7 +964,6 @@
             };
 
             MyModel.Axes.Add(yAxis);
-            ApplyPlotTheme(MyModel);
 
 
             this.BackupTimelineModel.Model = MyModel;
@@ -1057,7 +1014,6 @@
 
 
             PieModel.Series.Add(seriesP1);
-            ApplyPlotTheme(PieModel);
 
             this.BackupSizeModel.Model = PieModel;
 
@@ -1154,15 +1110,15 @@
 
                             var resultType = reader.GetInt32(3);
 
-                            var LineColor = _plotNeutralColor;
+                            var LineColor = OxyColors.DeepPink;
                             if (resultType == 0) // Failure
-                                LineColor = _plotErrorColor;
+                                LineColor = OxyColors.Red;
                             else if (resultType == 1) // Success
-                                LineColor = _plotSuccessColor;
+                                LineColor = OxyColors.Green;
                             else if (resultType == 2) // ??
-                                LineColor = _plotNeutralColor;
+                                LineColor = OxyColors.DeepPink;
                             else if (resultType == 3) // Stopped manually
-                                LineColor = _plotSecondaryColor;
+                                LineColor = OxyColors.Purple;
                             
                             var scatterSeries = new ScatterSeries
                             {
@@ -1213,7 +1169,6 @@
             };
 
             MyModel.Axes.Add(yAxis);
-            ApplyPlotTheme(MyModel);
 
             this.AgentJobsTimelineModel.Model = MyModel;
 
@@ -1255,45 +1210,10 @@
 
         private void HyperlinkOpenNewVersionLink_Click(object sender, RoutedEventArgs e)
         {
-            ToolWindowNavigation.OpenExternalUrl(_newVersionURL);
-        }
-
-        private void WikiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
-        {
-            ToolWindowNavigation.HandleRequestNavigate(e);
-        }
-
-        private void ApplyPlotTheme(PlotModel model)
-        {
-            if (model == null)
+            if (!string.IsNullOrEmpty(_newVersionURL))
             {
-                return;
-            }
-
-            model.Background = _plotBackgroundColor;
-            model.TextColor = _plotTextColor;
-            model.TitleColor = _plotTextColor;
-            model.PlotAreaBorderColor = _plotBorderColor;
-            model.PlotAreaBackground = OxyColor.FromAColor(32, _plotBackgroundColor);
-
-            foreach (var axis in model.Axes)
-            {
-                axis.TextColor = _plotTextColor;
-                axis.TitleColor = _plotTextColor;
-                axis.TicklineColor = _plotBorderColor;
-                axis.MajorGridlineColor = OxyColor.FromAColor(130, _plotGridlineColor);
-                axis.MinorGridlineColor = OxyColor.FromAColor(80, _plotGridlineColor);
-            }
-        }
-
-        private static OxyColor ToOxyColor(System.Windows.Media.Color color)
-        {
-            return OxyColor.FromArgb(color.A, color.R, color.G, color.B);
-        }
-
-        private Brush GetThemeBrush(string key, Brush fallback)
-        {
-            return TryFindResource(key) as Brush ?? fallback;
+                Process.Start(new ProcessStartInfo(_newVersionURL) { UseShellExecute = true });
+            } 
         }
 
     }

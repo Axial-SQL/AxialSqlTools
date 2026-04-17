@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,18 +17,9 @@ namespace AxialSqlTools
     /// </summary>
     public partial class SqlServerBuildsWindowControl : UserControl
     {
-        private readonly ToolWindowThemeController _themeController;
-
         public SqlServerBuildsWindowControl()
         {
             this.InitializeComponent();
-            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
-            LoadSqlVersions();
-        }
-
-        private void ApplyThemeBrushResources()
-        {
-            ToolWindowThemeResources.ApplySharedTheme(this);
             LoadSqlVersions();
         }
 
@@ -36,11 +28,6 @@ namespace AxialSqlTools
             var sqlVersions = AxialSqlToolsPackage.PackageInstance.SQLBuildsDataInfo;
             sqlVersionTreeView.Items.Clear(); // Clear previous items
 
-            Brush groupHeaderBrush = ResolveThemeBrush("AxialThemeAccentBrush", Brushes.DarkBlue);
-            Brush headerBackgroundBrush = ResolveThemeBrush("AxialThemeGridHeaderBackgroundBrush", Brushes.LightGray);
-            Brush foregroundBrush = ResolveThemeBrush("AxialThemeForegroundBrush", Brushes.Black);
-            Brush linkBrush = ResolveThemeBrush("AxialThemeLinkBrush", Brushes.Blue);
-
             // Add Group Headers
             foreach (var majorVersion in sqlVersions.Builds)
             {
@@ -48,17 +35,17 @@ namespace AxialSqlTools
                 {
                     Header = $"SQL Server {majorVersion.Key}",
                     FontWeight = FontWeights.Bold,
-                    Foreground = groupHeaderBrush,
+                    Foreground = Brushes.DarkBlue,
                     IsExpanded = true
                 };
 
                 // Add Column Headers (Styled like a ListView)
-                StackPanel headerPanel = new StackPanel { Orientation = Orientation.Horizontal, Background = headerBackgroundBrush };
-                headerPanel.Children.Add(CreateColumnText("Build Number", 120, foregroundBrush, FontWeights.Bold));
-                headerPanel.Children.Add(CreateColumnText("KB Number", 120, foregroundBrush, FontWeights.Bold));
-                headerPanel.Children.Add(CreateColumnText("Release Date", 120, foregroundBrush, FontWeights.Bold));
-                headerPanel.Children.Add(CreateColumnText("Update Name", 100, foregroundBrush, FontWeights.Bold));
-                headerPanel.Children.Add(CreateColumnText("URL", 150, foregroundBrush, FontWeights.Bold));
+                StackPanel headerPanel = new StackPanel { Orientation = Orientation.Horizontal, Background = Brushes.LightGray };
+                headerPanel.Children.Add(CreateColumnText("Build Number", 120, FontWeights.Bold));
+                headerPanel.Children.Add(CreateColumnText("KB Number", 120, FontWeights.Bold));
+                headerPanel.Children.Add(CreateColumnText("Release Date", 120, FontWeights.Bold));
+                headerPanel.Children.Add(CreateColumnText("Update Name", 100, FontWeights.Bold));
+                headerPanel.Children.Add(CreateColumnText("URL", 150, FontWeights.Bold));
 
                 groupNode.Items.Add(new TreeViewItem { Header = headerPanel, IsEnabled = false });
 
@@ -69,17 +56,17 @@ namespace AxialSqlTools
 
                     if (update.BuildNumber != null)
                     {
-                        rowPanel.Children.Add(CreateColumnText(update.BuildNumber.ToString(), 120, foregroundBrush));
+                        rowPanel.Children.Add(CreateColumnText(update.BuildNumber.ToString(), 120));
                     }
                     else
                     {
-                        rowPanel.Children.Add(CreateColumnText("n/a", 120, foregroundBrush));
+                        rowPanel.Children.Add(CreateColumnText("n/a", 120));
                     }
-                    rowPanel.Children.Add(CreateColumnText(update.KbNumber, 100, foregroundBrush));
-                    rowPanel.Children.Add(CreateColumnText(update.ReleaseDate.ToString("yyyy-MM-dd"), 120, foregroundBrush));
-                    rowPanel.Children.Add(CreateColumnText(update.UpdateName, 100, foregroundBrush));
+                    rowPanel.Children.Add(CreateColumnText(update.KbNumber, 100));
+                    rowPanel.Children.Add(CreateColumnText(update.ReleaseDate.ToString("yyyy-MM-dd"), 120));
+                    rowPanel.Children.Add(CreateColumnText(update.UpdateName, 100));
 
-                    TextBlock link = CreateHyperlink(update.Url, 150, linkBrush);
+                    TextBlock link = CreateHyperlink(update.Url, 150);
                     rowPanel.Children.Add(link);
 
                     TreeViewItem updateNode = new TreeViewItem { Header = rowPanel };
@@ -91,27 +78,26 @@ namespace AxialSqlTools
         }
 
         // Helper to create text column
-        private TextBlock CreateColumnText(string text, double width, Brush foregroundBrush, FontWeight fontWeight = default)
+        private TextBlock CreateColumnText(string text, double width, FontWeight fontWeight = default)
         {
             return new TextBlock
             {
                 Text = text,
                 Width = width,
-                Foreground = foregroundBrush,
                 FontWeight = fontWeight,
                 Margin = new Thickness(5, 2, 5, 2)
             };
         }
 
         // Helper to create hyperlink column
-        private TextBlock CreateHyperlink(string url, double width, Brush foregroundBrush)
+        private TextBlock CreateHyperlink(string url, double width)
         {
             string normalizedUrl = NormalizeUrl(url);
             TextBlock link = new TextBlock
             {
                 Text = "More Info",
                 Width = width,
-                Foreground = foregroundBrush,
+                Foreground = Brushes.Blue,
                 TextDecorations = TextDecorations.Underline,
                 Cursor = System.Windows.Input.Cursors.Hand
             };
@@ -169,20 +155,12 @@ namespace AxialSqlTools
             return url.StartsWith("HYPERLINK(") ? ExtractUrlAfter_HYPERLINK(url) : url;
         }
 
-        private Brush ResolveThemeBrush(string resourceKey, Brush fallback)
-        {
-            return TryFindResource(resourceKey) as Brush ?? fallback;
-        }
-
         private void OpenUrl(string url)
         {
             try
             {
                 url = NormalizeUrl(url);
-                if (!ToolWindowNavigation.OpenExternalUrl(url))
-                {
-                    throw new InvalidOperationException("URL is empty.");
-                }
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 
             } catch (Exception ex)
             {
@@ -198,7 +176,7 @@ namespace AxialSqlTools
 
         private void HyperlinkDataSource_Click(object sender, RoutedEventArgs e)
         {
-            OpenUrl("https://aka.ms/sqlserverbuilds");
+            Process.Start(new ProcessStartInfo("https://aka.ms/sqlserverbuilds") { UseShellExecute = true });
         }
 
         /// <summary>

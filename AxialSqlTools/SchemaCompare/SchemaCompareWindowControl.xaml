@@ -3,46 +3,25 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" MinWidth="900" MinHeight="600"
-             Background="{DynamicResource AxialThemeBackgroundBrush}"
-             Foreground="{DynamicResource AxialThemeForegroundBrush}">
+             mc:Ignorable="d" MinWidth="900" MinHeight="600">
     <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        </ResourceDictionary>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </UserControl.Resources>
-    <Grid Background="{DynamicResource AxialThemeBackgroundBrush}">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="0,0,0,1" Padding="8"
-            Background="{DynamicResource AxialThemeHeaderBackgroundBrush}">
+        <Border Grid.Row="0" BorderBrush="#FFDDDDDD" BorderThickness="0,0,0,1" Padding="8">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,8" VerticalAlignment="Center">
-                    <Run Text="Database Schema Compare" FontSize="18" FontWeight="Bold" />
-                    <Run Text="    " />
-                    <Run Text="Feature description in " />
-                    <Hyperlink NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Database-Schema-Compare"
-                               RequestNavigate="WikiLink_RequestNavigate">
-                        <Run Text="Wiki" />
-                    </Hyperlink>
-                </TextBlock>
-                <StackPanel Grid.Row="1" Margin="0,0,16,0" Orientation="Vertical">
+                <StackPanel Margin="0,0,16,0" Orientation="Vertical">
                     <TextBlock Text="Source" FontWeight="Bold" Margin="0,0,0,4" />
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <Button Content="Use Selected" Width="120" Command="{Binding PickSourceCommand}" />
@@ -50,7 +29,7 @@
                     </StackPanel>
                     <TextBlock Text="{Binding SourceDisplay}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,16,0" Orientation="Vertical">
+                <StackPanel Grid.Column="1" Margin="0,0,16,0" Orientation="Vertical">
                     <TextBlock Text="Target" FontWeight="Bold" Margin="0,0,0,4" />
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <Button Content="Use Selected" Width="120" Command="{Binding PickTargetCommand}" />
@@ -58,11 +37,11 @@
                     </StackPanel>
                     <TextBlock Text="{Binding TargetDisplay}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom">
                     <Button Content="Swap" Width="80" Margin="0,0,8,0" Command="{Binding SwapConnectionsCommand}" />
-                    <Button Content="Cancel" Width="120" Margin="0,0,8,0" Command="{Binding CancelCompareCommand}" Style="{DynamicResource AxialDangerButtonStyle}"
+                    <Button Content="Cancel" Width="120" Margin="0,0,8,0" Command="{Binding CancelCompareCommand}"
                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Button Content="Compare" Width="120" Command="{Binding CompareCommand}" Style="{DynamicResource AxialPrimaryButtonStyle}" />
+                    <Button Content="Compare" Width="120" Command="{Binding CompareCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -77,7 +56,7 @@
 
                     <DataGrid Grid.Row="0" ItemsSource="{Binding Differences}" AutoGenerateColumns="False" IsReadOnly="True"
                               SelectedItem="{Binding SelectedDifference, Mode=TwoWay}" CanUserAddRows="False"
-                              HeadersVisibility="Column" Margin="0,0,0,8" Style="{DynamicResource AxialThemedDataGridStyle}">
+                              HeadersVisibility="Column" Margin="0,0,0,8">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
                             <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="*" />
@@ -106,10 +85,7 @@
                                 </Grid>
                             </GroupBox.Header>
                             <Grid>
-                                <ListView x:Name="SourceDiffListView" ItemsSource="{Binding SourceDiffLines}" BorderThickness="0" FontSize="12"
-                                          Background="{DynamicResource AxialThemeBackgroundBrush}"
-                                          Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                                          BorderBrush="{DynamicResource AxialThemeBorderBrush}"
+                                <ListView ItemsSource="{Binding SourceDiffLines}" BorderThickness="0" FontSize="12"
                                           ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                           VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
                                     <ListView.ItemContainerStyle>
@@ -119,16 +95,13 @@
                                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding DiffType}" Value="Inserted">
-                                                    <Setter Property="Background" Value="{DynamicResource AxialThemeDiffInsertedBackgroundBrush}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeDiffInsertedForegroundBrush}" />
+                                                    <Setter Property="Background" Value="#FFE1FFE1" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding DiffType}" Value="Deleted">
-                                                    <Setter Property="Background" Value="{DynamicResource AxialThemeDiffDeletedBackgroundBrush}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeDiffDeletedForegroundBrush}" />
+                                                    <Setter Property="Background" Value="#FFF7D6D6" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding DiffType}" Value="Modified">
-                                                    <Setter Property="Background" Value="{DynamicResource AxialThemeDiffModifiedBackgroundBrush}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeDiffModifiedForegroundBrush}" />
+                                                    <Setter Property="Background" Value="#FFE9F3FF" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -142,7 +115,7 @@
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding Indicator}" HorizontalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding LineNumber}" Foreground="{DynamicResource AxialThemeForegroundBrush}" HorizontalAlignment="Right"
+                                                <TextBlock Grid.Column="1" Text="{Binding LineNumber}" Foreground="#FF888888" HorizontalAlignment="Right"
                                                            Margin="0,0,8,0" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="NoWrap"
                                                            FontFamily="Consolas" />
@@ -150,7 +123,7 @@
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
                                 </ListView>
-                                <TextBlock Text="Select a difference to preview the source definition." Foreground="{DynamicResource AxialThemeForegroundBrush}"
+                                <TextBlock Text="Select a difference to preview the source definition." Foreground="#FF666666"
                                            FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -179,10 +152,7 @@
                                 </Grid>
                             </GroupBox.Header>
                             <Grid>
-                                <ListView x:Name="TargetDiffListView" ItemsSource="{Binding TargetDiffLines}" BorderThickness="0" FontSize="12"
-                                          Background="{DynamicResource AxialThemeBackgroundBrush}"
-                                          Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                                          BorderBrush="{DynamicResource AxialThemeBorderBrush}"
+                                <ListView ItemsSource="{Binding TargetDiffLines}" BorderThickness="0" FontSize="12"
                                           ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                           VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
                                     <ListView.ItemContainerStyle>
@@ -192,16 +162,13 @@
                                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding DiffType}" Value="Inserted">
-                                                    <Setter Property="Background" Value="{DynamicResource AxialThemeDiffInsertedBackgroundBrush}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeDiffInsertedForegroundBrush}" />
+                                                    <Setter Property="Background" Value="#FFE1FFE1" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding DiffType}" Value="Deleted">
-                                                    <Setter Property="Background" Value="{DynamicResource AxialThemeDiffDeletedBackgroundBrush}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeDiffDeletedForegroundBrush}" />
+                                                    <Setter Property="Background" Value="#FFF7D6D6" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding DiffType}" Value="Modified">
-                                                    <Setter Property="Background" Value="{DynamicResource AxialThemeDiffModifiedBackgroundBrush}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeDiffModifiedForegroundBrush}" />
+                                                    <Setter Property="Background" Value="#FFE9F3FF" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -215,7 +182,7 @@
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding Indicator}" HorizontalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding LineNumber}" Foreground="{DynamicResource AxialThemeForegroundBrush}" HorizontalAlignment="Right"
+                                                <TextBlock Grid.Column="1" Text="{Binding LineNumber}" Foreground="#FF888888" HorizontalAlignment="Right"
                                                            Margin="0,0,8,0" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="NoWrap"
                                                            FontFamily="Consolas" />
@@ -223,7 +190,7 @@
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
                                 </ListView>
-                                <TextBlock Text="Select a difference to preview the target definition." Foreground="{DynamicResource AxialThemeForegroundBrush}"
+                                <TextBlock Text="Select a difference to preview the target definition." Foreground="#FF666666"
                                            FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -258,8 +225,7 @@
             </TabItem>
         </TabControl>
 
-        <Border Grid.Row="2" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1,1,1,0" Padding="8"
-                Background="{DynamicResource AxialThemeBackgroundBrush}">
+        <Border Grid.Row="2" BorderBrush="#FFDDDDDD" BorderThickness="1,1,1,0" Padding="8">
             <DockPanel>
                 <TextBlock Text="{Binding Status}" VerticalAlignment="Center" />
                 <ProgressBar Width="180" Height="16" Margin="12,0,0,0" IsIndeterminate="True"

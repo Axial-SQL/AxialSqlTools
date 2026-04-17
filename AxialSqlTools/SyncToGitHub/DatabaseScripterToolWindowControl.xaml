@@ -5,21 +5,12 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              d:DesignWidth="600"
-             Name="MyToolWindow"
-             Background="{DynamicResource AxialThemeBackgroundBrush}"
-             Foreground="{DynamicResource AxialThemeForegroundBrush}">
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
-    <Grid Margin="0" Background="{DynamicResource AxialThemeBackgroundBrush}">
+             Name="MyToolWindow">
+    <Grid Margin="0">
         <!-- Frame 1: Main Sync UI -->
         <Grid Name="MainFrame" Visibility="Visible">
             <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="0">
-                <StackPanel Orientation="Horizontal" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}">
+                <StackPanel Orientation="Horizontal" Background="#FFB4B4B4">
                     <TextBlock Margin="5" HorizontalAlignment="Center" VerticalAlignment="Top"
                                FontWeight="Bold" FontSize="18">
                         Sync to GitHub
@@ -39,7 +30,7 @@
                 <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="5">
 
                     <!-- Profiles -->
-                    <GroupBox Margin="0,5" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
+                    <GroupBox Margin="0,5">
                         <GroupBox.Header>
                             <TextBlock Text="Profiles" FontSize="14" FontWeight="Bold"/>
                         </GroupBox.Header>
@@ -57,7 +48,7 @@
                     </GroupBox>
 
                     <!-- Repo Info -->
-                    <GroupBox Margin="0,5" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
+                    <GroupBox Margin="0,5">
                         <GroupBox.Header>
                             <TextBlock Text="Target Repo Info" FontSize="14" FontWeight="Bold"/>
                         </GroupBox.Header>
@@ -74,19 +65,19 @@
                                 <TextBlock Name="RepoSyncOptionsTextBlock"
                                    Text="Sync options will appear here"
                                    FontStyle="Italic"
-                                   Opacity="0.72"/>
+                                   Foreground="Gray"/>
                             </StackPanel>
                             <StackPanel Orientation="Vertical" Margin="0,5,0,0">
                                 <TextBlock Name="RepoSyncDbsTextBlock"
                                    Text="List of databases will appear here"
                                    FontStyle="Italic"
-                                   Opacity="0.72"/>
+                                   Foreground="Gray"/>
                             </StackPanel>
                         </StackPanel>
                     </GroupBox>
 
                     <!-- Commit Section -->
-                    <GroupBox Margin="0,5" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
+                    <GroupBox Margin="0,5">
                         <GroupBox.Header>
                             <TextBlock Text="Commit" FontSize="14" FontWeight="Bold"/>
                         </GroupBox.Header>
@@ -94,9 +85,6 @@
                             <StackPanel Orientation="Horizontal" Margin="0,8">
                                 <TextBlock Text="Commit Msg:" Width="80"/>
                                 <TextBox Name="MessageTextBox" Width="300"
-                                         Background="{DynamicResource AxialThemeBackgroundBrush}"
-                                         Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                                         BorderBrush="{DynamicResource AxialThemeBorderBrush}"
                                          Text="Add or update scripted objects"/>
                                 <CheckBox Name="ConfirmBeforePushing"
                                           Content="Confirm before pushing"
@@ -109,9 +97,6 @@
                                     Click="RunButton_Click"/>
                             <ProgressBar Name="OverallProgressBar"
                                          Height="16" Minimum="0" Maximum="100"
-                                         Background="{DynamicResource AxialThemeButtonBackgroundBrush}"
-                                         Foreground="{DynamicResource AxialThemeAccentBrush}"
-                                         BorderBrush="{DynamicResource AxialThemeBorderBrush}"
                                          Margin="0,8"/>
                             <ListBox Name="ProgressListBox" Height="200"/>
                         </StackPanel>
@@ -121,44 +106,29 @@
         </Grid>
 
         <!-- Frame 2: Profile Editor -->
-        <Grid Name="ProfileEditorFrame" Visibility="Collapsed" Background="{DynamicResource AxialThemeBackgroundBrush}">
+        <Grid Name="ProfileEditorFrame" Visibility="Collapsed" Background="#FAFAFA">
             <StackPanel Margin="10">
                 <TextBlock Text="Edit Sync Profile" FontWeight="Bold" FontSize="16"/>
-                <TextBox Name="ProfileNameTextBox" Margin="0,10,0,0"
-                         Background="{DynamicResource AxialThemeBackgroundBrush}"
-                         Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                         BorderBrush="{DynamicResource AxialThemeBorderBrush}" />
+                <TextBox Name="ProfileNameTextBox" Margin="0,10,0,0" />
 
                 <TextBlock Text="Repository Details:" Margin="0,10,0,0" FontWeight="SemiBold"/>
 
                 <StackPanel Orientation="Vertical" Margin="0,5,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="Owner:" Width="80" VerticalAlignment="Center"/>
-                        <TextBox Name="RepoOwnerTextBox" Width="250"
-                                 Background="{DynamicResource AxialThemeBackgroundBrush}"
-                                 Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                                 BorderBrush="{DynamicResource AxialThemeBorderBrush}"/>
+                        <TextBox Name="RepoOwnerTextBox" Width="250"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="Repo Name:" Width="80" VerticalAlignment="Center"/>
-                        <TextBox Name="RepoNameTextBox" Width="250"
-                                 Background="{DynamicResource AxialThemeBackgroundBrush}"
-                                 Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                                 BorderBrush="{DynamicResource AxialThemeBorderBrush}"/>
+                        <TextBox Name="RepoNameTextBox" Width="250"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="Branch:" Width="80" VerticalAlignment="Center"/>
-                        <TextBox Name="RepoBranchTextBox" Width="250"
-                                 Background="{DynamicResource AxialThemeBackgroundBrush}"
-                                 Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                                 BorderBrush="{DynamicResource AxialThemeBorderBrush}"/>
+                        <TextBox Name="RepoBranchTextBox" Width="250"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="Token:" Width="80" VerticalAlignment="Center"/>
-                        <PasswordBox Name="RepoTokenBox" Width="250"
-                                     Background="{DynamicResource AxialThemeBackgroundBrush}"
-                                     Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                                     BorderBrush="{DynamicResource AxialThemeBorderBrush}"/>
+                        <PasswordBox Name="RepoTokenBox" Width="250"/>
                     </StackPanel>
                 </StackPanel>
 
@@ -174,10 +144,7 @@
                 <StackPanel Orientation="Vertical" Margin="0,5,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="Databases:" Width="80" VerticalAlignment="Center"/>
-                        <TextBox Name="ListOfDatabasesTextBox" Width="400"
-                                 Background="{DynamicResource AxialThemeBackgroundBrush}"
-                                 Foreground="{DynamicResource AxialThemeForegroundBrush}"
-                                 BorderBrush="{DynamicResource AxialThemeBorderBrush}"/>                        
+                        <TextBox Name="ListOfDatabasesTextBox" Width="400"/>                        
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Margin="0,5,0,0">
@@ -190,7 +157,7 @@
                     <Button Content="Save Profile" Click="SaveProfile_Click"/>
                     <Button Content="Cancel" Click="CancelProfileEdit_Click" Margin="10,0,0,0"/>
                     <Button Content="Delete Profile" Click="DeleteProfile_Click" Margin="10,0,0,0"
-                            Style="{DynamicResource AxialDangerButtonStyle}"/>
+                    Background="#FFD9534F" Foreground="White"/>
                 </StackPanel>
             </StackPanel>
         </Grid>
