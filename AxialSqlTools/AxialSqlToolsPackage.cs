@@ -102,6 +102,8 @@ namespace AxialSqlTools
             public string WorkstationId;
         }
 
+        private const string QueryHistoryStorageModeTextFiles = "TextFiles";
+
         private static ConcurrentQueue<QueryHistoryEntry> _queryHistoryQueue = new ConcurrentQueue<QueryHistoryEntry>();
         public static Logger _logger;
 
@@ -164,16 +166,26 @@ namespace AxialSqlTools
         {
             try
             {
+                string storageMode = SettingsManager.GetQueryHistoryStorageMode();
+                if (string.Equals(storageMode, QueryHistoryStorageModeTextFiles, StringComparison.OrdinalIgnoreCase))
+                {
+                    await PersistDataAsJsonLineAsync(data);
+                    return;
+                }
+
                 string connectionString = SettingsManager.GetQueryHistoryConnectionString();
                 string qhTableName = SettingsManager.GetQueryHistoryTableNameOrDefault();
                 string indexNameGuid = Guid.NewGuid().ToString(); // too much complexity trying to incorporate all possible table name combinations into proper index name
 
-                if (!string.IsNullOrEmpty(connectionString))
+                if (string.IsNullOrEmpty(connectionString))
                 {
-                    using (SqlConnection connection = new SqlConnection(connectionString))
-                    {
-                        await connection.OpenAsync();
-                        string sql = $@"
+                    return;
+                }
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+                    string sql = $@"
                         IF OBJECT_ID('{qhTableName}') IS NULL
                         BEGIN
                             CREATE TABLE {qhTableName} (
@@ -204,20 +216,19 @@ namespace AxialSqlTools
                                     @ExecResult, @QueryText, @DataSource, @DatabaseName, @LoginName, @WorkstationId)
                         ";
 
-                        using (SqlCommand command = new SqlCommand(sql, connection))
-                        {
-                            command.Parameters.AddWithValue("@StartTime", data.StartTime);
-                            command.Parameters.AddWithValue("@FinishTime", data.FinishTime);
-                            command.Parameters.AddWithValue("@ElapsedTime", data.ElapsedTime);
-                            command.Parameters.AddWithValue("@TotalRowsReturned", data.TotalRowsReturned);
-                            command.Parameters.AddWithValue("@ExecResult", data.ExecResult);
-                            command.Parameters.AddWithValue("@QueryText", data.QueryText.Trim());
-                            command.Parameters.AddWithValue("@DataSource", data.DataSource);
-                            command.Parameters.AddWithValue("@DatabaseName", data.DatabaseName);
-                            command.Parameters.AddWithValue("@LoginName", data.LoginName);
-                            command.Parameters.AddWithValue("@WorkstationId", data.WorkstationId);
-                            await command.ExecuteNonQueryAsync();
-                        }
+                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    {
+                        command.Parameters.AddWithValue("@StartTime", data.StartTime);
+                        command.Parameters.AddWithValue("@FinishTime", data.FinishTime);
+                        command.Parameters.AddWithValue("@ElapsedTime", data.ElapsedTime);
+                        command.Parameters.AddWithValue("@TotalRowsReturned", data.TotalRowsReturned);
+                        command.Parameters.AddWithValue("@ExecResult", data.ExecResult);
+                        command.Parameters.AddWithValue("@QueryText", data.QueryText?.Trim() ?? string.Empty);
+                        command.Parameters.AddWithValue("@DataSource", data.DataSource ?? string.Empty);
+                        command.Parameters.AddWithValue("@DatabaseName", data.DatabaseName ?? string.Empty);
+                        command.Parameters.AddWithValue("@LoginName", data.LoginName ?? string.Empty);
+                        command.Parameters.AddWithValue("@WorkstationId", data.WorkstationId ?? string.Empty);
+                        await command.ExecuteNonQueryAsync();
                     }
                 }
             }
@@ -226,6 +237,19 @@ namespace AxialSqlTools
                 _logger.Error(ex, "[QueryHistory-PersistDataAsync]: An exception occurred");
             }
 
+        }
+
+        private static Task PersistDataAsJsonLineAsync(QueryHistoryEntry data)
+        {
+            string folderPath = SettingsManager.GetQueryHistoryTextFileFolder();
+            Directory.CreateDirectory(folderPath);
+
+            string fileName = $"query-history-{DateTime.UtcNow:yyyy-MM-dd}.jsonl";
+            string filePath = Path.Combine(folderPath, fileName);
+            string json = JsonConvert.SerializeObject(data);
+
+            File.AppendAllText(filePath, json + Environment.NewLine);
+            return Task.CompletedTask;
         }
         #endregion
 

@@ -3,6 +3,7 @@
     using Microsoft.Data.SqlClient;
     using Newtonsoft.Json.Linq;
     using System;
+    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.IO.Compression;
@@ -21,6 +22,8 @@
     /// </summary>
     public partial class SettingsWindowControl : UserControl
     {
+        private const string QueryHistoryStorageModeDatabase = "Database";
+        private const string QueryHistoryStorageModeTextFiles = "TextFiles";
 
         private string _queryHistoryConnectionString;
         private readonly ToolWindowThemeController _themeController;
@@ -104,6 +107,9 @@ as select 1;
 
                 _queryHistoryConnectionString = SettingsManager.GetQueryHistoryConnectionString();
                 QueryHistoryTableName.Text = SettingsManager.GetQueryHistoryTableName();
+                QueryHistoryTextFilesInfo.Text = SettingsManager.GetQueryHistoryTextFileFolder();
+                SelectQueryHistoryStorageType(SettingsManager.GetQueryHistoryStorageMode());
+                UpdateQueryHistoryStorageControls();
                 UpdateQueryHistoryConnectionDetails();
 
                 RefreshQueryHistoryCreateScript();
@@ -462,7 +468,8 @@ as select 1;
         private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveQueryHistoryConnectionString(_queryHistoryConnectionString);
-            SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text); 
+            SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text);
+            SettingsManager.SaveQueryHistoryStorageMode(GetSelectedQueryHistoryStorageType());
 
             SavedMessage();
 
@@ -519,9 +526,66 @@ as select 1;
             _queryHistoryConnectionString = "";
 
             UpdateQueryHistoryConnectionDetails();
+            UpdateQueryHistoryStorageControls();
 
             RefreshQueryHistoryCreateScript();
 
+        }
+
+        private string GetSelectedQueryHistoryStorageType()
+        {
+            if (QueryHistoryStorageType.SelectedItem is ComboBoxItem item)
+            {
+                return item.Tag?.ToString() ?? QueryHistoryStorageModeDatabase;
+            }
+
+            return QueryHistoryStorageModeDatabase;
+        }
+
+        private void SelectQueryHistoryStorageType(string storageType)
+        {
+            string mode = string.IsNullOrWhiteSpace(storageType) ? QueryHistoryStorageModeDatabase : storageType;
+
+            foreach (var obj in QueryHistoryStorageType.Items)
+            {
+                if (obj is ComboBoxItem item && string.Equals(item.Tag?.ToString(), mode, StringComparison.OrdinalIgnoreCase))
+                {
+                    QueryHistoryStorageType.SelectedItem = item;
+                    return;
+                }
+            }
+
+            QueryHistoryStorageType.SelectedIndex = 0;
+        }
+
+        private void UpdateQueryHistoryStorageControls()
+        {
+            bool isDatabaseStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeDatabase, StringComparison.OrdinalIgnoreCase);
+            Label_QueryHistoryConnectionInfoTitle.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            Label_QueryHistoryConnectionInfo.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            button_SelectDatabaseFromObjectExplorer.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            Label_QueryHistoryTargetTableName.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            QueryHistoryTableName.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            Label_QueryHistoryTargetTableHint.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            Group_QueryHistoryCreateScript.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            QueryHistoryTextFilesPanel.Visibility = isDatabaseStorage ? Visibility.Collapsed : Visibility.Visible;
+            Label_QueryHistoryTextFilesInfo.Visibility = isDatabaseStorage ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void QueryHistoryStorageType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateQueryHistoryStorageControls();
+        }
+
+        private void Button_OpenQueryHistoryFolder_Click(object sender, RoutedEventArgs e)
+        {
+            string folderPath = SettingsManager.GetQueryHistoryTextFileFolder();
+            Directory.CreateDirectory(folderPath);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = folderPath,
+                UseShellExecute = true
+            });
         }
 
         private void formatTSqlExample()

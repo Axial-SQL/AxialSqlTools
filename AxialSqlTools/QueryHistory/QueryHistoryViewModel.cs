@@ -4,14 +4,32 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using Newtonsoft.Json;
 using static AxialSqlTools.QueryHistoryWindowControl;
 
 namespace AxialSqlTools
 {
     public class QueryHistoryViewModel : INotifyPropertyChanged
     {
+        private const string QueryHistoryStorageModeTextFiles = "TextFiles";
+        private class QueryHistoryFileEntry
+        {
+            public DateTime StartTime { get; set; }
+            public DateTime FinishTime { get; set; }
+            public string ElapsedTime { get; set; }
+            public long TotalRowsReturned { get; set; }
+            public string ExecResult { get; set; }
+            public string QueryText { get; set; }
+            public string DataSource { get; set; }
+            public string DatabaseName { get; set; }
+            public string LoginName { get; set; }
+            public string WorkstationId { get; set; }
+        }
+
         // Underlying full list (before filtering)
         private List<QueryHistoryRecord> _allRecords;
 
@@ -134,11 +152,38 @@ namespace AxialSqlTools
         {
             _allRecords = new List<QueryHistoryRecord>();
 
-            // Retrieve connection and table settings (update as needed).
+            try
+            {
+                string storageMode = SettingsManager.GetQueryHistoryStorageMode();
+                if (string.Equals(storageMode, QueryHistoryStorageModeTextFiles, StringComparison.OrdinalIgnoreCase))
+                {
+                    LoadFromTextFiles();
+                }
+                else
+                {
+                    LoadFromDatabase();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error loading data: " + ex.Message,
+                                "Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+            }
+
+            // Push into the ObservableCollection
+            QueryHistoryRecords.Clear();
+            foreach (var rec in _allRecords)
+            {
+                QueryHistoryRecords.Add(rec);
+            }
+        }
+
+        private void LoadFromDatabase()
+        {
             string connectionString = SettingsManager.GetQueryHistoryConnectionString();
             string qhTableName = SettingsManager.GetQueryHistoryTableNameOrDefault();
-
-            // Base SELECT
             string sql = $@"
                 SELECT TOP 1000 
                     [QueryID],
@@ -193,60 +238,131 @@ namespace AxialSqlTools
 
             sql += "ORDER BY [QueryID] DESC;";
 
-            try
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                using (SqlConnection conn = new SqlConnection(connectionString))
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
-                    conn.Open();
-                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    foreach (var p in parameters)
+                        cmd.Parameters.Add(p);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        foreach (var p in parameters)
-                            cmd.Parameters.Add(p);
-
-                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        while (reader.Read())
                         {
-                            while (reader.Read())
+                            var record = new QueryHistoryRecord
                             {
-                                var record = new QueryHistoryRecord
-                                {
-                                    Id = reader.GetInt32(reader.GetOrdinal("QueryID")),
-                                    Date = reader.GetDateTime(reader.GetOrdinal("StartTime")),
-                                    FinishTime = reader.GetDateTime(reader.GetOrdinal("FinishTime")),
-                                    ElapsedTime = reader.GetString(reader.GetOrdinal("ElapsedTime")),
-                                    TotalRowsReturned = reader.GetInt64(reader.GetOrdinal("TotalRowsReturned")),
-                                    ExecResult = reader.GetString(reader.GetOrdinal("ExecResult")),
-                                    QueryText = reader.GetString(reader.GetOrdinal("QueryText")),
-                                    DataSource = reader.GetString(reader.GetOrdinal("DataSource")),
-                                    DatabaseName = reader.GetString(reader.GetOrdinal("DatabaseName")),
-                                    LoginName = reader.GetString(reader.GetOrdinal("LoginName")),
-                                    WorkstationId = reader.GetString(reader.GetOrdinal("WorkstationId"))
-                                };
+                                Id = reader.GetInt32(reader.GetOrdinal("QueryID")),
+                                Date = reader.GetDateTime(reader.GetOrdinal("StartTime")),
+                                FinishTime = reader.GetDateTime(reader.GetOrdinal("FinishTime")),
+                                ElapsedTime = reader.GetString(reader.GetOrdinal("ElapsedTime")),
+                                TotalRowsReturned = reader.GetInt64(reader.GetOrdinal("TotalRowsReturned")),
+                                ExecResult = reader.GetString(reader.GetOrdinal("ExecResult")),
+                                QueryText = reader.GetString(reader.GetOrdinal("QueryText")),
+                                DataSource = reader.GetString(reader.GetOrdinal("DataSource")),
+                                DatabaseName = reader.GetString(reader.GetOrdinal("DatabaseName")),
+                                LoginName = reader.GetString(reader.GetOrdinal("LoginName")),
+                                WorkstationId = reader.GetString(reader.GetOrdinal("WorkstationId"))
+                            };
 
-                                // Create a short (ellipsized) version of QueryText
-                                record.QueryTextShort = record.QueryText.Length > 100
-                                    ? record.QueryText.Substring(0, 100)
-                                    : record.QueryText;
-
-                                _allRecords.Add(record);
-                            }
+                            record.QueryTextShort = BuildShortQueryText(record.QueryText);
+                            _allRecords.Add(record);
                         }
                     }
                 }
             }
-            catch (Exception ex)
+        }
+
+        private void LoadFromTextFiles()
+        {
+            string folder = SettingsManager.GetQueryHistoryTextFileFolder();
+            if (!Directory.Exists(folder))
             {
-                MessageBox.Show("Error loading data: " + ex.Message,
-                                "Error",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Error);
+                return;
             }
 
-            // Push into the ObservableCollection
-            QueryHistoryRecords.Clear();
-            foreach (var rec in _allRecords)
+            var records = new List<QueryHistoryRecord>();
+            foreach (string filePath in Directory.GetFiles(folder, "*.jsonl", SearchOption.TopDirectoryOnly))
             {
-                QueryHistoryRecords.Add(rec);
+                foreach (string line in File.ReadLines(filePath))
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var fileEntry = JsonConvert.DeserializeObject<QueryHistoryFileEntry>(line);
+                        if (fileEntry == null)
+                        {
+                            continue;
+                        }
+
+                        var record = new QueryHistoryRecord
+                        {
+                            Date = fileEntry.StartTime,
+                            FinishTime = fileEntry.FinishTime,
+                            ElapsedTime = fileEntry.ElapsedTime ?? string.Empty,
+                            TotalRowsReturned = fileEntry.TotalRowsReturned,
+                            ExecResult = fileEntry.ExecResult ?? string.Empty,
+                            QueryText = fileEntry.QueryText ?? string.Empty,
+                            DataSource = fileEntry.DataSource ?? string.Empty,
+                            DatabaseName = fileEntry.DatabaseName ?? string.Empty,
+                            LoginName = fileEntry.LoginName ?? string.Empty,
+                            WorkstationId = fileEntry.WorkstationId ?? string.Empty
+                        };
+
+                        record.QueryTextShort = BuildShortQueryText(record.QueryText);
+                        records.Add(record);
+                    }
+                    catch
+                    {
+                        // ignore malformed lines and continue
+                    }
+                }
             }
+
+            IEnumerable<QueryHistoryRecord> filtered = records;
+            if (FilterFromDate.HasValue)
+            {
+                filtered = filtered.Where(r => r.Date >= FilterFromDate.Value.Date);
+            }
+            if (FilterToDate.HasValue)
+            {
+                DateTime endOfDay = FilterToDate.Value.Date.AddDays(1).AddSeconds(-1);
+                filtered = filtered.Where(r => r.Date <= endOfDay);
+            }
+            if (!string.IsNullOrWhiteSpace(FilterServer))
+            {
+                filtered = filtered.Where(r => (r.DataSource ?? string.Empty).IndexOf(FilterServer, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            if (!string.IsNullOrWhiteSpace(FilterDatabase))
+            {
+                filtered = filtered.Where(r => (r.DatabaseName ?? string.Empty).IndexOf(FilterDatabase, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            if (!string.IsNullOrWhiteSpace(FilterQueryText))
+            {
+                filtered = filtered.Where(r => (r.QueryText ?? string.Empty).IndexOf(FilterQueryText, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            _allRecords = filtered
+                .OrderByDescending(r => r.Date)
+                .Take(1000)
+                .Select((r, idx) =>
+                {
+                    r.Id = idx + 1;
+                    return r;
+                })
+                .ToList();
+        }
+
+        private static string BuildShortQueryText(string queryText)
+        {
+            queryText = queryText ?? string.Empty;
+            return queryText.Length > 100
+                ? queryText.Substring(0, 100)
+                : queryText;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
