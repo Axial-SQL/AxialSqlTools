@@ -275,7 +275,7 @@ namespace AxialSqlTools
 
         private void LoadFromTextFiles()
         {
-            string folder = SettingsManager.GetQueryHistoryTextFileFolderOrDefault();
+            string folder = SettingsManager.GetQueryHistoryTextFileFolder();
             if (!Directory.Exists(folder))
             {
                 return;

@@ -773,27 +773,10 @@ ORDER BY sd.[name];
 
         public static string GetQueryHistoryTextFileFolder()
         {
-            return GetRegisterValue("QueryHistoryTextFileFolder");
-        }
-
-        public static string GetQueryHistoryTextFileFolderOrDefault()
-        {
-            string folder = GetQueryHistoryTextFileFolder();
-
-            if (string.IsNullOrWhiteSpace(folder))
-            {
-                folder = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "AxialSQL",
-                    "QueryHistory");
-            }
-
-            return folder;
-        }
-
-        public static bool SaveQueryHistoryTextFileFolder(string folderPath)
-        {
-            return SaveRegisterValue("QueryHistoryTextFileFolder", folderPath ?? string.Empty);
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "AxialSQL",
+                "QueryHistory");
         }
 
         public static List<DataTransferSavedConnection> GetDataTransferSavedConnections()

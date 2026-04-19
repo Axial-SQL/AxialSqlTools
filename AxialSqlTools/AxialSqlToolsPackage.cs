@@ -102,7 +102,6 @@ namespace AxialSqlTools
             public string WorkstationId;
         }
 
-        private const string QueryHistoryStorageModeDatabase = "Database";
         private const string QueryHistoryStorageModeTextFiles = "TextFiles";
 
         private static ConcurrentQueue<QueryHistoryEntry> _queryHistoryQueue = new ConcurrentQueue<QueryHistoryEntry>();
@@ -242,7 +241,7 @@ namespace AxialSqlTools
 
         private static Task PersistDataAsJsonLineAsync(QueryHistoryEntry data)
         {
-            string folderPath = SettingsManager.GetQueryHistoryTextFileFolderOrDefault();
+            string folderPath = SettingsManager.GetQueryHistoryTextFileFolder();
             Directory.CreateDirectory(folderPath);
 
             string fileName = $"query-history-{DateTime.UtcNow:yyyy-MM-dd}.jsonl";

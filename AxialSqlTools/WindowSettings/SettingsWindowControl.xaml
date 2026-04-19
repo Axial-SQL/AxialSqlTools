@@ -245,19 +245,10 @@
                         <ComboBoxItem Content="Text files (JSONL)" Tag="TextFiles"/>
                     </ComboBox>
 
-                    <StackPanel Grid.Row="4" Grid.Column="1"
-                                x:Name="QueryHistoryTextFilesPanel"
-                                Orientation="Horizontal"
-                                Margin="5">
-                        <TextBox x:Name="QueryHistoryTextFilesFolder"
-                                 Width="420"
-                                 VerticalContentAlignment="Center"/>
-                        <Button Content="Select folder..."
-                                Margin="8,0,0,0"
-                                Width="110"
-                                Click="QueryHistoryTextFilesFolderButton_Click"
-                                FontWeight="Bold"/>
-                    </StackPanel>
+                    <TextBlock Grid.Row="4" Grid.Column="1"
+                               x:Name="QueryHistoryTextFilesInfo"
+                               Margin="5"
+                               TextWrapping="Wrap" />
 
                     <Label Grid.Row="5" Grid.Column="0"
                Content="Target Table Name:"
