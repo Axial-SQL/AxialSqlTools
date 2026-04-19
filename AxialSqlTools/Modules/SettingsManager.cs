@@ -755,6 +755,47 @@ ORDER BY sd.[name];
             return SaveRegisterValue("QueryHistoryTableName", qhTableName);
         }
 
+        public static string GetQueryHistoryStorageMode()
+        {
+            string mode = GetRegisterValue("QueryHistoryStorageMode");
+            return string.IsNullOrWhiteSpace(mode) ? "Database" : mode;
+        }
+
+        public static bool SaveQueryHistoryStorageMode(string storageMode)
+        {
+            if (string.IsNullOrWhiteSpace(storageMode))
+            {
+                storageMode = "Database";
+            }
+
+            return SaveRegisterValue("QueryHistoryStorageMode", storageMode);
+        }
+
+        public static string GetQueryHistoryTextFileFolder()
+        {
+            return GetRegisterValue("QueryHistoryTextFileFolder");
+        }
+
+        public static string GetQueryHistoryTextFileFolderOrDefault()
+        {
+            string folder = GetQueryHistoryTextFileFolder();
+
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                folder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "AxialSQL",
+                    "QueryHistory");
+            }
+
+            return folder;
+        }
+
+        public static bool SaveQueryHistoryTextFileFolder(string folderPath)
+        {
+            return SaveRegisterValue("QueryHistoryTextFileFolder", folderPath ?? string.Empty);
+        }
+
         public static List<DataTransferSavedConnection> GetDataTransferSavedConnections()
         {
             try

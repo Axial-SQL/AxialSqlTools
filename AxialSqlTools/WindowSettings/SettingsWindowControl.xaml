@@ -233,6 +233,32 @@
                 Margin="5,0,0,5"
                 FontWeight="Bold"/>
 
+                    <Label Grid.Row="3" Grid.Column="0"
+               Content="Storage Type:"
+               Margin="5"/>
+                    <ComboBox Grid.Row="3" Grid.Column="1"
+                 x:Name="QueryHistoryStorageType"
+                 Margin="5"
+                 VerticalContentAlignment="Center"
+                 SelectionChanged="QueryHistoryStorageType_SelectionChanged">
+                        <ComboBoxItem Content="Database table" Tag="Database"/>
+                        <ComboBoxItem Content="Text files (JSONL)" Tag="TextFiles"/>
+                    </ComboBox>
+
+                    <StackPanel Grid.Row="4" Grid.Column="1"
+                                x:Name="QueryHistoryTextFilesPanel"
+                                Orientation="Horizontal"
+                                Margin="5">
+                        <TextBox x:Name="QueryHistoryTextFilesFolder"
+                                 Width="420"
+                                 VerticalContentAlignment="Center"/>
+                        <Button Content="Select folder..."
+                                Margin="8,0,0,0"
+                                Width="110"
+                                Click="QueryHistoryTextFilesFolderButton_Click"
+                                FontWeight="Bold"/>
+                    </StackPanel>
+
                     <Label Grid.Row="5" Grid.Column="0"
                Content="Target Table Name:"
                Margin="5"/>

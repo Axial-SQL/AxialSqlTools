@@ -21,6 +21,8 @@
     /// </summary>
     public partial class SettingsWindowControl : UserControl
     {
+        private const string QueryHistoryStorageModeDatabase = "Database";
+        private const string QueryHistoryStorageModeTextFiles = "TextFiles";
 
         private string _queryHistoryConnectionString;
         private readonly ToolWindowThemeController _themeController;
@@ -104,6 +106,9 @@ as select 1;
 
                 _queryHistoryConnectionString = SettingsManager.GetQueryHistoryConnectionString();
                 QueryHistoryTableName.Text = SettingsManager.GetQueryHistoryTableName();
+                QueryHistoryTextFilesFolder.Text = SettingsManager.GetQueryHistoryTextFileFolderOrDefault();
+                SelectQueryHistoryStorageType(SettingsManager.GetQueryHistoryStorageMode());
+                UpdateQueryHistoryStorageControls();
                 UpdateQueryHistoryConnectionDetails();
 
                 RefreshQueryHistoryCreateScript();
@@ -462,7 +467,9 @@ as select 1;
         private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)
         {
             SettingsManager.SaveQueryHistoryConnectionString(_queryHistoryConnectionString);
-            SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text); 
+            SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text);
+            SettingsManager.SaveQueryHistoryStorageMode(GetSelectedQueryHistoryStorageType());
+            SettingsManager.SaveQueryHistoryTextFileFolder(QueryHistoryTextFilesFolder.Text);
 
             SavedMessage();
 
@@ -517,11 +524,67 @@ as select 1;
         {
 
             _queryHistoryConnectionString = "";
+            QueryHistoryTextFilesFolder.Text = string.Empty;
 
             UpdateQueryHistoryConnectionDetails();
+            UpdateQueryHistoryStorageControls();
 
             RefreshQueryHistoryCreateScript();
 
+        }
+
+        private string GetSelectedQueryHistoryStorageType()
+        {
+            if (QueryHistoryStorageType.SelectedItem is ComboBoxItem item)
+            {
+                return item.Tag?.ToString() ?? QueryHistoryStorageModeDatabase;
+            }
+
+            return QueryHistoryStorageModeDatabase;
+        }
+
+        private void SelectQueryHistoryStorageType(string storageType)
+        {
+            string mode = string.IsNullOrWhiteSpace(storageType) ? QueryHistoryStorageModeDatabase : storageType;
+
+            foreach (var obj in QueryHistoryStorageType.Items)
+            {
+                if (obj is ComboBoxItem item && string.Equals(item.Tag?.ToString(), mode, StringComparison.OrdinalIgnoreCase))
+                {
+                    QueryHistoryStorageType.SelectedItem = item;
+                    return;
+                }
+            }
+
+            QueryHistoryStorageType.SelectedIndex = 0;
+        }
+
+        private void UpdateQueryHistoryStorageControls()
+        {
+            bool isDatabaseStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeDatabase, StringComparison.OrdinalIgnoreCase);
+            Label_QueryHistoryConnectionInfo.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            button_SelectDatabaseFromObjectExplorer.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            QueryHistoryTableName.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            QueryHistoryCreateScript.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
+            QueryHistoryTextFilesPanel.Visibility = isDatabaseStorage ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void QueryHistoryStorageType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateQueryHistoryStorageControls();
+        }
+
+        private void QueryHistoryTextFilesFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            {
+                dialog.Description = "Select query history folder";
+                dialog.ShowNewFolderButton = true;
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    QueryHistoryTextFilesFolder.Text = dialog.SelectedPath;
+                }
+            }
         }
 
         private void formatTSqlExample()
