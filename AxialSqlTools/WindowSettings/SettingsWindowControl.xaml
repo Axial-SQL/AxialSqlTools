@@ -235,6 +235,7 @@
                  Margin="5"
                  VerticalContentAlignment="Center"
                  SelectionChanged="QueryHistoryStorageType_SelectionChanged">
+                        <ComboBoxItem Content="Disabled" Tag="Disabled"/>
                         <ComboBoxItem Content="Database table" Tag="Database"/>
                         <ComboBoxItem Content="Text files (JSONL)" Tag="TextFiles"/>
                     </ComboBox>

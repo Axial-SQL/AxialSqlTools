@@ -24,6 +24,7 @@
     {
         private const string QueryHistoryStorageModeDatabase = "Database";
         private const string QueryHistoryStorageModeTextFiles = "TextFiles";
+        private const string QueryHistoryStorageModeDisabled = "Disabled";
 
         private string _queryHistoryConnectionString;
         private readonly ToolWindowThemeController _themeController;
@@ -206,8 +207,9 @@ as select 1;
 
         private bool IsQueryHistoryEnabled()
         {
+            bool isDisabledStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeDisabled, StringComparison.OrdinalIgnoreCase);
             bool isTextFilesStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeTextFiles, StringComparison.OrdinalIgnoreCase);
-            return isTextFilesStorage || !string.IsNullOrWhiteSpace(_queryHistoryConnectionString);
+            return !isDisabledStorage && (isTextFilesStorage || !string.IsNullOrWhiteSpace(_queryHistoryConnectionString));
         }
 
         private void UpdateQueryHistoryStatusIndicator()
@@ -542,14 +544,15 @@ as select 1;
 
         private void Button_DisableQueryHistory_Click(object sender, RoutedEventArgs e)
         {
-
             _queryHistoryConnectionString = "";
+            SelectQueryHistoryStorageType(QueryHistoryStorageModeDisabled);
+            SettingsManager.SaveQueryHistoryConnectionString(_queryHistoryConnectionString);
+            SettingsManager.SaveQueryHistoryStorageMode(QueryHistoryStorageModeDisabled);
 
             UpdateQueryHistoryConnectionDetails();
             UpdateQueryHistoryStorageControls();
-
             RefreshQueryHistoryCreateScript();
-
+            SavedMessage();
         }
 
         private string GetSelectedQueryHistoryStorageType()
@@ -580,6 +583,7 @@ as select 1;
 
         private void UpdateQueryHistoryStorageControls()
         {
+            bool isDisabledStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeDisabled, StringComparison.OrdinalIgnoreCase);
             bool isDatabaseStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeDatabase, StringComparison.OrdinalIgnoreCase);
             Label_QueryHistoryConnectionInfoTitle.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
             Label_QueryHistoryConnectionInfo.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
@@ -588,8 +592,8 @@ as select 1;
             QueryHistoryTableName.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
             Label_QueryHistoryTargetTableHint.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
             Group_QueryHistoryCreateScript.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
-            QueryHistoryTextFilesPanel.Visibility = isDatabaseStorage ? Visibility.Collapsed : Visibility.Visible;
-            Label_QueryHistoryTextFilesInfo.Visibility = isDatabaseStorage ? Visibility.Collapsed : Visibility.Visible;
+            QueryHistoryTextFilesPanel.Visibility = (!isDatabaseStorage && !isDisabledStorage) ? Visibility.Visible : Visibility.Collapsed;
+            Label_QueryHistoryTextFilesInfo.Visibility = (!isDatabaseStorage && !isDisabledStorage) ? Visibility.Visible : Visibility.Collapsed;
             UpdateQueryHistoryStatusIndicator();
         }
 
