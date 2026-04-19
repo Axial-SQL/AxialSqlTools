@@ -214,6 +214,18 @@
                 <Run Text="Wiki"/>
             </Hyperlink>
                     </TextBlock>
+                    <StackPanel Grid.Row="0" Grid.Column="1"
+                                Margin="10"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <TextBlock Text="Status:"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,6,0"/>
+                        <TextBlock x:Name="QueryHistoryStatusIndicator"
+                                   VerticalAlignment="Center"
+                                   FontWeight="Bold"
+                                   Text="Disabled"/>
+                    </StackPanel>
 
                     <Label Grid.Row="1" Grid.Column="0"
                Content="Storage Type:"
