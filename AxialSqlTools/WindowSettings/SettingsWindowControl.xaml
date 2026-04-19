@@ -214,7 +214,6 @@
                 <Run Text="Wiki"/>
             </Hyperlink>
                     </TextBlock>
-
                     <Label Grid.Row="1" Grid.Column="0"
                Content="Storage Type:"
                Margin="5"/>
@@ -223,6 +222,7 @@
                  Margin="5"
                  VerticalContentAlignment="Center"
                  SelectionChanged="QueryHistoryStorageType_SelectionChanged">
+                        <ComboBoxItem Content="Disabled" Tag="Disabled"/>
                         <ComboBoxItem Content="Database table" Tag="Database"/>
                         <ComboBoxItem Content="Text files (JSONL)" Tag="TextFiles"/>
                     </ComboBox>
@@ -300,15 +300,7 @@
                         </Grid>
                     </GroupBox>
 
-                    <Button Content="Disable Query History"
-                Grid.Row="9" Grid.Column="1"
-                x:Name="button_DisableQueryHistory"
-                Click="Button_DisableQueryHistory_Click"
-                Width="150" HorizontalAlignment="Left"
-                Margin="5"
-                FontWeight="Bold"/>
-
-                    <Button Grid.Row="10" Grid.Column="0"
+                    <Button Grid.Row="9" Grid.Column="0"
                 x:Name="button_SaveQueryHistory"
                 Click="Button_SaveQueryHistory_Click"
                 Width="80"

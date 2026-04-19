@@ -16,6 +16,7 @@ namespace AxialSqlTools
     public class QueryHistoryViewModel : INotifyPropertyChanged
     {
         private const string QueryHistoryStorageModeTextFiles = "TextFiles";
+        private const string QueryHistoryStorageModeDisabled = "Disabled";
         private class QueryHistoryFileEntry
         {
             public DateTime StartTime { get; set; }
@@ -155,7 +156,11 @@ namespace AxialSqlTools
             try
             {
                 string storageMode = SettingsManager.GetQueryHistoryStorageMode();
-                if (string.Equals(storageMode, QueryHistoryStorageModeTextFiles, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(storageMode, QueryHistoryStorageModeDisabled, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Query history is disabled; keep the list empty.
+                }
+                else if (string.Equals(storageMode, QueryHistoryStorageModeTextFiles, StringComparison.OrdinalIgnoreCase))
                 {
                     LoadFromTextFiles();
                 }

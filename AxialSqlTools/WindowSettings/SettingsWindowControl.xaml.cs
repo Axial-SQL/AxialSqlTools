@@ -24,6 +24,7 @@
     {
         private const string QueryHistoryStorageModeDatabase = "Database";
         private const string QueryHistoryStorageModeTextFiles = "TextFiles";
+        private const string QueryHistoryStorageModeDisabled = "Disabled";
 
         private string _queryHistoryConnectionString;
         private readonly ToolWindowThemeController _themeController;
@@ -200,6 +201,7 @@ as select 1;
                     Label_QueryHistoryConnectionInfo.Text = ex.Message;
                 }
             }
+
         }
 
         private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)
@@ -520,18 +522,6 @@ as select 1;
             }
         }
 
-        private void Button_DisableQueryHistory_Click(object sender, RoutedEventArgs e)
-        {
-
-            _queryHistoryConnectionString = "";
-
-            UpdateQueryHistoryConnectionDetails();
-            UpdateQueryHistoryStorageControls();
-
-            RefreshQueryHistoryCreateScript();
-
-        }
-
         private string GetSelectedQueryHistoryStorageType()
         {
             if (QueryHistoryStorageType.SelectedItem is ComboBoxItem item)
@@ -560,6 +550,7 @@ as select 1;
 
         private void UpdateQueryHistoryStorageControls()
         {
+            bool isDisabledStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeDisabled, StringComparison.OrdinalIgnoreCase);
             bool isDatabaseStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeDatabase, StringComparison.OrdinalIgnoreCase);
             Label_QueryHistoryConnectionInfoTitle.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
             Label_QueryHistoryConnectionInfo.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
@@ -568,8 +559,8 @@ as select 1;
             QueryHistoryTableName.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
             Label_QueryHistoryTargetTableHint.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
             Group_QueryHistoryCreateScript.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
-            QueryHistoryTextFilesPanel.Visibility = isDatabaseStorage ? Visibility.Collapsed : Visibility.Visible;
-            Label_QueryHistoryTextFilesInfo.Visibility = isDatabaseStorage ? Visibility.Collapsed : Visibility.Visible;
+            QueryHistoryTextFilesPanel.Visibility = (!isDatabaseStorage && !isDisabledStorage) ? Visibility.Visible : Visibility.Collapsed;
+            Label_QueryHistoryTextFilesInfo.Visibility = (!isDatabaseStorage && !isDisabledStorage) ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void QueryHistoryStorageType_SelectionChanged(object sender, SelectionChangedEventArgs e)

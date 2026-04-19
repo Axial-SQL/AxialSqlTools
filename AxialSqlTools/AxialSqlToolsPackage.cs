@@ -103,6 +103,7 @@ namespace AxialSqlTools
         }
 
         private const string QueryHistoryStorageModeTextFiles = "TextFiles";
+        private const string QueryHistoryStorageModeDisabled = "Disabled";
 
         private static ConcurrentQueue<QueryHistoryEntry> _queryHistoryQueue = new ConcurrentQueue<QueryHistoryEntry>();
         public static Logger _logger;
@@ -167,6 +168,11 @@ namespace AxialSqlTools
             try
             {
                 string storageMode = SettingsManager.GetQueryHistoryStorageMode();
+                if (string.Equals(storageMode, QueryHistoryStorageModeDisabled, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
                 if (string.Equals(storageMode, QueryHistoryStorageModeTextFiles, StringComparison.OrdinalIgnoreCase))
                 {
                     await PersistDataAsJsonLineAsync(data);
