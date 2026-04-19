@@ -202,26 +202,6 @@ as select 1;
                 }
             }
 
-            UpdateQueryHistoryStatusIndicator();
-        }
-
-        private bool IsQueryHistoryEnabled()
-        {
-            bool isDisabledStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeDisabled, StringComparison.OrdinalIgnoreCase);
-            bool isTextFilesStorage = string.Equals(GetSelectedQueryHistoryStorageType(), QueryHistoryStorageModeTextFiles, StringComparison.OrdinalIgnoreCase);
-            return !isDisabledStorage && (isTextFilesStorage || !string.IsNullOrWhiteSpace(_queryHistoryConnectionString));
-        }
-
-        private void UpdateQueryHistoryStatusIndicator()
-        {
-            if (QueryHistoryStatusIndicator == null)
-            {
-                return;
-            }
-
-            bool isEnabled = IsQueryHistoryEnabled();
-            QueryHistoryStatusIndicator.Text = isEnabled ? "Enabled" : "Disabled";
-            QueryHistoryStatusIndicator.Foreground = GetThemedStatusBrush(isEnabled);
         }
 
         private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)
@@ -581,7 +561,6 @@ as select 1;
             Group_QueryHistoryCreateScript.Visibility = isDatabaseStorage ? Visibility.Visible : Visibility.Collapsed;
             QueryHistoryTextFilesPanel.Visibility = (!isDatabaseStorage && !isDisabledStorage) ? Visibility.Visible : Visibility.Collapsed;
             Label_QueryHistoryTextFilesInfo.Visibility = (!isDatabaseStorage && !isDisabledStorage) ? Visibility.Visible : Visibility.Collapsed;
-            UpdateQueryHistoryStatusIndicator();
         }
 
         private void QueryHistoryStorageType_SelectionChanged(object sender, SelectionChangedEventArgs e)
