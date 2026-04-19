@@ -542,19 +542,6 @@ as select 1;
             }
         }
 
-        private void Button_DisableQueryHistory_Click(object sender, RoutedEventArgs e)
-        {
-            _queryHistoryConnectionString = "";
-            SelectQueryHistoryStorageType(QueryHistoryStorageModeDisabled);
-            SettingsManager.SaveQueryHistoryConnectionString(_queryHistoryConnectionString);
-            SettingsManager.SaveQueryHistoryStorageMode(QueryHistoryStorageModeDisabled);
-
-            UpdateQueryHistoryConnectionDetails();
-            UpdateQueryHistoryStorageControls();
-            RefreshQueryHistoryCreateScript();
-            SavedMessage();
-        }
-
         private string GetSelectedQueryHistoryStorageType()
         {
             if (QueryHistoryStorageType.SelectedItem is ComboBoxItem item)

@@ -313,15 +313,7 @@
                         </Grid>
                     </GroupBox>
 
-                    <Button Content="Disable Query History"
-                Grid.Row="9" Grid.Column="1"
-                x:Name="button_DisableQueryHistory"
-                Click="Button_DisableQueryHistory_Click"
-                Width="150" HorizontalAlignment="Left"
-                Margin="5"
-                FontWeight="Bold"/>
-
-                    <Button Grid.Row="10" Grid.Column="0"
+                    <Button Grid.Row="9" Grid.Column="0"
                 x:Name="button_SaveQueryHistory"
                 Click="Button_SaveQueryHistory_Click"
                 Width="80"
