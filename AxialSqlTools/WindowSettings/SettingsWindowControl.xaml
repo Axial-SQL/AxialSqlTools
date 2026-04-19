@@ -216,27 +216,9 @@
                     </TextBlock>
 
                     <Label Grid.Row="1" Grid.Column="0"
-               Content="Connection Info:"
-               Margin="5"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1"
-                   x:Name="Label_QueryHistoryConnectionInfo"
-                   Text="&lt; not configured &gt;"
-                   VerticalAlignment="Center"
-                   Margin="5"/>
-
-                    <Button Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                Content="Use connection from Object Explorer"
-                x:Name="button_SelectDatabaseFromObjectExplorer"
-                Click="Button_SelectDatabaseFromObjectExplorer_Click"
-                HorizontalAlignment="Left"
-                Width="240"
-                Margin="5,0,0,5"
-                FontWeight="Bold"/>
-
-                    <Label Grid.Row="3" Grid.Column="0"
                Content="Storage Type:"
                Margin="5"/>
-                    <ComboBox Grid.Row="3" Grid.Column="1"
+                    <ComboBox Grid.Row="1" Grid.Column="1"
                  x:Name="QueryHistoryStorageType"
                  Margin="5"
                  VerticalContentAlignment="Center"
@@ -245,12 +227,45 @@
                         <ComboBoxItem Content="Text files (JSONL)" Tag="TextFiles"/>
                     </ComboBox>
 
-                    <TextBlock Grid.Row="4" Grid.Column="1"
-                               x:Name="QueryHistoryTextFilesInfo"
-                               Margin="5"
+                    <Label Grid.Row="2" Grid.Column="0"
+               x:Name="Label_QueryHistoryTextFilesInfo"
+               Content="Text Files:"
+               Margin="5"/>
+                    <StackPanel Grid.Row="2" Grid.Column="1"
+                                x:Name="QueryHistoryTextFilesPanel"
+                                Margin="5"
+                                Orientation="Horizontal">
+                        <TextBlock x:Name="QueryHistoryTextFilesInfo"
+                               VerticalAlignment="Center"
                                TextWrapping="Wrap" />
+                        <Button x:Name="Button_OpenQueryHistoryFolder"
+                                Content="Open folder"
+                                Margin="10,0,0,0"
+                                Click="Button_OpenQueryHistoryFolder_Click"
+                                FontWeight="Bold" />
+                    </StackPanel>
+
+                    <Label Grid.Row="3" Grid.Column="0"
+               x:Name="Label_QueryHistoryConnectionInfoTitle"
+               Content="Connection Info:"
+               Margin="5"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1"
+                   x:Name="Label_QueryHistoryConnectionInfo"
+                   Text="&lt; not configured &gt;"
+                   VerticalAlignment="Center"
+                   Margin="5"/>
+
+                    <Button Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
+                Content="Use connection from Object Explorer"
+                x:Name="button_SelectDatabaseFromObjectExplorer"
+                Click="Button_SelectDatabaseFromObjectExplorer_Click"
+                HorizontalAlignment="Left"
+                Width="240"
+                Margin="5,0,0,5"
+                FontWeight="Bold"/>
 
                     <Label Grid.Row="5" Grid.Column="0"
+               x:Name="Label_QueryHistoryTargetTableName"
                Content="Target Table Name:"
                Margin="5"/>
                     <TextBox Grid.Row="5" Grid.Column="1"
@@ -261,11 +276,13 @@
                  TextChanged="QueryHistoryTableName_TextChanged"/>
 
                     <Label Grid.Row="6" Grid.Column="1"
+               x:Name="Label_QueryHistoryTargetTableHint"
                Content="Leave blank to use the default [dbo].[QueryHistory] table."
                Margin="0,0,0,5"/>
 
                     <!-- New: creation script viewer -->
                     <GroupBox Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2"
+                  x:Name="Group_QueryHistoryCreateScript"
                   Header="Creation script (for information only)"
                   Margin="5">
                         <Grid>
