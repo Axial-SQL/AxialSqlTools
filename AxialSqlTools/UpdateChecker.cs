@@ -26,13 +26,14 @@ namespace AxialSqlTools
         private const string StagedZipFilePattern = "AxialSqlTools-*.zip";
         private const string ExpectedVsixName = "AxialSqlTools.vsix";
         private const string Sha256DigestPrefix = "sha256:";
+        private static readonly TimeSpan DeferredUpdateStageWaitTimeout = TimeSpan.FromSeconds(10);
 #if DEBUG
         private const string ForceUpdateAvailableEnvironmentVariable = "AXIALSQLTOOLS_FORCE_UPDATE_AVAILABLE";
 #endif
 
         private static int pendingStartupCheck;
         private static readonly object diagnosticsLock = new object();
-        private static readonly object stagedVsixLock = new object();
+        private static readonly object updateStateLock = new object();
 
         private static string lastUpdateResult = "No update check has run yet.";
         private static string stagedVsixPath;
@@ -40,6 +41,8 @@ namespace AxialSqlTools
         private static bool pendingUpdateOnClose;
         private static bool stageDownloadInProgress;
         private static bool stageDownloadFailed;
+        private static Task stageDownloadTask = Task.CompletedTask;
+        private static Task cleanupDownloadedVsixFilesTask = Task.CompletedTask;
         private static UpdateInfoBar activeInfoBar;
 
         internal static event Action LastUpdateResultChanged;
@@ -78,7 +81,7 @@ namespace AxialSqlTools
                 return;
             }
 
-            CleanupDownloadedVsixFiles();
+            Task cleanupTask = ScheduleCleanupDownloadedVsixFiles();
 
             if (!enableUpdateChecks)
             {
@@ -96,6 +99,7 @@ namespace AxialSqlTools
                 try
                 {
                     var token = package.DisposalToken;
+                    await cleanupTask;
                     await Task.Delay(TimeSpan.FromMilliseconds(900), token);
 
                     if (Interlocked.CompareExchange(ref pendingStartupCheck, 0, 1) != 1)
@@ -153,25 +157,61 @@ namespace AxialSqlTools
 
         internal static void LaunchDeferredUpdateOnClose()
         {
-            if (!pendingUpdateOnClose)
+            Task downloadTask;
+            lock (updateStateLock)
             {
-                return;
+                if (!pendingUpdateOnClose)
+                {
+                    return;
+                }
+
+                downloadTask = stageDownloadInProgress ? stageDownloadTask : null;
             }
 
-            pendingUpdateOnClose = false;
+            if (downloadTask != null && !downloadTask.IsCompleted)
+            {
+                Log($"Deferred update on close: waiting up to {DeferredUpdateStageWaitTimeout.TotalSeconds:0} seconds for staging to finish.");
+                try
+                {
+                    if (!downloadTask.Wait(DeferredUpdateStageWaitTimeout))
+                    {
+                        lock (updateStateLock)
+                        {
+                            pendingUpdateOnClose = false;
+                        }
 
-            if (string.IsNullOrWhiteSpace(stagedVsixPath) || !File.Exists(stagedVsixPath))
+                        Log("Deferred update on close: staging did not finish before timeout. Skipping.");
+                        SetLastUpdateResult("Deferred update skipped because the VSIX download did not finish before SSMS closed.");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"Deferred update on close: staging wait failed: {ex.Message}");
+                }
+            }
+
+            string vsixPath;
+            GitHubRelease release;
+            lock (updateStateLock)
+            {
+                pendingUpdateOnClose = false;
+                vsixPath = stagedVsixPath;
+                release = stagedRelease;
+            }
+
+            if (string.IsNullOrWhiteSpace(vsixPath) || !File.Exists(vsixPath))
             {
                 Log("Deferred update on close: staged VSIX not found. Skipping.");
-                SetLastUpdateResult("Deferred update skipped because the verified VSIX was not ready.");
+                SetLastUpdateResult("Deferred update skipped because the staged VSIX was not ready.");
                 return;
             }
 
             Log("Deferred update on close: launching VSIXInstaller.");
-            if (!LaunchVsixInstaller(stagedVsixPath))
+            if (!LaunchVsixInstaller(vsixPath))
             {
                 SetLastUpdateResult("Could not launch VSIXInstaller automatically; opened release page instead.");
-                OpenUrl(stagedRelease?.HtmlUrl ?? ReleasePageUrl);
+                OpenUrl(release?.HtmlUrl ?? ReleasePageUrl);
             }
         }
 
@@ -364,31 +404,43 @@ namespace AxialSqlTools
                 return;
             }
 
-            pendingUpdateOnClose = true;
             activeInfoBar = null;
+            string vsixPath;
+            bool inProgress;
+            bool failed;
+            GitHubRelease release;
+            lock (updateStateLock)
+            {
+                pendingUpdateOnClose = true;
+                vsixPath = stagedVsixPath;
+                inProgress = stageDownloadInProgress;
+                failed = stageDownloadFailed;
+                release = stagedRelease;
+            }
+
             Log("Deferred update on close enabled.");
 
-            if (!string.IsNullOrWhiteSpace(stagedVsixPath) && File.Exists(stagedVsixPath))
+            if (!string.IsNullOrWhiteSpace(vsixPath) && File.Exists(vsixPath))
             {
                 SetLastUpdateResult("Update will install when SSMS closes.");
                 return;
             }
 
-            if (stageDownloadInProgress)
+            if (inProgress)
             {
                 SetLastUpdateResult("Update will install when SSMS closes after the download finishes.");
                 return;
             }
 
-            if (stageDownloadFailed)
+            if (failed)
             {
                 SetLastUpdateResult("Update download failed; opened release page.");
-                OpenUrl(stagedRelease?.HtmlUrl ?? ReleasePageUrl);
+                OpenUrl(release?.HtmlUrl ?? ReleasePageUrl);
                 return;
             }
 
             SetLastUpdateResult("Update package is not ready; opened release page.");
-            OpenUrl(stagedRelease?.HtmlUrl ?? ReleasePageUrl);
+            OpenUrl(release?.HtmlUrl ?? ReleasePageUrl);
         }
 
         private static void ShowUpToDatePrompt(AsyncPackage package, Version currentVersion)
@@ -417,7 +469,11 @@ namespace AxialSqlTools
                 return;
             }
 
-            stagedRelease = release;
+            lock (updateStateLock)
+            {
+                stagedRelease = release;
+                stageDownloadFailed = false;
+            }
 
             GitHubAsset asset = GetInstallAsset(release);
             if (asset == null || string.IsNullOrWhiteSpace(asset.DownloadUrl))
@@ -427,25 +483,39 @@ namespace AxialSqlTools
                 return;
             }
 
-            stageDownloadInProgress = true;
-            stageDownloadFailed = false;
+            Task cleanupTask = GetCleanupDownloadedVsixFilesTask();
+            var completion = new TaskCompletionSource<bool>();
+            lock (updateStateLock)
+            {
+                stageDownloadInProgress = true;
+                stageDownloadTask = completion.Task;
+            }
 
             _ = Task.Run(async () =>
             {
                 string downloadedPath = null;
                 string extractedVsixPath = null;
                 bool staged = false;
+                bool verified = false;
 
                 try
                 {
                     SetLastUpdateResult("Downloading update package in background.");
 
-                    string expectedSha256 = GetAssetSha256(asset);
-                    if (string.IsNullOrWhiteSpace(expectedSha256))
+                    await cleanupTask;
+
+                    bool hasDigest;
+                    string expectedSha256 = GetAssetSha256(asset, out hasDigest);
+                    if (hasDigest && string.IsNullOrWhiteSpace(expectedSha256))
                     {
-                        Log("Stage download aborted: GitHub release digest missing or invalid.");
-                        MarkStageDownloadFailed("Update download failed: missing or invalid GitHub release digest.");
+                        Log("Stage download aborted: GitHub release digest is invalid.");
+                        MarkStageDownloadFailed("Update download failed: invalid GitHub release digest.");
                         return;
+                    }
+
+                    if (!hasDigest)
+                    {
+                        Log("Stage download: GitHub release digest was not provided; download will not be checksum verified.");
                     }
 
                     bool isZip = asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
@@ -453,12 +523,17 @@ namespace AxialSqlTools
                     downloadedPath = Path.Combine(Path.GetTempPath(), $"AxialSqlTools-{Guid.NewGuid():N}{downloadExtension}");
                     await DownloadFileAsync(asset.DownloadUrl, downloadedPath, CancellationToken.None);
 
-                    string actualSha256 = ComputeSha256Hex(downloadedPath);
-                    if (!string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrWhiteSpace(expectedSha256))
                     {
-                        Log($"Stage download aborted: checksum mismatch. Expected={expectedSha256}, Actual={actualSha256}");
-                        MarkStageDownloadFailed("Update download failed: checksum verification failed.");
-                        return;
+                        string actualSha256 = ComputeSha256Hex(downloadedPath);
+                        if (!string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Log($"Stage download aborted: checksum mismatch. Expected={expectedSha256}, Actual={actualSha256}");
+                            MarkStageDownloadFailed("Update download failed: checksum verification failed.");
+                            return;
+                        }
+
+                        verified = true;
                     }
 
                     extractedVsixPath = isZip
@@ -471,13 +546,23 @@ namespace AxialSqlTools
                     staged = true;
                     Log($"Update package staged at: {extractedVsixPath}");
 
-                    if (pendingUpdateOnClose)
+                    bool installPending;
+                    lock (updateStateLock)
                     {
-                        SetLastUpdateResult("Update package downloaded and verified. It will install when SSMS closes.");
+                        installPending = pendingUpdateOnClose;
+                    }
+
+                    string statusSuffix = verified
+                        ? "downloaded and verified"
+                        : "downloaded without checksum verification";
+
+                    if (installPending)
+                    {
+                        SetLastUpdateResult($"Update package {statusSuffix}. It will install when SSMS closes.");
                     }
                     else
                     {
-                        SetLastUpdateResult("Update package downloaded and verified. Ready to install on close.");
+                        SetLastUpdateResult($"Update package {statusSuffix}. Ready to install on close.");
                     }
                 }
                 catch (Exception ex)
@@ -487,7 +572,10 @@ namespace AxialSqlTools
                 }
                 finally
                 {
-                    stageDownloadInProgress = false;
+                    lock (updateStateLock)
+                    {
+                        stageDownloadInProgress = false;
+                    }
 
                     if (!staged && !string.IsNullOrWhiteSpace(extractedVsixPath))
                     {
@@ -498,18 +586,28 @@ namespace AxialSqlTools
                     {
                         TryDeleteFile(downloadedPath);
                     }
+
+                    completion.TrySetResult(true);
                 }
             });
         }
 
         private static void MarkStageDownloadFailed(string message)
         {
-            stageDownloadFailed = true;
+            bool shouldOpenReleasePage;
+            GitHubRelease release;
+            lock (updateStateLock)
+            {
+                stageDownloadFailed = true;
+                shouldOpenReleasePage = pendingUpdateOnClose;
+                release = stagedRelease;
+            }
+
             SetLastUpdateResult(message);
 
-            if (pendingUpdateOnClose)
+            if (shouldOpenReleasePage)
             {
-                OpenUrl(stagedRelease?.HtmlUrl ?? ReleasePageUrl);
+                OpenUrl(release?.HtmlUrl ?? ReleasePageUrl);
             }
         }
 
@@ -585,14 +683,16 @@ namespace AxialSqlTools
             return tempVsixPath;
         }
 
-        private static string GetAssetSha256(GitHubAsset asset)
+        private static string GetAssetSha256(GitHubAsset asset, out bool hasDigest)
         {
             string digest = asset?.Digest;
             if (string.IsNullOrWhiteSpace(digest))
             {
+                hasDigest = false;
                 return null;
             }
 
+            hasDigest = true;
             string trimmed = digest.Trim();
             if (!trimmed.StartsWith(Sha256DigestPrefix, StringComparison.OrdinalIgnoreCase))
             {
@@ -608,37 +708,64 @@ namespace AxialSqlTools
             return null;
         }
 
+        private static Task ScheduleCleanupDownloadedVsixFiles()
+        {
+            Task cleanupTask = Task.Run((Action)CleanupDownloadedVsixFiles);
+            lock (updateStateLock)
+            {
+                cleanupDownloadedVsixFilesTask = cleanupTask;
+            }
+
+            return cleanupTask;
+        }
+
+        private static Task GetCleanupDownloadedVsixFilesTask()
+        {
+            lock (updateStateLock)
+            {
+                return cleanupDownloadedVsixFilesTask;
+            }
+        }
+
         private static void CleanupDownloadedVsixFiles()
         {
-            lock (stagedVsixLock)
+            string activePath;
+            lock (updateStateLock)
             {
-                string activePath = stagedVsixPath;
+                if (stageDownloadInProgress)
+                {
+                    Log("Cleanup staged update files skipped because a download is in progress.");
+                    return;
+                }
+
+                activePath = stagedVsixPath;
                 stagedVsixPath = null;
                 pendingUpdateOnClose = false;
                 stageDownloadFailed = false;
+                stagedRelease = null;
+            }
 
-                try
+            try
+            {
+                string tempDirectory = Path.GetTempPath();
+                foreach (string filePath in Directory.GetFiles(tempDirectory, StagedVsixFilePattern))
                 {
-                    string tempDirectory = Path.GetTempPath();
-                    foreach (string filePath in Directory.GetFiles(tempDirectory, StagedVsixFilePattern))
-                    {
-                        TryDeleteFile(filePath);
-                    }
-
-                    foreach (string filePath in Directory.GetFiles(tempDirectory, StagedZipFilePattern))
-                    {
-                        TryDeleteFile(filePath);
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(activePath) && File.Exists(activePath))
-                    {
-                        TryDeleteFile(activePath);
-                    }
+                    TryDeleteFile(filePath);
                 }
-                catch (Exception ex)
+
+                foreach (string filePath in Directory.GetFiles(tempDirectory, StagedZipFilePattern))
                 {
-                    Log($"Cleanup staged update files failed: {ex.Message}");
+                    TryDeleteFile(filePath);
                 }
+
+                if (!string.IsNullOrWhiteSpace(activePath) && File.Exists(activePath))
+                {
+                    TryDeleteFile(activePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Cleanup staged update files failed: {ex.Message}");
             }
         }
 
@@ -649,7 +776,7 @@ namespace AxialSqlTools
                 return;
             }
 
-            lock (stagedVsixLock)
+            lock (updateStateLock)
             {
                 string previousPath = stagedVsixPath;
                 stagedVsixPath = tempPath;

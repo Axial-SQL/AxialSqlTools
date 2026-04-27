@@ -55,7 +55,6 @@ as select 1;
             this.InitializeComponent();
 
             _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
-            LoadSavedSettings();
 
             this.Loaded += UserControl_Loaded;
             this.Unloaded += UserControl_Unloaded;
@@ -431,7 +430,6 @@ as select 1;
 
         private void button_CheckUpdates_Click(object sender, RoutedEventArgs e)
         {
-            SettingsManager.SaveEnableUpdateChecks(EnableUpdateChecks.IsChecked.GetValueOrDefault(true));
             UpdateChecker.CheckNow(AxialSqlToolsPackage.PackageInstance, ignoreSettings: true);
             UpdateUpdateStatus();
         }

@@ -93,17 +93,14 @@ namespace AxialSqlTools
 
             try
             {
-                if (currentElement != null)
-                {
-                    currentElement.Unadvise(adviseCookie);
-                    currentElement.Close();
-                    currentElement = null;
-                }
+                IVsInfoBarUIElement element = DetachCurrentElement();
+                element?.Close();
             }
             catch (Exception ex)
             {
                 UpdateChecker.Log($"UpdateInfoBar: Dismiss failed: {ex.Message}");
                 currentElement = null;
+                adviseCookie = 0;
             }
         }
 
@@ -131,18 +128,30 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            try
+            DetachCurrentElement();
+        }
+
+        private IVsInfoBarUIElement DetachCurrentElement()
+        {
+            IVsInfoBarUIElement element = currentElement;
+            uint cookie = adviseCookie;
+
+            currentElement = null;
+            adviseCookie = 0;
+
+            if (element != null && cookie != 0)
             {
-                if (currentElement != null)
+                try
                 {
-                    currentElement.Unadvise(adviseCookie);
-                    currentElement = null;
+                    element.Unadvise(cookie);
+                }
+                catch (Exception ex)
+                {
+                    UpdateChecker.Log($"UpdateInfoBar: Unadvise failed: {ex.Message}");
                 }
             }
-            catch
-            {
-                currentElement = null;
-            }
+
+            return element;
         }
 
         private void OpenReleaseNotes()
