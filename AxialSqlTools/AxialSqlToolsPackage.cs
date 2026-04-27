@@ -10,8 +10,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.IO;
-using System.Net.Http.Headers;
-using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -318,7 +316,6 @@ namespace AxialSqlTools
                 await CopyQueryAsHtmlCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await DataImportWindowCommand.InitializeAsync(this);
-                await CheckAddinVersionCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
                 //await AskChatGptCommand.InitializeAsync(this);
                 await SqlServerBuildsWindowCommand.InitializeAsync(this);
@@ -326,6 +323,8 @@ namespace AxialSqlTools
                 await DatabaseScripterToolWindowCommand.InitializeAsync(this);
                 await SchemaCompareWindowCommand.InitializeAsync(this);
                 await QuickSearchWindowCommand.InitializeAsync(this);
+
+                UpdateChecker.ScheduleCheck(this, SettingsManager.GetEnableUpdateChecks());
 
             }
             catch (Exception ex)
@@ -375,39 +374,6 @@ namespace AxialSqlTools
                 //---------------------------------------------------------------------------
                 RefreshTemplatesList();
 
-                //---------------------------------------------------------------------------
-                // check for a new version
-                MenuCommand Cmd = m_plugin.MenuCommandService.FindCommand(new CommandID(CheckAddinVersionCommand.CommandSet, CheckAddinVersionCommand.CommandId));
-
-                try
-                {
-                    Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
-                    string currentVersionString = currentVersion.ToString();
-                    bool isNewVersionAvailable = false;
-
-                    using (var client = new HttpClient())
-                    {
-                        // GitHub API versioning
-                        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Axial-SQL-Tools", "Latest"));
-                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
-
-                        // Request the latest release from GitHub API
-                        var url = $"https://api.github.com/repos/Axial-SQL/AxialSqlTools/releases/latest";
-                        var response = await client.GetStringAsync(url);
-
-                        dynamic latestRelease = JsonConvert.DeserializeObject(response);
-                        var latestVersion = (string)latestRelease.tag_name;
-
-                        isNewVersionAvailable = (Version.Parse(latestVersion) > Version.Parse(currentVersionString));
-
-                    }
-
-                    Cmd.Visible = isNewVersionAvailable;
-
-                }
-                catch { Cmd.Visible = false; }
-
-
             }
             catch (Exception ex)
             {
@@ -441,6 +407,16 @@ namespace AxialSqlTools
             // needed for the OxyPlot library
             AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
             
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                UpdateChecker.LaunchDeferredUpdateOnClose();
+            }
+
+            base.Dispose(disposing);
         }
 
         #endregion

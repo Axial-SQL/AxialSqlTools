@@ -324,17 +324,6 @@
         </Strings>
       </Button>
 
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialCheckNewVersion" priority="0x3000" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
-        <Icon guid="guidAttention" id="bmpAttention" />
-        <CommandFlag>DefaultInvisible</CommandFlag>
-        <CommandFlag>DynamicVisibility</CommandFlag>
-        <CommandFlag>AllowVisibilityChangeOnToolBar</CommandFlag>
-        <Strings>
-          <ButtonText>New Version Available!</ButtonText>
-        </Strings>
-      </Button>   
-
     </Buttons>
 
     <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
@@ -352,7 +341,6 @@
       <Bitmap guid="guidExportData" href="Resources\export-data.png" usedList="bmpExportData" />
       <Bitmap guid="guidDataTransfer" href="Resources\data-source-target.png" usedList="bmpDataTransfer" />
       <Bitmap guid="guidServerHealth" href="Resources\server-health.png" usedList="bmpServerHealth" />
-      <Bitmap guid="guidAttention" href="Resources\attention.png" usedList="bmpAttention" />
       <Bitmap guid="guidExportGridToEmail" href="Resources\grid-to-email.png" usedList="bmpExportGridToEmail" />
       <Bitmap guid="guidExportGridToTempTable" href="Resources\grid-to-temp-table.png" usedList="bmpExportGridToTempTable" />
       <Bitmap guid="guidQueryHistory" href="Resources\query-history.png" usedList="bmpQueryHistory" />
@@ -391,7 +379,6 @@
       <IDSymbol name="AxialCopyQueryAsHtmlButton" value="4160" />
       <IDSymbol name="AxialSettingsButton" value="4130" />
       <IDSymbol name="AxialAboutButton" value="4129" />
-      <IDSymbol name="AxialCheckNewVersion" value="4041" />
       
       <IDSymbol name="AxialQueryTemplatesSubMenu" value="0x1100" />
       <IDSymbol name="AxialQueryTemplatesSubMenuGroup" value="0x1101" />
@@ -458,9 +445,6 @@
     </GuidSymbol>
     <GuidSymbol name="guidServerHealth" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c8}">
       <IDSymbol name="bmpServerHealth" value="1" />
-    </GuidSymbol>
-    <GuidSymbol name="guidAttention" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c9}">
-      <IDSymbol name="bmpAttention" value="1" />
     </GuidSymbol>
     <GuidSymbol name="guidExportGridToEmail" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d0}">
       <IDSymbol name="bmpExportGridToEmail" value="1" />
