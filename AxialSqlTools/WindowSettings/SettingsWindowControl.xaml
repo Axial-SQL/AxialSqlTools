@@ -690,6 +690,52 @@
                 </Grid>
             </TabItem>
 
+            <TabItem Header="Updates">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <CheckBox Grid.Row="0"
+                              x:Name="EnableUpdateChecks"
+                              Content="Check for Axial SQL Tools updates on startup"
+                              Margin="5"/>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
+                        <Button x:Name="button_SaveUpdateSettings"
+                                Click="button_SaveUpdateSettings_Click"
+                                Width="80"
+                                Height="24"
+                                Margin="0,0,10,0"
+                                FontWeight="Bold">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                                    <Path Fill="{DynamicResource AxialThemeAccentBrush}" Data="M1,1 L11,1 L13,3 L13,13 L1,13 Z M3,2 L3,5 L9,5 L9,2 Z M4,8 L10,8 L10,12 L4,12 Z"/>
+                                </Viewbox>
+                                <TextBlock Text="Save" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="button_CheckUpdates"
+                                Click="button_CheckUpdates_Click"
+                                Width="130"
+                                Height="24"
+                                FontWeight="Bold">
+                            <TextBlock Text="Check for updates" VerticalAlignment="Center"/>
+                        </Button>
+                    </StackPanel>
+
+                    <GroupBox Grid.Row="2" Header="Update status" Margin="5">
+                        <TextBlock x:Name="UpdateCheckStatus"
+                                   TextWrapping="Wrap"
+                                   Margin="5"/>
+                    </GroupBox>
+                </Grid>
+            </TabItem>
+
             <TabItem Header="GitHub Integration" Visibility="Hidden">
                 <Grid>
                     <Grid.RowDefinitions>

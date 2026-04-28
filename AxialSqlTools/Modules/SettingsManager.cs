@@ -572,6 +572,22 @@ ORDER BY sd.[name];
             return SaveRegisterValue("ScriptTemplatesFolder", folder);
         }
 
+        public static bool GetEnableUpdateChecks()
+        {
+            string value = GetRegisterValue("EnableUpdateChecks");
+            if (bool.TryParse(value, out bool enabled))
+            {
+                return enabled;
+            }
+
+            return true;
+        }
+
+        public static bool SaveEnableUpdateChecks(bool enableUpdateChecks)
+        {
+            return SaveRegisterValue("EnableUpdateChecks", enableUpdateChecks.ToString());
+        }
+
         public static List<FrequentlyUsedEmail> GetFrequentlyUsedEmails()
         {
 

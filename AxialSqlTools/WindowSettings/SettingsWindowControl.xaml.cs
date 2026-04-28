@@ -28,6 +28,7 @@
 
         private string _queryHistoryConnectionString;
         private readonly ToolWindowThemeController _themeController;
+        private bool updateResultSubscribed;
 
         private string tsqlFormatExample = @"while (1=0) 
 begin 
@@ -54,9 +55,9 @@ as select 1;
             this.InitializeComponent();
 
             _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
-            LoadSavedSettings();
 
             this.Loaded += UserControl_Loaded;
+            this.Unloaded += UserControl_Unloaded;
 
             SourceQueryPreview.Text = tsqlFormatExample;
 
@@ -66,7 +67,35 @@ as select 1;
 
         private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
         {
+            SubscribeToUpdateResultChanges();
             LoadSavedSettings();
+        }
+
+        private void UserControl_Unloaded(object sender, System.Windows.RoutedEventArgs e)
+        {
+            UnsubscribeFromUpdateResultChanges();
+        }
+
+        private void SubscribeToUpdateResultChanges()
+        {
+            if (updateResultSubscribed)
+            {
+                return;
+            }
+
+            UpdateChecker.LastUpdateResultChanged += UpdateChecker_LastUpdateResultChanged;
+            updateResultSubscribed = true;
+        }
+
+        private void UnsubscribeFromUpdateResultChanges()
+        {
+            if (!updateResultSubscribed)
+            {
+                return;
+            }
+
+            UpdateChecker.LastUpdateResultChanged -= UpdateChecker_LastUpdateResultChanged;
+            updateResultSubscribed = false;
         }
 
         private void ApplyThemeBrushResources()
@@ -156,6 +185,9 @@ as select 1;
                 GoogleSheetsClientId.Text = googleSettings.clientId;
                 GoogleSheetsClientSecret.Password = googleSettings.clientSecret;
                 UpdateGoogleSheetsStatus(googleSettings.refreshToken);
+
+                EnableUpdateChecks.IsChecked = SettingsManager.GetEnableUpdateChecks();
+                UpdateUpdateStatus();
 
             }
             catch (Exception ex)
@@ -388,6 +420,37 @@ as select 1;
             SettingsManager.SaveGoogleSheetsSettings(settings);
             UpdateGoogleSheetsStatus(settings.refreshToken);
             SavedMessage();
+        }
+
+        private void button_SaveUpdateSettings_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsManager.SaveEnableUpdateChecks(EnableUpdateChecks.IsChecked.GetValueOrDefault(true));
+            SavedMessage();
+        }
+
+        private void button_CheckUpdates_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateChecker.CheckNow(AxialSqlToolsPackage.PackageInstance, ignoreSettings: true);
+            UpdateUpdateStatus();
+        }
+
+        private void UpdateChecker_LastUpdateResultChanged()
+        {
+            try
+            {
+                Dispatcher.BeginInvoke(new Action(UpdateUpdateStatus));
+            }
+            catch
+            {
+            }
+        }
+
+        private void UpdateUpdateStatus()
+        {
+            if (UpdateCheckStatus != null)
+            {
+                UpdateCheckStatus.Text = UpdateChecker.LastUpdateResult;
+            }
         }
 
         private async void button_AuthorizeGoogleSheets_Click(object sender, RoutedEventArgs e)
