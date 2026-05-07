@@ -212,6 +212,11 @@ namespace AxialSqlTools
                 return "-";
             }
 
+            if (milliseconds.Value >= 1000)
+            {
+                return (milliseconds.Value / 1000d).ToString("0.00") + " s";
+            }
+
             return milliseconds.Value.ToString("N0") + " ms";
         }
     }
