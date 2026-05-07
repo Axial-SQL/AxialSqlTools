@@ -107,7 +107,7 @@
 
                 <Border Grid.Column="2" Padding="10" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock FontWeight="Bold" Text="Total reads" />
+                        <TextBlock FontWeight="Bold" Text="Total logical reads" />
                         <TextBlock Margin="0,6,0,0" FontSize="18" Text="{Binding TotalReadsText}" />
                     </StackPanel>
                 </Border>
@@ -125,7 +125,7 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Table" Binding="{Binding TableName}" Width="*" />
                     <DataGridTextColumn Header="Scans" Binding="{Binding ScanCount, StringFormat={}{0:N0}}" Width="50" />
-                    <DataGridTextColumn Header="Reads"
+                    <DataGridTextColumn Header="Logical reads"
                                         Binding="{Binding TotalReads, StringFormat={}{0:N0}}"
                                         Width="110"
                                         HeaderStyle="{StaticResource StatisticsReadsHeaderStyle}"

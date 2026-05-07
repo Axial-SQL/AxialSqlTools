@@ -10,8 +10,8 @@ namespace AxialSqlTools
         public string DatabaseName { get; set; }
         public string QueryText { get; set; }
         public string RawText { get; set; }
-        public int? TotalCpuMilliseconds { get; set; }
-        public int? TotalElapsedMilliseconds { get; set; }
+        public long? TotalCpuMilliseconds { get; set; }
+        public long? TotalElapsedMilliseconds { get; set; }
         public long TotalReads { get; set; }
         public List<StatisticsTableSummary> Tables { get; } = new List<StatisticsTableSummary>();
 

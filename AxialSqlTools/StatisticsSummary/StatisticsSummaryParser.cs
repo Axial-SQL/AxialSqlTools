@@ -14,8 +14,8 @@ namespace AxialSqlTools
             @"Scan count\s+(?<value>\d[\d,]*)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        private static readonly Regex ReadMetricRegex = new Regex(
-            @"(?<label>logical reads|physical reads|page server reads|read-ahead reads|page server read-ahead reads|lob logical reads|lob physical reads|lob page server reads|lob read-ahead reads|lob page server read-ahead reads)\s+(?<value>\d[\d,]*)",
+        private static readonly Regex LogicalReadMetricRegex = new Regex(
+            @"(?<label>logical reads|lob logical reads)\s+(?<value>\d[\d,]*)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly Regex TimeBlockRegex = new Regex(
@@ -54,20 +54,20 @@ namespace AxialSqlTools
                     tableSummary.ScanCount += ParseLong(scanCountMatch.Groups["value"].Value);
                 }
 
-                foreach (Match readMatch in ReadMetricRegex.Matches(metricsText))
+                foreach (Match readMatch in LogicalReadMetricRegex.Matches(metricsText))
                 {
                     tableSummary.TotalReads += ParseLong(readMatch.Groups["value"].Value);
                 }
             }
 
-            int totalCpu = 0;
-            int totalElapsed = 0;
+            long totalCpu = 0;
+            long totalElapsed = 0;
             bool sawExecutionTime = false;
             foreach (Match match in TimeBlockRegex.Matches(text))
             {
                 sawExecutionTime = true;
-                totalCpu += (int)ParseLong(match.Groups["cpu"].Value);
-                totalElapsed += (int)ParseLong(match.Groups["elapsed"].Value);
+                totalCpu += ParseLong(match.Groups["cpu"].Value);
+                totalElapsed += ParseLong(match.Groups["elapsed"].Value);
             }
 
             foreach (var table in tablesByName.Values)

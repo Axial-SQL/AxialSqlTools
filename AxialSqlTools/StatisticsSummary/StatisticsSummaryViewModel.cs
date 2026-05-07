@@ -205,7 +205,7 @@ namespace AxialSqlTools
             return summary.DataSource + " / " + summary.DatabaseName;
         }
 
-        private static string FormatMilliseconds(int? milliseconds)
+        private static string FormatMilliseconds(long? milliseconds)
         {
             if (!milliseconds.HasValue)
             {
