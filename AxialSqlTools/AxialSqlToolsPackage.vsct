@@ -215,6 +215,16 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialStatisticsSummaryCommand" priority="0x0001" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
+        <Icon guid="guidStatisticsSummary" id="bmpStatisticsSummary" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Statistics Summary</ButtonText>
+          <ToolTipText>Open a summary of the most recently captured SET STATISTICS IO/TIME output.</ToolTipText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialHealthDashboardServerCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidServerHealth" id="bmpServerHealth" />
@@ -341,6 +351,7 @@
       <Bitmap guid="guidExportData" href="Resources\export-data.png" usedList="bmpExportData" />
       <Bitmap guid="guidDataTransfer" href="Resources\data-source-target.png" usedList="bmpDataTransfer" />
       <Bitmap guid="guidServerHealth" href="Resources\server-health.png" usedList="bmpServerHealth" />
+      <Bitmap guid="guidStatisticsSummary" href="Resources\statistics-summary.png" usedList="bmpStatisticsSummary" />
       <Bitmap guid="guidExportGridToEmail" href="Resources\grid-to-email.png" usedList="bmpExportGridToEmail" />
       <Bitmap guid="guidExportGridToTempTable" href="Resources\grid-to-temp-table.png" usedList="bmpExportGridToTempTable" />
       <Bitmap guid="guidQueryHistory" href="Resources\query-history.png" usedList="bmpQueryHistory" />
@@ -409,6 +420,7 @@
       <IDSymbol name="AxialDataTransferCommand" value="4143" />
 
       <IDSymbol name="AxialQueryHistoryCommand" value="4144" />
+      <IDSymbol name="AxialStatisticsSummaryCommand" value="4152" />
 
       <IDSymbol name="AxialSqlServerBuildsCommand" value="4147" />
 
@@ -445,6 +457,9 @@
     </GuidSymbol>
     <GuidSymbol name="guidServerHealth" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4c8}">
       <IDSymbol name="bmpServerHealth" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidStatisticsSummary" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4ca}">
+      <IDSymbol name="bmpStatisticsSummary" value="1" />
     </GuidSymbol>
     <GuidSymbol name="guidExportGridToEmail" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d0}">
       <IDSymbol name="bmpExportGridToEmail" value="1" />
