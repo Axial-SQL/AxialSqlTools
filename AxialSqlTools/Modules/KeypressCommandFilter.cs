@@ -92,12 +92,11 @@ namespace AxialSqlTools
             if (textView.GetBuffer(out IVsTextLines textLines) != VSConstants.S_OK)
                 return;
 
-            if (!package.globalSnippets.TryGetValue(lineText.Trim(), out string newText))
-                return;        
-
             textView.GetCaretPos(out int iLine, out int iIndex);
 
-            int iSourceLength = lineText.Length;
+            if (!TryGetSnippetReplacement(lineText, iIndex, out int snippetStartIndex, out int snippetEndIndex, out string newText))
+                return;
+
             int iTargetLength = newText.Length;
 
             TextSpan[] pChangedSpan = new TextSpan[] { };
@@ -106,13 +105,61 @@ namespace AxialSqlTools
 
             try
             {
-                textLines.ReplaceLines(iLine, 0, iLine, iSourceLength, pNewText, iTargetLength, pChangedSpan);
+                textLines.ReplaceLines(iLine, snippetStartIndex, iLine, snippetEndIndex, pNewText, iTargetLength, pChangedSpan);
             }
             finally
             {
                 Marshal.FreeHGlobal(pNewText);
             }
 
+        }
+
+        private bool TryGetSnippetReplacement(string lineText, int caretIndex, out int snippetStartIndex, out int snippetEndIndex, out string newText)
+        {
+            snippetStartIndex = -1;
+            snippetEndIndex = -1;
+            newText = null;
+
+            if (string.IsNullOrEmpty(lineText) || package?.globalSnippets == null || package.globalSnippets.Count == 0)
+                return false;
+
+            int searchEndIndex = Math.Min(Math.Max(caretIndex, 0), lineText.Length);
+
+            while (searchEndIndex > 0 && char.IsWhiteSpace(lineText[searchEndIndex - 1]))
+            {
+                searchEndIndex--;
+            }
+
+            if (searchEndIndex == 0)
+                return false;
+
+            foreach (KeyValuePair<string, string> snippet in package.globalSnippets)
+            {
+                string snippetName = snippet.Key;
+
+                if (string.IsNullOrWhiteSpace(snippetName))
+                    continue;
+
+                int candidateStartIndex = searchEndIndex - snippetName.Length;
+
+                if (candidateStartIndex < 0)
+                    continue;
+
+                if (candidateStartIndex > 0 && !char.IsWhiteSpace(lineText[candidateStartIndex - 1]))
+                    continue;
+
+                if (!string.Equals(lineText.Substring(candidateStartIndex, snippetName.Length), snippetName, StringComparison.Ordinal))
+                    continue;
+
+                if (newText != null && snippetName.Length <= snippetEndIndex - snippetStartIndex)
+                    continue;
+
+                snippetStartIndex = candidateStartIndex;
+                snippetEndIndex = searchEndIndex;
+                newText = snippet.Value;
+            }
+
+            return newText != null;
         }
 
         public int QueryStatus(ref Guid cmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
