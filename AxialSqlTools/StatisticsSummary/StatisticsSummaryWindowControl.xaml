@@ -1,0 +1,174 @@
+<UserControl x:Class="AxialSqlTools.StatisticsSummaryWindowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="700"
+             d:DesignWidth="900"
+             Background="{DynamicResource AxialThemeBackgroundBrush}"
+             Foreground="{DynamicResource AxialThemeForegroundBrush}">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+            <Style x:Key="StatisticsReadsHeaderStyle"
+                   TargetType="{x:Type DataGridColumnHeader}"
+                   BasedOn="{StaticResource AxialThemedDataGridColumnHeaderStyle}">
+                <Setter Property="Padding" Value="14,0,6,0" />
+            </Style>
+
+            <Style x:Key="StatisticsReadsTextStyle" TargetType="{x:Type TextBlock}">
+                <Setter Property="Margin" Value="14,0,0,0" />
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <DockPanel Background="{DynamicResource AxialThemeBackgroundBrush}">
+        <StackPanel DockPanel.Dock="Top"
+                    Orientation="Horizontal"
+                    Background="{DynamicResource AxialThemeHeaderBackgroundBrush}">
+            <TextBlock Margin="5"
+                       VerticalAlignment="Center"
+                       FontWeight="Bold"
+                       FontSize="18"
+                       Text="Statistics Summary" />
+            <TextBlock Margin="10"
+                       VerticalAlignment="Center">
+                <Run Text="Feature description in" />
+                <Run Text=" " />
+                <Hyperlink NavigateUri="https://github.com/Axial-SQL/AxialSqlTools/wiki/Statistics-Summary"
+                           RequestNavigate="WikiLink_RequestNavigate">
+                    <Run Text="Wiki" />
+                </Hyperlink>
+            </TextBlock>
+        </StackPanel>
+
+        <Grid Margin="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Margin="0,0,8,0"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Text="{Binding StatusMessage}" />
+
+                <Button Grid.Column="1"
+                        Padding="10,3"
+                        VerticalAlignment="Center"
+                        Content="Cancel"
+                        Click="CancelLoading_Click"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </Grid>
+
+            <ProgressBar Grid.Row="1"
+                         Height="4"
+                         Margin="0,0,0,8"
+                         IsIndeterminate="True"
+                         Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+            <Grid Grid.Row="2" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Margin="0,0,8,0" Padding="10" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock FontWeight="Bold" Text="Elapsed time" />
+                        <TextBlock Margin="0,6,0,0" FontSize="18" Text="{Binding TotalElapsedText}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Margin="0,0,8,0" Padding="10" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock FontWeight="Bold" Text="CPU time" />
+                        <TextBlock Margin="0,6,0,0" FontSize="18" Text="{Binding TotalCpuText}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Padding="10" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock FontWeight="Bold" Text="Total logical reads" />
+                        <TextBlock Margin="0,6,0,0" FontSize="18" Text="{Binding TotalReadsText}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <DataGrid Grid.Row="3"
+                      Margin="0,0,0,8"
+                      IsReadOnly="True"
+                      AutoGenerateColumns="False"
+                      ItemsSource="{Binding Tables}"
+                      Style="{DynamicResource AxialThemedDataGridStyle}"
+                      ColumnHeaderStyle="{DynamicResource AxialThemedDataGridColumnHeaderStyle}"
+                      CellStyle="{DynamicResource AxialThemedDataGridCellStyle}"
+                      RowStyle="{DynamicResource AxialThemedDataGridRowStyle}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Table" Binding="{Binding TableName}" Width="*" />
+                    <DataGridTextColumn Header="Scans" Binding="{Binding ScanCount, StringFormat={}{0:N0}}" Width="50" />
+                    <DataGridTextColumn Header="Logical reads"
+                                        Binding="{Binding TotalReads, StringFormat={}{0:N0}}"
+                                        Width="110"
+                                        HeaderStyle="{StaticResource StatisticsReadsHeaderStyle}"
+                                        ElementStyle="{StaticResource StatisticsReadsTextStyle}" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="180" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="Bold" Text="Captured at" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CapturedAtText}" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,4,0,0" FontWeight="Bold" Text="Source" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,4,0,0" Text="{Binding SourceText}" />
+
+                <Expander Grid.Row="2"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="2"
+                          Margin="0,8,0,0"
+                          Header="Source query"
+                          IsExpanded="False">
+                    <TextBox Margin="0,8,0,0"
+                             Height="160"
+                             Text="{Binding QueryTextPreview}"
+                             IsReadOnly="True"
+                             TextWrapping="NoWrap"
+                             AcceptsReturn="True"
+                             AcceptsTab="True"
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Auto"
+                             FontFamily="Consolas"
+                             FontSize="12" />
+                </Expander>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</UserControl>

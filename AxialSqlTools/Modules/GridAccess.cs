@@ -3,13 +3,16 @@ using Microsoft.SqlServer.Management.UI.VSIntegration;
 using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using static AxialSqlTools.AxialSqlToolsPackage;
 
@@ -386,6 +389,393 @@ namespace AxialSqlTools
             }
 
             return dataTables;
+        }
+
+        public static string TryGetStatisticsMessagesText(object executionContext = null)
+        {
+            var visited = new HashSet<object>(new ReferenceEqualityComparer());
+
+            if (TryFindStatisticsText(executionContext, 0, visited, out var statisticsText))
+            {
+                return statisticsText;
+            }
+
+            var sqlResultsControl = GetSQLResultsControl();
+            if (!ReferenceEquals(sqlResultsControl, executionContext)
+                && TryFindStatisticsText(sqlResultsControl, 0, visited, out statisticsText))
+            {
+                return statisticsText;
+            }
+
+            return null;
+        }
+
+        public static void TryFlushStatisticsMessages()
+        {
+            var sqlResultsControl = GetSQLResultsControl();
+            if (sqlResultsControl is null)
+            {
+                return;
+            }
+
+            TryInvokeParameterlessDelegateField(sqlResultsControl, "m_FlushTextWritersInvoker");
+            TryInvokeParameterlessMethod(sqlResultsControl, "FlushTextWriters");
+
+            TryFlushWriterLike(GetNonPublicField(sqlResultsControl, "m_messagesWriter"));
+            TryFlushWriterLike(GetNonPublicField(sqlResultsControl, "m_resultsWriter"));
+            TryFlushWriterLike(GetNonPublicField(sqlResultsControl, "m_errorsWriter"));
+        }
+
+        private static bool TryFindStatisticsText(object candidate, int depth, HashSet<object> visited, out string statisticsText)
+        {
+            statisticsText = null;
+
+            if (candidate is null || depth > 4)
+            {
+                return false;
+            }
+
+            if (candidate is string candidateText)
+            {
+                if (LooksLikeStatisticsOutput(candidateText))
+                {
+                    statisticsText = candidateText;
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (candidate is TextWriter textWriter)
+            {
+                var writerText = SafeToString(textWriter);
+                if (LooksLikeStatisticsOutput(writerText))
+                {
+                    statisticsText = writerText;
+                    return true;
+                }
+            }
+
+            if (candidate is IVsTextView textView
+                && TryGetTextFromVsTextView(textView, out var textViewText)
+                && LooksLikeStatisticsOutput(textViewText))
+            {
+                statisticsText = textViewText;
+                return true;
+            }
+
+            if (candidate is IVsTextLines textLines
+                && TryGetTextFromVsTextLines(textLines, out var textLinesText)
+                && LooksLikeStatisticsOutput(textLinesText))
+            {
+                statisticsText = textLinesText;
+                return true;
+            }
+
+            var candidateType = candidate.GetType();
+            if (candidateType.IsPrimitive
+                || candidate is decimal
+                || candidate is DateTime
+                || candidate is TimeSpan
+                || candidate is Enum)
+            {
+                return false;
+            }
+
+            if (!candidateType.IsValueType && !visited.Add(candidate))
+            {
+                return false;
+            }
+
+            if (candidate is Control control)
+            {
+                if (LooksLikeStatisticsOutput(control.Text))
+                {
+                    statisticsText = control.Text;
+                    return true;
+                }
+
+                foreach (Control childControl in control.Controls)
+                {
+                    if (TryFindStatisticsText(childControl, depth + 1, visited, out statisticsText))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            foreach (var member in GetRelevantMembers(candidate))
+            {
+                if (TryFindStatisticsText(member.Value, depth + 1, visited, out statisticsText))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static IEnumerable<KeyValuePair<string, object>> GetRelevantMembers(object obj)
+        {
+            foreach (var field in EnumerateInstanceFields(obj.GetType()))
+            {
+                if (!IsRelevantMember(field.Name, field.FieldType))
+                {
+                    continue;
+                }
+
+                object value = null;
+                try
+                {
+                    value = field.GetValue(obj);
+                }
+                catch
+                {
+                }
+
+                if (value != null)
+                {
+                    yield return new KeyValuePair<string, object>(field.Name, value);
+                }
+            }
+
+            var seenProperties = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in EnumerateInstanceProperties(obj.GetType()))
+            {
+                if (!property.CanRead || property.GetIndexParameters().Length > 0 || !IsRelevantMember(property.Name, property.PropertyType))
+                {
+                    continue;
+                }
+
+                if (!seenProperties.Add(property.Name))
+                {
+                    continue;
+                }
+
+                object value = null;
+                try
+                {
+                    value = property.GetValue(obj);
+                }
+                catch
+                {
+                }
+
+                if (value != null)
+                {
+                    yield return new KeyValuePair<string, object>(property.Name, value);
+                }
+            }
+        }
+
+        private static IEnumerable<FieldInfo> EnumerateInstanceFields(Type type)
+        {
+            const BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
+            for (var currentType = type; currentType != null; currentType = currentType.BaseType)
+            {
+                foreach (var field in currentType.GetFields(bindingFlags))
+                {
+                    yield return field;
+                }
+            }
+        }
+
+        private static IEnumerable<PropertyInfo> EnumerateInstanceProperties(Type type)
+        {
+            const BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
+            for (var currentType = type; currentType != null; currentType = currentType.BaseType)
+            {
+                foreach (var property in currentType.GetProperties(bindingFlags))
+                {
+                    yield return property;
+                }
+            }
+        }
+
+        private static bool IsRelevantMember(string memberName, Type memberType)
+        {
+            return LooksLikeRelevantMemberName(memberName) || IsRelevantMemberType(memberType);
+        }
+
+        private static bool IsRelevantMemberType(Type memberType)
+        {
+            if (memberType is null)
+            {
+                return false;
+            }
+
+            return typeof(Control).IsAssignableFrom(memberType)
+                || typeof(TextWriter).IsAssignableFrom(memberType)
+                || typeof(IVsTextView).IsAssignableFrom(memberType)
+                || typeof(IVsTextLines).IsAssignableFrom(memberType);
+        }
+
+        private static bool LooksLikeRelevantMemberName(string memberName)
+        {
+            if (string.IsNullOrEmpty(memberName))
+            {
+                return false;
+            }
+
+            memberName = memberName.ToLowerInvariant();
+            return memberName.Contains("message")
+                || memberName.Contains("text")
+                || memberName.Contains("writer")
+                || memberName.Contains("buffer")
+                || memberName.Contains("document")
+                || memberName.Contains("editor")
+                || memberName.Contains("view")
+                || memberName.Contains("output")
+                || memberName.Contains("result")
+                || memberName.Contains("pane")
+                || memberName.Contains("page")
+                || memberName.Contains("sql")
+                || memberName.Contains("exec");
+        }
+
+        private static string SafeToString(object value)
+        {
+            try
+            {
+                return value?.ToString();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+
+        private static void TryFlushWriterLike(object writer)
+        {
+            if (writer is null)
+            {
+                return;
+            }
+
+            if (writer is TextWriter textWriter)
+            {
+                try
+                {
+                    textWriter.Flush();
+                }
+                catch
+                {
+                }
+            }
+
+            TryInvokeParameterlessMethod(writer, "Flush");
+        }
+
+        private static bool TryInvokeParameterlessDelegateField(object target, string fieldName)
+        {
+            if (target is null || string.IsNullOrWhiteSpace(fieldName))
+            {
+                return false;
+            }
+
+            try
+            {
+                if (GetNonPublicField(target, fieldName) is Delegate callback)
+                {
+                    callback.DynamicInvoke();
+                    return true;
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
+        }
+
+        private static bool TryInvokeParameterlessMethod(object target, string methodName)
+        {
+            if (target is null || string.IsNullOrWhiteSpace(methodName))
+            {
+                return false;
+            }
+
+            try
+            {
+                var method = target.GetType().GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
+                if (method == null)
+                {
+                    return false;
+                }
+
+                method.Invoke(target, null);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool TryGetTextFromVsTextView(IVsTextView textView, out string text)
+        {
+            text = null;
+
+            try
+            {
+                if (textView == null || textView.GetBuffer(out IVsTextLines textLines) != VSConstants.S_OK)
+                {
+                    return false;
+                }
+
+                return TryGetTextFromVsTextLines(textLines, out text);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool TryGetTextFromVsTextLines(IVsTextLines textLines, out string text)
+        {
+            text = null;
+
+            try
+            {
+                if (textLines == null || textLines.GetLastLineIndex(out var lastLine, out var lastIndex) != VSConstants.S_OK)
+                {
+                    return false;
+                }
+
+                if (textLines.GetLineText(0, 0, lastLine, lastIndex, out var fullText) != VSConstants.S_OK)
+                {
+                    return false;
+                }
+
+                text = fullText;
+                return !string.IsNullOrWhiteSpace(text);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static bool LooksLikeStatisticsOutput(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            return text.IndexOf("SQL Server Execution Times:", StringComparison.OrdinalIgnoreCase) >= 0
+                || (text.IndexOf("logical reads", StringComparison.OrdinalIgnoreCase) >= 0
+                    && text.IndexOf("Scan count", StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private sealed class ReferenceEqualityComparer : IEqualityComparer<object>
+        {
+            public new bool Equals(object x, object y) => ReferenceEquals(x, y);
+
+            public int GetHashCode(object obj) => RuntimeHelpers.GetHashCode(obj);
         }
     }
 }

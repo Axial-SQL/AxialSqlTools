@@ -28,6 +28,8 @@
     <RootNamespace>AxialSqlTools</RootNamespace>
     <AssemblyName>AxialSqlTools</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <RuntimeIdentifier>win</RuntimeIdentifier>
+    <RuntimeIdentifiers>win</RuntimeIdentifiers>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
     <UseCodebase>true</UseCodebase>
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
@@ -165,6 +167,15 @@
       <DependentUpon>QueryHistoryWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="QueryHistory\RelayCommand.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummary.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryParser.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryStore.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryViewModel.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryWindow.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryWindowCommand.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryWindowControl.xaml.cs">
+      <DependentUpon>StatisticsSummaryWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindow.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowCommand.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowControl.xaml.cs">
@@ -357,6 +368,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="QuickSearch\QuickSearchWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="StatisticsSummary\StatisticsSummaryWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
