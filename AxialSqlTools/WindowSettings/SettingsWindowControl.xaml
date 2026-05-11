@@ -163,6 +163,7 @@
                                                          VerticalContentAlignment="Center">
                         <ComboBoxItem Content="Enter" Tag="Enter" />
                         <ComboBoxItem Content="Shift+Enter" Tag="ShiftEnter" />
+                        <ComboBoxItem Content="Tab" Tag="Tab" />
                     </ComboBox>
 
                     <Button Grid.Row="5" Grid.Column="0"

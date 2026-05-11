@@ -255,7 +255,8 @@ ORDER BY sd.[name];
         public enum SnippetReplaceKey
         {
             Enter,
-            ShiftEnter
+            ShiftEnter,
+            Tab
         }
 
         public class SnippetSettings
