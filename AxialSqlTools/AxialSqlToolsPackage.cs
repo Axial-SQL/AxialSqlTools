@@ -505,7 +505,7 @@ namespace AxialSqlTools
                         {
                             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fi.Name);
 
-                            globalSnippets.Add(fileNameWithoutExtension, System.IO.File.ReadAllText(fi.FullName));
+                            globalSnippets.Add(fileNameWithoutExtension.ToUpper(), System.IO.File.ReadAllText(fi.FullName));
                         }
 
                     }
