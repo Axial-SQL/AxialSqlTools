@@ -346,8 +346,10 @@
     <Content Include="Resources\script.png" />
     <Resource Include="Resources\send.png" />
     <Content Include="Resources\search.png" />
+    <Content Include="Resources\select.png" />
     <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />
+    <Content Include="Resources\snippet.png" />
     <Content Include="Resources\sql-build-info.png" />
     <Content Include="Resources\statistics-summary.png" />
     <Content Include="Resources\template.png" />
