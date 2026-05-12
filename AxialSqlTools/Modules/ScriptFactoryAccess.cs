@@ -90,8 +90,14 @@ namespace AxialSqlTools
 
         public static ConnectionInfo GetCurrentConnectionInfo(bool inMaster = false)
         {
+            var scriptFactory = ServiceCache.ScriptFactory;
+            if (scriptFactory == null) return null;
 
-            UIConnectionInfo connection = ServiceCache.ScriptFactory.CurrentlyActiveWndConnectionInfo.UIConnectionInfo;
+            var connInfo = scriptFactory.CurrentlyActiveWndConnectionInfo;
+            if (connInfo == null) return null;
+
+            UIConnectionInfo connection = connInfo.UIConnectionInfo;
+            if (connection == null) return null;
 
             string databaseName = inMaster ? "master" : connection.AdvancedOptions["DATABASE"];
             if (string.IsNullOrEmpty(databaseName))

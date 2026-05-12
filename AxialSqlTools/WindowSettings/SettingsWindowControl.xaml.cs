@@ -12,6 +12,7 @@
     using System.Threading;
     using System.Windows;
     using System.Windows.Controls;
+    using System.Collections.ObjectModel;
     using System.Windows.Media;
     using System.Windows.Navigation;
     using Microsoft.VisualBasic;
@@ -29,6 +30,7 @@
         private string _queryHistoryConnectionString;
         private readonly ToolWindowThemeController _themeController;
         private bool updateResultSubscribed;
+        private ObservableCollection<SettingsManager.ConnectionColorRule> _connectionColorRules;
 
         private string tsqlFormatExample = @"while (1=0) 
 begin 
@@ -351,7 +353,8 @@ as select 1;
 
         private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
         {
-            ToolWindowNavigation.HandleRequestNavigate(e);
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
         }
 
         private void ButtonSaveSmtpSettings_Click(object sender, RoutedEventArgs e)
@@ -466,7 +469,7 @@ as select 1;
             try
             {
                 string authorizationUrl = GoogleSheetsExport.BuildAuthorizationUrl(settings);
-                ToolWindowNavigation.OpenExternalUrl(authorizationUrl);
+                Process.Start(new ProcessStartInfo(authorizationUrl) { UseShellExecute = true });
 
                 string authorizationCode = Interaction.InputBox("Paste the authorization code provided by Google after granting access.", "Google Sheets Authorization");
                 if (string.IsNullOrWhiteSpace(authorizationCode))
@@ -509,18 +512,19 @@ as select 1;
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
                 GoogleSheetsRefreshTokenLabel.Text = "Not authorized";
-                GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(false);
+                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkRed);
             }
             else
             {
                 GoogleSheetsRefreshTokenLabel.Text = "Authorized";
-                GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(true);
+                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkGreen);
             }
         }
 
         private void Hyperlink_RequestNavigateFormatQueryWiki(object sender, RequestNavigateEventArgs e)
         {
-            ToolWindowNavigation.HandleRequestNavigate(e);
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
         }
 
         private void Button_SaveOpenAi_Click(object sender, RoutedEventArgs e)
@@ -739,7 +743,124 @@ END
             }
         }
 
+        private string PickColor(string currentHex)
+        {
+            var dialog = new System.Windows.Forms.ColorDialog();
+            try
+            {
+                dialog.Color = System.Drawing.ColorTranslator.FromHtml(currentHex);
+            }
+            catch { }
+            dialog.FullOpen = true;
 
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                return System.Drawing.ColorTranslator.ToHtml(dialog.Color);
+            }
+            return null;
+        }
+
+        private void NewRuleColorPreview_Click(object sender, RoutedEventArgs e)
+        {
+            var currentBrush = NewRuleColorPreview.Background as SolidColorBrush;
+            string currentHex = currentBrush != null
+                ? string.Format("#{0:X2}{1:X2}{2:X2}", currentBrush.Color.R, currentBrush.Color.G, currentBrush.Color.B)
+                : "#FF4444";
+
+            string picked = PickColor(currentHex);
+            if (picked != null)
+            {
+                try
+                {
+                    var color = System.Drawing.ColorTranslator.FromHtml(picked);
+                    NewRuleColorPreview.Background = new SolidColorBrush(
+                        System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
+                }
+                catch { }
+            }
+        }
+
+        private void NewRuleColorPreview_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            NewRuleColorPreview_Click(sender, (RoutedEventArgs)e);
+        }
+
+        private void RuleColorPreview_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is SettingsManager.ConnectionColorRule rule)
+            {
+                string picked = PickColor(rule.StatusBarColor);
+                if (picked != null)
+                {
+                    rule.StatusBarColor = picked;
+                    ConnectionColorRulesListView.Items.Refresh();
+                }
+            }
+        }
+
+        private void ButtonAddColorRule_Click(object sender, RoutedEventArgs e)
+        {
+            string serverPattern = NewRuleServerPattern.Text?.Trim();
+            string databasePattern = NewRuleDatabasePattern.Text?.Trim();
+
+            if (string.IsNullOrEmpty(serverPattern) && string.IsNullOrEmpty(databasePattern))
+            {
+                MessageBox.Show("Fill in at least the server name or the database name.", "Connection Colors");
+                return;
+            }
+
+            var brush = NewRuleColorPreview.Background as SolidColorBrush;
+            string hex = "#FF4444";
+            if (brush != null)
+            {
+                hex = string.Format("#{0:X2}{1:X2}{2:X2}", brush.Color.R, brush.Color.G, brush.Color.B);
+            }
+
+            _connectionColorRules.Add(new SettingsManager.ConnectionColorRule
+            {
+                ServerNamePattern = serverPattern ?? string.Empty,
+                DatabaseNamePattern = databasePattern ?? string.Empty,
+                StatusBarColor = hex,
+                IsEnabled = true
+            });
+
+            NewRuleServerPattern.Text = "";
+            NewRuleDatabasePattern.Text = "";
+        }
+
+        private void ButtonEditColorRule_Click(object sender, RoutedEventArgs e)
+        {
+            if (ConnectionColorRulesListView.SelectedItem is SettingsManager.ConnectionColorRule selectedRule)
+            {
+                NewRuleServerPattern.Text = selectedRule.ServerNamePattern;
+                NewRuleDatabasePattern.Text = selectedRule.DatabaseNamePattern;
+
+                try
+                {
+                    var color = System.Drawing.ColorTranslator.FromHtml(selectedRule.StatusBarColor);
+                    NewRuleColorPreview.Background = new SolidColorBrush(
+                        System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
+                }
+                catch { }
+
+                _connectionColorRules.Remove(selectedRule);
+            }
+        }
+
+        private void ButtonRemoveColorRule_Click(object sender, RoutedEventArgs e)
+        {
+            if (ConnectionColorRulesListView.SelectedItem is SettingsManager.ConnectionColorRule selectedRule)
+            {
+                _connectionColorRules.Remove(selectedRule);
+            }
+        }
+
+        private void Button_SaveConnectionColorRules_Click(object sender, RoutedEventArgs e)
+        {
+            var rules = new System.Collections.Generic.List<SettingsManager.ConnectionColorRule>(_connectionColorRules);
+            SettingsManager.SaveConnectionColorRules(rules);
+            SavedMessage();
+        }
 
     }
 }

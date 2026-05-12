@@ -263,7 +263,8 @@ ORDER BY sd.[name];
         {
             public bool useSnippets = false;
             public string snippetFolder = string.Empty;
-            public SnippetReplaceKey replaceKey = SnippetReplaceKey.Enter;
+            public SnippetReplaceKey replaceKey = SnippetReplaceKey.Tab;
+            public string cursorMarker = "#";
         }
 
         public class ExcelExportSettings
@@ -699,6 +700,7 @@ ORDER BY sd.[name];
         private static SnippetSettings NormalizeSnippetSettings(SnippetSettings settings)
         {
             settings.snippetFolder = settings.snippetFolder ?? string.Empty;
+            settings.cursorMarker = settings.cursorMarker ?? "#";
             return settings;
         }
 
@@ -916,6 +918,44 @@ ORDER BY sd.[name];
             }
         }
 
+
+        public class ConnectionColorRule
+        {
+            public string ServerNamePattern { get; set; } = string.Empty;
+            public string DatabaseNamePattern { get; set; } = string.Empty;
+            public string StatusBarColor { get; set; } = "#FF0000";
+            public bool IsEnabled { get; set; } = true;
+        }
+
+        public static List<ConnectionColorRule> GetConnectionColorRules()
+        {
+            try
+            {
+                string json = GetRegisterValue("ConnectionColorRules");
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var rules = JsonConvert.DeserializeObject<List<ConnectionColorRule>>(json);
+                    if (rules != null)
+                        return rules;
+                }
+            }
+            catch { }
+
+            return new List<ConnectionColorRule>();
+        }
+
+        public static bool SaveConnectionColorRules(List<ConnectionColorRule> rules)
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(rules ?? new List<ConnectionColorRule>());
+                return SaveRegisterValue("ConnectionColorRules", json);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
     }
 }

@@ -113,6 +113,16 @@
     <Compile Include="Commands\RefreshTemplatesCommand.cs" />
     <Compile Include="Commands\ResultGridCommands.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
+	<Compile Include="Commands\SelectCurrentStatementCommand.cs" />
+    <Compile Include="SnippetManager\SnippetItem.cs" />
+    <Compile Include="SnippetManager\SnippetService.cs" />
+    <Compile Include="SnippetManager\SnippetVariableProcessor.cs" />
+    <Compile Include="SnippetManager\SnippetManagerWindow.cs" />
+    <Compile Include="SnippetManager\SnippetManagerWindowCommand.cs" />
+    <Compile Include="SnippetManager\SnippetManagerViewModel.cs" />
+    <Compile Include="SnippetManager\SnippetManagerWindowControl.xaml.cs">
+      <DependentUpon>SnippetManagerWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="DataTransfer\DataTransferWindow.cs" />
     <Compile Include="DataTransfer\DataTransferWindowCommand.cs" />
     <Compile Include="DataTransfer\DataTransferWindowControl.xaml.cs">
