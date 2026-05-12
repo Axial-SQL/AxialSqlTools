@@ -453,7 +453,7 @@
       
       <IDSymbol name="AxialQuickSearch" value="4151" />
 
-      <IDSymbol name="AxialSelectCurrentStatementCommand" value="4152" />
+      <IDSymbol name="AxialSelectCurrentStatementCommand" value="4154" />
 
       <IDSymbol name="AxialSnippetManagerCommand" value="4153" />
 

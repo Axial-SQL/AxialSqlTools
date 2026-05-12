@@ -14,7 +14,7 @@ namespace AxialSqlTools
 {
     internal sealed class SelectCurrentStatementCommand
     {
-        public const int CommandId = 4152;
+        public const int CommandId = 4154;
 
         public static readonly Guid CommandSet = new Guid("45457e02-6dec-4a4d-ab22-c9ee126d23c5");
 
