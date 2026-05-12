@@ -56,6 +56,9 @@ as select 1;
         {
             this.InitializeComponent();
 
+            _connectionColorRules = new ObservableCollection<SettingsManager.ConnectionColorRule>();
+            ConnectionColorRulesListView.ItemsSource = _connectionColorRules;
+
             _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
 
             this.Loaded += UserControl_Loaded;
@@ -190,6 +193,8 @@ as select 1;
 
                 EnableUpdateChecks.IsChecked = SettingsManager.GetEnableUpdateChecks();
                 UpdateUpdateStatus();
+
+                LoadConnectionColorRules();
 
             }
             catch (Exception ex)
@@ -743,6 +748,21 @@ END
             }
         }
 
+        private void LoadConnectionColorRules()
+        {
+            _connectionColorRules = new ObservableCollection<SettingsManager.ConnectionColorRule>(SettingsManager.GetConnectionColorRules());
+            ConnectionColorRulesListView.ItemsSource = _connectionColorRules;
+        }
+
+        private void EnsureConnectionColorRulesLoaded()
+        {
+            if (_connectionColorRules == null)
+            {
+                _connectionColorRules = new ObservableCollection<SettingsManager.ConnectionColorRule>();
+                ConnectionColorRulesListView.ItemsSource = _connectionColorRules;
+            }
+        }
+
         private string PickColor(string currentHex)
         {
             var dialog = new System.Windows.Forms.ColorDialog();
@@ -800,6 +820,8 @@ END
 
         private void ButtonAddColorRule_Click(object sender, RoutedEventArgs e)
         {
+            EnsureConnectionColorRulesLoaded();
+
             string serverPattern = NewRuleServerPattern.Text?.Trim();
             string databasePattern = NewRuleDatabasePattern.Text?.Trim();
 
