@@ -28,6 +28,8 @@
     <RootNamespace>AxialSqlTools</RootNamespace>
     <AssemblyName>AxialSqlTools</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <RuntimeIdentifier>win</RuntimeIdentifier>
+    <RuntimeIdentifiers>win</RuntimeIdentifiers>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
     <UseCodebase>true</UseCodebase>
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
@@ -93,7 +95,8 @@
       <DependentUpon>DatabaseScripterToolWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Modules\AuroraCore.cs" />
-    <Compile Include="Commands\CheckAddinVersionCommand.cs" />
+    <Compile Include="UpdateChecker.cs" />
+    <Compile Include="UpdateInfoBar.cs" />
     <Compile Include="Commands\CommandProcessor.cs" />
     <Compile Include="Commands\ExportGridToAsInsertsCommand.cs" />
     <Compile Include="Commands\ExportGridToGoogleSheetCommand.cs" />
@@ -102,12 +105,15 @@
     <Compile Include="Commands\Dialogs\GoogleSheetsExportSuccessDialog.xaml.cs">
       <DependentUpon>GoogleSheetsExportSuccessDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Commands\Dialogs\ExcelExportSuccessDialog.xaml.cs">
+      <DependentUpon>ExcelExportSuccessDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Commands\CopyQueryAsHtmlCommand.cs" />
     <Compile Include="Commands\OpenTemplatesFolderCommand.cs" />
     <Compile Include="Commands\RefreshTemplatesCommand.cs" />
     <Compile Include="Commands\ResultGridCommands.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
-    <Compile Include="Commands\SelectCurrentStatementCommand.cs" />
+	<Compile Include="Commands\SelectCurrentStatementCommand.cs" />
     <Compile Include="SnippetManager\SnippetItem.cs" />
     <Compile Include="SnippetManager\SnippetService.cs" />
     <Compile Include="SnippetManager\SnippetVariableProcessor.cs" />
@@ -150,6 +156,7 @@
     <Compile Include="Modules\GridAccess.cs" />
     <Compile Include="Modules\KeypressCommandFilter.cs" />
     <Compile Include="Modules\MetricsService.cs" />
+    <Compile Include="Modules\ToolWindowThemeSupport.cs" />
     <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="Modules\SettingsManager.cs" />
     <Compile Include="Modules\SQLBuilds.cs" />
@@ -170,6 +177,15 @@
       <DependentUpon>QueryHistoryWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="QueryHistory\RelayCommand.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummary.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryParser.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryStore.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryViewModel.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryWindow.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryWindowCommand.cs" />
+    <Compile Include="StatisticsSummary\StatisticsSummaryWindowControl.xaml.cs">
+      <DependentUpon>StatisticsSummaryWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindow.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowCommand.cs" />
     <Compile Include="SqlServerBuilds\SqlServerBuildsWindowControl.xaml.cs">
@@ -256,6 +272,8 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
@@ -267,7 +285,7 @@
       <Version>6.3.1.120</Version>
     </PackageReference>
     <PackageReference Include="DocumentFormat.OpenXml">
-      <Version>3.4.1</Version>
+      <Version>3.5.1</Version>
     </PackageReference>
     <PackageReference Include="DiffPlex">
       <Version>1.9.0</Version>
@@ -278,12 +296,12 @@
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" ExcludeAssets="runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2120">
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.40034">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="NLog">
-      <Version>6.1.0</Version>
+      <Version>6.1.2</Version>
     </PackageReference>
     <PackageReference Include="MySqlConnector">
       <Version>2.5.0</Version>
@@ -301,7 +319,7 @@
       <Version>4.3.4</Version>
     </PackageReference>
     <PackageReference Include="System.Security.Cryptography.ProtectedData">
-      <Version>10.0.3</Version>
+      <Version>10.0.6</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
@@ -331,7 +349,12 @@
     <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />
     <Content Include="Resources\sql-build-info.png" />
+    <Content Include="Resources\statistics-summary.png" />
     <Content Include="Resources\template.png" />
+    <Content Include="Resources\vsix-logo.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
@@ -347,6 +370,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Commands\Dialogs\ExcelExportSuccessDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataImport\DataImportWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -355,7 +382,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="SnippetManager\SnippetManagerWindowControl.xaml">
+	<Page Include="SnippetManager\SnippetManagerWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="StatisticsSummary\StatisticsSummaryWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -404,6 +435,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="WindowSettings\SettingsWindowControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Themes\SharedToolWindowTheme.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
