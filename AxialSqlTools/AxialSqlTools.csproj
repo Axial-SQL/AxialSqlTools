@@ -339,6 +339,7 @@
     <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />
     <Content Include="Resources\sql-build-info.png" />
+    <Content Include="Resources\statistics-summary.png" />
     <Content Include="Resources\template.png" />
     <Content Include="Resources\vsix-logo.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
