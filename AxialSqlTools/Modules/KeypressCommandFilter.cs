@@ -2,14 +2,8 @@
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
-using Microsoft.IdentityModel.Tokens;
-using static AxialSqlTools.AxialSqlToolsPackage;
 
 namespace AxialSqlTools
 {
@@ -17,11 +11,8 @@ namespace AxialSqlTools
     {
         private IOleCommandTarget nextCommandTarget;
         private IVsTextView textView;
-        private AxialSqlToolsPackage package;
-
         public KeypressCommandFilter(AxialSqlToolsPackage package, IVsTextView textView)
         {
-            this.package = package;
             this.textView = textView;
         }
 
@@ -36,32 +27,16 @@ namespace AxialSqlTools
 
         public int Exec(ref Guid cmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
         {
-            try
+            if (cmdGroup == VSConstants.VSStd2K && ShouldProcessKey(nCmdID))
             {
-                if (cmdGroup == VSConstants.VSStd2K && ShouldProcessKey(nCmdID))
+                if (TryReplaceSnippet())
                 {
-                    // Logic to handle the RETURN key press
-                    // Example: get the current line's text from the editor
-                    string lastWord = GetLastWord();
-
-                    if (lastWord.Length > 0)
-                    {
-                        if (package.globalSnippets.TryGetValue(lastWord.ToUpper(), out string newText))
-                        {
-                            ReplaceSnippetText(lastWord, newText);
-
-                            // Stop processing command
-                            return VSConstants.S_OK;
-                        }
-                    }
+                    // Snippet was replaced — swallow the key so no newline/tab is inserted.
+                    return VSConstants.S_OK;
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, ex.StackTrace);
-            }
 
-            // Pass along the command so that other command handlers can process it
+            // Pass along the command so that other command handlers can process it.
             return nextCommandTarget?.Exec(ref cmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) ?? VSConstants.S_OK;
         }
 
@@ -91,48 +66,85 @@ namespace AxialSqlTools
             }
         }
 
-        private string GetLastWord()
-        {
-            // Obtain the IVsTextLines interface from the IVsTextView
-            if (textView.GetBuffer(out IVsTextLines textLines) != VSConstants.S_OK)
-                return string.Empty; // Early return if we fail to get the buffer
-
-            // Get the caret position in the text view
-            textView.GetCaretPos(out int iLine, out var iColumn);
-            
-            textLines.GetLineText(iLine, 0, iLine, iColumn, out string textToCursor);
-
-            if (textToCursor.Length == 0)
-                return string.Empty;
-
-            var lastWord = textToCursor.Split(' ', '(', ')').Last();
-            return lastWord;
-        }
-
-        private void ReplaceSnippetText(string lastWord, string newText)
+        private bool TryReplaceSnippet()
         {
             if (textView.GetBuffer(out IVsTextLines textLines) != VSConstants.S_OK)
-                return;
+                return false;
 
             textView.GetCaretPos(out int iLine, out int iColumn);
 
-            int iSourceLength = lastWord.Length;
-            var indent = iColumn - iSourceLength;
-            newText = newText.Replace("\r\n", "\r\n" + new string(' ', indent));
+            textLines.GetLengthOfLine(iLine, out int lineLength);
+            textLines.GetLineText(iLine, 0, iLine, lineLength, out string lineText);
 
-            TextSpan[] pChangedSpan = new TextSpan[] { };
-            int iTargetLength = newText.Length;
+            if (string.IsNullOrEmpty(lineText) || iColumn == 0)
+                return false;
+
+            int wordStart = iColumn;
+            for (int i = iColumn - 1; i >= 0; i--)
+            {
+                char c = lineText[i];
+                if (c == ' ' || c == '\t' || c == '(' || c == ')' || c == ',' || c == ';')
+                    break;
+
+                wordStart = i;
+            }
+
+            if (wordStart >= iColumn)
+                return false;
+
+            string word = lineText.Substring(wordStart, iColumn - wordStart).Trim();
+            if (string.IsNullOrEmpty(word))
+                return false;
+
+            var dict = SnippetService.SnippetDictionary;
+            if (!dict.TryGetValue(word, out SnippetItem snippet))
+                return false;
+
+            var settings = SettingsManager.GetSnippetSettings();
+            var result = SnippetVariableProcessor.ProcessVariables(snippet.Body, settings.cursorMarker);
+            string newText = result.ProcessedText;
+            int cursorOffset = result.CursorOffset;
+
             IntPtr pNewText = Marshal.StringToHGlobalUni(newText);
-
             try
             {
-                textLines.ReplaceLines(iLine, iColumn - iSourceLength, iLine, iColumn, pNewText, iTargetLength, pChangedSpan);
+                TextSpan[] pChangedSpan = new TextSpan[1];
+                textLines.ReplaceLines(iLine, wordStart, iLine, iColumn, pNewText, newText.Length, pChangedSpan);
             }
             finally
             {
                 Marshal.FreeHGlobal(pNewText);
             }
 
+            SetCaretPosition(iLine, wordStart, newText, cursorOffset >= 0 ? cursorOffset : newText.Length);
+            return true;
+        }
+
+        private void SetCaretPosition(int startLine, int startColumn, string text, int offset)
+        {
+            int targetLine = startLine;
+            int targetColumn = startColumn;
+
+            for (int i = 0; i < offset && i < text.Length; i++)
+            {
+                if (text[i] == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+                {
+                    targetLine++;
+                    targetColumn = 0;
+                    i++;
+                }
+                else if (text[i] == '\n')
+                {
+                    targetLine++;
+                    targetColumn = 0;
+                }
+                else
+                {
+                    targetColumn++;
+                }
+            }
+
+            textView.SetCaretPos(targetLine, targetColumn);
         }
 
         public int QueryStatus(ref Guid cmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
@@ -141,7 +153,8 @@ namespace AxialSqlTools
             {
                 for (int i = 0; i < prgCmds.Length; i++)
                 {
-                    if (prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.RETURN)
+                    if (prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.RETURN ||
+                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.TAB)
                     {
                         prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
                         return VSConstants.S_OK;
