@@ -691,7 +691,7 @@
                     <StackPanel Grid.Row="0" Margin="0,0,0,10">
                         <TextBlock TextWrapping="Wrap"
                                    Text="Color the status bar of query windows based on the server and/or database name. If both fields are filled, both must match. Leave a field empty to match anything."/>
-                        <TextBlock Margin="0,5,0,0" TextWrapping="Wrap" Foreground="{DynamicResource AxialThemeSubtleBorderBrush}" FontStyle="Italic"
+                        <TextBlock Margin="0,5,0,0" TextWrapping="Wrap" Foreground="{DynamicResource AxialThemeForegroundBrush}" Opacity="0.8" FontStyle="Italic"
                                    Text="Examples: Server='PROD' matches SQL-PROD-01. Database='master' matches any connection to master. Server='PROD' + Database='Sales' matches only Sales on PROD servers. First matching rule wins."/>
                     </StackPanel>
 
