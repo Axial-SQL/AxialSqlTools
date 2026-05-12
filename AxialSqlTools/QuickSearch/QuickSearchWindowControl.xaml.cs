@@ -16,12 +16,14 @@ using System.Web.UI.Design;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Navigation;
 using static AxialSqlTools.ScriptFactoryAccess;
 
 namespace AxialSqlTools
 {
     public partial class QuickSearchWindowControl : UserControl
     {
+        private readonly ToolWindowThemeController themeController;
         private string selectedConnectionString;
         private string selectedDatabase;
         private string selectedServer;
@@ -32,6 +34,7 @@ namespace AxialSqlTools
         public QuickSearchWindowControl()
         {
             this.InitializeComponent();
+            themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
 
             CheckBox_WholeWord.IsChecked = true;
 
@@ -46,6 +49,16 @@ namespace AxialSqlTools
                 textMarkerService = new TextMarkerService(SqlEditor);
             }
 
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            ToolWindowThemeResources.ApplySharedTheme(this);
+        }
+
+        private void WikiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            ToolWindowNavigation.HandleRequestNavigate(e);
         }
 
         private void Button_SelectConnection_Click(object sender, RoutedEventArgs e)
@@ -184,7 +197,7 @@ namespace AxialSqlTools
                         includeAgentJobSteps,
                         cancellationToken);
                 }
-                catch (SqlException ex)
+                catch (SqlException)
                 {
                     continue;
                 }

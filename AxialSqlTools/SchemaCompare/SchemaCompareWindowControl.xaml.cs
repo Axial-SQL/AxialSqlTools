@@ -17,6 +17,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Navigation;
 
 namespace AxialSqlTools
 {
@@ -25,13 +27,135 @@ namespace AxialSqlTools
     /// </summary>
     public partial class SchemaCompareWindowControl : UserControl
     {
+        private readonly ToolWindowThemeController _themeController;
+        private ScrollViewer _sourceScrollViewer;
+        private ScrollViewer _targetScrollViewer;
+        private bool _isSyncingScroll;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SchemaCompareWindowControl"/> class.
         /// </summary>
         public SchemaCompareWindowControl()
         {
             InitializeComponent();
+            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
             DataContext = new SchemaCompareViewModel();
+            Loaded += OnControlLoaded;
+            Unloaded += OnControlUnloaded;
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            ToolWindowThemeResources.ApplySharedTheme(this);
+        }
+
+        private void OnControlLoaded(object sender, RoutedEventArgs e)
+        {
+            HookDiffScrollSynchronization();
+        }
+
+        private void OnControlUnloaded(object sender, RoutedEventArgs e)
+        {
+            UnhookDiffScrollSynchronization();
+        }
+
+        private void WikiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            ToolWindowNavigation.HandleRequestNavigate(e);
+        }
+
+        private void HookDiffScrollSynchronization()
+        {
+            UnhookDiffScrollSynchronization();
+
+            _sourceScrollViewer = FindVisualChild<ScrollViewer>(SourceDiffListView);
+            _targetScrollViewer = FindVisualChild<ScrollViewer>(TargetDiffListView);
+
+            if (_sourceScrollViewer == null || _targetScrollViewer == null)
+            {
+                return;
+            }
+
+            _sourceScrollViewer.ScrollChanged += SourceScrollViewer_ScrollChanged;
+            _targetScrollViewer.ScrollChanged += TargetScrollViewer_ScrollChanged;
+        }
+
+        private void UnhookDiffScrollSynchronization()
+        {
+            if (_sourceScrollViewer != null)
+            {
+                _sourceScrollViewer.ScrollChanged -= SourceScrollViewer_ScrollChanged;
+            }
+
+            if (_targetScrollViewer != null)
+            {
+                _targetScrollViewer.ScrollChanged -= TargetScrollViewer_ScrollChanged;
+            }
+
+            _sourceScrollViewer = null;
+            _targetScrollViewer = null;
+            _isSyncingScroll = false;
+        }
+
+        private void SourceScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            SyncScrollOffsets(_sourceScrollViewer, _targetScrollViewer, e);
+        }
+
+        private void TargetScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            SyncScrollOffsets(_targetScrollViewer, _sourceScrollViewer, e);
+        }
+
+        private void SyncScrollOffsets(ScrollViewer from, ScrollViewer to, ScrollChangedEventArgs e)
+        {
+            if (_isSyncingScroll || from == null || to == null)
+            {
+                return;
+            }
+
+            if (e.VerticalChange == 0 && e.HorizontalChange == 0)
+            {
+                return;
+            }
+
+            _isSyncingScroll = true;
+
+            try
+            {
+                to.ScrollToVerticalOffset(from.VerticalOffset);
+                to.ScrollToHorizontalOffset(from.HorizontalOffset);
+            }
+            finally
+            {
+                _isSyncingScroll = false;
+            }
+        }
+
+        private static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null)
+            {
+                return null;
+            }
+
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typedChild)
+                {
+                    return typedChild;
+                }
+
+                T descendant = FindVisualChild<T>(child);
+                if (descendant != null)
+                {
+                    return descendant;
+                }
+            }
+
+            return null;
         }
     }
 
@@ -61,8 +185,8 @@ namespace AxialSqlTools
             CompareCommand = new AsyncRelayCommand(CompareAsync, () => HasConnections && !IsBusy);
             CancelCompareCommand = new RelayCommand(CancelCompare, () => IsBusy);
             CopyDeploymentScriptCommand = new RelayCommand(CopyDeploymentScript, () => !string.IsNullOrEmpty(DeploymentScript));
-            CopySourceDefinitionCommand = new RelayCommand(CopySourceDefinition, () => !string.IsNullOrEmpty(SelectedDifference?.SourceDefinition));
-            CopyTargetDefinitionCommand = new RelayCommand(CopyTargetDefinition, () => !string.IsNullOrEmpty(SelectedDifference?.TargetDefinition));
+            CopySourceDefinitionCommand = new RelayCommand(CopySourceDefinition, () => SelectedDifference != null);
+            CopyTargetDefinitionCommand = new RelayCommand(CopyTargetDefinition, () => SelectedDifference != null);
         }
 
         public ObservableCollection<SchemaDifferenceViewModel> Differences { get; }
@@ -287,12 +411,24 @@ namespace AxialSqlTools
 
         private void CopySourceDefinition()
         {
-            CopyTextToClipboard(SelectedDifference?.SourceDefinition);
+            if (SelectedDifference == null)
+            {
+                return;
+            }
+
+            SelectedDifference.EnsureDefinitionsLoaded();
+            CopyTextToClipboard(SelectedDifference.SourceDefinition);
         }
 
         private void CopyTargetDefinition()
         {
-            CopyTextToClipboard(SelectedDifference?.TargetDefinition);
+            if (SelectedDifference == null)
+            {
+                return;
+            }
+
+            SelectedDifference.EnsureDefinitionsLoaded();
+            CopyTextToClipboard(SelectedDifference.TargetDefinition);
         }
 
         private static void CopyTextToClipboard(string text)
@@ -312,6 +448,8 @@ namespace AxialSqlTools
             {
                 return;
             }
+
+            difference.EnsureDefinitionsLoaded();
 
             var diffModel = _diffBuilder.BuildDiffModel(difference.TargetDefinition ?? string.Empty, difference.SourceDefinition ?? string.Empty);
 
@@ -340,22 +478,41 @@ namespace AxialSqlTools
 
     internal class SchemaDifferenceViewModel
     {
+        private readonly SchemaDifference _difference;
+        private readonly SchemaComparisonResult _result;
+        private string _sourceDefinition;
+        private string _targetDefinition;
+        private bool _definitionsLoaded;
+
         public SchemaDifferenceViewModel(SchemaDifference difference, SchemaComparisonResult result)
         {
+            _difference = difference;
+            _result = result;
+
             Name = difference.Name?.ToString() ?? string.Empty;
             DifferenceType = difference.DifferenceType.ToString();
             Action = difference.UpdateAction.ToString();
 
             SourceObject = difference.SourceObject?.Name.ToString() ?? string.Empty;
             TargetObject = difference.TargetObject?.Name.ToString() ?? string.Empty;
+        }
+
+        public void EnsureDefinitionsLoaded()
+        {
+            if (_definitionsLoaded)
+            {
+                return;
+            }
 
             var sbSource = new StringBuilder();
-            GetAllSourceChidren(difference, result, sbSource);
-            SourceDefinition = sbSource.ToString();
+            GetAllSourceChidren(_difference, _result, sbSource);
+            _sourceDefinition = sbSource.ToString();
 
             var sbTarget = new StringBuilder();
-            GetAllTargetChidren(difference, result, sbTarget);
-            TargetDefinition = sbTarget.ToString();
+            GetAllTargetChidren(_difference, _result, sbTarget);
+            _targetDefinition = sbTarget.ToString();
+
+            _definitionsLoaded = true;
         }
 
         public void GetAllSourceChidren(SchemaDifference difference, SchemaComparisonResult result, StringBuilder sb) 
@@ -404,9 +561,9 @@ namespace AxialSqlTools
 
         public string TargetObject { get; }
 
-        public string SourceDefinition { get; }
+        public string SourceDefinition => _sourceDefinition;
 
-        public string TargetDefinition { get; }
+        public string TargetDefinition => _targetDefinition;
     }
 
     internal class DiffLineViewModel
