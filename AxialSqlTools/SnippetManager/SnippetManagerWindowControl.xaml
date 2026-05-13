@@ -191,6 +191,7 @@
                              AcceptsTab="True"
                              FontFamily="Consolas"
                              FontSize="12"
+                             MaxHeight="200"
                              VerticalScrollBarVisibility="Auto"
                              HorizontalScrollBarVisibility="Auto"
                              TextWrapping="NoWrap"
