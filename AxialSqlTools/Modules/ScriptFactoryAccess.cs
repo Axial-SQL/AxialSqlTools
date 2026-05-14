@@ -99,36 +99,140 @@ namespace AxialSqlTools
             UIConnectionInfo connection = connInfo.UIConnectionInfo;
             if (connection == null) return null;
 
-            string databaseName = inMaster ? "master" : connection.AdvancedOptions["DATABASE"];
-            if (string.IsNullOrEmpty(databaseName))
+            string databaseName = inMaster ? "master" : GetAdvancedOption(connection, "DATABASE");
+            if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = "master";
 
-            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
-
-            builder.DataSource = connection.ServerName;
-            builder.IntegratedSecurity = string.IsNullOrEmpty(connection.Password);
-            builder.Password = connection.Password;
-            builder.UserID = connection.UserName;
-            builder.InitialCatalog = databaseName;
-            builder.ApplicationName = "Axial SQL Tools";
-
-            if (connection.AdvancedOptions["ENCRYPT_CONNECTION"] == "True")          
+            var builder = new SqlConnectionStringBuilder
             {
+                DataSource = connection.ServerName,
+                InitialCatalog = databaseName,
+                ApplicationName = "Axial SQL Tools"
+            };
+
+            string auth = GetAuthenticationMode(connection);
+
+            if (ShouldUseMicrosoftEntraInteractive(connection, auth))
+            {
+                builder.Authentication = SqlAuthenticationMethod.ActiveDirectoryInteractive;
+
+                if (!string.IsNullOrWhiteSpace(connection.UserName))
+                    builder.UserID = connection.UserName;
+
+                // Do not set Password for Microsoft Entra MFA.
+                // Do not set IntegratedSecurity=True, because that triggers SSPI/Kerberos.
+            }
+            else if (!string.IsNullOrWhiteSpace(connection.Password))
+            {
+                builder.IntegratedSecurity = false;
+                builder.UserID = connection.UserName;
+                builder.Password = connection.Password;
+            }
+            else
+            {
+                builder.IntegratedSecurity = true;
+            }
+
+            if (IsTrue(GetAdvancedOption(connection, "ENCRYPT_CONNECTION")))
                 builder.Encrypt = true;
-            }
-            if (connection.AdvancedOptions["TRUST_SERVER_CERTIFICATE"] == "True")
-            {
-                builder.TrustServerCertificate = true;
-            }
 
-            ConnectionInfo ci = new ConnectionInfo();
-            ci.FullConnectionString = builder.ToString();
-            ci.Database = databaseName;
-            ci.ServerName = connection.ServerName;
-            ci.ActiveConnectionInfo = connection;
+            if (IsTrue(GetAdvancedOption(connection, "TRUST_SERVER_CERTIFICATE")))
+                builder.TrustServerCertificate = true;
+
+            var ci = new ConnectionInfo
+            {
+                FullConnectionString = builder.ToString(),
+                Database = databaseName,
+                ServerName = connection.ServerName,
+                ActiveConnectionInfo = connection
+            };
 
             return ci;
+        }
 
+        private static string GetAdvancedOption(UIConnectionInfo connection, string key)
+        {
+            if (connection?.AdvancedOptions == null || string.IsNullOrWhiteSpace(key))
+                return null;
+
+            return connection.AdvancedOptions.Get(key);
+        }
+
+        private static string GetAuthenticationMode(UIConnectionInfo connection)
+        {
+            if (connection == null)
+                return string.Empty;
+
+            var values = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(connection.OtherParams))
+                values.Add(connection.OtherParams);
+
+            if (connection.AdvancedOptions != null)
+            {
+                foreach (string key in connection.AdvancedOptions.AllKeys)
+                {
+                    if (!string.IsNullOrWhiteSpace(key))
+                        values.Add(key);
+
+                    string value = connection.AdvancedOptions.Get(key);
+                    if (!string.IsNullOrWhiteSpace(value))
+                        values.Add(value);
+                }
+            }
+
+            return string.Join(";", values);
+        }
+
+        private static bool ShouldUseMicrosoftEntraInteractive(UIConnectionInfo connection, string auth)
+        {
+            if (IsMicrosoftEntraMfa(auth))
+                return true;
+
+            if (connection == null)
+                return false;
+
+            bool hasUserName = !string.IsNullOrWhiteSpace(connection.UserName);
+            bool hasPassword = !string.IsNullOrWhiteSpace(connection.Password);
+
+            // Microsoft Entra MFA commonly has a UPN username and no password.
+            // This prevents accidental fallback to Integrated Security=True / SSPI.
+            if (hasUserName && !hasPassword && LooksLikeUpn(connection.UserName))
+                return true;
+
+            return false;
+        }
+
+        private static bool IsMicrosoftEntraMfa(string auth)
+        {
+            if (string.IsNullOrWhiteSpace(auth))
+                return false;
+
+            return auth.IndexOf("Active Directory Interactive", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   auth.IndexOf("ActiveDirectoryInteractive", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   auth.IndexOf("Microsoft Entra MFA", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   auth.IndexOf("Microsoft Entra", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   auth.IndexOf("Azure Active Directory - Universal with MFA", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   auth.IndexOf("Universal with MFA", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   auth.IndexOf("MFA", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool LooksLikeUpn(string userName)
+        {
+            if (string.IsNullOrWhiteSpace(userName))
+                return false;
+
+            return userName.Contains("@") && !userName.Contains("\\");
+        }
+
+        private static bool IsTrue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("1", StringComparison.OrdinalIgnoreCase);
         }
 
         public static string GetActiveQueryWindowText()
