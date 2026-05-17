@@ -235,6 +235,8 @@
 
             var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer(inMaster: true);
 
+            if (connectionInfo == null) return;
+
             if (!string.IsNullOrEmpty(connectionInfo.FullConnectionString))
             {                
                 connectionString = connectionInfo.FullConnectionString;
