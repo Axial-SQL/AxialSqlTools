@@ -4,7 +4,7 @@
     using Microsoft.SqlServer.Management.UI.VSIntegration;
     using Microsoft.VisualStudio.Shell;
     using System;
-    using System.Data.SqlClient;
+    using Microsoft.Data.SqlClient;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading;
     using System.Threading.Tasks;

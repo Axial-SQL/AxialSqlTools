@@ -6,7 +6,7 @@
     using System;
     using System.Collections.Generic;
     using System.Data;
-    using System.Data.SqlClient;
+    using Microsoft.Data.SqlClient;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Diagnostics.Tracing;
@@ -55,14 +55,14 @@
             /// </summary>
             /// <param name="bulkCopy">The bulk copy.</param>
             /// <returns></returns>
-            public static int GetRowsCopied(SqlBulkCopy bulkCopy)
+            public static Int64 GetRowsCopied(SqlBulkCopy bulkCopy)
             {
                 if (rowsCopiedField == null)
                 {
                     rowsCopiedField = typeof(SqlBulkCopy).GetField("_rowsCopied", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance);
                 }
 
-                return (int)rowsCopiedField.GetValue(bulkCopy);
+                return (Int64)rowsCopiedField.GetValue(bulkCopy);
             }
         }
 
@@ -255,7 +255,7 @@
                 {
 
                     int batchSize = 10000;
-                    int totalRowsCopied = 0;
+                    long totalRowsCopied = 0;
 
                     TextRange textRange = new TextRange(RichTextBox_SourceQuery.Document.ContentStart, RichTextBox_SourceQuery.Document.ContentEnd);
                     string sourceQuery = textRange.Text;
@@ -1016,7 +1016,7 @@
 
                                         await bulkCopy.WriteToServerAsync(reader, cancellationToken);
 
-                                        int totalRowsCopied = SqlBulkCopyHelper.GetRowsCopied(bulkCopy);
+                                        long totalRowsCopied = SqlBulkCopyHelper.GetRowsCopied(bulkCopy);
                                         TimeSpan ts = stopwatch.Elapsed;
                                         Label_CopyProgressFromPsql.Content = $"Completed | Total rows copied: {totalRowsCopied:#,0} in {(int)ts.TotalSeconds:#,0} sec.";
                                     }
@@ -1159,7 +1159,7 @@
 
                                         await bulkCopy.WriteToServerAsync(reader, cancellationToken);
 
-                                        int totalRowsCopied = SqlBulkCopyHelper.GetRowsCopied(bulkCopy);
+                                        long totalRowsCopied = SqlBulkCopyHelper.GetRowsCopied(bulkCopy);
                                         TimeSpan ts = stopwatch.Elapsed;
                                         Label_CopyProgressFromMySql.Content = $"Completed | Total rows copied: {totalRowsCopied:#,0} in {(int)ts.TotalSeconds:#,0} sec.";
                                     }
