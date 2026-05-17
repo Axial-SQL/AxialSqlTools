@@ -114,6 +114,7 @@
     <Compile Include="Commands\ResultGridCommands.cs" />
     <Compile Include="Commands\ScriptSelectedObject.cs" />
     <Compile Include="Commands\SelectCurrentStatementCommand.cs" />
+    <Compile Include="Commands\ToggleBlockCommentCommand.cs" />
     <Compile Include="SnippetManager\SnippetItem.cs" />
     <Compile Include="SnippetManager\SnippetService.cs" />
     <Compile Include="SnippetManager\SnippetVariableProcessor.cs" />

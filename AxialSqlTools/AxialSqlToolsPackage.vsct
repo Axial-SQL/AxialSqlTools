@@ -64,6 +64,10 @@
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenu" />
       </Group>
       
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
+      </Group>
+
       <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" priority="0x0000">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenu" />
       </Group>
@@ -214,6 +218,17 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialToggleBlockCommentCommand" priority="0x0025" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
+        <Icon guid="guidCopy" id="bmpCopy" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Toggle Block Comment</ButtonText>
+          <LocCanonicalName>AxialSqlTools.ToggleBlockComment</LocCanonicalName>
+          <ToolTipText>Wrap the selected SQL text in /* */ or remove the surrounding block comment at the cursor position (Ctrl+Shift+Alt+B)</ToolTipText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryHistoryCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
         <Icon guid="guidQueryHistory" id="bmpQueryHistory" />
@@ -317,6 +332,7 @@
 
     </Buttons>
 
+
     <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
     <Bitmaps>
       <!--  The bitmap id is defined in a way that is a little bit different from the others:
@@ -349,6 +365,14 @@
     
   </Commands>
 
+  <CommandPlacements>
+    <CommandPlacement guid="guidAxialSqlToolsPackageCmdSet" id="AxialToggleBlockCommentCommand" priority="0x0005">
+      <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolbarGroup" />
+    </CommandPlacement>
+    <CommandPlacement guid="guidAxialSqlToolsPackageCmdSet" id="AxialToggleBlockCommentCommand" priority="0x0000">
+      <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" />
+    </CommandPlacement>
+  </CommandPlacements>
 
   <KeyBindings>
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialFormatQueryButton" editor="guidVSStd97" key1="F" mod1="Control Shift Alt" />
@@ -358,6 +382,7 @@
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridAsInserts" editor="guidVSStd97" key1="T" mod1="Control Shift Alt" />
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialCopyQueryAsHtmlButton" editor="guidVSStd97" key1="C" mod1="Control Shift Alt" />
     <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialSelectCurrentStatementCommand" editor="guidVSStd97" key1="VK_F5" mod1="Shift" />
+    <KeyBinding guid="guidAxialSqlToolsPackageCmdSet" id="AxialToggleBlockCommentCommand" editor="guidVSStd97" key1="B" mod1="Control Shift Alt" />
   </KeyBindings>
 
   <Symbols>
@@ -388,6 +413,7 @@
       <IDSymbol name="AxialToolsSubMenuGroup_Timelines" value="0x1205" />
       <IDSymbol name="AxialToolsSubMenuGroup_AI" value="0x1206" />
       <IDSymbol name="AxialToolsSubMenuGroup_Copy" value="0x1207" />
+      <IDSymbol name="AxialSqlEditorContextMenuGroup" value="0x1208" />
 
       <IDSymbol name="AxialExportButtonGridToExcel" value="4133" />
       <IDSymbol name="AxialExportButtonGridToExcelAndEmail" value="4139" />
@@ -417,6 +443,7 @@
       <IDSymbol name="AxialQuickSearch" value="4151" />
 
       <IDSymbol name="AxialSelectCurrentStatementCommand" value="4154" />
+      <IDSymbol name="AxialToggleBlockCommentCommand" value="4155" />
 
       <IDSymbol name="AxialSnippetManagerCommand" value="4153" />
 
