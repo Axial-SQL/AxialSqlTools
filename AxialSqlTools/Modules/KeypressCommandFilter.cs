@@ -105,6 +105,12 @@ namespace AxialSqlTools
             string newText = result.ProcessedText;
             int cursorOffset = result.CursorOffset;
 
+            var indent = wordStart;
+            if (indent > 0)
+            {
+                newText = newText.Replace(Environment.NewLine, Environment.NewLine + new string(' ', indent));
+            }
+
             IntPtr pNewText = Marshal.StringToHGlobalUni(newText);
             try
             {
