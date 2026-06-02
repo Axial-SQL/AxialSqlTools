@@ -861,7 +861,13 @@ namespace AxialSqlTools
 
         private static async Task CaptureStatisticsSummaryAsync(object sqlExecutionContext, int captureVersion, CancellationToken cancellationToken)
         {
-            const int maxAttempts = 24;
+            const int maxAttempts = 3;
+
+            if (!HasStatisticsSummaryOutputEnabled(sqlExecutionContext))
+            {
+                StatisticsSummaryStore.MarkUnavailable(captureVersion);
+                return;
+            }
 
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
@@ -883,11 +889,79 @@ namespace AxialSqlTools
 
                 if (attempt < maxAttempts - 1)
                 {
-                    await Task.Delay(300, cancellationToken);
+                    await Task.Delay(150, cancellationToken);
                 }
             }
 
             StatisticsSummaryStore.MarkUnavailable(captureVersion);
+        }
+
+        private static bool HasStatisticsSummaryOutputEnabled(object sqlExecutionContext)
+        {
+            try
+            {
+                if (!(GridAccess.GetNonPublicField(sqlExecutionContext, "m_conn") is SqlConnection connection)
+                    || connection.State != ConnectionState.Open)
+                {
+                    return true;
+                }
+
+                using (var command = new SqlCommand("DBCC USEROPTIONS WITH NO_INFOMSGS;", connection))
+                using (var reader = command.ExecuteReader())
+                {
+                    var statisticsIoEnabled = false;
+                    var statisticsTimeEnabled = false;
+
+                    while (reader.Read())
+                    {
+                        if (reader.FieldCount < 2)
+                        {
+                            continue;
+                        }
+
+                        var optionName = reader.IsDBNull(0) ? null : reader.GetString(0);
+                        var optionValue = reader.IsDBNull(1) ? null : reader.GetString(1);
+                        if (string.IsNullOrWhiteSpace(optionName))
+                        {
+                            continue;
+                        }
+
+                        if (optionName.Equals("statistics io", StringComparison.OrdinalIgnoreCase))
+                        {
+                            statisticsIoEnabled = IsUserOptionEnabled(optionValue);
+                        }
+                        else if (optionName.Equals("statistics time", StringComparison.OrdinalIgnoreCase))
+                        {
+                            statisticsTimeEnabled = IsUserOptionEnabled(optionValue);
+                        }
+
+                        if (statisticsIoEnabled || statisticsTimeEnabled)
+                        {
+                            return true;
+                        }
+                    }
+
+                    return statisticsIoEnabled || statisticsTimeEnabled;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to inspect session statistics options.");
+                return true;
+            }
+        }
+
+        private static bool IsUserOptionEnabled(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return value.Equals("on", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("set", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("true", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("1", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool TryStoreStatisticsSummary(object sqlExecutionContext, string statisticsText, int captureVersion, out StatisticsSummary summary)
