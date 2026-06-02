@@ -4,49 +4,71 @@ using System.Linq;
 
 namespace AxialSqlTools
 {
-    internal sealed class StatisticsSummaryStoreState
+    internal enum StatisticsSummaryCaptureStatus
+    {
+        None,
+        Loading,
+        Success,
+        Failed,
+        StatisticsDisabled,
+    }
+
+    internal sealed class StatisticsSummaryStoreResult
     {
         public StatisticsSummary Summary { get; set; }
-        public IReadOnlyList<StatisticsSummary> Summaries { get; set; }
-        public bool IsLoading { get; set; }
-        public bool LastCaptureFailed { get; set; }
+        public StatisticsSummaryCaptureStatus Status { get; set; }
+    }
+
+    internal sealed class StatisticsSummaryStoreState
+    {
+        internal StatisticsSummary Summary { get; set; }
+        internal IReadOnlyList<StatisticsSummary> Summaries { get; set; }
+        internal IReadOnlyList<StatisticsSummaryStoreResult> Results { get; set; }
+        internal bool IsLoading { get; set; }
+        internal bool LastCaptureFailed { get; set; }
     }
 
     internal static class StatisticsSummaryStore
     {
         private static readonly object SyncRoot = new object();
-        private static readonly List<StatisticsSummary> Summaries = new List<StatisticsSummary>();
+        private static readonly List<StatisticsSummaryStoreResult> Results = new List<StatisticsSummaryStoreResult>();
         private static bool _isLoading;
         private static bool _lastCaptureFailed;
         private static bool _isWindowOpen;
         private static int _activeCaptureVersion;
 
-        public static event EventHandler SummaryChanged;
+        internal static event EventHandler SummaryChanged;
 
-        public static StatisticsSummary GetCurrent()
+        internal static StatisticsSummary GetCurrent()
         {
             lock (SyncRoot)
             {
-                return Summaries.FirstOrDefault();
+                return Results.FirstOrDefault(result => result.Status == StatisticsSummaryCaptureStatus.Success)?.Summary;
             }
         }
 
-        public static StatisticsSummaryStoreState GetState()
+        internal static StatisticsSummaryStoreState GetState()
         {
             lock (SyncRoot)
             {
-                var summaries = Summaries.ToList();
+                var results = Results.Select(CloneResult).ToList();
+                var summaries = results
+                    .Where(result => result.Status == StatisticsSummaryCaptureStatus.Success && result.Summary != null)
+                    .Select(result => result.Summary)
+                    .ToList();
+
                 return new StatisticsSummaryStoreState
                 {
                     Summary = summaries.FirstOrDefault(),
                     Summaries = summaries,
+                    Results = results,
                     IsLoading = _isLoading,
                     LastCaptureFailed = _lastCaptureFailed,
                 };
             }
         }
 
-        public static bool IsWindowOpen()
+        internal static bool IsWindowOpen()
         {
             lock (SyncRoot)
             {
@@ -54,7 +76,7 @@ namespace AxialSqlTools
             }
         }
 
-        public static void SetWindowOpen(bool isWindowOpen)
+        internal static void SetWindowOpen(bool isWindowOpen)
         {
             var shouldRaise = false;
 
@@ -73,6 +95,7 @@ namespace AxialSqlTools
                     _isLoading = false;
                     _lastCaptureFailed = false;
                     _activeCaptureVersion++;
+                    RemoveLoadingResult();
                 }
             }
 
@@ -82,7 +105,7 @@ namespace AxialSqlTools
             }
         }
 
-        public static bool BeginCapture(int captureVersion)
+        internal static bool BeginCapture(int captureVersion)
         {
             lock (SyncRoot)
             {
@@ -94,13 +117,27 @@ namespace AxialSqlTools
                 _activeCaptureVersion = captureVersion;
                 _isLoading = true;
                 _lastCaptureFailed = false;
+
+                if (Results.Count == 0 || Results[0].Status != StatisticsSummaryCaptureStatus.Loading)
+                {
+                    Results.Insert(0, new StatisticsSummaryStoreResult
+                    {
+                        Status = StatisticsSummaryCaptureStatus.Loading,
+                    });
+                    TrimResults();
+                }
+                else
+                {
+                    Results[0].Summary = null;
+                    Results[0].Status = StatisticsSummaryCaptureStatus.Loading;
+                }
             }
 
             SummaryChanged?.Invoke(null, EventArgs.Empty);
             return true;
         }
 
-        public static void Set(StatisticsSummary summary, int captureVersion)
+        internal static void Set(StatisticsSummary summary, int captureVersion)
         {
             lock (SyncRoot)
             {
@@ -109,11 +146,7 @@ namespace AxialSqlTools
                     return;
                 }
 
-                Summaries.Insert(0, summary);
-                while (Summaries.Count > 2)
-                {
-                    Summaries.RemoveAt(Summaries.Count - 1);
-                }
+                SetActiveResult(summary, StatisticsSummaryCaptureStatus.Success);
 
                 _isLoading = false;
                 _lastCaptureFailed = false;
@@ -122,7 +155,12 @@ namespace AxialSqlTools
             SummaryChanged?.Invoke(null, EventArgs.Empty);
         }
 
-        public static void MarkUnavailable(int captureVersion)
+        internal static void MarkUnavailable(int captureVersion)
+        {
+            MarkUnavailable(captureVersion, StatisticsSummaryCaptureStatus.Failed);
+        }
+
+        internal static void MarkUnavailable(int captureVersion, StatisticsSummaryCaptureStatus status)
         {
             lock (SyncRoot)
             {
@@ -131,6 +169,7 @@ namespace AxialSqlTools
                     return;
                 }
 
+                SetActiveResult(null, status);
                 _isLoading = false;
                 _lastCaptureFailed = true;
             }
@@ -138,23 +177,24 @@ namespace AxialSqlTools
             SummaryChanged?.Invoke(null, EventArgs.Empty);
         }
 
-        public static void CancelCapture()
+        internal static void CancelCapture()
         {
             lock (SyncRoot)
             {
                 _isLoading = false;
                 _lastCaptureFailed = false;
                 _activeCaptureVersion++;
+                RemoveLoadingResult();
             }
 
             SummaryChanged?.Invoke(null, EventArgs.Empty);
         }
 
-        public static void Clear()
+        internal static void Clear()
         {
             lock (SyncRoot)
             {
-                Summaries.Clear();
+                Results.Clear();
                 _isLoading = false;
                 _lastCaptureFailed = false;
                 _isWindowOpen = false;
@@ -162,6 +202,43 @@ namespace AxialSqlTools
             }
 
             SummaryChanged?.Invoke(null, EventArgs.Empty);
+        }
+
+        private static void SetActiveResult(StatisticsSummary summary, StatisticsSummaryCaptureStatus status)
+        {
+            if (Results.Count == 0)
+            {
+                Results.Insert(0, new StatisticsSummaryStoreResult());
+            }
+
+            Results[0].Summary = summary;
+            Results[0].Status = status;
+            TrimResults();
+        }
+
+        private static void RemoveLoadingResult()
+        {
+            if (Results.Count > 0 && Results[0].Status == StatisticsSummaryCaptureStatus.Loading)
+            {
+                Results.RemoveAt(0);
+            }
+        }
+
+        private static void TrimResults()
+        {
+            while (Results.Count > 2)
+            {
+                Results.RemoveAt(Results.Count - 1);
+            }
+        }
+
+        private static StatisticsSummaryStoreResult CloneResult(StatisticsSummaryStoreResult result)
+        {
+            return new StatisticsSummaryStoreResult
+            {
+                Summary = result.Summary,
+                Status = result.Status,
+            };
         }
     }
 }

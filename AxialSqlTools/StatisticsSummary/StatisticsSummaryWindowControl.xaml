@@ -94,15 +94,15 @@
 
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="0,0,0,8"
-                                Padding="0"
-                                BorderBrush="{DynamicResource AxialThemeBorderBrush}">
+                        <Border BorderBrush="{DynamicResource AxialThemeBorderBrush}">
                             <Border.Style>
                                 <Style TargetType="{x:Type Border}">
                                     <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Margin" Value="0,0,0,8" />
                                     <Setter Property="Padding" Value="0" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding ShowDivider}" Value="True">
+                                            <Setter Property="Margin" Value="0,6,0,8" />
                                             <Setter Property="BorderThickness" Value="0,1,0,0" />
                                             <Setter Property="Padding" Value="0,10,0,0" />
                                         </DataTrigger>
@@ -182,25 +182,46 @@
                                     </Border>
                                 </Grid>
 
-                                <DataGrid Grid.Row="2"
-                                          Margin="0,0,0,8"
-                                          IsReadOnly="True"
-                                          AutoGenerateColumns="False"
-                                          ItemsSource="{Binding Tables}"
-                                          Style="{DynamicResource AxialThemedDataGridStyle}"
-                                          ColumnHeaderStyle="{DynamicResource AxialThemedDataGridColumnHeaderStyle}"
-                                          CellStyle="{DynamicResource AxialThemedDataGridCellStyle}"
-                                          RowStyle="{DynamicResource AxialThemedDataGridRowStyle}">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Table" Binding="{Binding TableName}" Width="*" />
-                                        <DataGridTextColumn Header="Scans" Binding="{Binding ScanCount, StringFormat={}{0:N0}}" Width="50" />
-                                        <DataGridTextColumn Header="Logical reads"
-                                                            Binding="{Binding TotalReads, StringFormat={}{0:N0}}"
-                                                            Width="110"
-                                                            HeaderStyle="{StaticResource StatisticsReadsHeaderStyle}"
-                                                            ElementStyle="{StaticResource StatisticsReadsTextStyle}" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                <Grid Grid.Row="2" Margin="0,0,0,8" MinHeight="120">
+                                    <DataGrid IsReadOnly="True"
+                                              AutoGenerateColumns="False"
+                                              ItemsSource="{Binding Tables}"
+                                              ColumnHeaderStyle="{DynamicResource AxialThemedDataGridColumnHeaderStyle}"
+                                              CellStyle="{DynamicResource AxialThemedDataGridCellStyle}"
+                                              RowStyle="{DynamicResource AxialThemedDataGridRowStyle}">
+                                        <DataGrid.Style>
+                                            <Style TargetType="{x:Type DataGrid}" BasedOn="{StaticResource AxialThemedDataGridStyle}">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasTableData}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </DataGrid.Style>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Table" Binding="{Binding TableName}" Width="*" />
+                                            <DataGridTextColumn Header="Scans" Binding="{Binding ScanCount, StringFormat={}{0:N0}}" Width="50" />
+                                            <DataGridTextColumn Header="Logical reads"
+                                                                Binding="{Binding TotalReads, StringFormat={}{0:N0}}"
+                                                                Width="110"
+                                                                HeaderStyle="{StaticResource StatisticsReadsHeaderStyle}"
+                                                                ElementStyle="{StaticResource StatisticsReadsTextStyle}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <Border BorderBrush="{DynamicResource AxialThemeBorderBrush}"
+                                            BorderThickness="1"
+                                            Visibility="{Binding ShowTableStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Margin="16"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   FontSize="14"
+                                                   Text="{Binding TableStatusMessage}" />
+                                    </Border>
+                                </Grid>
 
                                 <Grid Grid.Row="3">
                                     <Grid.ColumnDefinitions>

@@ -10,6 +10,10 @@ namespace AxialSqlTools
             @"Table\s+'(?<name>[^']+)'\.\s*(?<metrics>.+)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        private static readonly Regex GeneratedTempTableSuffixRegex = new Regex(
+            @"_+[0-9A-Fa-f]{12}$",
+            RegexOptions.Compiled);
+
         private static readonly Regex ScanCountRegex = new Regex(
             @"Scan count\s+(?<value>\d[\d,]*)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -37,7 +41,7 @@ namespace AxialSqlTools
             var tablesByName = new Dictionary<string, StatisticsTableSummary>(StringComparer.OrdinalIgnoreCase);
             foreach (Match match in TableLineRegex.Matches(text))
             {
-                var tableName = match.Groups["name"].Value;
+                var tableName = FormatTableName(match.Groups["name"].Value);
                 if (!tablesByName.TryGetValue(tableName, out var tableSummary))
                 {
                     tableSummary = new StatisticsTableSummary
@@ -85,6 +89,16 @@ namespace AxialSqlTools
             }
 
             return summary.HasData ? summary : null;
+        }
+
+        private static string FormatTableName(string tableName)
+        {
+            if (string.IsNullOrEmpty(tableName) || tableName[0] != '#' || (tableName.Length > 1 && tableName[1] == '#'))
+            {
+                return tableName;
+            }
+
+            return GeneratedTempTableSuffixRegex.Replace(tableName, string.Empty);
         }
 
         private static long ParseLong(string value)

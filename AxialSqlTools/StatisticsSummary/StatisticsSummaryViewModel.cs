@@ -17,8 +17,10 @@ namespace AxialSqlTools
         public string TotalCpuText { get; set; }
         public string QueryTextPreview { get; set; }
         public bool HasTableData => Tables.Count > 0;
+        public string TableStatusMessage { get; set; }
+        public bool ShowTableStatus => !string.IsNullOrWhiteSpace(TableStatusMessage);
 
-        public static StatisticsSummaryResultViewModel Create(string title, StatisticsSummary summary, bool showDivider)
+        internal static StatisticsSummaryResultViewModel Create(string title, StatisticsSummaryStoreResult storeResult, bool showDivider)
         {
             var result = new StatisticsSummaryResultViewModel
             {
@@ -26,14 +28,30 @@ namespace AxialSqlTools
                 ShowDivider = showDivider,
                 CapturedAtText = "-",
                 SourceText = "-",
-                TotalReadsText = "0",
+                TotalReadsText = "-",
                 TotalElapsedText = "-",
                 TotalCpuText = "-",
                 QueryTextPreview = string.Empty,
             };
 
+            if (storeResult == null)
+            {
+                result.TableStatusMessage = title == "Latest result"
+                    ? "Execute a query to see statistics summary"
+                    : "No previous result";
+                return result;
+            }
+
+            if (storeResult.Status != StatisticsSummaryCaptureStatus.Success)
+            {
+                result.TableStatusMessage = BuildStatusMessage(storeResult.Status, title);
+                return result;
+            }
+
+            var summary = storeResult.Summary;
             if (summary == null || !summary.HasData)
             {
+                result.TableStatusMessage = "Failed to retrieve data";
                 return result;
             }
 
@@ -48,7 +66,31 @@ namespace AxialSqlTools
             result.TotalElapsedText = FormatMilliseconds(summary.TotalElapsedMilliseconds);
             result.TotalCpuText = FormatMilliseconds(summary.TotalCpuMilliseconds);
             result.QueryTextPreview = summary.QueryText ?? string.Empty;
+
+            if (!result.HasTableData)
+            {
+                result.TotalReadsText = "-";
+                result.TableStatusMessage = "SET STATISTICS IO ON to see read summary";
+            }
+
             return result;
+        }
+
+        private static string BuildStatusMessage(StatisticsSummaryCaptureStatus status, string title)
+        {
+            switch (status)
+            {
+                case StatisticsSummaryCaptureStatus.Loading:
+                    return "Loading latest statistics output...";
+                case StatisticsSummaryCaptureStatus.StatisticsDisabled:
+                    return "STATISTICS IO / TIME not turned on";
+                case StatisticsSummaryCaptureStatus.Failed:
+                    return "Failed to retrieve data";
+                default:
+                    return title == "Latest result"
+                        ? "Execute a query to see statistics summary"
+                        : "No previous result";
+            }
         }
 
         private static string BuildSourceText(StatisticsSummary summary)
@@ -140,10 +182,10 @@ namespace AxialSqlTools
             ShowStatus = state.IsLoading;
             StatusMessage = state.IsLoading ? "Loading latest statistics output..." : string.Empty;
 
-            var summaries = state.Summaries ?? Array.Empty<StatisticsSummary>();
+            var results = state.Results ?? Array.Empty<StatisticsSummaryStoreResult>();
             Results.Clear();
-            Results.Add(StatisticsSummaryResultViewModel.Create("Latest result", summaries.ElementAtOrDefault(0), showDivider: false));
-            Results.Add(StatisticsSummaryResultViewModel.Create("Previous result", summaries.ElementAtOrDefault(1), showDivider: true));
+            Results.Add(StatisticsSummaryResultViewModel.Create("Latest result", results.ElementAtOrDefault(0), showDivider: false));
+            Results.Add(StatisticsSummaryResultViewModel.Create("Previous result", results.ElementAtOrDefault(1), showDivider: true));
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

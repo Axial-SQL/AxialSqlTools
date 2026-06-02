@@ -863,9 +863,13 @@ namespace AxialSqlTools
         {
             const int maxAttempts = 3;
 
-            if (!HasStatisticsSummaryOutputEnabled(sqlExecutionContext))
+            cancellationToken.ThrowIfCancellationRequested();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+
+            var statisticsOutputOptions = GetStatisticsSummaryOutputOptions(sqlExecutionContext);
+            if (!statisticsOutputOptions.HasStatisticsOutput)
             {
-                StatisticsSummaryStore.MarkUnavailable(captureVersion);
+                StatisticsSummaryStore.MarkUnavailable(captureVersion, StatisticsSummaryCaptureStatus.StatisticsDisabled);
                 return;
             }
 
@@ -896,21 +900,33 @@ namespace AxialSqlTools
             StatisticsSummaryStore.MarkUnavailable(captureVersion);
         }
 
-        private static bool HasStatisticsSummaryOutputEnabled(object sqlExecutionContext)
+        private sealed class StatisticsSummaryOutputOptions
         {
+            public bool StatisticsIoEnabled { get; set; }
+            public bool StatisticsTimeEnabled { get; set; }
+            public bool HasStatisticsOutput => StatisticsIoEnabled || StatisticsTimeEnabled;
+        }
+
+        private static StatisticsSummaryOutputOptions GetStatisticsSummaryOutputOptions(object sqlExecutionContext)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             try
             {
                 if (!(GridAccess.GetNonPublicField(sqlExecutionContext, "m_conn") is SqlConnection connection)
                     || connection.State != ConnectionState.Open)
                 {
-                    return true;
+                    return new StatisticsSummaryOutputOptions
+                    {
+                        StatisticsIoEnabled = true,
+                        StatisticsTimeEnabled = true,
+                    };
                 }
 
                 using (var command = new SqlCommand("DBCC USEROPTIONS WITH NO_INFOMSGS;", connection))
                 using (var reader = command.ExecuteReader())
                 {
-                    var statisticsIoEnabled = false;
-                    var statisticsTimeEnabled = false;
+                    var options = new StatisticsSummaryOutputOptions();
 
                     while (reader.Read())
                     {
@@ -928,26 +944,25 @@ namespace AxialSqlTools
 
                         if (optionName.Equals("statistics io", StringComparison.OrdinalIgnoreCase))
                         {
-                            statisticsIoEnabled = IsUserOptionEnabled(optionValue);
+                            options.StatisticsIoEnabled = IsUserOptionEnabled(optionValue);
                         }
                         else if (optionName.Equals("statistics time", StringComparison.OrdinalIgnoreCase))
                         {
-                            statisticsTimeEnabled = IsUserOptionEnabled(optionValue);
-                        }
-
-                        if (statisticsIoEnabled || statisticsTimeEnabled)
-                        {
-                            return true;
+                            options.StatisticsTimeEnabled = IsUserOptionEnabled(optionValue);
                         }
                     }
 
-                    return statisticsIoEnabled || statisticsTimeEnabled;
+                    return options;
                 }
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Failed to inspect session statistics options.");
-                return true;
+                return new StatisticsSummaryOutputOptions
+                {
+                    StatisticsIoEnabled = true,
+                    StatisticsTimeEnabled = true,
+                };
             }
         }
 
