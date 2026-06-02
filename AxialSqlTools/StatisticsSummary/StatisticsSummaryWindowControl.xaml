@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
              mc:Ignorable="d"
              d:DesignHeight="700"
              d:DesignWidth="900"
@@ -53,12 +54,12 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid Grid.Row="0"
+                  Margin="0,0,0,8"
+                  Visibility="{Binding ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -84,91 +85,164 @@
                          IsIndeterminate="True"
                          Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-            <Grid Grid.Row="2" Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding Results}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <primitives:UniformGrid Rows="2" Columns="1" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
 
-                <Border Grid.Column="0" Margin="0,0,8,0" Padding="10" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock FontWeight="Bold" Text="Elapsed time" />
-                        <TextBlock Margin="0,6,0,0" FontSize="18" Text="{Binding TotalElapsedText}" />
-                    </StackPanel>
-                </Border>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,8"
+                                Padding="0"
+                                BorderBrush="{DynamicResource AxialThemeBorderBrush}">
+                            <Border.Style>
+                                <Style TargetType="{x:Type Border}">
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ShowDivider}" Value="True">
+                                            <Setter Property="BorderThickness" Value="0,1,0,0" />
+                                            <Setter Property="Padding" Value="0,10,0,0" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
 
-                <Border Grid.Column="1" Margin="0,0,8,0" Padding="10" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock FontWeight="Bold" Text="CPU time" />
-                        <TextBlock Margin="0,6,0,0" FontSize="18" Text="{Binding TotalCpuText}" />
-                    </StackPanel>
-                </Border>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                <Border Grid.Column="2" Padding="10" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock FontWeight="Bold" Text="Total logical reads" />
-                        <TextBlock Margin="0,6,0,0" FontSize="18" Text="{Binding TotalReadsText}" />
-                    </StackPanel>
-                </Border>
-            </Grid>
+                                <Grid Grid.Row="0" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
-            <DataGrid Grid.Row="3"
-                      Margin="0,0,0,8"
-                      IsReadOnly="True"
-                      AutoGenerateColumns="False"
-                      ItemsSource="{Binding Tables}"
-                      Style="{DynamicResource AxialThemedDataGridStyle}"
-                      ColumnHeaderStyle="{DynamicResource AxialThemedDataGridColumnHeaderStyle}"
-                      CellStyle="{DynamicResource AxialThemedDataGridCellStyle}"
-                      RowStyle="{DynamicResource AxialThemedDataGridRowStyle}">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Table" Binding="{Binding TableName}" Width="*" />
-                    <DataGridTextColumn Header="Scans" Binding="{Binding ScanCount, StringFormat={}{0:N0}}" Width="50" />
-                    <DataGridTextColumn Header="Logical reads"
-                                        Binding="{Binding TotalReads, StringFormat={}{0:N0}}"
-                                        Width="110"
-                                        HeaderStyle="{StaticResource StatisticsReadsHeaderStyle}"
-                                        ElementStyle="{StaticResource StatisticsReadsTextStyle}" />
-                </DataGrid.Columns>
-            </DataGrid>
+                                    <TextBlock Grid.Column="0"
+                                               VerticalAlignment="Center"
+                                               FontWeight="Bold"
+                                               FontSize="14"
+                                               Text="{Binding Title}" />
 
-            <Grid Grid.Row="4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+                                    <Button Grid.Column="1"
+                                            Margin="8,0,0,0"
+                                            Padding="10,3"
+                                            VerticalAlignment="Center"
+                                            Content="Copy as"
+                                            IsEnabled="{Binding HasTableData}"
+                                            Click="CopyAsButton_Click">
+                                        <Button.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="CSV"
+                                                          Click="CopyAsCsvMenuItem_Click"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="Markdown"
+                                                          Click="CopyAsMarkdownMenuItem_Click"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <MenuItem Header="JSON"
+                                                          Click="CopyAsJsonMenuItem_Click"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                    </Button>
+                                </Grid>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="Bold" Text="Captured at" />
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CapturedAtText}" />
+                                <Grid Grid.Row="1" Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,4,0,0" FontWeight="Bold" Text="Source" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,4,0,0" Text="{Binding SourceText}" />
+                                    <Border Grid.Column="0" Margin="0,0,8,0" Padding="8" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock FontWeight="Bold" Text="Elapsed time" />
+                                            <TextBlock Margin="0,4,0,0" FontSize="16" Text="{Binding TotalElapsedText}" />
+                                        </StackPanel>
+                                    </Border>
 
-                <Expander Grid.Row="2"
-                          Grid.Column="0"
-                          Grid.ColumnSpan="2"
-                          Margin="0,8,0,0"
-                          Header="Source query"
-                          IsExpanded="False">
-                    <TextBox Margin="0,8,0,0"
-                             Height="160"
-                             Text="{Binding QueryTextPreview}"
-                             IsReadOnly="True"
-                             TextWrapping="NoWrap"
-                             AcceptsReturn="True"
-                             AcceptsTab="True"
-                             HorizontalScrollBarVisibility="Auto"
-                             VerticalScrollBarVisibility="Auto"
-                             FontFamily="Consolas"
-                             FontSize="12" />
-                </Expander>
-            </Grid>
+                                    <Border Grid.Column="1" Margin="0,0,8,0" Padding="8" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock FontWeight="Bold" Text="CPU time" />
+                                            <TextBlock Margin="0,4,0,0" FontSize="16" Text="{Binding TotalCpuText}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Grid.Column="2" Padding="8" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock FontWeight="Bold" Text="Total logical reads" />
+                                            <TextBlock Margin="0,4,0,0" FontSize="16" Text="{Binding TotalReadsText}" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <DataGrid Grid.Row="2"
+                                          Margin="0,0,0,8"
+                                          IsReadOnly="True"
+                                          AutoGenerateColumns="False"
+                                          ItemsSource="{Binding Tables}"
+                                          Style="{DynamicResource AxialThemedDataGridStyle}"
+                                          ColumnHeaderStyle="{DynamicResource AxialThemedDataGridColumnHeaderStyle}"
+                                          CellStyle="{DynamicResource AxialThemedDataGridCellStyle}"
+                                          RowStyle="{DynamicResource AxialThemedDataGridRowStyle}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Table" Binding="{Binding TableName}" Width="*" />
+                                        <DataGridTextColumn Header="Scans" Binding="{Binding ScanCount, StringFormat={}{0:N0}}" Width="50" />
+                                        <DataGridTextColumn Header="Logical reads"
+                                                            Binding="{Binding TotalReads, StringFormat={}{0:N0}}"
+                                                            Width="110"
+                                                            HeaderStyle="{StaticResource StatisticsReadsHeaderStyle}"
+                                                            ElementStyle="{StaticResource StatisticsReadsTextStyle}" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <Grid Grid.Row="3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="Bold" Text="Captured at" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CapturedAtText}" />
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,4,0,0" FontWeight="Bold" Text="Source" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,4,0,0" Text="{Binding SourceText}" />
+
+                                    <Expander Grid.Row="2"
+                                              Grid.Column="0"
+                                              Grid.ColumnSpan="2"
+                                              Margin="0,8,0,0"
+                                              Header="Source query"
+                                              IsExpanded="False">
+                                        <TextBox Margin="0,8,0,0"
+                                                 Height="96"
+                                                 Text="{Binding QueryTextPreview}"
+                                                 IsReadOnly="True"
+                                                 TextWrapping="NoWrap"
+                                                 AcceptsReturn="True"
+                                                 AcceptsTab="True"
+                                                 HorizontalScrollBarVisibility="Auto"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 FontFamily="Consolas"
+                                                 FontSize="12" />
+                                    </Expander>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Grid>
     </DockPanel>
 </UserControl>

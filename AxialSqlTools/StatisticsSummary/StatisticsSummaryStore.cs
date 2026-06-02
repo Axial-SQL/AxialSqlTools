@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AxialSqlTools
 {
     internal sealed class StatisticsSummaryStoreState
     {
         public StatisticsSummary Summary { get; set; }
+        public IReadOnlyList<StatisticsSummary> Summaries { get; set; }
         public bool IsLoading { get; set; }
         public bool LastCaptureFailed { get; set; }
     }
@@ -12,7 +15,7 @@ namespace AxialSqlTools
     internal static class StatisticsSummaryStore
     {
         private static readonly object SyncRoot = new object();
-        private static StatisticsSummary _current;
+        private static readonly List<StatisticsSummary> Summaries = new List<StatisticsSummary>();
         private static bool _isLoading;
         private static bool _lastCaptureFailed;
         private static bool _isWindowOpen;
@@ -24,7 +27,7 @@ namespace AxialSqlTools
         {
             lock (SyncRoot)
             {
-                return _current;
+                return Summaries.FirstOrDefault();
             }
         }
 
@@ -32,9 +35,11 @@ namespace AxialSqlTools
         {
             lock (SyncRoot)
             {
+                var summaries = Summaries.ToList();
                 return new StatisticsSummaryStoreState
                 {
-                    Summary = _current,
+                    Summary = summaries.FirstOrDefault(),
+                    Summaries = summaries,
                     IsLoading = _isLoading,
                     LastCaptureFailed = _lastCaptureFailed,
                 };
@@ -104,7 +109,12 @@ namespace AxialSqlTools
                     return;
                 }
 
-                _current = summary;
+                Summaries.Insert(0, summary);
+                while (Summaries.Count > 2)
+                {
+                    Summaries.RemoveAt(Summaries.Count - 1);
+                }
+
                 _isLoading = false;
                 _lastCaptureFailed = false;
             }
@@ -144,7 +154,7 @@ namespace AxialSqlTools
         {
             lock (SyncRoot)
             {
-                _current = null;
+                Summaries.Clear();
                 _isLoading = false;
                 _lastCaptureFailed = false;
                 _isWindowOpen = false;
