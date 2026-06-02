@@ -525,7 +525,7 @@ namespace AxialSqlTools
             try
             {
                 var sqlResultsControl = GridAccess.GetNonPublicField(Window.Object, "m_sqlResultsControl");
-                AttachStatisticsExecutionCompletedHandler(sqlResultsControl, "window-created");
+                AttachStatisticsExecutionCompletedHandler(sqlResultsControl);
 
             }
             catch (Exception ex) 
@@ -534,7 +534,7 @@ namespace AxialSqlTools
             }
         }
 
-        private static void AttachStatisticsExecutionCompletedHandler(object sqlResultsControl, string reason)
+        private static void AttachStatisticsExecutionCompletedHandler(object sqlResultsControl)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -563,7 +563,7 @@ namespace AxialSqlTools
             try
             {
                 var sqlResultsControl = GridAccess.GetSQLResultsControl();
-                AttachStatisticsExecutionCompletedHandler(sqlResultsControl, reason);
+                AttachStatisticsExecutionCompletedHandler(sqlResultsControl);
             }
             catch (Exception ex)
             {
@@ -875,7 +875,7 @@ namespace AxialSqlTools
 
                 GridAccess.TryFlushStatisticsMessages();
 
-                var statisticsText = GridAccess.TryGetStatisticsMessagesText(sqlExecutionContext);
+                var statisticsText = GridAccess.TryGetStatisticsMessagesText();
                 if (TryStoreStatisticsSummary(sqlExecutionContext, statisticsText, captureVersion, out var summary))
                 {
                     return;
