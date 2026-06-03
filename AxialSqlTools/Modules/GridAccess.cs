@@ -654,23 +654,91 @@ namespace AxialSqlTools
             return dataTables;
         }
 
-        public static string TryGetStatisticsMessagesText(object executionContext = null)
+        public static string TryGetStatisticsMessagesText()
         {
-            var visited = new HashSet<object>(new ReferenceEqualityComparer());
-
-            if (TryFindStatisticsText(executionContext, 0, visited, out var statisticsText))
-            {
-                return statisticsText;
-            }
-
             var sqlResultsControl = GetSQLResultsControl();
-            if (!ReferenceEquals(sqlResultsControl, executionContext)
-                && TryFindStatisticsText(sqlResultsControl, 0, visited, out statisticsText))
+            return TryFindStatisticsTextFromResultsControl(sqlResultsControl, out var statisticsText) ? statisticsText : null;
+        }
+
+        private static bool TryFindStatisticsTextFromResultsControl(object sqlResultsControl, out string statisticsText)
+        {
+            statisticsText = null;
+
+            var resultsTabControl = GetNonPublicField(sqlResultsControl, "m_resultsTabCtrl") as TabControl;
+            if (resultsTabControl == null)
             {
-                return statisticsText;
+                return false;
             }
 
-            return null;
+            var selectedIndex = resultsTabControl.SelectedIndex;
+            var messagesIndex = FindMessagesTabIndex(resultsTabControl);
+
+            var visited = new HashSet<object>(new ReferenceEqualityComparer());
+            if (TryFindStatisticsText(resultsTabControl, 0, visited, out statisticsText))
+            {
+                return true;
+            }
+
+            if (messagesIndex < 0 || messagesIndex >= resultsTabControl.TabPages.Count)
+            {
+                return false;
+            }
+
+            try
+            {
+                if (resultsTabControl.SelectedIndex != messagesIndex)
+                {
+                    resultsTabControl.SelectedIndex = messagesIndex;
+                    resultsTabControl.Update();
+                    resultsTabControl.Refresh();
+                    Application.DoEvents();
+                    TryFlushStatisticsMessages();
+                }
+
+                visited.Clear();
+                if (TryFindStatisticsText(resultsTabControl.TabPages[messagesIndex], 0, visited, out statisticsText))
+                {
+                    return true;
+                }
+
+                visited.Clear();
+                return TryFindStatisticsText(resultsTabControl, 0, visited, out statisticsText);
+            }
+            finally
+            {
+                if (selectedIndex >= 0
+                    && selectedIndex < resultsTabControl.TabPages.Count
+                    && resultsTabControl.SelectedIndex != selectedIndex)
+                {
+                    try
+                    {
+                        resultsTabControl.SelectedIndex = selectedIndex;
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+
+        private static int FindMessagesTabIndex(TabControl tabControl)
+        {
+            if (tabControl == null)
+            {
+                return -1;
+            }
+
+            for (var index = 0; index < tabControl.TabPages.Count; index++)
+            {
+                var tabPageText = tabControl.TabPages[index]?.Text;
+                if (!string.IsNullOrWhiteSpace(tabPageText)
+                    && tabPageText.IndexOf("messages", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return index;
+                }
+            }
+
+            return tabControl.TabPages.Count > 1 ? 1 : -1;
         }
 
         public static void TryFlushStatisticsMessages()
@@ -909,7 +977,6 @@ namespace AxialSqlTools
                 return null;
             }
         }
-
 
         private static void TryFlushWriterLike(object writer)
         {

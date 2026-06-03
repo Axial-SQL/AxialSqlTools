@@ -525,7 +525,7 @@ namespace AxialSqlTools
             try
             {
                 var sqlResultsControl = GridAccess.GetNonPublicField(Window.Object, "m_sqlResultsControl");
-                AttachStatisticsExecutionCompletedHandler(sqlResultsControl, "window-created");
+                AttachStatisticsExecutionCompletedHandler(sqlResultsControl);
 
             }
             catch (Exception ex) 
@@ -534,7 +534,7 @@ namespace AxialSqlTools
             }
         }
 
-        private static void AttachStatisticsExecutionCompletedHandler(object sqlResultsControl, string reason)
+        private static void AttachStatisticsExecutionCompletedHandler(object sqlResultsControl)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -563,7 +563,7 @@ namespace AxialSqlTools
             try
             {
                 var sqlResultsControl = GridAccess.GetSQLResultsControl();
-                AttachStatisticsExecutionCompletedHandler(sqlResultsControl, reason);
+                AttachStatisticsExecutionCompletedHandler(sqlResultsControl);
             }
             catch (Exception ex)
             {
@@ -861,7 +861,17 @@ namespace AxialSqlTools
 
         private static async Task CaptureStatisticsSummaryAsync(object sqlExecutionContext, int captureVersion, CancellationToken cancellationToken)
         {
-            const int maxAttempts = 24;
+            const int maxAttempts = 3;
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+
+            var statisticsOutputOptions = GetStatisticsSummaryOutputOptions(sqlExecutionContext);
+            if (!statisticsOutputOptions.HasStatisticsOutput)
+            {
+                StatisticsSummaryStore.MarkUnavailable(captureVersion, StatisticsSummaryCaptureStatus.StatisticsDisabled);
+                return;
+            }
 
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
@@ -875,7 +885,7 @@ namespace AxialSqlTools
 
                 GridAccess.TryFlushStatisticsMessages();
 
-                var statisticsText = GridAccess.TryGetStatisticsMessagesText(sqlExecutionContext);
+                var statisticsText = GridAccess.TryGetStatisticsMessagesText();
                 if (TryStoreStatisticsSummary(sqlExecutionContext, statisticsText, captureVersion, out var summary))
                 {
                     return;
@@ -883,11 +893,90 @@ namespace AxialSqlTools
 
                 if (attempt < maxAttempts - 1)
                 {
-                    await Task.Delay(300, cancellationToken);
+                    await Task.Delay(150, cancellationToken);
                 }
             }
 
             StatisticsSummaryStore.MarkUnavailable(captureVersion);
+        }
+
+        private sealed class StatisticsSummaryOutputOptions
+        {
+            public bool StatisticsIoEnabled { get; set; }
+            public bool StatisticsTimeEnabled { get; set; }
+            public bool HasStatisticsOutput => StatisticsIoEnabled || StatisticsTimeEnabled;
+        }
+
+        private static StatisticsSummaryOutputOptions GetStatisticsSummaryOutputOptions(object sqlExecutionContext)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            try
+            {
+                if (!(GridAccess.GetNonPublicField(sqlExecutionContext, "m_conn") is SqlConnection connection)
+                    || connection.State != ConnectionState.Open)
+                {
+                    return new StatisticsSummaryOutputOptions
+                    {
+                        StatisticsIoEnabled = true,
+                        StatisticsTimeEnabled = true,
+                    };
+                }
+
+                using (var command = new SqlCommand("DBCC USEROPTIONS WITH NO_INFOMSGS;", connection))
+                using (var reader = command.ExecuteReader())
+                {
+                    var options = new StatisticsSummaryOutputOptions();
+
+                    while (reader.Read())
+                    {
+                        if (reader.FieldCount < 2)
+                        {
+                            continue;
+                        }
+
+                        var optionName = reader.IsDBNull(0) ? null : reader.GetString(0);
+                        var optionValue = reader.IsDBNull(1) ? null : reader.GetString(1);
+                        if (string.IsNullOrWhiteSpace(optionName))
+                        {
+                            continue;
+                        }
+
+                        if (optionName.Equals("statistics io", StringComparison.OrdinalIgnoreCase))
+                        {
+                            options.StatisticsIoEnabled = IsUserOptionEnabled(optionValue);
+                        }
+                        else if (optionName.Equals("statistics time", StringComparison.OrdinalIgnoreCase))
+                        {
+                            options.StatisticsTimeEnabled = IsUserOptionEnabled(optionValue);
+                        }
+                    }
+
+                    return options;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to inspect session statistics options.");
+                return new StatisticsSummaryOutputOptions
+                {
+                    StatisticsIoEnabled = true,
+                    StatisticsTimeEnabled = true,
+                };
+            }
+        }
+
+        private static bool IsUserOptionEnabled(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return value.Equals("on", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("set", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("true", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("1", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool TryStoreStatisticsSummary(object sqlExecutionContext, string statisticsText, int captureVersion, out StatisticsSummary summary)
