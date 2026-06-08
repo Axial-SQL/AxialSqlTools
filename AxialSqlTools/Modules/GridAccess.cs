@@ -240,6 +240,92 @@ namespace AxialSqlTools
             return null;
         }
 
+        private sealed class StatusStripColorController
+        {
+            private readonly StatusStrip _statusStrip;
+            private bool _isApplied;
+
+            public StatusStripColorController(StatusStrip statusStrip)
+            {
+                _statusStrip = statusStrip;
+                OriginalBackColor = statusStrip.BackColor;
+            }
+
+            public Color OriginalBackColor { get; }
+
+            public void ApplyColor(Color color)
+            {
+                _statusStrip.BackColor = color;
+                _isApplied = true;
+            }
+
+            public void Restore()
+            {
+                if (!_isApplied)
+                {
+                    return;
+                }
+
+                _statusStrip.BackColor = OriginalBackColor;
+                _isApplied = false;
+            }
+        }
+
+        private static readonly Dictionary<StatusStrip, StatusStripColorController> _statusStripColorControllers =
+            new Dictionary<StatusStrip, StatusStripColorController>();
+
+        private static StatusStripColorController GetStatusStripColorController(StatusStrip statusStrip)
+        {
+            if (!_statusStripColorControllers.TryGetValue(statusStrip, out StatusStripColorController controller))
+            {
+                controller = new StatusStripColorController(statusStrip);
+                _statusStripColorControllers[statusStrip] = controller;
+            }
+
+            return controller;
+        }
+
+        private static void TryRestoreStatusBarColor(object statusBarManager, StatusStrip statusStrip)
+        {
+            if (statusStrip == null)
+            {
+                return;
+            }
+
+            if (!_statusStripColorControllers.TryGetValue(statusStrip, out StatusStripColorController controller))
+            {
+                return;
+            }
+
+            controller.Restore();
+            _statusStripColorControllers.Remove(statusStrip);
+            TrySetNativeServerBackground(statusBarManager, controller.OriginalBackColor);
+        }
+
+        private static void TrySetNativeServerBackground(object statusBarManager, Color color)
+        {
+            if (statusBarManager == null)
+            {
+                return;
+            }
+
+            try
+            {
+                MethodInfo method = statusBarManager.GetType().GetMethod(
+                    "SetServerBackground",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    null,
+                    new[] { typeof(Color) },
+                    null);
+
+                method?.Invoke(statusBarManager, new object[] { color });
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, "Error setting native status bar background");
+            }
+        }
+
         public static void ApplyConnectionColor(string serverName, string databaseName)
         {
             // Status bar coloring - only for query windows
@@ -255,17 +341,20 @@ namespace AxialSqlTools
                 if (statusBarManager == null)
                     return;
 
-                var statusStripObj = GetNonPublicField(statusBarManager, "statusStrip");
-                if (statusStripObj is StatusStrip statusStrip)
+                var statusStrip = GetNonPublicField(statusBarManager, "statusStrip") as StatusStrip;
+
+                if (matchedColor.HasValue)
                 {
-                    if (matchedColor != null)
+                    TrySetNativeServerBackground(statusBarManager, matchedColor.Value);
+
+                    if (statusStrip != null)
                     {
-                        statusStrip.BackColor = matchedColor.Value;
+                        GetStatusStripColorController(statusStrip).ApplyColor(matchedColor.Value);
                     }
-                    else
-                    {
-                        statusStrip.BackColor = SystemColors.Control;
-                    }
+                }
+                else
+                {
+                    TryRestoreStatusBarColor(statusBarManager, statusStrip);
                 }
             }
             catch (Exception ex)

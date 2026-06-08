@@ -16,6 +16,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Task = System.Threading.Tasks.Task;
 using Microsoft.SqlServer.Management.UI.Grid;
+using Microsoft.SqlServer.Management.UI.VSIntegration;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio;
 using System.Collections;
@@ -110,6 +111,8 @@ namespace AxialSqlTools
         private static int _pendingStatisticsCaptureVersion;
         private static readonly object _statisticsCaptureSyncRoot = new object();
         private static CancellationTokenSource _statisticsCaptureCancellationTokenSource;
+        private System.Windows.Threading.DispatcherTimer _connectionColorRetryTimer;
+        private int _connectionColorRetryCount;
         public static Logger _logger;
 
         private void InitializeLogging()
@@ -432,6 +435,68 @@ namespace AxialSqlTools
 
         #endregion
 
+        private bool TryApplyConnectionColorForWindow(EnvDTE.Window window)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            string windowKind = null;
+            try { windowKind = window?.Kind; } catch { }
+
+            if (window == null || windowKind != "Document")
+            {
+                return false;
+            }
+
+            var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
+            if (connectionInfo == null || string.IsNullOrWhiteSpace(connectionInfo.ServerName))
+            {
+                return false;
+            }
+
+            GridAccess.ApplyConnectionColor(connectionInfo.ServerName, connectionInfo.Database);
+            GridAccess.ColorAllDocumentTabs();
+            return true;
+        }
+
+        private void ScheduleActiveWindowConnectionColorRefresh()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (_connectionColorRetryTimer == null)
+            {
+                _connectionColorRetryTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(200)
+                };
+
+                _connectionColorRetryTimer.Tick += (sender, args) =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+
+                    _connectionColorRetryCount++;
+
+                    bool applied = false;
+                    try
+                    {
+                        applied = TryApplyConnectionColorForWindow(ServiceCache.ExtensibilityModel?.ActiveWindow);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.Error(ex, "Failed to refresh connection color.");
+                    }
+
+                    if (applied || _connectionColorRetryCount >= 6)
+                    {
+                        _connectionColorRetryTimer.Stop();
+                    }
+                };
+            }
+
+            _connectionColorRetryCount = 0;
+            _connectionColorRetryTimer.Stop();
+            _connectionColorRetryTimer.Start();
+        }
+
         private void WindowActivated_Event(EnvDTE.Window GotFocus, EnvDTE.Window LostFocus)
         {
 
@@ -478,21 +543,11 @@ namespace AxialSqlTools
             // Apply connection-based coloring (document tab + status bar)
             try
             {
-                string windowKind = null;
-                try { windowKind = GotFocus?.Kind; } catch { }
-
-                if (GotFocus != null && windowKind == "Document")
+                if (GotFocus != null)
                 {
-                    // Color status bar for the active tab
-                    var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
-                    if (connectionInfo != null)
-                    {
-                        GridAccess.ApplyConnectionColor(connectionInfo.ServerName, connectionInfo.Database);
-                    }
-
-                    // Color all document tabs (each tab's Header contains its own connection info)
-                    GridAccess.ColorAllDocumentTabs();
+                    TryApplyConnectionColorForWindow(GotFocus);
                     GridAccess.ScheduleReapplyAllTabColors();
+                    ScheduleActiveWindowConnectionColorRefresh();
                 }
             }
             catch (Exception ex)
@@ -526,6 +581,9 @@ namespace AxialSqlTools
             {
                 var sqlResultsControl = GridAccess.GetNonPublicField(Window.Object, "m_sqlResultsControl");
                 AttachStatisticsExecutionCompletedHandler(sqlResultsControl);
+                TryApplyConnectionColorForWindow(Window);
+                GridAccess.ScheduleReapplyAllTabColors();
+                ScheduleActiveWindowConnectionColorRefresh();
 
             }
             catch (Exception ex) 
