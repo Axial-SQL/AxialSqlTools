@@ -112,7 +112,10 @@ namespace AxialSqlTools
         private static readonly object _statisticsCaptureSyncRoot = new object();
         private static CancellationTokenSource _statisticsCaptureCancellationTokenSource;
         private System.Windows.Threading.DispatcherTimer _connectionColorRetryTimer;
+        private System.Windows.Threading.DispatcherTimer _activeConnectionMonitorTimer;
         private int _connectionColorRetryCount;
+        private string _lastObservedConnectionColorKey;
+        private string _lastObservedConnectionWindowKey;
         public static Logger _logger;
 
         private void InitializeLogging()
@@ -365,6 +368,8 @@ namespace AxialSqlTools
                 windowEvents.WindowActivated += new _dispWindowEvents_WindowActivatedEventHandler(WindowActivated_Event);
                 windowEvents.WindowClosing += new _dispWindowEvents_WindowClosingEventHandler(WindowClosing_Event);
 
+                StartActiveWindowConnectionMonitor();
+
                 // "File.ConnectObjectExplorer"
                 // "Query.Connect"
                 // 
@@ -458,6 +463,107 @@ namespace AxialSqlTools
             return true;
         }
 
+        private void StartActiveWindowConnectionMonitor()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (_activeConnectionMonitorTimer != null)
+            {
+                return;
+            }
+
+            _activeConnectionMonitorTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(300)
+            };
+
+            _activeConnectionMonitorTimer.Tick += (sender, args) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+
+                try
+                {
+                    RefreshActiveWindowConnectionColorIfChanged();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.Error(ex, "Failed to monitor active window connection changes.");
+                }
+            };
+
+            _activeConnectionMonitorTimer.Start();
+        }
+
+        private void RefreshActiveWindowConnectionColorIfChanged(bool force = false)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var activeWindow = ServiceCache.ExtensibilityModel?.ActiveWindow;
+            string windowKind = null;
+            try { windowKind = activeWindow?.Kind; } catch { }
+
+            if (activeWindow == null || windowKind != "Document")
+            {
+                _lastObservedConnectionColorKey = null;
+                _lastObservedConnectionWindowKey = null;
+                return;
+            }
+
+            var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
+            if (connectionInfo == null || string.IsNullOrWhiteSpace(connectionInfo.ServerName))
+            {
+                _lastObservedConnectionColorKey = null;
+                _lastObservedConnectionWindowKey = null;
+                return;
+            }
+
+            string connectionKey = $"{connectionInfo.ServerName}|{connectionInfo.Database}";
+            string windowKey = GetWindowTrackingKey(activeWindow);
+
+            if (!force &&
+                string.Equals(connectionKey, _lastObservedConnectionColorKey, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(windowKey, _lastObservedConnectionWindowKey, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            GridAccess.ApplyConnectionColor(connectionInfo.ServerName, connectionInfo.Database);
+            GridAccess.ColorAllDocumentTabs();
+
+            _lastObservedConnectionColorKey = connectionKey;
+            _lastObservedConnectionWindowKey = windowKey;
+        }
+
+        private static string GetWindowTrackingKey(EnvDTE.Window window)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (window == null)
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                if (window.Document != null)
+                {
+                    return window.Document.FullName ?? window.Caption ?? string.Empty;
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                return window.Caption ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
         private void ScheduleActiveWindowConnectionColorRefresh()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -492,6 +598,7 @@ namespace AxialSqlTools
                 };
             }
 
+            RefreshActiveWindowConnectionColorIfChanged(force: true);
             _connectionColorRetryCount = 0;
             _connectionColorRetryTimer.Stop();
             _connectionColorRetryTimer.Start();
