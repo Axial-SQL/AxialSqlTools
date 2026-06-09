@@ -68,7 +68,7 @@
             UpdateImportButtonState();
         }
 
-        private void ButtonImport_OnClick(object sender, RoutedEventArgs e)
+        private async void ButtonImport_OnClick(object sender, RoutedEventArgs e)
         {
             if (!EnsureSelections())
             {
@@ -84,24 +84,21 @@
 
             SetBusyState(true);
 
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            try
             {
-                try
-                {
-                    await PerformImportAsync(worksheet, firstRowHeaders, createTable, truncateTable, destinationTable, connectionInfo);
-                }
-                catch (Exception ex)
-                {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    MessageBox.Show($"Import failed: {ex.Message}", "Data Import", MessageBoxButton.OK, MessageBoxImage.Error);
-                    UpdateStatus("Import failed. Review the error and try again.");
-                }
-                finally
-                {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    SetBusyState(false);
-                }
-            });
+                await PerformImportAsync(worksheet, firstRowHeaders, createTable, truncateTable, destinationTable, connectionInfo);
+            }
+            catch (Exception ex)
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                MessageBox.Show($"Import failed: {ex.Message}", "Data Import", MessageBoxButton.OK, MessageBoxImage.Error);
+                UpdateStatus("Import failed. Review the error and try again.");
+            }
+            finally
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                SetBusyState(false);
+            }
         }
 
         private bool EnsureSelections()

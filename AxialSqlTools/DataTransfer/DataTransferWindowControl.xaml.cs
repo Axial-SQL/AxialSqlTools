@@ -236,7 +236,7 @@
 
         }
 
-        private void ButtonCopyData_Click(object sender, RoutedEventArgs e)
+        private async void ButtonCopyData_Click(object sender, RoutedEventArgs e)
         {
             // await SqlToSql_CopyDataAsync();
 
@@ -245,7 +245,6 @@
             stopwatch = Stopwatch.StartNew();
 
             // update counter on the form with the last update time 
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
 
                 Button_CopyData.Visibility = System.Windows.Visibility.Collapsed;
@@ -361,7 +360,7 @@
 
                 stopwatch.Stop();
 
-            });
+            }
 
         }
 

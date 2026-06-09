@@ -823,11 +823,7 @@ namespace AxialSqlTools
 
             if (!StatisticsSummaryStore.IsWindowOpen())
             {
-                _ = ThreadHelper.JoinableTaskFactory.RunAsync(async delegate
-                {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    EnsureStatisticsExecutionHookForActiveWindow("post-skip");
-                });
+                ThreadHelper.Generic.BeginInvoke(() => EnsureStatisticsExecutionHookForActiveWindow("post-skip"));
 
                 return;
             }
@@ -845,7 +841,7 @@ namespace AxialSqlTools
 
             var captureCancellationTokenSource = CreateStatisticsCaptureCancellationTokenSource();
 
-            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async delegate
+            _ = Task.Run(async delegate
             {
                 try
                 {

@@ -36,14 +36,11 @@ namespace AxialSqlTools
             Instance = new CopyQueryAsHtmlCommand(package, commandService);
         }
 
-        private void Execute(object sender, EventArgs e)
+        private async void Execute(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async delegate
-            {
-                await ExecuteAsync();
-            });
+            await ExecuteAsync();
         }
 
         private async Task ExecuteAsync()

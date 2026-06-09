@@ -242,45 +242,52 @@
                 connectionString = connectionInfo.FullConnectionString;
 
                 _cancellationTokenSource = new CancellationTokenSource();
-
-                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                {
-
-                    int i = 0;
-
-                    while (!_cancellationTokenSource.IsCancellationRequested)
-                    {
-
-                        var metrics = await MetricsService.FetchServerMetricsAsync(connectionString, prev_metrics);
-
-                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_cancellationTokenSource.Token);
-
-                        UpdateUI(i, metrics, false);
-
-                        prev_metrics = metrics;
-
-                        await System.Threading.Tasks.Task.Delay(3000, _cancellationTokenSource.Token); // Wait for 30 seconds before refreshing again
-
-                        i += 1;
-                    }
-
-                });
-
-                // update counter on the form with the last update time 
-                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                {
-                    while (!_cancellationTokenSource.IsCancellationRequested)
-                    {
-                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_cancellationTokenSource.Token);
-                        UpdateTheLastPullDate();
-                        await System.Threading.Tasks.Task.Delay(1000, _cancellationTokenSource.Token);
-                    }
-                });
+                _ = Task.Run(() => MonitorServerLoopAsync(_cancellationTokenSource.Token));
+                _ = Task.Run(() => UpdateLastPullLoopAsync(_cancellationTokenSource.Token));
 
                 _monitoringStarted = true;
 
             }
 
+        }
+
+        private async Task MonitorServerLoopAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                int i = 0;
+
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    var metrics = await MetricsService.FetchServerMetricsAsync(connectionString, prev_metrics);
+
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+                    UpdateUI(i, metrics, false);
+                    prev_metrics = metrics;
+
+                    await Task.Delay(3000, cancellationToken);
+                    i += 1;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        private async Task UpdateLastPullLoopAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+                    UpdateTheLastPullDate();
+                    await Task.Delay(1000, cancellationToken);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         public void UpdateUI(int i, HealthDashboardServerMetric metrics, bool doEmpty)

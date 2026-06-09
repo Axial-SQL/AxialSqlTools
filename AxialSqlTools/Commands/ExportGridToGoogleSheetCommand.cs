@@ -50,14 +50,11 @@ namespace AxialSqlTools
             Instance = new ExportGridToGoogleSheetCommand(package, commandService);
         }
 
-        private void Execute(object sender, EventArgs e)
+        private async void Execute(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            ThreadHelper.JoinableTaskFactory.RunAsync(async delegate
-            {
-                await ExecuteAsync();
-            });
+            await ExecuteAsync();
         }
 
         private async Task ExecuteAsync()

@@ -2,6 +2,7 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using System.Collections.Generic;
 using System;
 using System.Diagnostics;
 
@@ -41,8 +42,13 @@ namespace AxialSqlTools
                     return false;
                 }
 
-                if (ErrorHandler.Failed(shell.GetProperty((int)__VSSPROPID7.VSSPROPID_MainWindowInfoBarHost, out object hostObj))
-                    || !(hostObj is IVsInfoBarHost host))
+                if (ErrorHandler.Failed(shell.GetProperty((int)__VSSPROPID7.VSSPROPID_MainWindowInfoBarHost, out object hostObj)))
+                {
+                    UpdateChecker.Log("UpdateInfoBar: MainWindowInfoBarHost not available.");
+                    return false;
+                }
+
+                if (!(hostObj is IVsInfoBarHost host))
                 {
                     UpdateChecker.Log("UpdateInfoBar: MainWindowInfoBarHost not available.");
                     return false;
@@ -55,18 +61,22 @@ namespace AxialSqlTools
                     return false;
                 }
 
+                IEnumerable<IVsInfoBarTextSpan> textSpans = new[]
+                {
+                    new InfoBarTextSpan($"Axial SQL Tools v{latestVersion} update available.  ")
+                };
+
+                IEnumerable<IVsInfoBarActionItem> actionItems = new IVsInfoBarActionItem[]
+                {
+                    new InfoBarButton("Update on Close", ActionUpdateOnClose),
+                    new InfoBarHyperlink("Release Notes", ActionReleaseNotes)
+                };
+
                 var model = new InfoBarModel(
-                    new IVsInfoBarTextSpan[]
-                    {
-                        new InfoBarTextSpan($"Axial SQL Tools v{latestVersion} update available.  ")
-                    },
-                    new IVsInfoBarActionItem[]
-                    {
-                        new InfoBarButton("Update on Close", ActionUpdateOnClose),
-                        new InfoBarHyperlink("Release Notes", ActionReleaseNotes)
-                    },
+                    textSpans,
+                    actionItems,
                     KnownMonikers.StatusInformation,
-                    isCloseButtonVisible: true);
+                    true);
 
                 currentElement = factory.CreateInfoBar(model);
                 if (currentElement == null)
