@@ -15,6 +15,25 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <ControlTemplate x:Key="AxialPlotTrackerTemplate">
+                <oxy:TrackerControl Position="{Binding Position}"
+                                    LineExtents="{Binding PlotModel.PlotArea}"
+                                    Background="{DynamicResource AxialThemeButtonBackgroundBrush}"
+                                    BorderBrush="{DynamicResource AxialThemeBorderBrush}"
+                                    BorderThickness="1"
+                                    Padding="8,6"
+                                    LineStroke="{DynamicResource AxialThemeAccentBrush}">
+                    <TextBlock Text="{Binding Text}"
+                               Foreground="{DynamicResource AxialThemeForegroundBrush}"
+                               Background="Transparent"
+                               TextWrapping="Wrap" />
+                </oxy:TrackerControl>
+            </ControlTemplate>
+
+            <Style TargetType="{x:Type oxy:PlotView}">
+                <Setter Property="DefaultTrackerTemplate" Value="{StaticResource AxialPlotTrackerTemplate}" />
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
