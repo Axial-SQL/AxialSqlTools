@@ -1,18 +1,14 @@
-# Axial SQL Tools | SQL Server Management Studio 22 Productivity Addin
+# Axial SQL Tools | SQL Server Management Studio 22 Productivity Add-in
 
-As an engineer with over two decades of experience in SQL Server, I've encountered my fair share of inefficiencies and limitations within SSMS. 
-Motivated by these challenges, I started developing the SSMS extension back in 2016. This repository represents the fourth iteration of my work, tailored specifically for SSMS 22.
-This project is a personal endeavor to solve the issues I've faced, but I would like to incorporate valuable community feedback and ideas as well.
+Axial SQL Tools is an open-source productivity extension for SQL Server Management Studio (SSMS) 22. The project began in 2016 as a practical response to everyday SQL Server workflow friction and has grown into a community-supported tool maintained by contributors who use SSMS in real production environments.
 
-While I recognize that this extension may overlap with existing tools, both free and paid, my passion lies in coding and tackling problems in my own unique way. The aim isn't to overshadow other solutions but to provide a complementary tool that addresses gaps and simplifies processes for engineers like myself.
+The goal is straightforward: make common SSMS tasks faster, clearer, and less repetitive. Axial SQL Tools focuses on small, useful improvements such as clearer query status indicators, richer grid export options, query templates, formatting helpers, quick search, schema comparison, and other utilities that help database engineers stay in flow.
 
-I'm committed to keeping this tool free and openly available to the community. While formalized support won't be provided, I welcome feedback and suggestions to continually improve and evolve the tool based on user needs. 
+This extension may overlap with other free or commercial tools. It is not intended to replace every existing solution; instead, it provides a focused, open, and approachable set of enhancements for teams and individuals who want practical SSMS improvements that can evolve with community feedback.
 
-This project depends on community input. If you have ideas to improve the extension or queries worth sharing, contribute your suggestions or additions to help make it better for everyone.
+Axial SQL Tools is free and openly available under the Apache-2.0 license. The maintainers welcome bug reports, ideas, documentation improvements, and code contributions that make the extension more useful for everyone.
 
-If you find this extension useful and it helps streamline your workflow in SSMS, please consider giving it a :star: star on the repository. Your support not only motivates me but also helps others in the community discover this tool. 
-
-Check it out and let me know what you think!
+If the extension helps streamline your SSMS workflow, please consider giving the repository a :star: star. Stars help other SQL Server users discover the project and show support for the contributors who keep it moving forward.
 
 <img width="590" height="464" alt="image" src="https://github.com/user-attachments/assets/cada1f9e-4674-46e6-9fed-ca7a8724424a" />
 
@@ -32,7 +28,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 
 - [**Copy Query for Web Paste**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Query-for-Web-Paste): Preserve the text format to ensure proper rendering when inserting into HTML-aware clients such as Outlook Online, Gmail, and others.
   
-- [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access your personal collection of query templates for common tasks, reducing the time and effort required for routine work.
+- [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access a saved collection of query templates for common tasks, reducing the time and effort required for routine work.
 
 - [**Export Grid to Google Sheets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Google-Sheets-Export): Quickly export results from the grid view directly into Google Sheets.
   
@@ -56,22 +52,19 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 
 - [**Copy Column Names from Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Column-Names-from-Grid): Quickly copy the column names from the results grid to the clipboard.
   
-- [**Copy Cell Values As ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Grid-Cells-As-...): Copy cell values to clipborad in multiple formats: INSERT, CSV, JSON, XML, or HTML.
+- [**Copy Cell Values As ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Grid-Cells-As-...): Copy cell values to the clipboard in multiple formats: INSERT, CSV, JSON, XML, or HTML.
   
 - [**Database Schema Compare**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Database-Schema-Compare): DacFx-based database schema comparison tool.
 
-
 ## Query Library
 
-The extension also comes with a set of queries, which have been compiled over time and incorporate ideas and best practices from many SQL experts. 
-These templates are designed to cover a wide range of scenarios, helping you to execute complex tasks faster.
+The extension includes a query library compiled over time with ideas and best practices from SQL Server practitioners and community experts. These templates cover a wide range of scenarios and help users complete complex or repetitive tasks faster.
 
 ## Installation
 
-To install the addin, you have two options:
+To install the add-in, choose one of the following options:
 
-1. **Compile from Source:** If you prefer to compile the tool from the source code, please ensure you are using Visual Studio 2026 for compatibility. 
-The build process will automatically copy all necessary files into the SSMS extension folder, and you will be ready to use it.
+1. **Compile from Source:** If you prefer to compile the tool from source code, please ensure you are using Visual Studio 2026 for compatibility. The build process will automatically copy all necessary files into the SSMS extension folder, and you will be ready to use it.
 
 2. **Download the Release and Install the Extension:** For a quicker setup, download the most recent version from the [Releases](https://github.com/Axial-SQL/AxialSqlTools/releases) section of this GitHub repository. See the [Wiki](https://github.com/Axial-SQL/AxialSqlTools/wiki) for installation steps.
 
@@ -80,30 +73,27 @@ After installation and an SSMS restart, the **Axial SQL Tools** toolbar will app
 
 ## Contributing
 
-We believe in the power of community and are open to any ideas or bug reports. 
-Your contributions are what make this tool better every day. 
-If you have ideas for new features or have encountered a bug, please feel free to submit them in this repository.
+Axial SQL Tools is maintained as an open-source project, and community participation is encouraged. Contributions can include bug reports, feature ideas, documentation improvements, query library additions, testing, and code changes.
 
 ### Submitting Ideas and Bugs
 
 1. Submit bugs in the [Issues](https://github.com/Axial-SQL/AxialSqlTools/issues) section of this repository.
 2. Add ideas in the [Discussions](https://github.com/Axial-SQL/AxialSqlTools/discussions) section.
 
-We appreciate your feedback and contributions!
+All constructive feedback and contributions are appreciated.
 
 ## Acknowledgements
 
-This project stands on the shoulders of the many developers and authors who have publicly shared their work. I am not an expert in C# or VSIX development, so the creation of this tool would not have been possible without the invaluable resources and examples published by others on GitHub. We do not claim any copyright over the work derived from these contributions. Our aim is to give back to the community by sharing this tool, and we are deeply grateful for the guidance and inspiration provided by the broader developer community.
+This project stands on the shoulders of the many developers, SQL Server professionals, and authors who have publicly shared their work. The maintainers are grateful for the resources, examples, discussions, and guidance published by the broader developer community. Axial SQL Tools aims to give back by keeping the extension open, useful, and accessible.
 
 ## License
-This tool is distributed freely under the Apache-2.0 license, with no warranty implied. 
-It is an internal tool that we use daily at our organization. 
+
+This tool is distributed freely under the Apache-2.0 license, with no warranty implied.
 
 ## Disclaimer
-This extension is provided "as is", with all faults, defects, and errors, and without warranty of any kind. 
-The creators do not offer support and are not responsible for any damage or loss resulting from the use of this tool.
+
+This extension is provided "as is", with all faults, defects, and errors, and without warranty of any kind. The maintainers and contributors do not offer guaranteed support and are not responsible for any damage or loss resulting from the use of this tool.
 
 ---
 
-Thank you for using the Axial SQL Tools SSMS Addin! 
-We hope it makes your work with SQL Server significantly more efficient!
+Thank you for using the Axial SQL Tools SSMS Add-in. The project community hopes it makes your work with SQL Server significantly more efficient.
