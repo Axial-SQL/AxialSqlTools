@@ -98,8 +98,6 @@ This project stands on the shoulders of the many developers and authors who have
 ## License
 This tool is distributed freely under the Apache-2.0 license, with no warranty implied. 
 It is an internal tool that we use daily at our organization. 
-While we do not offer formal support or sell this tool, we are open to consulting and helping solve complex SQL Server challenges. 
-Feel free to reach out for professional assistance: `albochkov03@gmail.com`.
 
 ## Disclaimer
 This extension is provided "as is", with all faults, defects, and errors, and without warranty of any kind. 
