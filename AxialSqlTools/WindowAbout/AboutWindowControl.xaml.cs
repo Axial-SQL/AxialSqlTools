@@ -26,7 +26,7 @@
             Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
             string currentVersionString = currentVersion.ToString();
 
-            TextBlock_CurrentVersion.Text = $"Axial SQL Tools | SSMS Addin Version {currentVersionString}";
+            TextBlock_CurrentVersion.Text = $"SSMS extension version {currentVersionString}";
 
             _logFolder = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -37,18 +37,11 @@
             HyperlinkText_LogFolder.Text = _logFolder;
         }
 
-        private void Hyperlink_RequestNavigateEmail(object sender, RequestNavigateEventArgs e)
+        private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
             Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
             e.Handled = true;
         }
-
-        private void buttonAxialSqlWebsite_Click(object sender, RequestNavigateEventArgs e)
-        {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-            e.Handled = true;
-        }
-
 
         private void HyperlinkLogFolder_Click(object sender, RoutedEventArgs e)
         {
