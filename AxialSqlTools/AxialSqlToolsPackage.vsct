@@ -282,15 +282,6 @@
         </Strings>
       </Button>
 
-      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialCompareSchemasCommand" priority="0x0000" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
-        <Icon guid="guidCompareSchemas" id="bmpCompareSchemas" />
-        <!--<CommandFlag>DefaultInvisible</CommandFlag>-->
-        <Strings>
-          <ButtonText>Database Schema Compare</ButtonText>
-        </Strings>
-      </Button>
-
       <!-- Query templates Submenu buttons -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesButtonRefresh" priority="0x9900" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenuGroup" />
@@ -352,7 +343,6 @@
       <Bitmap guid="guidOpenFolder" href="Resources\open-folder.png" usedList="bmpOpenFolder" />
       <Bitmap guid="guidSqlBuildInfo" href="Resources\sql-build-info.png" usedList="bmpSqlBuildInfo" />
       <Bitmap guid="guidDatabaseScripter" href="Resources\database-scripter.png" usedList="bmpDatabaseScripter" />
-      <Bitmap guid="guidCompareSchemas" href="Resources\compare-schemas.png" usedList="bmpCompareSchemas" />
       <Bitmap guid="guidCopy" href="Resources\copy.png" usedList="bmpCopy" />
       <Bitmap guid="guidSearch" href="Resources\search.png" usedList="bmpSearch" />
       <Bitmap guid="guidSelect" href="Resources\select.png" usedList="bmpSelect" />
@@ -425,8 +415,6 @@
 
       <IDSymbol name="AxialDatabaseScripterCommand" value="4148" />
 
-      <IDSymbol name="AxialCompareSchemasCommand" value="4149" />
-
       <IDSymbol name="AxialDataImportCommand" value="4150" />
       
       <IDSymbol name="AxialQuickSearch" value="4151" />
@@ -482,9 +470,6 @@
     </GuidSymbol>
     <GuidSymbol name="guidDatabaseScripter" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d6}">
       <IDSymbol name="bmpDatabaseScripter" value="1" />
-    </GuidSymbol>
-    <GuidSymbol name="guidCompareSchemas" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d7}">
-      <IDSymbol name="bmpCompareSchemas" value="1" />
     </GuidSymbol>
     <GuidSymbol name="guidCopy" value="{fef3eb91-5bef-4fcc-8230-c1289c09b4d8}">
       <IDSymbol name="bmpCopy" value="1" />

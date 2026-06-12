@@ -54,8 +54,6 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
   
 - [**Copy Cell Values As ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Grid-Cells-As-...): Copy cell values to the clipboard in multiple formats: INSERT, CSV, JSON, XML, or HTML.
   
-- [**Database Schema Compare**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Database-Schema-Compare): DacFx-based database schema comparison tool.
-
 ## Query Library
 
 The extension includes a query library compiled over time with ideas and best practices from SQL Server practitioners and community experts. These templates cover a wide range of scenarios and help users complete complex or repetitive tasks faster.
