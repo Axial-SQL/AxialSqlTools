@@ -291,7 +291,7 @@ namespace AxialSqlTools
         {
             string resultCode = "";
 
-            TSql170Parser sqlParser = new TSql170Parser(false);
+            TSqlParser sqlParser = TSqlParserFactory.Create(false);
 
             IList<ParseError> parseErrors = new List<ParseError>();
             TSqlFragment result = sqlParser.Parse(new StringReader(oldCode), out parseErrors);
@@ -313,9 +313,8 @@ namespace AxialSqlTools
                 formatSettings = settingsOverride;
             }
 
-            Sql170ScriptGenerator gen = new Sql170ScriptGenerator();
+            SqlScriptGenerator gen = TSqlParserFactory.CreateScriptGenerator();
             gen.Options.AlignClauseBodies = false;
-            gen.Options.SqlVersion = SqlVersion.Sql170; //TODO - try to get from current connection
 
             if (formatSettings.preserveComments)
             {
@@ -342,7 +341,7 @@ namespace AxialSqlTools
 
         }
 
-        private static string ApplySpecialFormat(string oldCode, TSql170Parser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings)
+        private static string ApplySpecialFormat(string oldCode, TSqlParser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings)
         {
             IList<ParseError> parseErrors = new List<ParseError>();
 
