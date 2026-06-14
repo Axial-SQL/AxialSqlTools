@@ -6,7 +6,7 @@ The goal is straightforward: make common SSMS tasks faster, clearer, and less re
 
 This extension may overlap with other free or commercial tools. It is not intended to replace every existing solution; instead, it provides a focused, open, and approachable set of enhancements for teams and individuals who want practical SSMS improvements that can evolve with community feedback.
 
-Axial SQL Tools is free and openly available under the Apache-2.0 license. The maintainers welcome bug reports, ideas, documentation improvements, and code contributions that make the extension more useful for everyone.
+Axial SQL Tools is made available under the Apache License 2.0 together with an additional ethical use statement described in the NOTICE file. The maintainers welcome bug reports, ideas, documentation improvements, and code contributions that make the extension more useful for everyone.
 
 If the extension helps streamline your SSMS workflow, please consider giving the repository a :star: star. Stars help other SQL Server users discover the project and show support for the contributors who keep it moving forward.
 
@@ -86,12 +86,8 @@ This project stands on the shoulders of the many developers, SQL Server professi
 
 ## License
 
-This tool is distributed freely under the Apache-2.0 license, with no warranty implied.
+This tool is distributed under the Apache License 2.0. See the LICENSE and NOTICE files included with this project for additional information.
 
 ## Disclaimer
 
 This extension is provided "as is", with all faults, defects, and errors, and without warranty of any kind. The maintainers and contributors do not offer guaranteed support and are not responsible for any damage or loss resulting from the use of this tool.
-
----
-
-Thank you for using the Axial SQL Tools SSMS Add-in. The project community hopes it makes your work with SQL Server significantly more efficient.
