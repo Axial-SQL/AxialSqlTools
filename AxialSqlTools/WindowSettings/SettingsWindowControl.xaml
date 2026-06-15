@@ -105,6 +105,46 @@
                     BorderBrush="{DynamicResource AxialThemeBorderBrush}"
 					BorderThickness="1">
 
+
+            <TabItem Header="General">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="300"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="5">
+                        <TextBlock Text="SQL version" FontWeight="SemiBold"/>
+                        <TextBlock Text="Determines the version of the T-SQL language to use." Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <ComboBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                              x:Name="SqlVersion"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Version"
+                              Margin="5"
+                              Height="24"/>
+
+                    <Button Grid.Row="2" Grid.Column="1"
+                            x:Name="Button_SaveGeneralSettings"
+                            Click="Button_SaveGeneralSettings_Click"
+                            Margin="5"
+                            Width="80"
+                            Height="24"
+                            HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Path Width="12" Height="12" Data="{StaticResource SaveIconGeometry}" Style="{StaticResource AxialSaveIconPathStyle}" Margin="0,0,4,0"/>
+                            <TextBlock Text="Save" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </TabItem>
+
             <TabItem Header="Query Templates">
                 <Grid>
                     <Grid.RowDefinitions>
