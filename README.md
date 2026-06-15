@@ -10,7 +10,7 @@ Axial SQL Tools is made available under the Apache License 2.0 together with an 
 
 If the extension helps streamline your SSMS workflow, please consider giving the repository a :star: star. Stars help other SQL Server users discover the project and show support for the contributors who keep it moving forward.
 
-<img width="590" height="464" alt="image" src="https://github.com/user-attachments/assets/cada1f9e-4674-46e6-9fed-ca7a8724424a" />
+<img width="593" height="473" alt="image" src="https://github.com/user-attachments/assets/a1b819d8-c2a6-4d7b-988a-0e9984a75be7" />
 
 ## Main Features - (see Wiki for more details)
 
