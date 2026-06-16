@@ -16,12 +16,15 @@
     {
 
         private string _logFolder;
+        private readonly ToolWindowThemeController _themeController;
         /// <summary>
         /// Initializes a new instance of the <see cref="AboutWindowControl"/> class.
         /// </summary>
         public AboutWindowControl()
         {
             this.InitializeComponent();
+
+            _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
 
             Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
             string currentVersionString = currentVersion.ToString();
@@ -35,6 +38,11 @@
                 );
 
             HyperlinkText_LogFolder.Text = _logFolder;
+        }
+
+        private void ApplyThemeBrushResources()
+        {
+            ToolWindowThemeResources.ApplySharedTheme(this);
         }
 
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
