@@ -336,6 +336,16 @@ ORDER BY sd.[name];
             public bool breakVariableDefinitionsPerLine = false;
             public bool breakSprocDefinitionParametersPerLine = false;
             public bool breakSelectFieldsAfterTopAndUnindent = false;
+            public bool leadingCommas = false;
+            public bool semicolonBeforeCte = false;
+            public bool useFreehandFormatMode = false;
+            public bool breakSelectElementsPerLine = false;
+            public bool useAssignmentAliases = false;
+            public bool omitAsForTableAliases = false;
+            public bool omitAsInDeclare = false;
+            public bool formatTableDefinitionsMultiline = false;
+            public bool prefixUnicodeStrings = false;
+            public bool removeSemicolonsFromDeclare = false;
 
             public bool HasAnyFormattingEnabled()
             {
@@ -350,7 +360,16 @@ ORDER BY sd.[name];
                     || unindentBeginEndBlocks
                     || breakVariableDefinitionsPerLine
                     || breakSprocDefinitionParametersPerLine
-                    || breakSelectFieldsAfterTopAndUnindent;
+                    || breakSelectFieldsAfterTopAndUnindent
+                    || leadingCommas
+                    || semicolonBeforeCte
+                    || breakSelectElementsPerLine
+                    || useAssignmentAliases
+                    || omitAsForTableAliases
+                    || omitAsInDeclare
+                    || formatTableDefinitionsMultiline
+                    || prefixUnicodeStrings
+                    || removeSemicolonsFromDeclare;
             }
         }
 

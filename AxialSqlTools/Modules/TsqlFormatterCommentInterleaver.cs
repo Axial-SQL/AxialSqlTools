@@ -53,15 +53,22 @@ public static class TsqlFormatterCommentInterleaver
             mapOrigToFmt[origCodeIdx[iOrigKey]] = fmtCodeIdx[iFmtKey];
         }
 
-        // Collect comments from original and schedule injection BEFORE a formatted code token.
+        // Collect comments from original and schedule injection around formatted code tokens.
         var injectBeforeFmtIndex = new Dictionary<int, List<CommentCluster>>();
+        var injectAfterFmtIndex = new Dictionary<int, List<CommentCluster>>();
         var eofComments = new List<CommentCluster>();
 
-        // Helper to add a comment to a bucket
-        void Schedule(int fmtIndex, CommentCluster cluster)
+        void ScheduleBefore(int fmtIndex, CommentCluster cluster)
         {
             if (!injectBeforeFmtIndex.TryGetValue(fmtIndex, out var list))
                 injectBeforeFmtIndex[fmtIndex] = list = new List<CommentCluster>();
+            list.Add(cluster);
+        }
+
+        void ScheduleAfter(int fmtIndex, CommentCluster cluster)
+        {
+            if (!injectAfterFmtIndex.TryGetValue(fmtIndex, out var list))
+                injectAfterFmtIndex[fmtIndex] = list = new List<CommentCluster>();
             list.Add(cluster);
         }
 
@@ -87,8 +94,18 @@ public static class TsqlFormatterCommentInterleaver
 
             var cluster = new CommentCluster(chunk.ToString(), startsNewLine, blankLinesBefore);
 
+            if (!startsNewLine)
+            {
+                int previousCode = FindPreviousCodeToken(orig, i);
+                if (previousCode >= 0 && mapOrigToFmt.TryGetValue(previousCode, out int fmtPreviousIndex))
+                {
+                    ScheduleAfter(fmtPreviousIndex, cluster);
+                    continue;
+                }
+            }
+
             if (anchorOrig >= 0 && mapOrigToFmt.TryGetValue(anchorOrig, out int fmtIndex))
-                Schedule(fmtIndex, cluster);
+                ScheduleBefore(fmtIndex, cluster);
             else
                 eofComments.Add(cluster);
         }
@@ -122,6 +139,22 @@ public static class TsqlFormatterCommentInterleaver
             }
 
             sb.Append(fmt[jCode].Text);
+            if (injectAfterFmtIndex.TryGetValue(jCode, out var afterInject))
+            {
+                foreach (var c in afterInject)
+                {
+                    if (c.StartsNewLine && !EndsWithNewline(sb))
+                    {
+                        sb.Append(Environment.NewLine);
+                    }
+                    else if (!c.StartsNewLine && sb.Length > 0 && !char.IsWhiteSpace(sb[sb.Length - 1]))
+                    {
+                        sb.Append(' ');
+                    }
+
+                    sb.Append(c.StartsNewLine ? c.Text : c.Text);
+                }
+            }
             cur++;
         }
 
@@ -304,6 +337,24 @@ public static class TsqlFormatterCommentInterleaver
         }
 
         return idx;
+    }
+
+    private static int FindPreviousCodeToken(IList<TSqlParserToken> tokens, int start)
+    {
+        for (int i = start - 1; i >= 0; i--)
+        {
+            if (IsCodeToken(tokens[i]))
+            {
+                return i;
+            }
+
+            if (!IsWhitespaceToken(tokens[i]) && !IsCommentToken(tokens[i]))
+            {
+                return -1;
+            }
+        }
+
+        return -1;
     }
 
     private static int TrailingNewlines(StringBuilder sb)

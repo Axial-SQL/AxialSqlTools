@@ -1,14 +1,19 @@
 ﻿namespace AxialSqlTools
 {
     using Microsoft.Data.SqlClient;
+    using Microsoft.SqlServer.Management.UI.VSIntegration;
+    using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
+    using Microsoft.SqlServer.TransactSql.ScriptDom;
     using Newtonsoft.Json.Linq;
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.IO.Compression;
     using System.Net.Http;
     using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Windows;
     using System.Windows.Controls;
@@ -32,22 +37,23 @@
         private bool updateResultSubscribed;
         private ObservableCollection<SettingsManager.ConnectionColorRule> _connectionColorRules;
 
-        private string tsqlFormatExample = @"while (1=0) 
-begin 
-select top 10
-    c.CustomerID, getDate(),
-    CASE WHEN o.TotalAmount > 1000 THEN 'High' ELSE 'Low' END AS OrderSize
-FROM Customers c
-JOIN Orders o ON c.CustomerID = o.CustomerID CROSS JOIN Regions r
-WHERE c.IsActive = 1;
+        private string tsqlFormatExample = @"-- comment
+IF 0 = 1
+BEGIN
+    DECLARE @a int = 1, @b varchar(10) = 'x';
+    DECLARE @t TABLE (id int, label varchar(10));
+    DECLARE @u TABLE (id int);
 
-SELECT dbo.func(p.ProductID), p.ProductName FROM Products p; EXEC dbo.test @a = 0, @b = 1;
-end
-if 1=0 begin select 1; declare @a int, @b varchar(10) = ''
-end
-go
-create procedure dbo.test @a int, @b int = 0
-as select 1;
+    WITH c AS (
+        SELECT TOP 2 t.id, GETDATE() AS dt, CASE WHEN t.id > @a THEN 'big' ELSE 'small' END AS label
+        FROM @t AS t JOIN @u AS u ON u.id = t.id CROSS JOIN @u AS x
+    )
+    SELECT c.id, c.dt, c.label -- inline comment
+    FROM c
+    WHERE c.label <> @b;
+
+    EXEC dbo.p @a = @a, @b = @b;
+END
 ";
         /// <summary>
         /// Initializes a new instance of the <see cref="SettingsWindowControl"/> class.
@@ -65,6 +71,8 @@ as select 1;
             this.Unloaded += UserControl_Unloaded;
 
             SourceQueryPreview.Text = tsqlFormatExample;
+            FreehandSourceEditor.Text = tsqlFormatExample;
+            FreehandFormatEditor.Text = tsqlFormatExample;
 
             formatTSqlExample();
 
@@ -160,18 +168,12 @@ as select 1;
                 SMTP_EnableSSL.IsChecked = smtpSettings.EnableSsl;
 
                 var tsqlCodeFormatSettings = SettingsManager.GetTSqlCodeFormatSettings();
-                PreserveComments.IsChecked = tsqlCodeFormatSettings.preserveComments;
-                RemoveNewLineAfterJoin.IsChecked = tsqlCodeFormatSettings.removeNewLineAfterJoin;
-                AddTabAfterJoinOn.IsChecked = tsqlCodeFormatSettings.addTabAfterJoinOn;
-                MoveCrossJoinToNewLine.IsChecked = tsqlCodeFormatSettings.moveCrossJoinToNewLine;
-                FormatCaseAsMultiline.IsChecked = tsqlCodeFormatSettings.formatCaseAsMultiline;
-                AddNewLineBetweenStatementsInBlocks.IsChecked = tsqlCodeFormatSettings.addNewLineBetweenStatementsInBlocks;
-                BreakSprocParametersPerLine.IsChecked = tsqlCodeFormatSettings.breakSprocParametersPerLine;
-                UppercaseBuiltInFunctions.IsChecked = tsqlCodeFormatSettings.uppercaseBuiltInFunctions;
-                UnindentBeginEndBlocks.IsChecked = tsqlCodeFormatSettings.unindentBeginEndBlocks;
-                BreakVariableDefinitionsPerLine.IsChecked = tsqlCodeFormatSettings.breakVariableDefinitionsPerLine;  
-                BreakSprocDefinitionParametersPerLine.IsChecked = tsqlCodeFormatSettings.breakSprocDefinitionParametersPerLine;
-                // BreakSelectFieldsAfterTopAndUnindent.IsChecked = tsqlCodeFormatSettings.breakSelectFieldsAfterTopAndUnindent;
+                ApplyTSqlCodeFormatSettingsToUi(tsqlCodeFormatSettings);
+                FormatModeFreehand.IsChecked = tsqlCodeFormatSettings.useFreehandFormatMode;
+                FormatModeOptions.IsChecked = !tsqlCodeFormatSettings.useFreehandFormatMode;
+                FreehandSourceEditor.Text = tsqlFormatExample;
+                FreehandFormatEditor.Text = TSqlFormatter.FormatCode(tsqlFormatExample, tsqlCodeFormatSettings);
+                UpdateFormatModeUi();
 
                 OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
 
@@ -387,23 +389,20 @@ as select 1;
 
         private void Button_SaveApplyAdditionalFormat_Click(object sender, RoutedEventArgs e)
         {
-            var settings = new SettingsManager.TSqlCodeFormatSettings
+            if (FormatModeFreehand.IsChecked == true && !ValidateFreehandFormatSample())
             {
-                preserveComments = PreserveComments.IsChecked.GetValueOrDefault(false),
-                removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
-                addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
-                moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
-                formatCaseAsMultiline = FormatCaseAsMultiline.IsChecked.GetValueOrDefault(false),
-                addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false),
-                breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false),
-                uppercaseBuiltInFunctions = UppercaseBuiltInFunctions.IsChecked.GetValueOrDefault(false),
-                unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false),
-                breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked.GetValueOrDefault(false),
-                breakSprocDefinitionParametersPerLine = BreakSprocDefinitionParametersPerLine.IsChecked.GetValueOrDefault(false),
-                // breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
-            };
+                return;
+            }
+
+            var settings = FormatModeFreehand.IsChecked == true
+                ? LearnTSqlFormatSettingsFromSample(FreehandFormatEditor.Text)
+                : BuildTSqlCodeFormatSettingsFromUi();
+
+            settings.useFreehandFormatMode = FormatModeFreehand.IsChecked == true;
 
             SettingsManager.SaveTSqlCodeFormatSettings(settings);
+            ApplyTSqlCodeFormatSettingsToUi(settings);
+            formatTSqlExample();
             SavedMessage();
         }
 
@@ -651,9 +650,9 @@ as select 1;
             });
         }
 
-        private void formatTSqlExample()
+        private SettingsManager.TSqlCodeFormatSettings BuildTSqlCodeFormatSettingsFromUi()
         {
-            var settings = new SettingsManager.TSqlCodeFormatSettings
+            return new SettingsManager.TSqlCodeFormatSettings
             {
                 preserveComments = PreserveComments.IsChecked.GetValueOrDefault(false),
                 removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
@@ -666,8 +665,233 @@ as select 1;
                 unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false),
                 breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked.GetValueOrDefault(false),
                 breakSprocDefinitionParametersPerLine = BreakSprocDefinitionParametersPerLine.IsChecked.GetValueOrDefault(false),
+                leadingCommas = LeadingCommas.IsChecked.GetValueOrDefault(false),
+                semicolonBeforeCte = SemicolonBeforeCte.IsChecked.GetValueOrDefault(false),
+                useFreehandFormatMode = FormatModeFreehand.IsChecked.GetValueOrDefault(false),
+                breakSelectElementsPerLine = BreakSelectElementsPerLine.IsChecked.GetValueOrDefault(false),
+                useAssignmentAliases = UseAssignmentAliases.IsChecked.GetValueOrDefault(false),
+                omitAsForTableAliases = OmitAsForTableAliases.IsChecked.GetValueOrDefault(false),
+                omitAsInDeclare = OmitAsInDeclare.IsChecked.GetValueOrDefault(false),
+                formatTableDefinitionsMultiline = FormatTableDefinitionsMultiline.IsChecked.GetValueOrDefault(false),
+                prefixUnicodeStrings = PrefixUnicodeStrings.IsChecked.GetValueOrDefault(false),
+                removeSemicolonsFromDeclare = FormatTableDefinitionsMultiline.IsChecked.GetValueOrDefault(false),
                 // breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
             };
+        }
+
+        private void ApplyTSqlCodeFormatSettingsToUi(SettingsManager.TSqlCodeFormatSettings settings)
+        {
+            PreserveComments.IsChecked = settings.preserveComments;
+            RemoveNewLineAfterJoin.IsChecked = settings.removeNewLineAfterJoin;
+            AddTabAfterJoinOn.IsChecked = settings.addTabAfterJoinOn;
+            MoveCrossJoinToNewLine.IsChecked = settings.moveCrossJoinToNewLine;
+            FormatCaseAsMultiline.IsChecked = settings.formatCaseAsMultiline;
+            AddNewLineBetweenStatementsInBlocks.IsChecked = settings.addNewLineBetweenStatementsInBlocks;
+            BreakSprocParametersPerLine.IsChecked = settings.breakSprocParametersPerLine;
+            UppercaseBuiltInFunctions.IsChecked = settings.uppercaseBuiltInFunctions;
+            UnindentBeginEndBlocks.IsChecked = settings.unindentBeginEndBlocks;
+            BreakVariableDefinitionsPerLine.IsChecked = settings.breakVariableDefinitionsPerLine;
+            BreakSprocDefinitionParametersPerLine.IsChecked = settings.breakSprocDefinitionParametersPerLine;
+            LeadingCommas.IsChecked = settings.leadingCommas;
+            SemicolonBeforeCte.IsChecked = settings.semicolonBeforeCte;
+            BreakSelectElementsPerLine.IsChecked = settings.breakSelectElementsPerLine;
+            UseAssignmentAliases.IsChecked = settings.useAssignmentAliases;
+            OmitAsForTableAliases.IsChecked = settings.omitAsForTableAliases;
+            OmitAsInDeclare.IsChecked = settings.omitAsInDeclare;
+            FormatTableDefinitionsMultiline.IsChecked = settings.formatTableDefinitionsMultiline;
+            PrefixUnicodeStrings.IsChecked = settings.prefixUnicodeStrings;
+        }
+
+        private SettingsManager.TSqlCodeFormatSettings LearnTSqlFormatSettingsFromSample(string formattedSample)
+        {
+            string sql = formattedSample ?? string.Empty;
+            string normalized = NormalizeLineEndings(sql);
+            string codeOnly = StripCommentsForLearning(normalized);
+
+            return new SettingsManager.TSqlCodeFormatSettings
+            {
+                preserveComments = Regex.IsMatch(normalized, @"(?m)^\s*(--|/\*)"),
+                removeNewLineAfterJoin = Regex.IsMatch(codeOnly, @"(?is)\bJOIN\s+(?!\r?\n)\S.+?\s+ON\b"),
+                addTabAfterJoinOn = Regex.IsMatch(codeOnly, @"(?im)^\s{4,}ON\b"),
+                moveCrossJoinToNewLine = Regex.IsMatch(codeOnly, @"(?im)^\s*(CROSS\s+JOIN|OUTER\s+APPLY|CROSS\s+APPLY)\b"),
+                formatCaseAsMultiline = Regex.IsMatch(codeOnly, @"(?is)\bCASE\s*\r?\n\s+WHEN\b")
+                    || Regex.IsMatch(codeOnly, @"(?is)\bWHEN\b.+?\r?\n\s+THEN\b"),
+                addNewLineBetweenStatementsInBlocks = Regex.IsMatch(codeOnly, @";\s*(\r?\n){2,}\s*(SELECT|EXEC|DECLARE|IF|BEGIN|END)\b", RegexOptions.IgnoreCase),
+                breakSprocParametersPerLine = Regex.IsMatch(codeOnly, @"(?is)\bEXEC(?:UTE)?\s+[\[\]\w.]+\s*\r?\n\s*,?\s*@\w+.+\r?\n\s*,?\s*@\w+"),
+                uppercaseBuiltInFunctions = Regex.IsMatch(codeOnly, @"\b(GETDATE|DATEADD|COUNT|SUM)\s*\(")
+                    && !Regex.IsMatch(codeOnly, @"\b(getdate|dateadd|count|sum)\s*\("),
+                unindentBeginEndBlocks = Regex.IsMatch(codeOnly, @"(?m)^BEGIN\s*$")
+                    && Regex.IsMatch(codeOnly, @"(?m)^END\s*$"),
+                breakVariableDefinitionsPerLine = Regex.IsMatch(codeOnly, @"(?is)\bDECLARE\s+@\w+.+\r?\n\s*,?\s*@\w+"),
+                breakSprocDefinitionParametersPerLine = Regex.IsMatch(codeOnly, @"(?is)\bPROCEDURE\s+[\[\]\w.]+\s*\r?\n\s*,?\s*@\w+.+\r?\n\s*,?\s*@\w+"),
+                leadingCommas = Regex.IsMatch(codeOnly, @"(?m)^\s*,\s*\S"),
+                semicolonBeforeCte = Regex.IsMatch(codeOnly, @"(?im)^\s*;\s*WITH\b"),
+                breakSelectElementsPerLine = Regex.IsMatch(codeOnly, @"(?im)^\s*SELECT(?:\s+TOP\s+\d+)?\s*$")
+                    || Regex.IsMatch(codeOnly, @"(?m)^\s*,\s*[\w@]"),
+                useAssignmentAliases = Regex.IsMatch(codeOnly, @"(?m)^\s*,?\s*\w+\s*=\s*"),
+                omitAsForTableAliases = Regex.IsMatch(codeOnly, @"(?i)\b(FROM|JOIN|APPLY)\s+@\w+\s+\w+\b")
+                    && !Regex.IsMatch(codeOnly, @"(?i)\b(FROM|JOIN|APPLY)\s+@\w+\s+AS\s+\w+\b"),
+                omitAsInDeclare = Regex.IsMatch(codeOnly, @"(?im)^\s*DECLARE\s+@\w+\s+(?!AS\b)\w+"),
+                formatTableDefinitionsMultiline = Regex.IsMatch(codeOnly, @"(?is)\bDECLARE\s+@\w+\s+TABLE\s*\(\s*\r?\n"),
+                prefixUnicodeStrings = Regex.IsMatch(codeOnly, @"(?<![A-Za-z])N'"),
+                removeSemicolonsFromDeclare = Regex.IsMatch(codeOnly, @"(?im)^\s*DECLARE\s+@\w+.*[^;]\s*$")
+            };
+        }
+
+        private static string StripCommentsForLearning(string sql)
+        {
+            string withoutBlockComments = Regex.Replace(sql ?? string.Empty, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+            return Regex.Replace(withoutBlockComments, @"(?m)--.*$", string.Empty);
+        }
+
+        private bool ValidateFreehandFormatSample()
+        {
+            try
+            {
+                var learnedSettings = LearnTSqlFormatSettingsFromSample(FreehandFormatEditor.Text);
+                string learnedSourceFormat = TSqlFormatter.FormatCode(FreehandSourceEditor.Text, learnedSettings);
+                string sourceCanonical = CanonicalizeSqlForEquivalence(learnedSourceFormat);
+                string formattedCanonical = CanonicalizeSqlForEquivalence(FreehandFormatEditor.Text);
+
+                if (string.Equals(sourceCanonical, formattedCanonical, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+
+                MessageBox.Show(
+                    "The formatted sample must contain the same SQL as the source sample. You can change whitespace, casing, comments, comma placement, and semicolon placement, but not add, remove, or rewrite SQL.",
+                    "Format sample changed SQL",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"The formatted sample could not be parsed as valid T-SQL:{Environment.NewLine}{ex.Message}",
+                    "Format sample parse error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+
+            return false;
+        }
+
+        private static string CanonicalizeSqlForEquivalence(string sql)
+        {
+            TSql170Parser sqlParser = new TSql170Parser(false);
+            IList<ParseError> parseErrors;
+            TSqlFragment fragment = sqlParser.Parse(new StringReader(sql ?? string.Empty), out parseErrors);
+
+            if (parseErrors.Count > 0)
+            {
+                throw new Exception(BuildParseErrorMessage(parseErrors));
+            }
+
+            StringBuilder result = new StringBuilder();
+            foreach (var token in fragment.ScriptTokenStream)
+            {
+                if (!IsSignificantSqlToken(token))
+                {
+                    continue;
+                }
+
+                if (result.Length > 0)
+                {
+                    result.Append('\n');
+                }
+
+                result.Append(NormalizeSqlTokenType(token));
+                result.Append(':');
+                result.Append(NormalizeSqlTokenText(token));
+            }
+
+            return result.ToString();
+        }
+
+        private static bool IsSignificantSqlToken(TSqlParserToken token)
+        {
+            if (token == null || string.IsNullOrEmpty(token.Text))
+            {
+                return false;
+            }
+
+            return token.TokenType != TSqlTokenType.WhiteSpace
+                && token.TokenType != TSqlTokenType.SingleLineComment
+                && token.TokenType != TSqlTokenType.MultilineComment
+                && token.TokenType != TSqlTokenType.Semicolon
+                && token.Text != ";";
+        }
+
+        private static string NormalizeSqlTokenType(TSqlParserToken token)
+        {
+            if (token.TokenType == TSqlTokenType.AsciiStringLiteral
+                || token.TokenType == TSqlTokenType.UnicodeStringLiteral)
+            {
+                return "StringLiteral";
+            }
+
+            return token.TokenType.ToString();
+        }
+
+        private static string NormalizeSqlTokenText(TSqlParserToken token)
+        {
+            if (token.TokenType == TSqlTokenType.UnicodeStringLiteral
+                && token.Text.Length > 1
+                && char.ToUpperInvariant(token.Text[0]) == 'N'
+                && token.Text[1] == '\'')
+            {
+                return token.Text.Substring(1);
+            }
+
+            if (token.TokenType == TSqlTokenType.AsciiStringLiteral
+                || token.TokenType == TSqlTokenType.UnicodeStringLiteral
+                || token.TokenType == TSqlTokenType.Integer
+                || token.TokenType == TSqlTokenType.Real
+                || token.TokenType == TSqlTokenType.HexLiteral)
+            {
+                return token.Text;
+            }
+
+            return token.Text.ToUpperInvariant();
+        }
+
+        private static string BuildParseErrorMessage(IList<ParseError> parseErrors)
+        {
+            StringBuilder errorBuilder = new StringBuilder();
+            foreach (var parseError in parseErrors)
+            {
+                errorBuilder.AppendLine($"Line {parseError.Line}, column {parseError.Column}: {parseError.Message}");
+            }
+
+            return errorBuilder.ToString().Trim();
+        }
+
+        private static string NormalizeLineEndings(string text)
+        {
+            return (text ?? string.Empty).Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
+        }
+
+        private void UpdateFormatModeUi()
+        {
+            if (FormatOptionsPanel == null || FreehandFormatPanel == null || FormatPreviewPanel == null)
+            {
+                return;
+            }
+
+            bool isFreehand = FormatModeFreehand.IsChecked == true;
+            FormatOptionsPanel.Visibility = isFreehand ? Visibility.Collapsed : Visibility.Visible;
+            FormatPreviewPanel.Visibility = isFreehand ? Visibility.Collapsed : Visibility.Visible;
+            FreehandFormatPanel.Visibility = isFreehand ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void formatTSqlExample()
+        {
+            if (SourceQueryPreview == null || FormattedQueryPreview == null)
+            {
+                return;
+            }
+
+            var settings = BuildTSqlCodeFormatSettingsFromUi();
 
             FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, settings);
         }
@@ -680,6 +904,40 @@ as select 1;
         private void formatSetting_Unchecked(object sender, RoutedEventArgs e)
         {
             formatTSqlExample();
+        }
+
+        private void FormatMode_Checked(object sender, RoutedEventArgs e)
+        {
+            UpdateFormatModeUi();
+        }
+
+        private void Button_FormatFreehandSample_Click(object sender, RoutedEventArgs e)
+        {
+            FreehandFormatEditor.Text = TSqlFormatter.FormatCode(FreehandSourceEditor.Text, SettingsManager.GetTSqlCodeFormatSettings());
+        }
+
+        private void Button_OpenFreehandSampleInNewTab_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                ServiceCache.ScriptFactory.CreateNewBlankScript(ScriptType.Sql);
+
+                EnvDTE.DTE dte = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(EnvDTE.DTE)) as EnvDTE.DTE;
+                if (dte?.ActiveDocument == null)
+                {
+                    return;
+                }
+
+                EnvDTE.TextSelection selection = dte.ActiveDocument.Selection as EnvDTE.TextSelection;
+                if (selection != null)
+                {
+                    selection.Insert(FreehandFormatEditor.Text);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Unable to open the sample in a new SQL tab: {ex.Message}", "Open SQL tab");
+            }
         }
 
         private void buttonSaveGitHubSettings_Click(object sender, RoutedEventArgs e)

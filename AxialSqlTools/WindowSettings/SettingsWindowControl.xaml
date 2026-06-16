@@ -87,6 +87,10 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <Style TargetType="RadioButton">
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
     
@@ -401,12 +405,6 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -420,8 +418,26 @@
                         </Hyperlink>
                     </TextBlock>
 
+                    <StackPanel Grid.Row="1"
+                                Orientation="Horizontal"
+                                Margin="5"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="Formatting setup:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <RadioButton x:Name="FormatModeOptions"
+                                     Content="Options"
+                                     GroupName="FormatMode"
+                                     IsChecked="True"
+                                     Margin="0,0,15,0"
+                                     Checked="FormatMode_Checked"/>
+                        <RadioButton x:Name="FormatModeFreehand"
+                                     Content="Learn from example"
+                                     GroupName="FormatMode"
+                                     Checked="FormatMode_Checked"/>
+                    </StackPanel>
+
                     <!-- all checkboxes in a 3-column UniformGrid -->
-                    <UniformGrid Grid.Row="1"
+                    <UniformGrid Grid.Row="2"
+                             x:Name="FormatOptionsPanel"
                              Columns="3"
                              Margin="5"
                              HorizontalAlignment="Left">
@@ -469,6 +485,38 @@
                               Content="Break sproc definition parameters per line" 
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="LeadingCommas" Margin="5"
+                              Content="Use leading commas" 
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="SemicolonBeforeCte" Margin="5"
+                              Content="Put semicolon before CTE" 
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="BreakSelectElementsPerLine" Margin="5"
+                              Content="Put SELECT fields on separate lines"
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="UseAssignmentAliases" Margin="5"
+                              Content="Use alias = expression for column aliases"
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="OmitAsForTableAliases" Margin="5"
+                              Content="Omit AS for table aliases"
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="OmitAsInDeclare" Margin="5"
+                              Content="Omit AS in DECLARE types"
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="FormatTableDefinitionsMultiline" Margin="5"
+                              Content="Put table variable columns on separate lines"
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+                        <CheckBox x:Name="PrefixUnicodeStrings" Margin="5"
+                              Content="Prefix string literals with N"
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
                         <!-- TODO -->
                         <CheckBox x:Name="BreakSelectFieldsAfterTopAndUnindent" Margin="5" Visibility="Hidden"
                               Content="Break SELECT fields after TOP and unindent" 
@@ -478,7 +526,7 @@
                     </UniformGrid>
 
                     <Button
-                        Grid.Row="9"
+                        Grid.Row="3"
                         x:Name="button_SaveApplyAdditionalFormat"
                         Click="Button_SaveApplyAdditionalFormat_Click"
                         Width="80" 
@@ -494,7 +542,60 @@
                         </StackPanel>
                     </Button>
 
-                    <Grid Grid.Row="10">
+                    <GroupBox Grid.Row="4"
+                              x:Name="FreehandFormatPanel"
+                              Header="Format this sample"
+                              Margin="5"
+                              Visibility="Collapsed">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Top"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,0,0,5">
+                                <Button Content="Open in new tab"
+                                        Click="Button_OpenFreehandSampleInNewTab_Click"
+                                        Padding="10,3"
+                                        Margin="0,0,8,0"/>
+                                <Button Content="Format"
+                                        Click="Button_FormatFreehandSample_Click"
+                                        Padding="10,3"/>
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <GroupBox Header="Source SQL" Grid.Column="0" Margin="0,0,4,0">
+                                    <TextBox x:Name="FreehandSourceEditor"
+                                             AcceptsReturn="True"
+                                             AcceptsTab="True"
+                                             VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             TextWrapping="NoWrap"
+                                             FontFamily="Consolas"
+                                             FontSize="13"
+                                             MinHeight="450"
+                                             IsReadOnly="True"/>
+                                </GroupBox>
+
+                                <GroupBox Header="Your formatting" Grid.Column="1" Margin="4,0,0,0">
+                                    <TextBox x:Name="FreehandFormatEditor"
+                                             AcceptsReturn="True"
+                                             AcceptsTab="True"
+                                             VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             TextWrapping="NoWrap"
+                                             FontFamily="Consolas"
+                                             FontSize="13"
+                                             MinHeight="450"/>
+                                </GroupBox>
+                            </Grid>
+                        </DockPanel>
+                    </GroupBox>
+
+                    <Grid Grid.Row="4"
+                          x:Name="FormatPreviewPanel">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />

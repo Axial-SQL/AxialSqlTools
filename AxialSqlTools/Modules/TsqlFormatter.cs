@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using static AxialSqlTools.AxialSqlToolsPackage;
 
 namespace AxialSqlTools
@@ -24,6 +25,15 @@ namespace AxialSqlTools
             public List<AlterProcedureStatement> SprocDefinitionsAlter = new List<AlterProcedureStatement>();
             public List<CreateOrAlterProcedureStatement> SprocDefinitionsCreateAlter = new List<CreateOrAlterProcedureStatement>();
             public List<QuerySpecification> SelectsWithTop = new List<QuerySpecification>();
+            public List<StatementWithCtesAndXmlNamespaces> StatementsWithCtes = new List<StatementWithCtesAndXmlNamespaces>();
+
+            private void TrackStatementWithCtes(StatementWithCtesAndXmlNamespaces node)
+            {
+                if (node.WithCtesAndXmlNamespaces?.CommonTableExpressions?.Count > 0)
+                {
+                    StatementsWithCtes.Add(node);
+                }
+            }
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -194,6 +204,36 @@ namespace AxialSqlTools
                 DeclareStatements.Add(node);
             }
 
+            public override void ExplicitVisit(SelectStatement node)
+            {
+                base.ExplicitVisit(node);
+                TrackStatementWithCtes(node);
+            }
+
+            public override void ExplicitVisit(InsertStatement node)
+            {
+                base.ExplicitVisit(node);
+                TrackStatementWithCtes(node);
+            }
+
+            public override void ExplicitVisit(UpdateStatement node)
+            {
+                base.ExplicitVisit(node);
+                TrackStatementWithCtes(node);
+            }
+
+            public override void ExplicitVisit(DeleteStatement node)
+            {
+                base.ExplicitVisit(node);
+                TrackStatementWithCtes(node);
+            }
+
+            public override void ExplicitVisit(MergeStatement node)
+            {
+                base.ExplicitVisit(node);
+                TrackStatementWithCtes(node);
+            }
+
             public override void ExplicitVisit(QuerySpecification node)
             {
                 base.ExplicitVisit(node);
@@ -290,6 +330,16 @@ namespace AxialSqlTools
         public static string FormatCode(string oldCode, SettingsManager.TSqlCodeFormatSettings settingsOverride = null)
         {
             string resultCode = "";
+            var formatSettings = SettingsManager.GetTSqlCodeFormatSettings();
+            if (settingsOverride != null)
+            {
+                formatSettings = settingsOverride;
+            }
+
+            if (!HasTransformFormattingEnabled(formatSettings))
+            {
+                return oldCode;
+            }
 
             TSql170Parser sqlParser = new TSql170Parser(false);
 
@@ -307,14 +357,14 @@ namespace AxialSqlTools
                 throw new Exception($"TSqlParser unable to load selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
-            var formatSettings = SettingsManager.GetTSqlCodeFormatSettings();
-            if (settingsOverride != null)
-            {
-                formatSettings = settingsOverride;
-            }
-
             Sql170ScriptGenerator gen = new Sql170ScriptGenerator();
             gen.Options.AlignClauseBodies = false;
+            gen.Options.AlignColumnDefinitionFields = false;
+            gen.Options.MultilineSelectElementsList = formatSettings.breakSelectElementsPerLine;
+            gen.Options.NewLineBeforeFromClause = formatSettings.breakSelectElementsPerLine;
+            gen.Options.NewLineBeforeWhereClause = formatSettings.breakSelectElementsPerLine;
+            gen.Options.NewLineBeforeJoinClause = formatSettings.breakSelectElementsPerLine;
+            gen.Options.NewLineBeforeCloseParenthesisInMultilineList = formatSettings.formatTableDefinitionsMultiline || formatSettings.breakSelectElementsPerLine;
             gen.Options.SqlVersion = SqlVersion.Sql170; //TODO - try to get from current connection
 
             if (formatSettings.preserveComments)
@@ -338,8 +388,221 @@ namespace AxialSqlTools
                 }
             }
 
+            resultCode = PreserveLeadingCommaIndentAfterInlineComments(oldCode, resultCode);
+            resultCode = PreserveSourceTerminalShape(oldCode, resultCode);
             return resultCode;
 
+        }
+
+        private static string PreserveLeadingCommaIndentAfterInlineComments(string oldCode, string resultCode)
+        {
+            if (string.IsNullOrEmpty(oldCode) || string.IsNullOrEmpty(resultCode))
+            {
+                return resultCode;
+            }
+
+            var originalLines = NormalizeLineEndings(oldCode).Split(new[] { "\r\n" }, StringSplitOptions.None);
+            var resultLines = NormalizeLineEndings(resultCode).Split(new[] { "\r\n" }, StringSplitOptions.None);
+            int searchStart = 0;
+
+            for (int i = 0; i < originalLines.Length - 1; i++)
+            {
+                string originalCommentLine = originalLines[i];
+                string originalNextLine = originalLines[i + 1];
+                if (!HasInlineComment(originalCommentLine) || !IsLeadingCommaLine(originalNextLine))
+                {
+                    continue;
+                }
+
+                string originalIndent = LeadingWhitespace(originalNextLine);
+                string commentLineKey = originalCommentLine.TrimEnd();
+                for (int j = searchStart; j < resultLines.Length - 1; j++)
+                {
+                    if (resultLines[j].TrimEnd() != commentLineKey || !IsLeadingCommaLine(resultLines[j + 1]))
+                    {
+                        continue;
+                    }
+
+                    resultLines[j + 1] = originalIndent + resultLines[j + 1].TrimStart();
+                    searchStart = j + 1;
+                    break;
+                }
+            }
+
+            string result = string.Join("\r\n", resultLines);
+            if (!EndsWithLineBreak(resultCode))
+            {
+                result = result.TrimEnd('\r', '\n');
+            }
+
+            return result;
+        }
+
+        private static bool HasInlineComment(string line)
+        {
+            int commentIndex = (line ?? string.Empty).IndexOf("--", StringComparison.Ordinal);
+            return commentIndex > 0 && !string.IsNullOrWhiteSpace(line.Substring(0, commentIndex));
+        }
+
+        private static bool IsLeadingCommaLine(string line)
+        {
+            return Regex.IsMatch(line ?? string.Empty, @"^\s*,");
+        }
+
+        private static string LeadingWhitespace(string line)
+        {
+            return Regex.Match(line ?? string.Empty, @"^\s*").Value;
+        }
+
+        private static string PreserveSourceTerminalShape(string oldCode, string resultCode)
+        {
+            if (string.IsNullOrEmpty(resultCode))
+            {
+                return resultCode;
+            }
+
+            string result = resultCode;
+            if (!LastSignificantCharacterIs(oldCode, ';') && LastSignificantCharacterIs(result, ';'))
+            {
+                int semicolonIndex = LastSignificantCharacterIndex(result);
+                result = result.Remove(semicolonIndex, 1);
+            }
+
+            result = MatchTrailingLineBreaks(oldCode, result);
+
+            return result;
+        }
+
+        private static string MatchTrailingLineBreaks(string oldCode, string resultCode)
+        {
+            int oldTrailingLineBreaks = CountTrailingLineBreaks(oldCode);
+            string result = (resultCode ?? string.Empty).TrimEnd('\r', '\n');
+            string lineEnding = DetectLineEnding(oldCode);
+            for (int i = 0; i < oldTrailingLineBreaks; i++)
+            {
+                result += lineEnding;
+            }
+
+            return result;
+        }
+
+        private static int CountTrailingLineBreaks(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return 0;
+            }
+
+            int count = 0;
+            int i = text.Length;
+            while (i > 0)
+            {
+                if (text[i - 1] == '\n')
+                {
+                    count++;
+                    i--;
+                    if (i > 0 && text[i - 1] == '\r')
+                    {
+                        i--;
+                    }
+                }
+                else if (text[i - 1] == '\r')
+                {
+                    count++;
+                    i--;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return count;
+        }
+
+        private static string DetectLineEnding(string text)
+        {
+            if (!string.IsNullOrEmpty(text))
+            {
+                int crlf = text.IndexOf("\r\n", StringComparison.Ordinal);
+                if (crlf >= 0)
+                {
+                    return "\r\n";
+                }
+
+                if (text.IndexOf('\n') >= 0)
+                {
+                    return "\n";
+                }
+
+                if (text.IndexOf('\r') >= 0)
+                {
+                    return "\r";
+                }
+            }
+
+            return Environment.NewLine;
+        }
+
+        private static bool LastSignificantCharacterIs(string text, char expected)
+        {
+            int index = LastSignificantCharacterIndex(text);
+            return index >= 0 && text[index] == expected;
+        }
+
+        private static int LastSignificantCharacterIndex(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return -1;
+            }
+
+            for (int i = text.Length - 1; i >= 0; i--)
+            {
+                if (!char.IsWhiteSpace(text[i]))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool EndsWithLineBreak(string text)
+        {
+            return !string.IsNullOrEmpty(text)
+                && (text.EndsWith("\r\n", StringComparison.Ordinal)
+                    || text.EndsWith("\n", StringComparison.Ordinal)
+                    || text.EndsWith("\r", StringComparison.Ordinal));
+        }
+
+        private static bool HasTransformFormattingEnabled(SettingsManager.TSqlCodeFormatSettings formatSettings)
+        {
+            if (formatSettings == null)
+            {
+                return false;
+            }
+
+            return formatSettings.removeNewLineAfterJoin
+                || formatSettings.addTabAfterJoinOn
+                || formatSettings.moveCrossJoinToNewLine
+                || formatSettings.formatCaseAsMultiline
+                || formatSettings.addNewLineBetweenStatementsInBlocks
+                || formatSettings.breakSprocParametersPerLine
+                || formatSettings.uppercaseBuiltInFunctions
+                || formatSettings.unindentBeginEndBlocks
+                || formatSettings.breakVariableDefinitionsPerLine
+                || formatSettings.breakSprocDefinitionParametersPerLine
+                || formatSettings.breakSelectFieldsAfterTopAndUnindent
+                || formatSettings.leadingCommas
+                || formatSettings.semicolonBeforeCte
+                || formatSettings.breakSelectElementsPerLine
+                || formatSettings.useAssignmentAliases
+                || formatSettings.omitAsForTableAliases
+                || formatSettings.omitAsInDeclare
+                || formatSettings.formatTableDefinitionsMultiline
+                || formatSettings.prefixUnicodeStrings
+                || formatSettings.removeSemicolonsFromDeclare;
         }
 
         private static string ApplySpecialFormat(string oldCode, TSql170Parser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings)
@@ -857,6 +1120,18 @@ namespace AxialSqlTools
                 //}
             }
 
+            // special case #12 - place commas at the start of continuation lines
+            if (formatSettings.leadingCommas)
+            {
+                ApplyLeadingCommas(sqlFragment.ScriptTokenStream);
+            }
+
+            // special case #13 - add a defensive semicolon immediately before CTE WITH
+            if (formatSettings.semicolonBeforeCte)
+            {
+                ApplySemicolonBeforeCtes(sqlFragment.ScriptTokenStream, visitor.StatementsWithCtes);
+            }
+
             // return full recompiled result
             StringBuilder sqlText = new StringBuilder();
             foreach (var Token in sqlFragment.ScriptTokenStream)
@@ -864,7 +1139,662 @@ namespace AxialSqlTools
                 sqlText.Append(Token.Text);
             }
 
-            return sqlText.ToString();
+            return ApplyTextFormat(sqlText.ToString(), formatSettings);
+        }
+
+        private static string ApplyTextFormat(string sql, SettingsManager.TSqlCodeFormatSettings formatSettings)
+        {
+            string result = NormalizeLineEndings(sql).Replace("\t", "    ").TrimStart('\r', '\n');
+
+            if (formatSettings.omitAsInDeclare)
+            {
+                result = RemoveAsInDeclareStatements(result);
+            }
+
+            if (formatSettings.omitAsForTableAliases)
+            {
+                result = RemoveAsForTableAliases(result);
+            }
+
+            if (formatSettings.formatTableDefinitionsMultiline)
+            {
+                result = FormatTableVariableDefinitions(result);
+            }
+
+            if (formatSettings.breakSelectElementsPerLine)
+            {
+                result = FormatSelectLists(result, formatSettings.leadingCommas);
+                result = FormatCteSelectOpen(result);
+            }
+
+            if (formatSettings.leadingCommas)
+            {
+                result = NormalizeLeadingCommaLines(result);
+            }
+
+            if (formatSettings.useAssignmentAliases)
+            {
+                result = ApplyAssignmentAliases(result);
+            }
+
+            if (formatSettings.prefixUnicodeStrings)
+            {
+                result = PrefixUnicodeStringLiterals(result);
+            }
+
+            if (formatSettings.removeSemicolonsFromDeclare)
+            {
+                result = RemoveDeclareSemicolons(result);
+            }
+
+            if (formatSettings.leadingCommas)
+            {
+                result = NormalizeLeadingCommaLines(result);
+            }
+
+            if (formatSettings.breakSelectElementsPerLine)
+            {
+                result = FormatCteSelectOpen(result);
+                result = NormalizeCteJoinIndent(result);
+                result = FormatExistingMultilineSelects(result, formatSettings.leadingCommas);
+            }
+
+            result = NormalizeInlineCommentSpacing(result);
+            result = TrimTrailingSpaces(result);
+
+            return NormalizeLineEndings(result);
+        }
+
+        private static string RemoveAsInDeclareStatements(string sql)
+        {
+            return Regex.Replace(
+                sql,
+                @"(?im)^(\s*(?:DECLARE\s+)?[,]?@\w+)\s+AS\s+",
+                "$1 ");
+        }
+
+        private static string RemoveAsForTableAliases(string sql)
+        {
+            return Regex.Replace(
+                sql,
+                @"(?i)\b(FROM|JOIN|APPLY)\s+(@?\[?[\w.]+\]?)\s+AS\s+(\[?\w+\]?)",
+                "$1 $2 $3");
+        }
+
+        private static string FormatTableVariableDefinitions(string sql)
+        {
+            var result = new StringBuilder();
+            int position = 0;
+            var regex = new Regex(@"(?im)^(?<indent>[ \t]*)DECLARE\s+(?<name>@\w+)\s+TABLE\s*\(");
+
+            foreach (Match match in regex.Matches(sql))
+            {
+                if (match.Index < position)
+                {
+                    continue;
+                }
+
+                int openParen = sql.IndexOf('(', match.Index + match.Length - 1);
+                int closeParen = FindMatchingParen(sql, openParen);
+                if (openParen < 0 || closeParen < 0)
+                {
+                    continue;
+                }
+
+                int end = closeParen + 1;
+                if (end < sql.Length && sql[end] == ';')
+                {
+                    end++;
+                }
+
+                string indent = match.Groups["indent"].Value;
+                string childIndent = indent + "    ";
+                string body = Regex.Replace(sql.Substring(openParen + 1, closeParen - openParen - 1), @"\s+", " ").Trim();
+                var columns = SplitTopLevelCommaList(body);
+                var builder = new StringBuilder();
+                builder.Append(indent).Append("DECLARE ").Append(match.Groups["name"].Value).Append(" TABLE (");
+
+                for (int i = 0; i < columns.Count; i++)
+                {
+                    builder.Append("\r\n").Append(childIndent);
+                    if (i > 0)
+                    {
+                        builder.Append(",");
+                    }
+                    builder.Append(NormalizeSpaces(columns[i]));
+                }
+
+                builder.Append("\r\n").Append(indent).Append(")");
+
+                result.Append(sql.Substring(position, match.Index - position));
+                result.Append(builder.ToString());
+                position = end;
+            }
+
+            result.Append(sql.Substring(position));
+            return result.ToString();
+        }
+
+        private static string ApplyAssignmentAliases(string sql)
+        {
+            string result = sql;
+
+            result = Regex.Replace(
+                result,
+                @"(?ims)^(?<indent>\s*)(?<comma>,?)(?<post>\s*)CASE\r?\n(?<body>.*?)^(?<endindent>\s*)END\s+AS\s+(?<alias>\w+)\s*$",
+                match =>
+                {
+                    string indent = EffectiveCommaIndent(match);
+                    string comma = string.IsNullOrEmpty(match.Groups["comma"].Value) ? string.Empty : ",";
+                    string body = ReindentCaseBody(match.Groups["body"].Value, indent + "        ");
+                    return $"{indent}{comma}{match.Groups["alias"].Value} =\r\n{indent}    CASE\r\n{body}\r\n{indent}    END";
+                });
+
+            result = Regex.Replace(
+                result,
+                @"(?im)^(?<indent>\s*)(?<comma>,?)(?<post>\s*)(?<expr>(?:[A-Z_][\w.]*\s*)?\([^\r\n]*\)|[\w.]+)\s+AS\s+(?<alias>\w+)\s*$",
+                match =>
+                {
+                    string indent = EffectiveCommaIndent(match);
+                    string comma = string.IsNullOrEmpty(match.Groups["comma"].Value) ? string.Empty : ",";
+                    return $"{indent}{comma}{match.Groups["alias"].Value} = {match.Groups["expr"].Value.Trim()}";
+                });
+
+            return result;
+        }
+
+        private static string FormatSelectLists(string sql, bool leadingCommas)
+        {
+            return Regex.Replace(
+                sql,
+                @"(?im)^(?<indent>[ \t]*)SELECT(?<top>\s+TOP\s+\(?\d+\)?)?\s+(?<items>.+?(?:--.*)?)$",
+                match =>
+                {
+                    string itemsText = match.Groups["items"].Value;
+                    if (!itemsText.Contains(",") || Regex.IsMatch(itemsText, @"(?i)\bFROM\b"))
+                    {
+                        return match.Value;
+                    }
+
+                    string indent = match.Groups["indent"].Value;
+                    string childIndent = indent + "    ";
+                    var items = SplitTopLevelCommaList(itemsText);
+                    if (items.Count <= 1)
+                    {
+                        return match.Value;
+                    }
+
+                    var builder = new StringBuilder();
+                    builder.Append(indent).Append("SELECT").Append(match.Groups["top"].Value);
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        builder.Append("\r\n").Append(childIndent);
+                        if (i > 0 && leadingCommas)
+                        {
+                            builder.Append(",");
+                        }
+                        builder.Append(items[i].Trim());
+                        if (i < items.Count - 1 && !leadingCommas)
+                        {
+                            builder.Append(",");
+                        }
+                    }
+
+                    return builder.ToString();
+                });
+        }
+
+        private static string FormatCteSelectOpen(string sql)
+        {
+            string result = Regex.Replace(
+                sql,
+                @"(?im)^(?<indent>[ \t]*);?WITH\s+(?<name>\w+)[ \t]*\r?\n[ \t]*AS\s*\(SELECT(?<top>\s+TOP\s+\(?\d+\)?)?\s+(?<first>[^\r\n,]+)",
+                match =>
+                {
+                    string indent = match.Groups["indent"].Value;
+                    return $"{indent};WITH {match.Groups["name"].Value} AS (\r\n{indent}    SELECT{match.Groups["top"].Value}\r\n{indent}        {match.Groups["first"].Value.Trim()}";
+                });
+
+            result = Regex.Replace(
+                result,
+                @"(?im)^(?<indent>[ \t]*)(?<join>INNER|LEFT|RIGHT|FULL)\s+JOIN\s*\r?\n[ \t]*(?<table>@?\w+\s+\w+)\s*$",
+                "${indent}${join} JOIN ${table}");
+
+            result = Regex.Replace(
+                result,
+                @"(?im)^(?<indent>[ \t]*)(?<line>CROSS\s+JOIN\s+@?\w+\s+\w+)\)$",
+                "${indent}${line}\r\n${indent})");
+
+            return result;
+        }
+
+        private static string NormalizeCteJoinIndent(string sql)
+        {
+            var lines = NormalizeLineEndings(sql).Split(new[] { "\r\n" }, StringSplitOptions.None);
+            bool insideCte = false;
+            string cteIndent = string.Empty;
+            string fromIndent = string.Empty;
+            var output = new List<string>();
+
+            foreach (string originalLine in lines)
+            {
+                string line = originalLine;
+                string trimmed = line.TrimStart();
+                string currentIndent = Regex.Match(line, @"^[ \t]*").Value;
+
+                if (Regex.IsMatch(trimmed, @"^;WITH\b", RegexOptions.IgnoreCase))
+                {
+                    insideCte = true;
+                    cteIndent = currentIndent;
+                    fromIndent = string.Empty;
+                    output.Add(line);
+                    continue;
+                }
+
+                if (insideCte && Regex.IsMatch(trimmed, @"^FROM\b", RegexOptions.IgnoreCase))
+                {
+                    fromIndent = currentIndent;
+                    output.Add(line);
+                    continue;
+                }
+
+                if (insideCte && !string.IsNullOrEmpty(fromIndent))
+                {
+                    if (Regex.IsMatch(trimmed, @"^(INNER|LEFT|RIGHT|FULL|CROSS)\s+JOIN\b", RegexOptions.IgnoreCase))
+                    {
+                        bool closesCte = trimmed.EndsWith(")", StringComparison.Ordinal);
+                        string joinText = closesCte ? trimmed.Substring(0, trimmed.Length - 1).TrimEnd() : trimmed;
+                        output.Add(fromIndent + joinText);
+                        if (closesCte)
+                        {
+                            output.Add(cteIndent + ")");
+                            insideCte = false;
+                            fromIndent = string.Empty;
+                        }
+
+                        continue;
+                    }
+
+                    if (Regex.IsMatch(trimmed, @"^ON\b", RegexOptions.IgnoreCase))
+                    {
+                        output.Add(fromIndent + "    " + trimmed);
+                        continue;
+                    }
+                }
+
+                if (insideCte && trimmed == ")")
+                {
+                    output.Add(cteIndent + ")");
+                    insideCte = false;
+                    fromIndent = string.Empty;
+                    continue;
+                }
+
+                output.Add(line);
+            }
+
+            return string.Join("\r\n", output);
+        }
+
+        private static string FormatExistingMultilineSelects(string sql, bool leadingCommas)
+        {
+            return Regex.Replace(
+                sql,
+                @"(?im)^(?<indent>[ \t]*)SELECT\s+(?<first>[^\r\n,]+)\r?\n(?<items>(?:[ \t]*,[^\r\n]*(?:\r?\n|$)){1,})",
+                match =>
+                {
+                    string indent = match.Groups["indent"].Value;
+                    string childIndent = indent + "    ";
+                    var items = new List<string> { match.Groups["first"].Value.Trim() };
+                    foreach (Match itemMatch in Regex.Matches(match.Groups["items"].Value, @"(?m)^[ \t]*,(?<item>[^\r\n]*)"))
+                    {
+                        items.Add(itemMatch.Groups["item"].Value.Trim());
+                    }
+
+                    if (items.Count <= 1)
+                    {
+                        return match.Value;
+                    }
+
+                    var builder = new StringBuilder();
+                    builder.Append(indent).Append("SELECT");
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        builder.Append("\r\n").Append(childIndent);
+                        if (i > 0 && leadingCommas)
+                        {
+                            builder.Append(",");
+                        }
+
+                        builder.Append(items[i]);
+                        if (i < items.Count - 1 && !leadingCommas)
+                        {
+                            builder.Append(",");
+                        }
+                    }
+
+                    return builder.ToString();
+                });
+        }
+
+        private static string NormalizeLeadingCommaLines(string sql)
+        {
+            var lines = NormalizeLineEndings(sql).Split(new[] { "\r\n" }, StringSplitOptions.None);
+            string previousItemIndent = string.Empty;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i];
+                Match commaMatch = Regex.Match(line, @"^(?<indent>\s*),(?<space>\s*)(?<text>.*)$");
+                if (commaMatch.Success)
+                {
+                    string candidateIndent = commaMatch.Groups["indent"].Value;
+                    string indent = string.IsNullOrEmpty(candidateIndent)
+                        ? previousItemIndent
+                        : candidateIndent;
+                    if (!string.IsNullOrEmpty(previousItemIndent)
+                        && candidateIndent.Length > previousItemIndent.Length + 4)
+                    {
+                        indent = previousItemIndent;
+                    }
+
+                    lines[i] = indent + "," + commaMatch.Groups["text"].Value.TrimStart();
+                    previousItemIndent = indent;
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(line)
+                    && !Regex.IsMatch(line.TrimStart(), @"^(SELECT|FROM|WHERE|INNER|LEFT|RIGHT|FULL|CROSS|ON|ELSE|END|\)|;WITH)\b", RegexOptions.IgnoreCase))
+                {
+                    previousItemIndent = Regex.Match(line, @"^\s*").Value;
+                }
+            }
+
+            return string.Join("\r\n", lines);
+        }
+
+        private static string EffectiveCommaIndent(Match match)
+        {
+            string indent = match.Groups["indent"].Value;
+            if (string.IsNullOrEmpty(indent) && !string.IsNullOrEmpty(match.Groups["comma"].Value))
+            {
+                indent = match.Groups["post"].Value;
+            }
+
+            return indent;
+        }
+
+        private static int FindMatchingParen(string text, int openParen)
+        {
+            if (openParen < 0)
+            {
+                return -1;
+            }
+
+            int depth = 0;
+            for (int i = openParen; i < text.Length; i++)
+            {
+                if (text[i] == '(')
+                {
+                    depth++;
+                }
+                else if (text[i] == ')')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            return -1;
+        }
+
+        private static string ReindentCaseBody(string body, string indent)
+        {
+            var sourceLines = NormalizeLineEndings(body).Split(new[] { "\r\n" }, StringSplitOptions.None)
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Select(line => line.Trim())
+                .ToList();
+
+            var lines = new List<string>();
+            for (int i = 0; i < sourceLines.Count; i++)
+            {
+                string line = sourceLines[i];
+                if (line.StartsWith("WHEN ", StringComparison.OrdinalIgnoreCase)
+                    && i + 1 < sourceLines.Count
+                    && sourceLines[i + 1].StartsWith("THEN ", StringComparison.OrdinalIgnoreCase))
+                {
+                    lines.Add(indent + line + " " + sourceLines[i + 1]);
+                    i++;
+                    continue;
+                }
+
+                lines.Add(indent + line);
+            }
+
+            return string.Join("\r\n", lines);
+        }
+
+        private static string NormalizeInlineCommentSpacing(string sql)
+        {
+            return Regex.Replace(
+                sql,
+                @"(?m)(--[^\r\n]*)\r\n[ \t]*\r\n([ \t]*(?:FROM|WHERE|GROUP|ORDER|HAVING)\b)",
+                "$1\r\n$2");
+        }
+
+        private static string TrimTrailingSpaces(string sql)
+        {
+            return Regex.Replace(sql, @"(?m)[ \t]+(?=\r?$)", string.Empty);
+        }
+
+        private static string PrefixUnicodeStringLiterals(string sql)
+        {
+            var builder = new StringBuilder();
+            for (int i = 0; i < sql.Length; i++)
+            {
+                if (i + 1 < sql.Length && sql[i] == '-' && sql[i + 1] == '-')
+                {
+                    int end = sql.IndexOf('\n', i + 2);
+                    if (end < 0)
+                    {
+                        builder.Append(sql.Substring(i));
+                        break;
+                    }
+
+                    builder.Append(sql.Substring(i, end - i + 1));
+                    i = end;
+                    continue;
+                }
+
+                if (i + 1 < sql.Length && sql[i] == '/' && sql[i + 1] == '*')
+                {
+                    int end = sql.IndexOf("*/", i + 2, StringComparison.Ordinal);
+                    if (end < 0)
+                    {
+                        builder.Append(sql.Substring(i));
+                        break;
+                    }
+
+                    builder.Append(sql.Substring(i, end - i + 2));
+                    i = end + 1;
+                    continue;
+                }
+
+                if (sql[i] == '\'')
+                {
+                    if (i == 0 || (sql[i - 1] != 'N' && sql[i - 1] != 'n'))
+                    {
+                        builder.Append('N');
+                    }
+
+                    builder.Append(sql[i]);
+                    while (++i < sql.Length)
+                    {
+                        builder.Append(sql[i]);
+                        if (sql[i] == '\'')
+                        {
+                            if (i + 1 < sql.Length && sql[i + 1] == '\'')
+                            {
+                                builder.Append(sql[++i]);
+                                continue;
+                            }
+
+                            break;
+                        }
+                    }
+
+                    continue;
+                }
+
+                builder.Append(sql[i]);
+            }
+
+            return builder.ToString();
+        }
+
+        private static string RemoveDeclareSemicolons(string sql)
+        {
+            return Regex.Replace(sql, @"(?im)^(\s*(?:DECLARE\b|,@).*?);(\s*)$", "$1$2");
+        }
+
+        private static List<string> SplitTopLevelCommaList(string text)
+        {
+            var items = new List<string>();
+            int depth = 0;
+            int start = 0;
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                char ch = text[i];
+                if (ch == '(')
+                {
+                    depth++;
+                }
+                else if (ch == ')' && depth > 0)
+                {
+                    depth--;
+                }
+                else if (ch == ',' && depth == 0)
+                {
+                    items.Add(text.Substring(start, i - start).Trim());
+                    start = i + 1;
+                }
+            }
+
+            if (start < text.Length)
+            {
+                items.Add(text.Substring(start).Trim());
+            }
+
+            return items;
+        }
+
+        private static string NormalizeSpaces(string text)
+        {
+            return Regex.Replace(text ?? string.Empty, @"\s+", " ").Trim();
+        }
+
+        private static string NormalizeLineEndings(string text)
+        {
+            return (text ?? string.Empty).Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
+        }
+
+        private static void ApplyLeadingCommas(IList<TSqlParserToken> tokens)
+        {
+            for (int i = 0; i < tokens.Count - 1; i++)
+            {
+                if (tokens[i].TokenType != TSqlTokenType.Comma)
+                {
+                    continue;
+                }
+
+                int wsAfterComma = i + 1;
+                if (tokens[wsAfterComma].TokenType != TSqlTokenType.WhiteSpace
+                    || !ContainsNewLine(tokens[wsAfterComma].Text))
+                {
+                    continue;
+                }
+
+                tokens[i].Text = string.Empty;
+                tokens[wsAfterComma].Text = MoveCommaToContinuationLine(tokens[wsAfterComma].Text);
+            }
+        }
+
+        private static void ApplySemicolonBeforeCtes(
+            IList<TSqlParserToken> tokens,
+            IList<StatementWithCtesAndXmlNamespaces> statementsWithCtes)
+        {
+            foreach (var statement in statementsWithCtes)
+            {
+                if (statement.FirstTokenIndex < 0 || statement.FirstTokenIndex >= tokens.Count)
+                {
+                    continue;
+                }
+
+                int cteTokenIndex = statement.FirstTokenIndex;
+                int previousSignificantTokenIndex = cteTokenIndex - 1;
+                while (previousSignificantTokenIndex >= 0
+                    && tokens[previousSignificantTokenIndex].TokenType == TSqlTokenType.WhiteSpace)
+                {
+                    previousSignificantTokenIndex--;
+                }
+
+                int whitespaceBeforeCte = cteTokenIndex - 1;
+                if (previousSignificantTokenIndex >= 0
+                    && tokens[previousSignificantTokenIndex].TokenType == TSqlTokenType.Semicolon)
+                {
+                    if (previousSignificantTokenIndex == cteTokenIndex - 1)
+                    {
+                        continue;
+                    }
+
+                    tokens[previousSignificantTokenIndex].Text = string.Empty;
+                }
+
+                if (whitespaceBeforeCte >= 0
+                    && tokens[whitespaceBeforeCte].TokenType == TSqlTokenType.WhiteSpace)
+                {
+                    tokens[whitespaceBeforeCte].Text = tokens[whitespaceBeforeCte].Text + ";";
+                }
+                else
+                {
+                    tokens[cteTokenIndex].Text = ";" + tokens[cteTokenIndex].Text;
+                }
+            }
+        }
+
+        private static bool ContainsNewLine(string text)
+        {
+            return text != null && (text.Contains("\r\n") || text.Contains("\n"));
+        }
+
+        private static string MoveCommaToContinuationLine(string whitespace)
+        {
+            if (string.IsNullOrEmpty(whitespace))
+            {
+                return ",";
+            }
+
+            int newlineIndex = whitespace.LastIndexOf("\r\n", StringComparison.Ordinal);
+            int newlineLength = 2;
+
+            if (newlineIndex < 0)
+            {
+                newlineIndex = whitespace.LastIndexOf("\n", StringComparison.Ordinal);
+                newlineLength = 1;
+            }
+
+            if (newlineIndex < 0)
+            {
+                return "," + whitespace;
+            }
+
+            return whitespace.Substring(newlineIndex, newlineLength)
+                + whitespace.Substring(newlineIndex + newlineLength)
+                + ",";
         }
 
         // Helper: for a whitespace token that looks like "\r\n    …",
