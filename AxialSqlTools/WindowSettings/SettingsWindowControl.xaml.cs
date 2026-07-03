@@ -139,6 +139,9 @@ as select 1;
                 UseSnippets.IsChecked = snippetSettings.useSnippets;
                 SnippetFolder.Text = snippetSettings.snippetFolder;
                 SnippetReplaceMode.SelectedValue = snippetSettings.replaceKey.ToString();
+                var asteriskSettings = SettingsManager.GetAsteriskExpansionSettings();
+                UseAsteriskExpansion.IsChecked = asteriskSettings.useAsteriskExpansion;
+                AsteriskExpansionTriggerMode.SelectedValue = asteriskSettings.triggerKey.ToString();
 
                 _queryHistoryConnectionString = SettingsManager.GetQueryHistoryConnectionString();
                 QueryHistoryTableName.Text = SettingsManager.GetQueryHistoryTableName();
@@ -260,6 +263,12 @@ as select 1;
 
             SettingsManager.SaveSnippetSettings(snippetSettings);
 
+            SettingsManager.SaveAsteriskExpansionSettings(new SettingsManager.AsteriskExpansionSettings
+            {
+                useAsteriskExpansion = UseAsteriskExpansion.IsChecked.GetValueOrDefault(),
+                triggerKey = GetSelectedAsteriskExpansionTriggerKey()
+            });
+
             SavedMessage();
         }
 
@@ -298,6 +307,17 @@ as select 1;
             }
 
             return SettingsManager.SnippetReplaceKey.Enter;
+        }
+
+        private SettingsManager.SnippetReplaceKey GetSelectedAsteriskExpansionTriggerKey()
+        {
+            var selectedValue = AsteriskExpansionTriggerMode.SelectedValue as string;
+            if (Enum.TryParse(selectedValue, out SettingsManager.SnippetReplaceKey key))
+            {
+                return key;
+            }
+
+            return SettingsManager.SnippetReplaceKey.Tab;
         }
 
         static string DownloadGitHubRepoZip(string url)

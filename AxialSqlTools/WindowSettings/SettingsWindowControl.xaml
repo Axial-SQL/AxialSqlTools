@@ -181,9 +181,11 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Code Snippets" Visibility="Collapsed">
+            <TabItem Header="Code Snippets">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -240,7 +242,27 @@
                         <ComboBoxItem Content="Tab" Tag="Tab" />
                     </ComboBox>
 
-                    <Button Grid.Row="5" Grid.Column="0"
+                    <CheckBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
+                              x:Name="UseAsteriskExpansion"
+                              Content="Replace SELECT * with column list"
+                              Margin="5"/>
+
+                    <Label Grid.Row="6" Grid.Column="0"
+                           Content="Replace asterisk when pressing:"
+                           VerticalAlignment="Center"
+                           Margin="5"/>
+
+                    <ComboBox Grid.Row="6" Grid.Column="1"
+                              x:Name="AsteriskExpansionTriggerMode"
+                              SelectedValuePath="Tag"
+                              Margin="5"
+                              VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="Enter" Tag="Enter" />
+                        <ComboBoxItem Content="Shift+Enter" Tag="ShiftEnter" />
+                        <ComboBoxItem Content="Tab" Tag="Tab" />
+                    </ComboBox>
+
+                    <Button Grid.Row="7" Grid.Column="0"
                                                         x:Name="button_SaveSnippetFolder"
                                                         Click="Button_SaveSnippetFolder_Click"
                                                         Width="80"
