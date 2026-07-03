@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -15,7 +16,7 @@ namespace AxialSqlTools
         private string _editDescription;
         private string _editBody;
         private bool _isEditing;
-        private bool _isNewMode;
+        private bool _isEditMode;
 
         private bool _useSnippets;
         private SettingsManager.SnippetReplaceKey _replaceKey;
@@ -27,6 +28,7 @@ namespace AxialSqlTools
 
             NewCommand = new RelayCommand(OnNew);
             SaveCommand = new RelayCommand(OnSave);
+            EditCommand = new RelayCommand(OnEdit, () => SelectedSnippet != null && !IsEditMode);
             DeleteCommand = new RelayCommand(OnDelete);
             DuplicateCommand = new RelayCommand(OnDuplicate);
             ImportLegacyCommand = new RelayCommand(OnImportLegacy);
@@ -50,12 +52,14 @@ namespace AxialSqlTools
             {
                 _selectedSnippet = value;
                 OnPropertyChanged();
-                if (_selectedSnippet != null && !_isNewMode)
+                CommandManager.InvalidateRequerySuggested();
+                if (_selectedSnippet != null && !_isEditMode)
                 {
                     EditPrefix = _selectedSnippet.Prefix;
                     EditDescription = _selectedSnippet.Description;
                     EditBody = _selectedSnippet.Body;
                     IsEditing = true;
+                    IsEditMode = false;
                 }
             }
         }
@@ -84,6 +88,20 @@ namespace AxialSqlTools
             set { _isEditing = value; OnPropertyChanged(); }
         }
 
+        public bool IsEditMode
+        {
+            get => _isEditMode;
+            set
+            {
+                _isEditMode = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsEditorReadOnly));
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public bool IsEditorReadOnly => !IsEditMode;
+
         public bool UseSnippets
         {
             get => _useSnippets;
@@ -104,6 +122,7 @@ namespace AxialSqlTools
 
         public ICommand NewCommand { get; }
         public ICommand SaveCommand { get; }
+        public ICommand EditCommand { get; }
         public ICommand DeleteCommand { get; }
         public ICommand DuplicateCommand { get; }
         public ICommand ImportLegacyCommand { get; }
@@ -131,13 +150,19 @@ namespace AxialSqlTools
 
         private void OnNew()
         {
-            _isNewMode = true;
             _selectedSnippet = null;
             EditPrefix = string.Empty;
             EditDescription = string.Empty;
             EditBody = string.Empty;
             IsEditing = true;
+            IsEditMode = true;
             OnPropertyChanged(nameof(SelectedSnippet));
+        }
+
+        private void OnEdit()
+        {
+            if (_selectedSnippet != null)
+                IsEditMode = true;
         }
 
         private void OnSave()
@@ -148,11 +173,12 @@ namespace AxialSqlTools
                 return;
             }
 
-            if (_isNewMode || _selectedSnippet == null)
+            string savedId;
+            if (_selectedSnippet == null)
             {
                 var newSnippet = new SnippetItem(EditPrefix.Trim(), EditDescription ?? string.Empty, EditBody ?? string.Empty);
                 SnippetService.AddSnippet(newSnippet);
-                _isNewMode = false;
+                savedId = newSnippet.Id;
             }
             else
             {
@@ -160,10 +186,13 @@ namespace AxialSqlTools
                 _selectedSnippet.Description = EditDescription ?? string.Empty;
                 _selectedSnippet.Body = EditBody ?? string.Empty;
                 SnippetService.UpdateSnippet(_selectedSnippet);
+                savedId = _selectedSnippet.Id;
             }
 
             LoadSnippets();
-            IsEditing = false;
+            SelectedSnippet = _snippets.FirstOrDefault(s => s.Id == savedId);
+            IsEditMode = false;
+            IsEditing = SelectedSnippet != null;
         }
 
         private void OnDelete()
@@ -183,6 +212,7 @@ namespace AxialSqlTools
                 LoadSnippets();
                 IsEditing = false;
                 _selectedSnippet = null;
+                IsEditMode = false;
                 OnPropertyChanged(nameof(SelectedSnippet));
             }
         }
@@ -199,6 +229,7 @@ namespace AxialSqlTools
 
             SnippetService.AddSnippet(dup);
             LoadSnippets();
+            SelectedSnippet = _snippets.FirstOrDefault(s => s.Id == dup.Id);
         }
 
         private void OnImportLegacy()
@@ -219,8 +250,7 @@ namespace AxialSqlTools
 
         private void OnCancel()
         {
-            _isNewMode = false;
-            IsEditing = false;
+            IsEditMode = false;
 
             if (_selectedSnippet != null)
             {
@@ -230,6 +260,7 @@ namespace AxialSqlTools
             }
             else
             {
+                IsEditing = false;
                 EditPrefix = string.Empty;
                 EditDescription = string.Empty;
                 EditBody = string.Empty;

@@ -118,29 +118,35 @@
                     Width="75" Height="24" Margin="0,0,5,0"/>
             <Button Content="Delete" Command="{Binding DeleteCommand}"
                     Width="65" Height="24" Margin="0,0,5,0"/>
+            <Button Content="Edit" Command="{Binding EditCommand}"
+                    Width="65" Height="24" Margin="0,0,5,0"/>
             <Button Content="Import .sql" Command="{Binding ImportLegacyCommand}"
                     Width="80" Height="24" Margin="0,0,5,0"/>
         </StackPanel>
 
-        <!-- Main content: Grid on top, Edit panel on bottom -->
+        <!-- Main content: fixed-row grid on the left, preview/editor on the right -->
         <Grid Grid.Row="2">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" MinHeight="100"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MinWidth="280"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="3*" MinWidth="360"/>
+            </Grid.ColumnDefinitions>
 
             <!-- DataGrid -->
-            <DataGrid Grid.Row="0"
+            <DataGrid Grid.Column="0"
                       ItemsSource="{Binding Snippets}"
                       SelectedItem="{Binding SelectedSnippet, Mode=TwoWay}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
+                      IsEnabled="{Binding IsEditorReadOnly}"
+                      RowHeight="22"
+                      EnableRowVirtualization="True"
                       SelectionMode="Single"
                       CanUserAddRows="False"
                       CanUserDeleteRows="False"
                       GridLinesVisibility="Horizontal"
                       HeadersVisibility="Column"
-                      Margin="0,0,0,5">
+                      Margin="0,0,5,0">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Prefix" Binding="{Binding Prefix}" Width="100"/>
                     <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="200"/>
@@ -155,7 +161,7 @@
             </DataGrid>
 
             <!-- Edit Panel -->
-            <GroupBox Grid.Row="1" Header="Edit Snippet"
+            <GroupBox Grid.Column="2" Header="Snippet"
                       Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}"
                       Margin="0,0,0,0">
                 <Grid Margin="5">
@@ -175,23 +181,25 @@
                                VerticalAlignment="Center" Margin="0,0,0,5"/>
                     <TextBox Grid.Row="0" Grid.Column="1"
                              Text="{Binding EditPrefix, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             IsReadOnly="{Binding IsEditorReadOnly}"
                              Margin="0,0,0,5" VerticalContentAlignment="Center"/>
 
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Description:"
                                VerticalAlignment="Center" Margin="0,0,0,5"/>
                     <TextBox Grid.Row="1" Grid.Column="1"
                              Text="{Binding EditDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             IsReadOnly="{Binding IsEditorReadOnly}"
                              Margin="0,0,0,5" VerticalContentAlignment="Center"/>
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Body:"
                                VerticalAlignment="Top" Margin="0,0,0,5"/>
                     <TextBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
                              Text="{Binding EditBody, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             IsReadOnly="{Binding IsEditorReadOnly}"
                              AcceptsReturn="True"
                              AcceptsTab="True"
                              FontFamily="Consolas"
                              FontSize="12"
-                             MaxHeight="200"
                              VerticalScrollBarVisibility="Auto"
                              HorizontalScrollBarVisibility="Auto"
                              TextWrapping="NoWrap"
@@ -199,7 +207,8 @@
                              Margin="0,0,0,5"/>
 
                     <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                                Orientation="Horizontal" Margin="0,5,0,0">
+                                Orientation="Horizontal" Margin="0,5,0,0"
+                                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}">
                         <Button Content="Save Snippet" Command="{Binding SaveCommand}"
                                 Width="100" Height="24" Margin="0,0,5,0" FontWeight="Bold"/>
                         <Button Content="Cancel" Command="{Binding CancelCommand}"
