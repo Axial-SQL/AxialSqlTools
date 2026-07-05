@@ -18,6 +18,9 @@ namespace AxialSqlTools
             public int StatementStartOffset { get; set; }
             public Dictionary<string, string> TableQualifiersByName { get; set; }
             public List<TableInfo> Tables { get; set; }
+            public Dictionary<string, List<string>> LocalColumnsByName { get; set; }
+            public Dictionary<string, QueryExpression> LocalQueriesByName { get; set; }
+            public bool AllowMetadataFallback { get; set; }
         }
 
         private sealed class TableInfo
@@ -161,32 +164,18 @@ namespace AxialSqlTools
                     if (statement.StartOffset < 0 || statement.FragmentLength <= 0 || statement.StartOffset + statement.FragmentLength > fullText.Length)
                         return false;
 
-                    return TryBuildSelectInfo(fullText, (SelectStatement)statement, starOffset, out selectInfo);
+                    return TryBuildSelectInfo(script, fullText, (SelectStatement)statement, starOffset, out selectInfo);
                 }
             }
 
             return false;
         }
 
-        private static bool TryBuildSelectInfo(string fullText, SelectStatement statement, int starOffset, out SelectInfo selectInfo)
+        private static bool TryBuildSelectInfo(TSqlScript script, string fullText, SelectStatement statement, int starOffset, out SelectInfo selectInfo)
         {
             selectInfo = null;
 
-            var query = statement.QueryExpression as QuerySpecification;
-            if (query == null || query.SelectElements == null || query.SelectElements.Count == 0)
-                return false;
-
-            SelectElement selectedStar = null;
-            foreach (SelectElement element in query.SelectElements)
-            {
-                if (element is SelectStarExpression && ContainsOffset(element, starOffset))
-                {
-                    selectedStar = element;
-                    break;
-                }
-            }
-
-            if (selectedStar == null)
+            if (!TryFindQueryWithStar(statement, starOffset, out QuerySpecification query, out SelectElement selectedStar))
                 return false;
 
             SelectElement firstElement = query.SelectElements[0];
@@ -201,6 +190,8 @@ namespace AxialSqlTools
             string starText = fullText.Substring(selectedStar.StartOffset, selectedStar.FragmentLength);
             int relativeSelectListStart = selectListStart - statement.StartOffset;
             int relativeSelectListEnd = selectListEnd - statement.StartOffset;
+            Dictionary<string, QueryExpression> localQueriesByName;
+            Dictionary<string, List<string>> localColumnsByName = GetLocalColumns(script, statement, out localQueriesByName);
 
             selectInfo = new SelectInfo
             {
@@ -209,9 +200,57 @@ namespace AxialSqlTools
                     + starText
                     + statementText.Substring(relativeSelectListEnd),
                 TableQualifiersByName = GetTableQualifiers(query.FromClause),
-                Tables = GetTables(query.FromClause)
+                Tables = GetTables(query.FromClause),
+                LocalColumnsByName = localColumnsByName,
+                LocalQueriesByName = localQueriesByName,
+                AllowMetadataFallback = ReferenceEquals(query, statement.QueryExpression)
             };
             return true;
+        }
+
+        private static bool TryFindQueryWithStar(
+            SelectStatement statement,
+            int starOffset,
+            out QuerySpecification query,
+            out SelectElement selectedStar)
+        {
+            if (TryFindQueryWithStar(statement.QueryExpression, starOffset, out query, out selectedStar))
+                return true;
+
+            if (statement.WithCtesAndXmlNamespaces?.CommonTableExpressions == null)
+                return false;
+
+            foreach (CommonTableExpression cte in statement.WithCtesAndXmlNamespaces.CommonTableExpressions)
+            {
+                if (TryFindQueryWithStar(cte.QueryExpression, starOffset, out query, out selectedStar))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryFindQueryWithStar(
+            QueryExpression queryExpression,
+            int starOffset,
+            out QuerySpecification query,
+            out SelectElement selectedStar)
+        {
+            query = queryExpression as QuerySpecification;
+            selectedStar = null;
+
+            if (query == null || query.SelectElements == null || query.SelectElements.Count == 0)
+                return false;
+
+            foreach (SelectElement element in query.SelectElements)
+            {
+                if (element is SelectStarExpression && ContainsOffset(element, starOffset))
+                {
+                    selectedStar = element;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool ContainsOffset(TSqlFragment fragment, int offset)
@@ -277,7 +316,10 @@ namespace AxialSqlTools
 
         private static List<ColumnInfo> GetResultColumns(SelectInfo selectInfo, string tempTableSetup, string typedQualifier)
         {
-            var columns = new List<ColumnInfo>();
+            var columns = GetColumnsFromTableReferences(null, selectInfo.Tables, typedQualifier, selectInfo.LocalColumnsByName, selectInfo.LocalQueriesByName);
+            if (columns.Count > 0)
+                return columns;
+
             var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
             if (connectionInfo == null || string.IsNullOrWhiteSpace(connectionInfo.FullConnectionString))
                 return columns;
@@ -296,15 +338,22 @@ namespace AxialSqlTools
                     }
                 }
 
-                columns = GetColumnsFromTableReferences(connection, selectInfo.Tables, typedQualifier);
+                columns = GetColumnsFromTableReferences(connection, selectInfo.Tables, typedQualifier, selectInfo.LocalColumnsByName, selectInfo.LocalQueriesByName);
                 if (columns.Count > 0)
                     return columns;
 
-                return GetResultColumnsFromFmtOnly(connection, selectInfo.MetadataStatementText, selectInfo.TableQualifiersByName);
+                return selectInfo.AllowMetadataFallback
+                    ? GetResultColumnsFromFmtOnly(connection, selectInfo.MetadataStatementText, selectInfo.TableQualifiersByName)
+                    : columns;
             }
         }
 
-        private static List<ColumnInfo> GetColumnsFromTableReferences(SqlConnection connection, List<TableInfo> tables, string typedQualifier)
+        private static List<ColumnInfo> GetColumnsFromTableReferences(
+            SqlConnection connection,
+            List<TableInfo> tables,
+            string typedQualifier,
+            Dictionary<string, List<string>> localColumnsByName,
+            Dictionary<string, QueryExpression> localQueriesByName)
         {
             var result = new List<ColumnInfo>();
             if (tables == null || tables.Count == 0)
@@ -321,7 +370,18 @@ namespace AxialSqlTools
 
             foreach (TableInfo table in targetTables)
             {
-                List<string> tableColumns = GetColumnNamesForTable(connection, table);
+                List<string> tableColumns = GetLocalColumnNames(table, localColumnsByName);
+                if (tableColumns.Count == 0 && connection != null)
+                    tableColumns = GetLocalQueryColumnNames(connection, table, localColumnsByName, localQueriesByName);
+
+                if (tableColumns.Count == 0)
+                {
+                    if (connection == null)
+                        return new List<ColumnInfo>();
+
+                    tableColumns = GetColumnNamesForTable(connection, table);
+                }
+
                 if (tableColumns.Count == 0)
                     return new List<ColumnInfo>();
 
@@ -340,6 +400,35 @@ namespace AxialSqlTools
                 ApplyDuplicateQualifiers(result, BuildQualifierMap(targetTables));
 
             return result;
+        }
+
+        private static List<string> GetLocalQueryColumnNames(
+            SqlConnection connection,
+            TableInfo table,
+            Dictionary<string, List<string>> localColumnsByName,
+            Dictionary<string, QueryExpression> localQueriesByName)
+        {
+            if (table == null || localQueriesByName == null || string.IsNullOrWhiteSpace(table.TableName))
+                return new List<string>();
+
+            if (!localQueriesByName.TryGetValue(table.TableName, out QueryExpression queryExpression))
+                return new List<string>();
+
+            List<string> columns = ResolveQueryColumns(connection, queryExpression, localColumnsByName, localQueriesByName, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+            if (columns.Count > 0 && localColumnsByName != null)
+                localColumnsByName[table.TableName] = columns;
+
+            return columns;
+        }
+
+        private static List<string> GetLocalColumnNames(TableInfo table, Dictionary<string, List<string>> localColumnsByName)
+        {
+            if (table == null || localColumnsByName == null || string.IsNullOrWhiteSpace(table.TableName))
+                return new List<string>();
+
+            return localColumnsByName.TryGetValue(table.TableName, out List<string> columns)
+                ? columns
+                : new List<string>();
         }
 
         private static List<string> GetColumnNamesForTable(SqlConnection connection, TableInfo table)
@@ -542,6 +631,21 @@ namespace AxialSqlTools
                 return;
             }
 
+            if (tableReference is VariableTableReference variableTable)
+            {
+                string tableName = variableTable.Variable?.Name;
+                if (string.IsNullOrWhiteSpace(tableName))
+                    return;
+
+                string alias = variableTable.Alias?.Value;
+                result.Add(new TableInfo
+                {
+                    TableName = tableName,
+                    Qualifier = !string.IsNullOrWhiteSpace(alias) ? alias + "." : EscapeIdentifier(tableName) + "."
+                });
+                return;
+            }
+
             if (tableReference is QualifiedJoin qualifiedJoin)
             {
                 AddTables(qualifiedJoin.FirstTableReference, result);
@@ -571,6 +675,17 @@ namespace AxialSqlTools
                 return;
             }
 
+            if (tableReference is VariableTableReference variableTable)
+            {
+                string tableName = variableTable.Variable?.Name;
+                if (string.IsNullOrWhiteSpace(tableName))
+                    return;
+
+                string alias = variableTable.Alias?.Value;
+                result[tableName] = !string.IsNullOrWhiteSpace(alias) ? alias + "." : EscapeIdentifier(tableName) + ".";
+                return;
+            }
+
             if (tableReference is QualifiedJoin qualifiedJoin)
             {
                 AddTableQualifiers(qualifiedJoin.FirstTableReference, result);
@@ -582,6 +697,284 @@ namespace AxialSqlTools
             {
                 AddTableQualifiers(parenthesizedJoin.Join, result);
             }
+        }
+
+        private static Dictionary<string, List<string>> GetLocalColumns(
+            TSqlScript script,
+            SelectStatement statement,
+            out Dictionary<string, QueryExpression> localQueriesByName)
+        {
+            var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            localQueriesByName = new Dictionary<string, QueryExpression>(StringComparer.OrdinalIgnoreCase);
+            AddPriorTableVariables(script, statement, result);
+            AddCommonTableExpressions(statement.WithCtesAndXmlNamespaces, result, localQueriesByName);
+            return result;
+        }
+
+        private static void AddPriorTableVariables(TSqlScript script, SelectStatement targetStatement, Dictionary<string, List<string>> result)
+        {
+            if (script == null || targetStatement == null || result == null)
+                return;
+
+            foreach (TSqlBatch batch in script.Batches)
+            {
+                if (!BatchContainsStatement(batch, targetStatement))
+                    continue;
+
+                foreach (TSqlStatement statement in batch.Statements)
+                {
+                    if (statement.StartOffset >= targetStatement.StartOffset)
+                        continue;
+
+                    if (!(statement is DeclareTableVariableStatement declareTable) || declareTable.Body == null)
+                        continue;
+
+                    string variableName = declareTable.Body.VariableName?.Value;
+                    if (string.IsNullOrWhiteSpace(variableName) || declareTable.Body.Definition == null)
+                        continue;
+
+                    var columns = new List<string>();
+                    foreach (ColumnDefinition column in declareTable.Body.Definition.ColumnDefinitions)
+                    {
+                        string columnName = column.ColumnIdentifier?.Value;
+                        if (!string.IsNullOrWhiteSpace(columnName))
+                            columns.Add(columnName);
+                    }
+
+                    if (columns.Count > 0)
+                        result[variableName] = columns;
+                }
+            }
+        }
+
+        private static bool BatchContainsStatement(TSqlBatch batch, TSqlStatement targetStatement)
+        {
+            if (batch?.Statements == null || targetStatement == null)
+                return false;
+
+            foreach (TSqlStatement statement in batch.Statements)
+            {
+                if (ReferenceEquals(statement, targetStatement))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void AddCommonTableExpressions(
+            WithCtesAndXmlNamespaces withClause,
+            Dictionary<string, List<string>> result,
+            Dictionary<string, QueryExpression> localQueriesByName)
+        {
+            if (withClause?.CommonTableExpressions == null || result == null)
+                return;
+
+            foreach (CommonTableExpression cte in withClause.CommonTableExpressions)
+            {
+                string cteName = cte.ExpressionName?.Value;
+                if (string.IsNullOrWhiteSpace(cteName))
+                    continue;
+
+                if (cte.QueryExpression != null && localQueriesByName != null)
+                    localQueriesByName[cteName] = cte.QueryExpression;
+
+                List<string> columns = GetExplicitCteColumns(cte);
+                if (columns.Count == 0)
+                    columns = InferColumns(cte.QueryExpression, result);
+
+                if (columns.Count > 0)
+                    result[cteName] = columns;
+            }
+        }
+
+        private static List<string> GetExplicitCteColumns(CommonTableExpression cte)
+        {
+            var result = new List<string>();
+            if (cte?.Columns == null)
+                return result;
+
+            foreach (Identifier column in cte.Columns)
+            {
+                if (!string.IsNullOrWhiteSpace(column?.Value))
+                    result.Add(column.Value);
+            }
+
+            return result;
+        }
+
+        private static List<string> ResolveQueryColumns(
+            SqlConnection connection,
+            QueryExpression queryExpression,
+            Dictionary<string, List<string>> localColumnsByName,
+            Dictionary<string, QueryExpression> localQueriesByName,
+            HashSet<string> resolving)
+        {
+            var query = queryExpression as QuerySpecification;
+            var result = new List<string>();
+            if (query == null || query.SelectElements == null)
+                return result;
+
+            foreach (SelectElement element in query.SelectElements)
+            {
+                if (element is SelectScalarExpression scalar)
+                {
+                    string columnName = GetOutputColumnName(scalar);
+                    if (!string.IsNullOrWhiteSpace(columnName))
+                        result.Add(columnName);
+                    continue;
+                }
+
+                if (element is SelectStarExpression star)
+                {
+                    List<string> starColumns = ResolveStarColumns(connection, star, query.FromClause, localColumnsByName, localQueriesByName, resolving);
+                    if (starColumns.Count == 0)
+                        return new List<string>();
+
+                    result.AddRange(starColumns);
+                }
+            }
+
+            return result;
+        }
+
+        private static List<string> ResolveStarColumns(
+            SqlConnection connection,
+            SelectStarExpression star,
+            FromClause fromClause,
+            Dictionary<string, List<string>> localColumnsByName,
+            Dictionary<string, QueryExpression> localQueriesByName,
+            HashSet<string> resolving)
+        {
+            var result = new List<string>();
+            string qualifier = star.Qualifier?.Identifiers.Count > 0
+                ? star.Qualifier.Identifiers[star.Qualifier.Identifiers.Count - 1].Value
+                : null;
+
+            foreach (TableInfo table in GetTables(fromClause))
+            {
+                if (!TableMatchesQualifier(table, qualifier))
+                    continue;
+
+                List<string> tableColumns = GetLocalColumnNames(table, localColumnsByName);
+                if (tableColumns.Count == 0)
+                    tableColumns = ResolveLocalQueryTableColumns(connection, table, localColumnsByName, localQueriesByName, resolving);
+
+                if (tableColumns.Count == 0)
+                    tableColumns = GetColumnNamesForTable(connection, table);
+
+                if (tableColumns.Count == 0)
+                    return new List<string>();
+
+                result.AddRange(tableColumns);
+            }
+
+            return result;
+        }
+
+        private static List<string> ResolveLocalQueryTableColumns(
+            SqlConnection connection,
+            TableInfo table,
+            Dictionary<string, List<string>> localColumnsByName,
+            Dictionary<string, QueryExpression> localQueriesByName,
+            HashSet<string> resolving)
+        {
+            if (table == null || localQueriesByName == null || string.IsNullOrWhiteSpace(table.TableName))
+                return new List<string>();
+
+            if (!localQueriesByName.TryGetValue(table.TableName, out QueryExpression queryExpression))
+                return new List<string>();
+
+            if (resolving == null || resolving.Contains(table.TableName))
+                return new List<string>();
+
+            resolving.Add(table.TableName);
+            List<string> columns = ResolveQueryColumns(connection, queryExpression, localColumnsByName, localQueriesByName, resolving);
+            resolving.Remove(table.TableName);
+
+            if (columns.Count > 0 && localColumnsByName != null)
+                localColumnsByName[table.TableName] = columns;
+
+            return columns;
+        }
+
+        private static List<string> InferColumns(QueryExpression queryExpression, Dictionary<string, List<string>> localColumnsByName)
+        {
+            var query = queryExpression as QuerySpecification;
+            var result = new List<string>();
+            if (query == null || query.SelectElements == null)
+                return result;
+
+            foreach (SelectElement element in query.SelectElements)
+            {
+                if (element is SelectScalarExpression scalar)
+                {
+                    string columnName = GetOutputColumnName(scalar);
+                    if (!string.IsNullOrWhiteSpace(columnName))
+                        result.Add(columnName);
+                    continue;
+                }
+
+                if (element is SelectStarExpression star)
+                {
+                    foreach (string columnName in GetStarColumns(star, query.FromClause, localColumnsByName))
+                    {
+                        if (!string.IsNullOrWhiteSpace(columnName))
+                            result.Add(columnName);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static string GetOutputColumnName(SelectScalarExpression scalar)
+        {
+            if (scalar == null)
+                return null;
+
+            string alias = scalar.ColumnName?.Identifier?.Value ?? scalar.ColumnName?.Value;
+            if (!string.IsNullOrWhiteSpace(alias))
+                return alias;
+
+            var column = scalar.Expression as ColumnReferenceExpression;
+            return column?.MultiPartIdentifier?.Identifiers.Count > 0
+                ? column.MultiPartIdentifier.Identifiers[column.MultiPartIdentifier.Identifiers.Count - 1].Value
+                : null;
+        }
+
+        private static List<string> GetStarColumns(
+            SelectStarExpression star,
+            FromClause fromClause,
+            Dictionary<string, List<string>> localColumnsByName)
+        {
+            var result = new List<string>();
+            if (localColumnsByName == null)
+                return result;
+
+            string qualifier = star.Qualifier?.Identifiers.Count > 0
+                ? star.Qualifier.Identifiers[star.Qualifier.Identifiers.Count - 1].Value
+                : null;
+
+            foreach (TableInfo table in GetTables(fromClause))
+            {
+                if (!TableMatchesQualifier(table, qualifier))
+                    continue;
+
+                foreach (string columnName in GetLocalColumnNames(table, localColumnsByName))
+                    result.Add(columnName);
+            }
+
+            return result;
+        }
+
+        private static bool TableMatchesQualifier(TableInfo table, string qualifier)
+        {
+            if (table == null)
+                return false;
+
+            return string.IsNullOrWhiteSpace(qualifier)
+                || string.Equals(table.Qualifier.TrimEnd('.'), qualifier, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(table.TableName, qualifier, StringComparison.OrdinalIgnoreCase);
         }
 
         private static int GetAbsoluteOffset(string text, int targetLine, int targetColumn)
