@@ -707,6 +707,7 @@ namespace AxialSqlTools
             var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             localQueriesByName = new Dictionary<string, QueryExpression>(StringComparer.OrdinalIgnoreCase);
             AddPriorTableVariables(script, statement, result);
+            AddPriorSelectIntoTempTables(script, statement, result);
             AddCommonTableExpressions(statement.WithCtesAndXmlNamespaces, result, localQueriesByName);
             return result;
         }
@@ -743,6 +744,35 @@ namespace AxialSqlTools
 
                     if (columns.Count > 0)
                         result[variableName] = columns;
+                }
+            }
+        }
+
+        private static void AddPriorSelectIntoTempTables(TSqlScript script, SelectStatement targetStatement, Dictionary<string, List<string>> result)
+        {
+            if (script == null || targetStatement == null || result == null)
+                return;
+
+            foreach (TSqlBatch batch in script.Batches)
+            {
+                if (!BatchContainsStatement(batch, targetStatement))
+                    continue;
+
+                foreach (TSqlStatement statement in batch.Statements)
+                {
+                    if (statement.StartOffset >= targetStatement.StartOffset)
+                        continue;
+
+                    if (!(statement is SelectStatement selectInto) || !IsTempTable(selectInto.Into))
+                        continue;
+
+                    string tableName = selectInto.Into.BaseIdentifier?.Value;
+                    if (string.IsNullOrWhiteSpace(tableName))
+                        continue;
+
+                    List<string> columns = InferColumns(selectInto.QueryExpression, result);
+                    if (columns.Count > 0)
+                        result[tableName] = columns;
                 }
             }
         }
