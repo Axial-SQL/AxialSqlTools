@@ -923,6 +923,7 @@ ORDER BY sd.[name];
         {
             public string ServerNamePattern { get; set; } = string.Empty;
             public string DatabaseNamePattern { get; set; } = string.Empty;
+            // persisted name kept for compatibility; the color now applies to both status bars and tabs.
             public string StatusBarColor { get; set; } = "#FF0000";
             public bool IsEnabled { get; set; } = true;
         }

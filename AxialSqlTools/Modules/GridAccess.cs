@@ -243,19 +243,41 @@ namespace AxialSqlTools
         private sealed class StatusStripColorController
         {
             private readonly StatusStrip _statusStrip;
+            private readonly Dictionary<ToolStripItem, ToolStripItemColorSnapshot> _itemSnapshots =
+                new Dictionary<ToolStripItem, ToolStripItemColorSnapshot>();
             private bool _isApplied;
 
             public StatusStripColorController(StatusStrip statusStrip)
             {
                 _statusStrip = statusStrip;
                 OriginalBackColor = statusStrip.BackColor;
+                OriginalForeColor = statusStrip.ForeColor;
             }
 
             public Color OriginalBackColor { get; }
+            public Color OriginalForeColor { get; }
 
             public void ApplyColor(Color color)
             {
+                Color foreColor = ContrastColor(color);
+
+                foreach (ToolStripItem item in _statusStrip.Items)
+                {
+                    if (!_itemSnapshots.ContainsKey(item))
+                    {
+                        _itemSnapshots[item] = new ToolStripItemColorSnapshot
+                        {
+                            BackColor = item.BackColor,
+                            ForeColor = item.ForeColor
+                        };
+                    }
+
+                    item.BackColor = color;
+                    item.ForeColor = foreColor;
+                }
+
                 _statusStrip.BackColor = color;
+                _statusStrip.ForeColor = foreColor;
                 _isApplied = true;
             }
 
@@ -267,8 +289,34 @@ namespace AxialSqlTools
                 }
 
                 _statusStrip.BackColor = OriginalBackColor;
+                _statusStrip.ForeColor = OriginalForeColor;
+
+                foreach (var itemSnapshot in _itemSnapshots)
+                {
+                    if (itemSnapshot.Key == null || itemSnapshot.Key.IsDisposed)
+                    {
+                        continue;
+                    }
+
+                    itemSnapshot.Key.BackColor = itemSnapshot.Value.BackColor;
+                    itemSnapshot.Key.ForeColor = itemSnapshot.Value.ForeColor;
+                }
+
+                _itemSnapshots.Clear();
                 _isApplied = false;
             }
+        }
+
+        private sealed class ToolStripItemColorSnapshot
+        {
+            public Color BackColor { get; set; }
+            public Color ForeColor { get; set; }
+        }
+
+        private sealed class OpenDocumentTabInfo
+        {
+            public IVsWindowFrame Frame { get; set; }
+            public string Caption { get; set; }
         }
 
         private static readonly Dictionary<StatusStrip, StatusStripColorController> _statusStripColorControllers =
@@ -328,7 +376,7 @@ namespace AxialSqlTools
 
         public static void ApplyConnectionColor(string serverName, string databaseName)
         {
-            // Status bar coloring - only for query windows
+            // Connection coloring applies only to query windows.
             try
             {
                 var SQLResultsControl = GetSQLResultsControl();
@@ -372,6 +420,7 @@ namespace AxialSqlTools
             {
                 var wpfApp = System.Windows.Application.Current;
                 if (wpfApp == null) return;
+
                 var mainWindow = wpfApp.MainWindow;
                 if (mainWindow == null) return;
 
@@ -387,6 +436,7 @@ namespace AxialSqlTools
         {
             var tabItems = new List<System.Windows.DependencyObject>();
             FindElementsByTypeName(mainWindow, "DocumentTabItem", tabItems);
+            var openDocuments = GetOpenDocumentTabInfos();
 
             if (tabItems.Count > 0)
             {
@@ -394,68 +444,43 @@ namespace AxialSqlTools
                 {
                     var headerCtrl = tabItem as System.Windows.Controls.HeaderedContentControl;
                     string header = headerCtrl?.Header?.ToString();
-                    if (string.IsNullOrEmpty(header)) continue;
-
-                    var parts = header.Split(new[] { " - " }, 2, StringSplitOptions.None);
-                    if (parts.Length < 2)
-                    {
-                        var border0 = FindChildByTypeName(tabItem, "SimpleCurvedBorder")
-                                   ?? FindChildByTypeName(tabItem, "TopCurvedBorder");
-                        ApplyColorToElement(border0 ?? tabItem, null);
-                        continue;
-                    }
-
-                    string connectionPart = parts[1].Trim();
-                    int parenIdx = connectionPart.IndexOf(" (");
-                    if (parenIdx > 0)
-                        connectionPart = connectionPart.Substring(0, parenIdx);
-
-                    Color? color = FindMatchingConnectionColor(connectionPart, connectionPart);
-
+                    Color? color = FindMatchingConnectionColorForTab(tabItem, header, openDocuments);
                     var curvedBorder = FindChildByTypeName(tabItem, "SimpleCurvedBorder")
                                    ?? FindChildByTypeName(tabItem, "TopCurvedBorder");
                     ApplyColorToElement(curvedBorder ?? tabItem, color);
+                    if (curvedBorder != null)
+                    {
+                        ApplyForegroundToElement(tabItem, color);
+                    }
                 }
             }
             else
             {
-                ColorSingleTabFallback(mainWindow);
+                ColorSingleTabFallback(mainWindow, openDocuments);
             }
         }
 
-        private static void ColorSingleTabFallback(System.Windows.DependencyObject root)
+        private static void ColorSingleTabFallback(System.Windows.DependencyObject root, List<OpenDocumentTabInfo> openDocuments)
         {
             try
             {
                 var docGroups = new List<System.Windows.DependencyObject>();
                 FindElementsByTypeName(root, "DocumentGroupControl", docGroups);
-                if (docGroups.Count == 0) return;
+                if (docGroups.Count == 0)
+                    return;
 
                 foreach (var docGroup in docGroups)
                 {
                     var header = FindChildByTypeName(docGroup, "DragUndockHeader");
-                    if (header == null) continue;
+                    if (header == null)
+                        continue;
 
                     var fe = header as System.Windows.FrameworkElement;
                     if (fe == null || fe.ActualHeight <= 0 || fe.Visibility != System.Windows.Visibility.Visible)
                         continue;
 
                     string headerTitle = fe.DataContext?.ToString();
-                    Color? color = null;
-
-                    if (!string.IsNullOrEmpty(headerTitle))
-                    {
-                        var parts = headerTitle.Split(new[] { " - " }, 2, StringSplitOptions.None);
-                        if (parts.Length >= 2)
-                        {
-                            string connectionPart = parts[1].Trim();
-                            int parenIdx = connectionPart.IndexOf(" (");
-                            if (parenIdx > 0)
-                                connectionPart = connectionPart.Substring(0, parenIdx);
-                            color = FindMatchingConnectionColor(connectionPart, connectionPart);
-                        }
-                    }
-
+                    Color? color = FindMatchingConnectionColorForTab(header, headerTitle, openDocuments);
                     ApplyColorToElement(header, color);
                     return;
                 }
@@ -476,11 +501,15 @@ namespace AxialSqlTools
                         matchedColor.Value.R, matchedColor.Value.G, matchedColor.Value.B);
                     var brush = new System.Windows.Media.SolidColorBrush(wpfColor);
                     brush.Freeze();
+                    var foregroundBrush = new System.Windows.Media.SolidColorBrush(ToWpfColor(ContrastColor(matchedColor.Value)));
+                    foregroundBrush.Freeze();
                     ctrl.Background = brush;
+                    ctrl.Foreground = foregroundBrush;
                 }
                 else
                 {
                     ctrl.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
+                    ctrl.ClearValue(System.Windows.Controls.Control.ForegroundProperty);
                 }
             }
             else if (element is System.Windows.Controls.Border border)
@@ -498,6 +527,269 @@ namespace AxialSqlTools
                     border.ClearValue(System.Windows.Controls.Border.BackgroundProperty);
                 }
             }
+        }
+
+        private static void ApplyForegroundToElement(System.Windows.DependencyObject element, Color? matchedColor)
+        {
+            if (!(element is System.Windows.Controls.Control ctrl))
+                return;
+
+            if (matchedColor.HasValue)
+            {
+                var brush = new System.Windows.Media.SolidColorBrush(ToWpfColor(ContrastColor(matchedColor.Value)));
+                brush.Freeze();
+                ctrl.Foreground = brush;
+            }
+            else
+            {
+                ctrl.ClearValue(System.Windows.Controls.Control.ForegroundProperty);
+            }
+        }
+
+        private static Color? FindMatchingConnectionColorForTab(
+            System.Windows.DependencyObject tabElement,
+            string header,
+            List<OpenDocumentTabInfo> openDocuments)
+        {
+            if (TryGetConnectionInfoFromTab(tabElement, header, openDocuments, out string server, out string database))
+            {
+                return FindMatchingConnectionColor(server, database);
+            }
+
+            return FindMatchingConnectionColorFromCaption(header);
+        }
+
+        private static Color? FindMatchingConnectionColorFromCaption(string caption)
+        {
+            if (string.IsNullOrEmpty(caption))
+                return null;
+
+            var parts = caption.Split(new[] { " - " }, 2, StringSplitOptions.None);
+            if (parts.Length < 2)
+                return null;
+
+            string connectionPart = parts[1].Trim();
+            int parenIdx = connectionPart.IndexOf(" (");
+            if (parenIdx > 0)
+                connectionPart = connectionPart.Substring(0, parenIdx);
+
+            return FindMatchingConnectionColor(connectionPart, connectionPart);
+        }
+
+        private static bool TryGetConnectionInfoFromTab(
+            System.Windows.DependencyObject tabElement,
+            string header,
+            List<OpenDocumentTabInfo> openDocuments,
+            out string server,
+            out string database)
+        {
+            server = null;
+            database = null;
+
+            if (TryFindWindowFrame(tabElement, out IVsWindowFrame frame)
+                && TryGetConnectionInfo(frame, out server, out database))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(header) && openDocuments != null)
+            {
+                OpenDocumentTabInfo match = null;
+                int matchCount = 0;
+
+                foreach (var doc in openDocuments)
+                {
+                    if (string.Equals(doc.Caption, header, StringComparison.OrdinalIgnoreCase))
+                    {
+                        match = doc;
+                        matchCount++;
+                    }
+                }
+
+                if (matchCount == 1 && TryGetConnectionInfo(match.Frame, out server, out database))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryGetConnectionInfo(IVsWindowFrame frame, out string server, out string database)
+        {
+            server = null;
+            database = null;
+
+            try
+            {
+                if (frame == null
+                    || frame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out object docView) != VSConstants.S_OK
+                    || docView == null)
+                {
+                    return false;
+                }
+
+                object connection = GetNonPublicField(docView, "m_connection");
+                if (connection == null)
+                    return false;
+
+                server = GetProperty(connection, "DataSource") as string;
+                database = GetProperty(connection, "Database") as string;
+                return !string.IsNullOrWhiteSpace(server);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool TryFindWindowFrame(object root, out IVsWindowFrame frame)
+        {
+            frame = null;
+
+            if (root == null)
+                return false;
+
+            var visited = new HashSet<object>(new ReferenceEqualityComparer());
+            var queue = new Queue<Tuple<object, int>>();
+            queue.Enqueue(Tuple.Create(root, 0));
+            visited.Add(root);
+
+            while (queue.Count > 0 && visited.Count < 300)
+            {
+                var current = queue.Dequeue();
+                object obj = current.Item1;
+                int depth = current.Item2;
+
+                if (obj is IVsWindowFrame foundFrame)
+                {
+                    frame = foundFrame;
+                    return true;
+                }
+
+                if (depth >= 3 || IsSimpleProbeType(obj.GetType()))
+                    continue;
+
+                foreach (object child in EnumerateProbeValues(obj))
+                {
+                    if (child != null && visited.Add(child))
+                    {
+                        queue.Enqueue(Tuple.Create(child, depth + 1));
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static IEnumerable<object> EnumerateProbeValues(object obj)
+        {
+            const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+            foreach (FieldInfo field in obj.GetType().GetFields(Flags))
+            {
+                object value = null;
+                try { value = field.GetValue(obj); } catch { }
+                if (value != null)
+                    yield return value;
+            }
+
+            foreach (PropertyInfo property in obj.GetType().GetProperties(Flags))
+            {
+                if (!property.CanRead || property.GetIndexParameters().Length != 0)
+                    continue;
+
+                object value = null;
+                try { value = property.GetValue(obj, null); } catch { }
+                if (value != null)
+                    yield return value;
+            }
+        }
+
+        private static bool IsSimpleProbeType(Type type)
+        {
+            return type == null
+                || type.IsPrimitive
+                || type.IsEnum
+                || type == typeof(string)
+                || type == typeof(decimal)
+                || type == typeof(DateTime)
+                || type == typeof(TimeSpan)
+                || type == typeof(Guid)
+                || type == typeof(IntPtr)
+                || type == typeof(UIntPtr)
+                || type == typeof(Color)
+                || typeof(System.Windows.Media.Brush).IsAssignableFrom(type);
+        }
+
+        private static List<OpenDocumentTabInfo> GetOpenDocumentTabInfos()
+        {
+            var documents = new List<OpenDocumentTabInfo>();
+
+            try
+            {
+                var rdt = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsRunningDocumentTable)) as IVsRunningDocumentTable;
+                var shellOpenDoc = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsUIShellOpenDocument)) as IVsUIShellOpenDocument;
+                if (rdt == null || shellOpenDoc == null)
+                    return documents;
+
+                rdt.GetRunningDocumentsEnum(out IEnumRunningDocuments enumDocs);
+                if (enumDocs == null)
+                    return documents;
+
+                uint[] cookies = new uint[1];
+                while (enumDocs.Next(1, cookies, out uint fetched) == VSConstants.S_OK && fetched == 1)
+                {
+                    if (rdt.GetDocumentInfo(
+                        cookies[0],
+                        out uint _,
+                        out uint _,
+                        out uint _,
+                        out string moniker,
+                        out IVsHierarchy _,
+                        out uint _,
+                        out IntPtr _) != VSConstants.S_OK)
+                    {
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(moniker) || !moniker.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    Guid logicalView = Guid.Empty;
+                    uint[] itemid = new uint[1];
+                    if (shellOpenDoc.IsDocumentOpen(null, 0, moniker, ref logicalView, 0, out IVsUIHierarchy _, itemid, out IVsWindowFrame frame, out int isOpen) != VSConstants.S_OK
+                        || isOpen == 0
+                        || frame == null)
+                    {
+                        continue;
+                    }
+
+                    string caption = null;
+                    if (frame.GetProperty((int)__VSFPROPID.VSFPROPID_Caption, out object captionObject) == VSConstants.S_OK)
+                    {
+                        caption = captionObject as string;
+                    }
+
+                    documents.Add(new OpenDocumentTabInfo { Frame = frame, Caption = caption });
+                }
+            }
+            catch
+            {
+            }
+
+            return documents;
+        }
+
+        private static Color ContrastColor(Color color)
+        {
+            double luma = ((0.299 * color.R) + (0.587 * color.G) + (0.114 * color.B)) / 255;
+            return luma > 0.5 ? Color.Black : Color.White;
+        }
+
+        private static System.Windows.Media.Color ToWpfColor(Color color)
+        {
+            return System.Windows.Media.Color.FromRgb(color.R, color.G, color.B);
         }
 
         private static System.Windows.DependencyObject FindChildByTypeName(System.Windows.DependencyObject parent, string typeName)

@@ -881,6 +881,8 @@ END
         {
             var rules = new System.Collections.Generic.List<SettingsManager.ConnectionColorRule>(_connectionColorRules);
             SettingsManager.SaveConnectionColorRules(rules);
+            GridAccess.ColorAllDocumentTabs();
+            GridAccess.ScheduleReapplyAllTabColors();
             SavedMessage();
         }
 
