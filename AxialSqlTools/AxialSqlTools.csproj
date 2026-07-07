@@ -345,7 +345,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.SqlServer.TransactSql.ScriptDom">
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Extensions\Application\Microsoft.SqlServer.TransactSql.ScriptDom.dll</HintPath>
-      <Private>False</Private>
+      <Private>True</Private>
     </Reference>
     <Reference Include="WindowsBase" />
   </ItemGroup>
