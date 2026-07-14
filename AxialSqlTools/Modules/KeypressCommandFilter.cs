@@ -49,7 +49,9 @@ namespace AxialSqlTools
         private bool IsSupportedKey(uint nCmdID)
         {
             return nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN
-                || nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB;
+                || nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB
+                || nCmdID == (uint)VSConstants.VSStd2KCmdID.COMPLETEWORD
+                || nCmdID == (uint)VSConstants.VSStd2KCmdID.SHOWMEMBERLIST;
         }
 
         private bool ShouldProcessSnippetKey(uint nCmdID)
@@ -66,6 +68,9 @@ namespace AxialSqlTools
 
         private bool ShouldProcessAsteriskExpansionKey(uint nCmdID)
         {
+            if (!SettingsManager.GetUseSnippets())
+                return false;
+
             var settings = SettingsManager.GetAsteriskExpansionSettings();
             return settings.useAsteriskExpansion && KeyMatches(settings.triggerKey, nCmdID);
         }
@@ -84,6 +89,11 @@ namespace AxialSqlTools
 
                 case SettingsManager.SnippetReplaceKey.Tab:
                     return nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB;
+
+                case SettingsManager.SnippetReplaceKey.CtrlSpace:
+                    return (nCmdID == (uint)VSConstants.VSStd2KCmdID.COMPLETEWORD ||
+                            nCmdID == (uint)VSConstants.VSStd2KCmdID.SHOWMEMBERLIST) &&
+                           (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
 
                 default:
                     return false;
@@ -184,7 +194,9 @@ namespace AxialSqlTools
                 for (int i = 0; i < prgCmds.Length; i++)
                 {
                     if (prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.RETURN ||
-                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.TAB)
+                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.TAB ||
+                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.COMPLETEWORD ||
+                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.SHOWMEMBERLIST)
                     {
                         prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
                         return VSConstants.S_OK;

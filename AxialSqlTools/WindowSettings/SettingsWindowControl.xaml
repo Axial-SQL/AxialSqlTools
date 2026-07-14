@@ -245,21 +245,25 @@
                     <CheckBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
                               x:Name="UseAsteriskExpansion"
                               Content="Replace SELECT * with column list"
+                              IsEnabled="{Binding IsChecked, ElementName=UseSnippets}"
                               Margin="5"/>
 
                     <Label Grid.Row="6" Grid.Column="0"
                            Content="Replace asterisk when pressing:"
+                           IsEnabled="{Binding IsChecked, ElementName=UseSnippets}"
                            VerticalAlignment="Center"
                            Margin="5"/>
 
                     <ComboBox Grid.Row="6" Grid.Column="1"
                               x:Name="AsteriskExpansionTriggerMode"
+                              IsEnabled="{Binding IsChecked, ElementName=UseSnippets}"
                               SelectedValuePath="Tag"
                               Margin="5"
                               VerticalContentAlignment="Center">
                         <ComboBoxItem Content="Enter" Tag="Enter" />
                         <ComboBoxItem Content="Shift+Enter" Tag="ShiftEnter" />
                         <ComboBoxItem Content="Tab" Tag="Tab" />
+                        <ComboBoxItem Content="Ctrl+Space" Tag="CtrlSpace" />
                     </ComboBox>
 
                     <Button Grid.Row="7" Grid.Column="0"

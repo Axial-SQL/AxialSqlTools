@@ -256,7 +256,8 @@ ORDER BY sd.[name];
         {
             Enter,
             ShiftEnter,
-            Tab
+            Tab,
+            CtrlSpace
         }
 
         public class SnippetSettings
