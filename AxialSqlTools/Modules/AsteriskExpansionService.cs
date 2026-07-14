@@ -34,6 +34,7 @@ namespace AxialSqlTools
         {
             public string Name { get; set; }
             public string SourceTableName { get; set; }
+            public string SourceQualifier { get; set; }
             public string Qualifier { get; set; } = string.Empty;
         }
 
@@ -391,6 +392,7 @@ namespace AxialSqlTools
                     {
                         Name = columnName,
                         SourceTableName = table.TableName,
+                        SourceQualifier = table.Qualifier,
                         Qualifier = string.Empty
                     });
                 }
@@ -547,7 +549,9 @@ namespace AxialSqlTools
                 if (counts[column.Name] <= 1)
                     continue;
 
-                column.Qualifier = GetQualifier(column.SourceTableName, tableQualifiersByName);
+                column.Qualifier = !string.IsNullOrWhiteSpace(column.SourceQualifier)
+                    ? column.SourceQualifier
+                    : GetQualifier(column.SourceTableName, tableQualifiersByName);
             }
         }
 
