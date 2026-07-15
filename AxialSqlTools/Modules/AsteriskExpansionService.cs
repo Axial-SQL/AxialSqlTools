@@ -28,6 +28,7 @@ namespace AxialSqlTools
             public string SchemaName { get; set; }
             public string TableName { get; set; }
             public string Qualifier { get; set; }
+            public QueryExpression QueryExpression { get; set; }
         }
 
         private sealed class ColumnInfo
@@ -344,7 +345,11 @@ namespace AxialSqlTools
                     return columns;
 
                 return selectInfo.AllowMetadataFallback
-                    ? GetResultColumnsFromFmtOnly(connection, selectInfo.MetadataStatementText, selectInfo.TableQualifiersByName)
+                    ? GetResultColumnsFromFmtOnly(
+                        connection,
+                        selectInfo.MetadataStatementText,
+                        selectInfo.TableQualifiersByName,
+                        string.IsNullOrWhiteSpace(typedQualifier) && selectInfo.Tables != null && selectInfo.Tables.Count > 1)
                     : columns;
             }
         }
@@ -372,7 +377,7 @@ namespace AxialSqlTools
             foreach (TableInfo table in targetTables)
             {
                 List<string> tableColumns = GetLocalColumnNames(table, localColumnsByName);
-                if (tableColumns.Count == 0 && connection != null)
+                if (tableColumns.Count == 0)
                     tableColumns = GetLocalQueryColumnNames(connection, table, localColumnsByName, localQueriesByName);
 
                 if (tableColumns.Count == 0)
@@ -399,7 +404,7 @@ namespace AxialSqlTools
             }
 
             if (string.IsNullOrWhiteSpace(typedQualifier))
-                ApplyDuplicateQualifiers(result, BuildQualifierMap(targetTables));
+                ApplyQualifiers(result, BuildQualifierMap(targetTables), targetTables.Count > 1);
 
             return result;
         }
@@ -410,11 +415,15 @@ namespace AxialSqlTools
             Dictionary<string, List<string>> localColumnsByName,
             Dictionary<string, QueryExpression> localQueriesByName)
         {
-            if (table == null || localQueriesByName == null || string.IsNullOrWhiteSpace(table.TableName))
+            if (table == null || string.IsNullOrWhiteSpace(table.TableName))
                 return new List<string>();
 
-            if (!localQueriesByName.TryGetValue(table.TableName, out QueryExpression queryExpression))
-                return new List<string>();
+            QueryExpression queryExpression = table.QueryExpression;
+            if (queryExpression == null)
+            {
+                if (localQueriesByName == null || !localQueriesByName.TryGetValue(table.TableName, out queryExpression))
+                    return new List<string>();
+            }
 
             List<string> columns = ResolveQueryColumns(connection, queryExpression, localColumnsByName, localQueriesByName, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             if (columns.Count > 0 && localColumnsByName != null)
@@ -482,7 +491,7 @@ namespace AxialSqlTools
             return result;
         }
 
-        private static List<ColumnInfo> GetResultColumnsFromFmtOnly(SqlConnection connection, string statementText, Dictionary<string, string> tableQualifiersByName)
+        private static List<ColumnInfo> GetResultColumnsFromFmtOnly(SqlConnection connection, string statementText, Dictionary<string, string> tableQualifiersByName, bool qualifyAllColumns)
         {
             var columns = new List<ColumnInfo>();
 
@@ -517,7 +526,7 @@ namespace AxialSqlTools
 
                         if (columns.Count > 0)
                         {
-                            ApplyDuplicateQualifiers(columns, tableQualifiersByName);
+                            ApplyQualifiers(columns, tableQualifiersByName, qualifyAllColumns);
                             return columns;
                         }
                     }
@@ -533,7 +542,7 @@ namespace AxialSqlTools
             return row.Table.Columns.Contains(columnName) ? row[columnName] as string : null;
         }
 
-        private static void ApplyDuplicateQualifiers(List<ColumnInfo> columns, Dictionary<string, string> tableQualifiersByName)
+        private static void ApplyQualifiers(List<ColumnInfo> columns, Dictionary<string, string> tableQualifiersByName, bool qualifyAllColumns)
         {
             var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             foreach (ColumnInfo column in columns)
@@ -546,7 +555,7 @@ namespace AxialSqlTools
 
             foreach (ColumnInfo column in columns)
             {
-                if (counts[column.Name] <= 1)
+                if (!qualifyAllColumns && counts[column.Name] <= 1)
                     continue;
 
                 column.Qualifier = !string.IsNullOrWhiteSpace(column.SourceQualifier)
@@ -650,10 +659,32 @@ namespace AxialSqlTools
                 return;
             }
 
+            if (tableReference is QueryDerivedTable derivedTable)
+            {
+                string alias = derivedTable.Alias?.Value;
+                if (string.IsNullOrWhiteSpace(alias))
+                    return;
+
+                result.Add(new TableInfo
+                {
+                    TableName = alias,
+                    Qualifier = alias + ".",
+                    QueryExpression = derivedTable.QueryExpression
+                });
+                return;
+            }
+
             if (tableReference is QualifiedJoin qualifiedJoin)
             {
                 AddTables(qualifiedJoin.FirstTableReference, result);
                 AddTables(qualifiedJoin.SecondTableReference, result);
+                return;
+            }
+
+            if (tableReference is UnqualifiedJoin unqualifiedJoin)
+            {
+                AddTables(unqualifiedJoin.FirstTableReference, result);
+                AddTables(unqualifiedJoin.SecondTableReference, result);
                 return;
             }
 
@@ -690,10 +721,27 @@ namespace AxialSqlTools
                 return;
             }
 
+            if (tableReference is QueryDerivedTable derivedTable)
+            {
+                string alias = derivedTable.Alias?.Value;
+                if (string.IsNullOrWhiteSpace(alias))
+                    return;
+
+                result[alias] = alias + ".";
+                return;
+            }
+
             if (tableReference is QualifiedJoin qualifiedJoin)
             {
                 AddTableQualifiers(qualifiedJoin.FirstTableReference, result);
                 AddTableQualifiers(qualifiedJoin.SecondTableReference, result);
+                return;
+            }
+
+            if (tableReference is UnqualifiedJoin unqualifiedJoin)
+            {
+                AddTableQualifiers(unqualifiedJoin.FirstTableReference, result);
+                AddTableQualifiers(unqualifiedJoin.SecondTableReference, result);
                 return;
             }
 
@@ -893,7 +941,7 @@ namespace AxialSqlTools
                 if (tableColumns.Count == 0)
                     tableColumns = ResolveLocalQueryTableColumns(connection, table, localColumnsByName, localQueriesByName, resolving);
 
-                if (tableColumns.Count == 0)
+                if (tableColumns.Count == 0 && connection != null)
                     tableColumns = GetColumnNamesForTable(connection, table);
 
                 if (tableColumns.Count == 0)
@@ -912,11 +960,15 @@ namespace AxialSqlTools
             Dictionary<string, QueryExpression> localQueriesByName,
             HashSet<string> resolving)
         {
-            if (table == null || localQueriesByName == null || string.IsNullOrWhiteSpace(table.TableName))
+            if (table == null || string.IsNullOrWhiteSpace(table.TableName))
                 return new List<string>();
 
-            if (!localQueriesByName.TryGetValue(table.TableName, out QueryExpression queryExpression))
-                return new List<string>();
+            QueryExpression queryExpression = table.QueryExpression;
+            if (queryExpression == null)
+            {
+                if (localQueriesByName == null || !localQueriesByName.TryGetValue(table.TableName, out queryExpression))
+                    return new List<string>();
+            }
 
             if (resolving == null || resolving.Contains(table.TableName))
                 return new List<string>();
