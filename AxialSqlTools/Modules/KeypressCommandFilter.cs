@@ -27,11 +27,17 @@ namespace AxialSqlTools
 
         public int Exec(ref Guid cmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
         {
-            if (cmdGroup == VSConstants.VSStd2K && ShouldProcessKey(nCmdID))
+            if (cmdGroup == VSConstants.VSStd2K && IsSupportedKey(nCmdID))
             {
-                if (TryReplaceSnippet())
+                if (ShouldProcessSnippetKey(nCmdID) && TryReplaceSnippet())
                 {
                     // Snippet was replaced — swallow the key so no newline/tab is inserted.
+                    return VSConstants.S_OK;
+                }
+
+                if (ShouldProcessAsteriskExpansionKey(nCmdID) && AsteriskExpansionService.TryExpand(textView))
+                {
+                    // Asterisk was expanded — swallow the key so no newline/tab is inserted.
                     return VSConstants.S_OK;
                 }
             }
@@ -40,7 +46,15 @@ namespace AxialSqlTools
             return nextCommandTarget?.Exec(ref cmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut) ?? VSConstants.S_OK;
         }
 
-        private bool ShouldProcessKey(uint nCmdID)
+        private bool IsSupportedKey(uint nCmdID)
+        {
+            return nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN
+                || nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB
+                || nCmdID == (uint)VSConstants.VSStd2KCmdID.COMPLETEWORD
+                || nCmdID == (uint)VSConstants.VSStd2KCmdID.SHOWMEMBERLIST;
+        }
+
+        private bool ShouldProcessSnippetKey(uint nCmdID)
         {
             var snippetSettings = SettingsManager.GetSnippetSettings();
 
@@ -49,17 +63,37 @@ namespace AxialSqlTools
                 return false;
             }
 
-            switch (snippetSettings.replaceKey)
+            return KeyMatches(snippetSettings.replaceKey, nCmdID);
+        }
+
+        private bool ShouldProcessAsteriskExpansionKey(uint nCmdID)
+        {
+            if (!SettingsManager.GetUseSnippets())
+                return false;
+
+            var settings = SettingsManager.GetAsteriskExpansionSettings();
+            return settings.useAsteriskExpansion && KeyMatches(settings.triggerKey, nCmdID);
+        }
+
+        private bool KeyMatches(SettingsManager.SnippetReplaceKey key, uint nCmdID)
+        {
+            switch (key)
             {
                 case SettingsManager.SnippetReplaceKey.Enter:
-                    return (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN);
-                
+                    return nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN &&
+                           (Keyboard.Modifiers & ModifierKeys.Shift) != ModifierKeys.Shift;
+
                 case SettingsManager.SnippetReplaceKey.ShiftEnter:
-                    return (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN) && 
+                    return nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN &&
                            (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
 
                 case SettingsManager.SnippetReplaceKey.Tab:
-                    return (nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB);
+                    return nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB;
+
+                case SettingsManager.SnippetReplaceKey.CtrlSpace:
+                    return (nCmdID == (uint)VSConstants.VSStd2KCmdID.COMPLETEWORD ||
+                            nCmdID == (uint)VSConstants.VSStd2KCmdID.SHOWMEMBERLIST) &&
+                           (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
 
                 default:
                     return false;
@@ -160,7 +194,9 @@ namespace AxialSqlTools
                 for (int i = 0; i < prgCmds.Length; i++)
                 {
                     if (prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.RETURN ||
-                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.TAB)
+                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.TAB ||
+                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.COMPLETEWORD ||
+                        prgCmds[i].cmdID == (uint)VSConstants.VSStd2KCmdID.SHOWMEMBERLIST)
                     {
                         prgCmds[i].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
                         return VSConstants.S_OK;

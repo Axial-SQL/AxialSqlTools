@@ -90,6 +90,7 @@
       <DependentUpon>DatabaseScripterToolWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Modules\AuroraCore.cs" />
+    <Compile Include="Modules\AsteriskExpansionService.cs" />
     <Compile Include="UpdateChecker.cs" />
     <Compile Include="UpdateInfoBar.cs" />
     <Compile Include="Commands\CommandProcessor.cs" />

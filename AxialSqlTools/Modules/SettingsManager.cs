@@ -256,7 +256,8 @@ ORDER BY sd.[name];
         {
             Enter,
             ShiftEnter,
-            Tab
+            Tab,
+            CtrlSpace
         }
 
         public class SnippetSettings
@@ -265,6 +266,12 @@ ORDER BY sd.[name];
             public string snippetFolder = string.Empty;
             public SnippetReplaceKey replaceKey = SnippetReplaceKey.Tab;
             public string cursorMarker = "#";
+        }
+
+        public class AsteriskExpansionSettings
+        {
+            public bool useAsteriskExpansion = false;
+            public SnippetReplaceKey triggerKey = SnippetReplaceKey.Tab;
         }
 
         public class ExcelExportSettings
@@ -730,6 +737,40 @@ ORDER BY sd.[name];
             var settings = GetSnippetSettings();
             settings.snippetFolder = folder;
             return SaveSnippetSettings(settings);
+        }
+
+        public static AsteriskExpansionSettings GetAsteriskExpansionSettings()
+        {
+            try
+            {
+                string json = GetRegisterValue("AsteriskExpansionSettings");
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var settings = JsonConvert.DeserializeObject<AsteriskExpansionSettings>(json);
+                    if (settings != null)
+                    {
+                        return settings;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return new AsteriskExpansionSettings();
+        }
+
+        public static bool SaveAsteriskExpansionSettings(AsteriskExpansionSettings settings)
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(settings ?? new AsteriskExpansionSettings());
+                return SaveRegisterValue("AsteriskExpansionSettings", json);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
 
