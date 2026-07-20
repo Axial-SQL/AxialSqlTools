@@ -104,7 +104,6 @@
     <Compile Include="Commands\Dialogs\ExcelExportSuccessDialog.xaml.cs">
       <DependentUpon>ExcelExportSuccessDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Commands\CopyQueryAsHtmlCommand.cs" />
     <Compile Include="Commands\OpenTemplatesFolderCommand.cs" />
     <Compile Include="Commands\RefreshTemplatesCommand.cs" />
     <Compile Include="Commands\ResultGridCommands.cs" />
@@ -421,7 +420,6 @@
   <ItemGroup>
     <Content Include="Resources\attention.png" />
     <Content Include="Resources\compare-schemas.png" />
-    <Content Include="Resources\copy.png" />
     <Content Include="Resources\data-source-target.png" />
     <Content Include="Resources\database-scripter.png" />
     <Content Include="Resources\export-data.png" />
