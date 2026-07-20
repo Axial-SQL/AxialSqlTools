@@ -322,7 +322,6 @@ namespace AxialSqlTools
                 await ExportGridToAsInsertsCommand.InitializeAsync(this);
                 await ToolWindowGridToEmailCommand.InitializeAsync(this);
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
-                await CopyQueryAsHtmlCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await DataImportWindowCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
