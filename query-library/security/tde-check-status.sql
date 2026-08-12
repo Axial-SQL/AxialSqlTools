@@ -13,9 +13,9 @@ SELECT
                     + ' is encrypting the database encryption key is being changed.)'
          ELSE 'No Status' END,
   percent_complete,
-  certificate_name = (SELECT name
-        FROM master.sys.certificates AS c
-        WHERE c.thumbprint = a.encryptor_thumbprint),
+  c.[name] AS CertificateName,
+  c.[start_date] AS CertificateStartDate,
+  c.[expiry_date] AS CertificateExpirationDate,
   encryptor_thumbprint,
   encryptor_type,
   CONCAT('USE [', d.[name], ']
@@ -24,14 +24,16 @@ CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256 ENCRYPTION BY SERVER CER
 GO
 ALTER DATABASE [', d.[name], '] SET ENCRYPTION ON;
 GO
--- rotate the cert only without re-encrypting the entire database	
+-- rotate the cert only without re-ecnrypting the entire database	
 -- ALTER DATABASE ENCRYPTION KEY ENCRYPTION BY SERVER CERTIFICATE [TDE_new];
 GO
 -- re-encrypt the entire database without changing the certificate
 --ALTER DATABASE ENCRYPTION KEY REGENERATE WITH ALGORITHM = AES_256;') AS encryptCommand
 FROM sys.databases AS d
-     LEFT OUTER JOIN sys.dm_database_encryption_keys AS a
-     ON d.database_id = a.database_id
+LEFT JOIN sys.dm_database_encryption_keys AS dek
+    ON dek.database_id = d.database_id
+LEFT JOIN master.sys.certificates AS c
+    ON c.thumbprint = dek.encryptor_thumbprint
 WHERE d.source_database_id IS NULL
-	 AND d.database_id > 4
-ORDER BY DatabaseName;
+  AND d.database_id > 4
+ORDER BY d.[name];
