@@ -157,6 +157,7 @@
     <Compile Include="Modules\SettingsManager.cs" />
     <Compile Include="Modules\SQLBuilds.cs" />
     <Compile Include="Modules\TsqlFormatter.cs" />
+    <Compile Include="Modules\TSqlParserFactory.cs" />
     <Compile Include="Modules\WindowsCredentialHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AxialSqlToolsPackage.cs" />

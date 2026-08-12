@@ -13,6 +13,7 @@
     using System.Windows;
     using System.Windows.Controls;
     using System.Collections.ObjectModel;
+    using System.Linq;
     using System.Windows.Media;
     using System.Windows.Navigation;
     using Microsoft.VisualBasic;
@@ -58,6 +59,7 @@ as select 1;
 
             _connectionColorRules = new ObservableCollection<SettingsManager.ConnectionColorRule>();
             ConnectionColorRulesListView.ItemsSource = _connectionColorRules;
+            SqlVersion.ItemsSource = GetSqlVersionOptions();
 
             _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
 
@@ -132,6 +134,8 @@ as select 1;
         {
             try
             {
+
+                SqlVersion.SelectedValue = SettingsManager.GetTSqlParserVersion();
 
                 ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
 
@@ -244,6 +248,30 @@ as select 1;
                 }
             }
 
+        }
+
+
+        private static object[] GetSqlVersionOptions()
+        {
+            return Enum.GetValues(typeof(SettingsManager.TSqlParserVersion))
+                .Cast<SettingsManager.TSqlParserVersion>()
+                .OrderByDescending(version => version)
+                .Select(version => new
+                {
+                    Version = version,
+                    DisplayName = SettingsManager.GetTSqlParserVersionDisplayName(version)
+                })
+                .ToArray();
+        }
+
+        private void Button_SaveGeneralSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (SqlVersion.SelectedValue is SettingsManager.TSqlParserVersion version)
+            {
+                SettingsManager.SaveTSqlParserVersion(version);
+            }
+
+            SavedMessage();
         }
 
         private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)

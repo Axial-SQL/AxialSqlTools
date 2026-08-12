@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using AxialSqlTools;
 
 public static class TsqlFormatterCommentInterleaver
 {
@@ -17,7 +18,7 @@ public static class TsqlFormatterCommentInterleaver
         if (generator == null) throw new ArgumentNullException(nameof(generator));
 
         if (parser is null)
-            parser = new TSql170Parser(initialQuotedIdentifiers: true);
+            parser = TSqlParserFactory.Create(initialQuotedIdentifiers: true);
 
         generator.GenerateScript(sqlFragment, out var formattedSql);
 

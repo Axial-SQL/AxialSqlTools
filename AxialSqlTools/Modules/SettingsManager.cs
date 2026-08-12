@@ -252,6 +252,50 @@ ORDER BY sd.[name];
             public bool EnableSsl;
         }
 
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public enum TSqlParserVersion
+        {
+            Sql80,
+            Sql90,
+            Sql100,
+            Sql110,
+            Sql120,
+            Sql130,
+            Sql140,
+            Sql150,
+            Sql160,
+            Sql170
+        }
+
+        public static string GetTSqlParserVersionDisplayName(TSqlParserVersion version)
+        {
+            switch (version)
+            {
+                case TSqlParserVersion.Sql80:
+                    return "SQL Server 2000 (8.0)";
+                case TSqlParserVersion.Sql90:
+                    return "SQL Server 2005 (9.0)";
+                case TSqlParserVersion.Sql100:
+                    return "SQL Server 2008 (10.0)";
+                case TSqlParserVersion.Sql110:
+                    return "SQL Server 2012 (11.0)";
+                case TSqlParserVersion.Sql120:
+                    return "SQL Server 2014 (12.0)";
+                case TSqlParserVersion.Sql130:
+                    return "SQL Server 2016 (13.0)";
+                case TSqlParserVersion.Sql140:
+                    return "SQL Server 2017 (14.0)";
+                case TSqlParserVersion.Sql150:
+                    return "SQL Server 2019 (15.0)";
+                case TSqlParserVersion.Sql160:
+                    return "SQL Server 2022 (16.0)";
+                case TSqlParserVersion.Sql170:
+                default:
+                    return "SQL Server 2025 (17.0)";
+            }
+        }
+
         public enum SnippetReplaceKey
         {
             Enter,
@@ -555,6 +599,23 @@ ORDER BY sd.[name];
 
             return true;
 
+        }
+
+
+        public static TSqlParserVersion GetTSqlParserVersion()
+        {
+            string value = GetRegisterValue("TSqlParserVersion");
+            if (Enum.TryParse(value, out TSqlParserVersion version))
+            {
+                return version;
+            }
+
+            return TSqlParserVersion.Sql170;
+        }
+
+        public static bool SaveTSqlParserVersion(TSqlParserVersion version)
+        {
+            return SaveRegisterValue("TSqlParserVersion", version.ToString());
         }
 
         public static string GetTemplatesFolder()
