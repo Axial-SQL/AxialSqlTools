@@ -120,6 +120,25 @@
       <DependentUpon>SnippetManagerWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="DataTransfer\DataTransferWindow.cs" />
+    <Compile Include="DataCompare\ComparisonModel.cs" />
+    <Compile Include="DataCompare\ValueCodec.cs" />
+    <Compile Include="DataCompare\ComparisonStorage.cs" />
+    <Compile Include="DataCompare\ComparisonEngine.cs" />
+    <Compile Include="DataCompare\ComparisonCsv.cs" />
+    <Compile Include="DataCompare\SqlTableReader.cs" />
+    <Compile Include="DataCompare\SynchronizationScript.cs" />
+    <Compile Include="DataCompare\SqlSynchronizer.cs" />
+    <Compile Include="DataCompare\DataCompareWindow.cs" />
+    <Compile Include="DataCompare\DataCompareWindowCommand.cs" />
+    <Compile Include="DataCompare\DataCompareWindowControl.xaml.cs">
+      <DependentUpon>DataCompareWindowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DataCompare\ComparisonEndpointControl.xaml.cs">
+      <DependentUpon>ComparisonEndpointControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DataCompare\SqlConnectionDialog.xaml.cs">
+      <DependentUpon>SqlConnectionDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="DataTransfer\DataTransferWindowCommand.cs" />
     <Compile Include="DataTransfer\DataTransferWindowControl.xaml.cs">
       <DependentUpon>DataTransferWindowControl.xaml</DependentUpon>
@@ -489,6 +508,18 @@
     <Page Include="DataTransfer\DataTransferWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="DataCompare\DataCompareWindowControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="DataCompare\ComparisonEndpointControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="DataCompare\SqlConnectionDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="DataTransfer\SavedConnectionManagerWindow.xaml">
       <SubType>Designer</SubType>

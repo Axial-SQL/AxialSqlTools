@@ -58,6 +58,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
     [ProvideToolWindow(typeof(HealthDashboard_Server))]
     [ProvideToolWindow(typeof(DataTransferWindow))]
+    [ProvideToolWindow(typeof(DataCompare.DataCompareWindow), MultiInstances = true)]
     [ProvideToolWindow(typeof(SqlServerBuildsWindow))]
     [ProvideToolWindow(typeof(QueryHistoryWindow))]
     [ProvideToolWindow(typeof(StatisticsSummaryWindow))]
@@ -323,6 +324,7 @@ namespace AxialSqlTools
                 await ToolWindowGridToEmailCommand.InitializeAsync(this);
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
+                await DataCompare.DataCompareWindowCommand.InitializeAsync(this);
                 await DataImportWindowCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
                 await SqlServerBuildsWindowCommand.InitializeAsync(this);
