@@ -71,7 +71,7 @@ namespace AxialSqlTools
                 if (string.IsNullOrEmpty(fullText))
                     return;
 
-                // Try parsing with TSql170Parser
+                // Try parsing with the configured T-SQL parser
                 if (TrySelectWithParser(fullText, cursorLine, cursorColumn, selection))
                     return;
 
@@ -94,7 +94,7 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            TSql170Parser sqlParser = new TSql170Parser(false);
+            TSqlParser sqlParser = TSqlParserFactory.Create(false);
             IList<ParseError> parseErrors;
             TSqlFragment fragment = sqlParser.Parse(new StringReader(fullText), out parseErrors);
 

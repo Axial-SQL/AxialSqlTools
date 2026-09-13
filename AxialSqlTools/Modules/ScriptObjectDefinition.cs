@@ -244,14 +244,14 @@ namespace AxialSqlTools
                 // additional format to make it pretty
                 if (selectedObject.TypeDesc == "USER_TABLE")
                 {
-                    TSql170Parser sqlParser = new TSql170Parser(false);
+                    TSqlParser sqlParser = TSqlParserFactory.Create(false);
                     IList<ParseError> parseErrors = new List<ParseError>();
                     TSqlFragment result = sqlParser.Parse(new StringReader(fullScriptResult), out parseErrors);
 
                     // leave it as is if for some reason we can't format it
                     if (parseErrors.Count == 0)
                     {
-                        Sql170ScriptGenerator gen = new Sql170ScriptGenerator();
+                        SqlScriptGenerator gen = TSqlParserFactory.CreateScriptGenerator();
                         gen.Options.AlignClauseBodies = false;
                         gen.Options.IncludeSemicolons = false;
                         gen.GenerateScript(result, out fullScriptResult);

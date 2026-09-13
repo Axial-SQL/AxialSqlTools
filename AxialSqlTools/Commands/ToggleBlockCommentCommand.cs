@@ -155,7 +155,7 @@ namespace AxialSqlTools
             openPosition = default(TextPosition);
             closePosition = default(TextPosition);
 
-            var parser = new TSql170Parser(initialQuotedIdentifiers: true);
+            var parser = TSqlParserFactory.Create(initialQuotedIdentifiers: true);
             IList<ParseError> errors;
             IList<TSqlParserToken> tokens = parser.GetTokenStream(new StringReader(text), out errors);
             foreach (TSqlParserToken token in tokens)
