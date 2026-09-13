@@ -65,25 +65,51 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(DataImportWindow))]
     [ProvideToolWindow(typeof(QuickSearchWindow))]
     [ProvideToolWindow(typeof(SnippetManagerWindow))]
-    public sealed class AxialSqlToolsPackage : AsyncPackage
+    public sealed partial class AxialSqlToolsPackage : AsyncPackage
     {
 
-        public class SQLVersionInfo
+        public SQLBuildsData SQLBuildsDataInfo = new SQLBuildsData();
+        public SQLBuildsLoadResult SQLBuildsLoadState { get; private set; }
+        public SQLBuildsLoadResult SQLBuildsLastSuccess { get; private set; }
+        public bool SQLBuildsIsLoading { get; private set; }
+        public event EventHandler SQLBuildsChanged;
+        private Task _sqlBuildsRefreshTask;
+
+        public Task RefreshSqlServerBuildsAsync(string localFile = null)
         {
-            public string SqlVersion { get; set; }    // e.g. "SQL Server 2022"
-            public Version BuildNumber { get; set; }   // e.g. "16.0.1000"
-            public DateTime ReleaseDate { get; set; }
-            public string UpdateName { get; set; }    // e.g. "CU5" or "Security Update XYZ"
-            public string KbNumber { get; set; }    // e.g. "CU5" or "Security Update XYZ"
-            public string Url { get; set; }
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_sqlBuildsRefreshTask != null && !_sqlBuildsRefreshTask.IsCompleted) return _sqlBuildsRefreshTask;
+            return _sqlBuildsRefreshTask = RefreshSqlServerBuildsCoreAsync(localFile);
         }
 
-        public class SQLBuildsData
+        private async Task RefreshSqlServerBuildsCoreAsync(string localFile)
         {
-            public Dictionary<string, List<SQLVersionInfo>> Builds { get; set; } = new Dictionary<string, List<SQLVersionInfo>>();
+            SQLBuildsIsLoading = true;
+            SQLBuildsChanged?.Invoke(this, EventArgs.Empty);
+            try
+            {
+                var result = await Task.Run(() => SQLBuilds.DownloadSqlServerBuildInfo(localFile));
+                await JoinableTaskFactory.SwitchToMainThreadAsync();
+                SQLBuildsLoadState = result;
+                if (result.HasData)
+                {
+                    SQLBuildsDataInfo = result.Data;
+                    SQLBuildsLastSuccess = result;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, "SQL Server build refresh failed.");
+                SQLBuildsLoadState = new SQLBuildsLoadResult { Source = localFile ?? SQLBuilds.SourceUrl,
+                    Error = "SQL Server build refresh failed. Retry the download or open a readable .xlsx workbook.",
+                    Details = ex.GetType().Name + ": " + ex.Message };
+            }
+            finally
+            {
+                SQLBuildsIsLoading = false;
+                SQLBuildsChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
-
-        public SQLBuildsData SQLBuildsDataInfo;
 
         #region QueryHistory
         private class QueryHistoryEntry
@@ -405,10 +431,10 @@ namespace AxialSqlTools
 
             try
             {
-                SQLBuildsDataInfo = await Task.Run(() => SQLBuilds.DownloadSqlServerBuildInfo());
-
+                await JoinableTaskFactory.SwitchToMainThreadAsync();
                 MenuCommand CmdSqlServerBuilds = m_plugin.MenuCommandService.FindCommand(new CommandID(SqlServerBuildsWindowCommand.CommandSet, SqlServerBuildsWindowCommand.CommandId));
                 CmdSqlServerBuilds.Visible = true;
+                await RefreshSqlServerBuildsAsync();
 
             }
             catch (Exception ex)
