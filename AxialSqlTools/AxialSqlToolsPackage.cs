@@ -1,4 +1,4 @@
-﻿using Aurora;
+using Aurora;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.CommandBars;
@@ -345,6 +345,7 @@ namespace AxialSqlTools
                 await SettingsWindowCommand.InitializeAsync(this);
                 await AboutWindowCommand.InitializeAsync(this);
                 await ScriptSelectedObject.InitializeAsync(this);
+                await OpenInObjectExplorerCommand.InitializeAsync(this);
                 await ExportGridToAsInsertsCommand.InitializeAsync(this);
                 await ToolWindowGridToEmailCommand.InitializeAsync(this);
                 await HealthDashboard_ServerCommand.InitializeAsync(this);

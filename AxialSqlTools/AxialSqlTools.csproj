@@ -71,6 +71,13 @@
     </Compile>
     <Compile Include="Modules\ExcelImport.cs" />
     <Compile Include="Modules\ScriptObjectDefinition.cs" />
+    <Compile Include="Commands\OpenInObjectExplorerCommand.cs" />
+    <Compile Include="Modules\SqlObjectName.cs" />
+    <Compile Include="Modules\ScriptObjectSelectionItem.cs" />
+    <Compile Include="Modules\SqlObjectResolver.cs" />
+    <Compile Include="Modules\ObjectExplorerPath.cs" />
+    <Compile Include="Modules\ObjectExplorerNavigation.cs" />
+    <Compile Include="Modules\SsmsObjectExplorerNavigationHost.cs" />
     <Compile Include="Modules\TsqlFormatterCommentInterleaver.cs" />
     <Compile Include="Commands\Dialogs\FormatOptionsDialog.xaml.cs">
       <DependentUpon>FormatOptionsDialog.xaml</DependentUpon>

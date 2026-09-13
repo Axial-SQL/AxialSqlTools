@@ -39,6 +39,8 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Quick Search**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Quick-Search): Quick Search helps you find SQL text quickly across one database or across all accessible databases on a server.
  
 - [**Script Object Definition**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Script-Object-Definition): Quickly generate scripts for the definition of selected objects directly from the selected query text.
+
+- [**Open in Object Explorer**](docs/open-in-object-explorer.md): Select an object name or place the cursor inside it, then locate its branch in Object Explorer from the query editor's right-click menu or the Axial Tools menu. Reuses the scripting lookup and connects Object Explorer when needed.
   
 - [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics.
 
