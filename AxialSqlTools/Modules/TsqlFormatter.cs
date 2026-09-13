@@ -23,7 +23,6 @@ namespace AxialSqlTools
             public List<CreateProcedureStatement> SprocDefinitionsCreate = new List<CreateProcedureStatement>();
             public List<AlterProcedureStatement> SprocDefinitionsAlter = new List<AlterProcedureStatement>();
             public List<CreateOrAlterProcedureStatement> SprocDefinitionsCreateAlter = new List<CreateOrAlterProcedureStatement>();
-            public List<QuerySpecification> SelectsWithTop = new List<QuerySpecification>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -194,12 +193,7 @@ namespace AxialSqlTools
                 DeclareStatements.Add(node);
             }
 
-            public override void ExplicitVisit(QuerySpecification node)
-            {
-                base.ExplicitVisit(node);
-                if (node.TopRowFilter != null)
-                    SelectsWithTop.Add(node);
-            }
+
         }
 
         /// <summary>
@@ -330,7 +324,7 @@ namespace AxialSqlTools
             {
                 try
                 {
-                    resultCode = ApplySpecialFormat(resultCode, sqlParser, formatSettings);
+                    resultCode = ApplySpecialFormat(resultCode, sqlParser, formatSettings, gen.Options.IndentationSize);
                 }
                 catch (Exception ex)
                 {
@@ -342,7 +336,7 @@ namespace AxialSqlTools
 
         }
 
-        private static string ApplySpecialFormat(string oldCode, TSql170Parser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings)
+        private static string ApplySpecialFormat(string oldCode, TSql170Parser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings, int indentSize)
         {
             IList<ParseError> parseErrors = new List<ParseError>();
 
@@ -364,7 +358,7 @@ namespace AxialSqlTools
                         TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[NextTokenNumber - 1];
 
                         if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
-                            if (NextToken.Text == "\r\n")
+                            if (NextToken.Text.Contains("\n"))
                                 NextToken.Text = " ";
                             else if (NextToken.Text.Trim() == "")
                                 NextToken.Text = "";
@@ -818,45 +812,6 @@ namespace AxialSqlTools
 
             }
 
-            // special case #11 - split SELECT fields after TOP, fixed indent up to FROM
-            // TODO - can't get this right, so disabled for now
-            if (formatSettings.breakSelectFieldsAfterTopAndUnindent)
-            {
-                //var tokens = sqlFragment.ScriptTokenStream;
-                //const string indent = "\t";
-
-                //foreach (var qs in visitor.SelectsWithTop)
-                //{
-                //    // 1) break right after TOP(...) into "\r\n\t"
-                //    int splitIdx = qs.TopRowFilter.LastTokenIndex + 1;
-                //    if (splitIdx < tokens.Count
-                //     && tokens[splitIdx].TokenType == TSqlTokenType.WhiteSpace)
-                //    {
-                //        tokens[splitIdx].Text = "\r\n" + indent;
-                //    }
-
-                //    //// 2) for every select‐element after the first, break before it into "\r\n\t"
-                //    //for (int i = 1; i < qs.SelectElements.Count; i++)
-                //    //{
-                //    //    var elem = qs.SelectElements[i];
-                //    //    int wsIdx = elem.FirstTokenIndex - 1;
-                //    //    if (wsIdx >= 0
-                //    //     && tokens[wsIdx].TokenType == TSqlTokenType.WhiteSpace)
-                //    //    {
-                //    //        tokens[wsIdx].Text = "\r\n" + indent;
-                //    //    }
-                //    //}
-
-                //    //// 3) unindent FROM back to column 1
-                //    //int wsBeforeFrom = qs.FromClause.FirstTokenIndex - 1;
-                //    //if (wsBeforeFrom >= 0
-                //    // && tokens[wsBeforeFrom].TokenType == TSqlTokenType.WhiteSpace)
-                //    //{
-                //    //    tokens[wsBeforeFrom].Text = "\r\n";
-                //    //}
-                //}
-            }
-
             // return full recompiled result
             StringBuilder sqlText = new StringBuilder();
             foreach (var Token in sqlFragment.ScriptTokenStream)
@@ -864,7 +819,11 @@ namespace AxialSqlTools
                 sqlText.Append(Token.Text);
             }
 
-            return sqlText.ToString();
+            string formatted = sqlText.ToString();
+            // Reparse after the other options so indentation uses the current positions, including moved BEGIN/END and CASE expressions.
+            return formatSettings.breakSelectFieldsAfterTopAndUnindent
+                ? TsqlSelectFieldIndentation.Format(formatted, sqlParser, indentSize)
+                : formatted;
         }
 
         // Helper: for a whitespace token that looks like "\r\n    …",

@@ -342,6 +342,7 @@ ORDER BY sd.[name];
             public bool unindentBeginEndBlocks = false;
             public bool breakVariableDefinitionsPerLine = false;
             public bool breakSprocDefinitionParametersPerLine = false;
+            // Retain the existing serialized name; this option now handles DISTINCT as well as TOP.
             public bool breakSelectFieldsAfterTopAndUnindent = false;
 
             public bool HasAnyFormattingEnabled()
