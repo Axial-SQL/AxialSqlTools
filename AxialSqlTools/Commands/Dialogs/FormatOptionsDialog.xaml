@@ -69,6 +69,11 @@
                 Content="Break sproc definition parameters per line"
                 Checked="formatSetting_Checked"
                 Unchecked="formatSetting_Unchecked"/>
+            <CheckBox x:Name="BreakSelectFieldsAfterTopAndUnindent" Margin="5"
+                Content="Use standard field indentation after DISTINCT/TOP"
+                ToolTip="Move every SELECT field to a new line with one normal indentation level, independent of DISTINCT or TOP. Applies to nested queries and CTEs."
+                Checked="formatSetting_Checked"
+                Unchecked="formatSetting_Unchecked"/>
         </UniformGrid>
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
