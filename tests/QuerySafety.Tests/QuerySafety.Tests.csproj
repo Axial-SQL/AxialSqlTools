@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="170.191.0"/>
+    <Compile Include="../../AxialSqlTools/QuerySafety/FatalActionAnalyzer.cs" Link="FatalActionAnalyzer.cs"/>
+    <Compile Include="../../AxialSqlTools/QuerySafety/FatalActionSession.cs" Link="FatalActionSession.cs"/>
+    <Compile Include="../../AxialSqlTools/QuerySafety/FatalActionGuard.cs" Link="FatalActionGuard.cs"/>
+  </ItemGroup>
+</Project>

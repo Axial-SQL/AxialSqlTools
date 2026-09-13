@@ -89,6 +89,12 @@
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml.cs">
       <DependentUpon>DatabaseScripterToolWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="QuerySafety\FatalActionAnalyzer.cs" />
+    <Compile Include="QuerySafety\FatalActionSession.cs" />
+    <Compile Include="QuerySafety\FatalActionGuard.cs" />
+    <Compile Include="QuerySafety\FatalActionWarningDialog.xaml.cs">
+      <DependentUpon>FatalActionWarningDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Modules\AuroraCore.cs" />
     <Compile Include="Modules\AsteriskExpansionService.cs" />
     <Compile Include="UpdateChecker.cs" />
@@ -451,6 +457,10 @@
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="QuerySafety\FatalActionWarningDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Commands\Dialogs\FormatOptionsDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
