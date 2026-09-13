@@ -8,11 +8,11 @@ namespace AxialSqlTools
     {
         public ScriptObjectSelectionItem SelectedObject { get; set; }
 
-        public ScriptObjectPickerDialog(IEnumerable<ScriptObjectSelectionItem> matches)
+        public ScriptObjectPickerDialog(IEnumerable<ScriptObjectSelectionItem> matches, string action = "script")
         {
             InitializeComponent();
 
-            HeaderTextBlock.Text = "Select the object to script.";
+            HeaderTextBlock.Text = "Select the object to " + action + ".";
             ObjectsListBox.ItemsSource = matches.ToList();
         }
 
@@ -25,7 +25,7 @@ namespace AxialSqlTools
             }
             else
             {
-                MessageBox.Show("Select an object to script.", "Script Object");
+                MessageBox.Show("Select an object from the list.", "Select Object");
             }
         }
 
