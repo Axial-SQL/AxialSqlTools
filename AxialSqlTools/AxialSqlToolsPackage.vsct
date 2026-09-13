@@ -263,6 +263,15 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDataCompareCommand" priority="0x0010" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
+        <Icon guid="guidDataTransfer" id="bmpDataTransfer" />
+        <Strings>
+          <ButtonText>Compare Table Data</ButtonText>
+          <ToolTipText>Compare rows in two tables and synchronize selected differences.</ToolTipText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDatabaseScripterCommand" priority="0x0000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
         <Icon guid="guidDatabaseScripter" id="bmpDatabaseScripter" />
@@ -394,6 +403,7 @@
       <IDSymbol name="AxialHealthDashboardServersCommand" value="4142" />
 
       <IDSymbol name="AxialDataTransferCommand" value="4143" />
+      <IDSymbol name="AxialDataCompareCommand" value="4156" />
 
       <IDSymbol name="AxialQueryHistoryCommand" value="4144" />
       <IDSymbol name="AxialStatisticsSummaryCommand" value="4152" />
