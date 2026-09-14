@@ -79,7 +79,7 @@ namespace AxialSqlTools.QuerySafety
             {
                 // A failure to show a confirmation must not authorize execution.
                 AxialSqlToolsPackage._logger?.Error(ex, "Could not display the fatal action warning. Execution cancelled.");
-                VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+                VsShellUtilities.ShowMessageBox(Microsoft.VisualStudio.Shell.ServiceProvider.GlobalProvider,
                     "Query execution was cancelled because its warning could not be displayed. " + ex.Message,
                     "Axial SQL Tools", OLEMSGICON.OLEMSGICON_WARNING, OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
                 return false;
