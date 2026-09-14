@@ -194,6 +194,7 @@ as select 1;
                 GoogleSheetsClientSecret.Password = googleSettings.clientSecret;
                 UpdateGoogleSheetsStatus(googleSettings.refreshToken);
 
+                WarnWhenRunningFatalAction.IsChecked = SettingsManager.GetWarnWhenRunningFatalAction();
                 EnableUpdateChecks.IsChecked = SettingsManager.GetEnableUpdateChecks();
                 UpdateUpdateStatus();
 
@@ -447,6 +448,16 @@ as select 1;
             var settings = BuildGoogleSheetsSettings();
             SettingsManager.SaveGoogleSheetsSettings(settings);
             UpdateGoogleSheetsStatus(settings.refreshToken);
+            SavedMessage();
+        }
+
+        private void SaveQuerySafety_Click(object sender, RoutedEventArgs e)
+        {
+            if (!SettingsManager.SaveWarnWhenRunningFatalAction(WarnWhenRunningFatalAction.IsChecked == true))
+            {
+                MessageBox.Show("Could not save query execution settings.", "Axial SQL Tools");
+                return;
+            }
             SavedMessage();
         }
 
