@@ -267,7 +267,7 @@
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_DataTransfer" />
         <Icon guid="guidDataTransfer" id="bmpDataTransfer" />
         <Strings>
-          <ButtonText>Compare Table Data</ButtonText>
+          <ButtonText>Compare Table Data (Alpha Version)</ButtonText>
           <ToolTipText>Compare rows in two tables and synchronize selected differences.</ToolTipText>
         </Strings>
       </Button>
