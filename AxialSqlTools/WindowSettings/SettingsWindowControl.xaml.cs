@@ -38,14 +38,14 @@
         private ObservableCollection<SettingsManager.ConnectionColorRule> _connectionColorRules;
 
         private string tsqlFormatExample = @"while (1=0) 
-begin 
+begin -- inline comment
 select distinct top 10
     c.CustomerID, getDate(),
     CASE WHEN o.TotalAmount > 1000 THEN 'High' ELSE 'Low' END AS OrderSize
 FROM Customers c
 JOIN Orders o ON c.CustomerID = o.CustomerID CROSS JOIN Regions r
-WHERE c.IsActive = 1;
-
+WHERE c.IsActive = 1; /* multi-line 
+comment */
 SELECT dbo.func(p.ProductID), p.ProductName FROM Products p; EXEC dbo.test @a = 0, @b = 1;
 end
 if 1=0 begin select 1; declare @a int, @b varchar(10) = ''
