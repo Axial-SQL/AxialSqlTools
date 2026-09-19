@@ -142,6 +142,12 @@ as select 1;
             try
             {
 
+                var generalSettings = SettingsManager.GetGeneralSettings();
+                UseTransactionWarning.IsChecked = generalSettings.useTransactionWarning;
+                UseAlwaysEncryptedWarning.IsChecked = generalSettings.useAlwaysEncryptedWarning;
+                UsePreciseExecutionTime.IsChecked = generalSettings.usePreciseExecutionTime;
+                AlignNumericValuesToRight.IsChecked = generalSettings.alignNumericValuesToRight;
+
                 ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
                 UpdateTemplatesFolderStatus();
 
@@ -385,6 +391,13 @@ as select 1;
 
             var settings = new SettingsManager.WindowSettings
             {
+                General = new SettingsManager.GeneralSettings
+                {
+                    useTransactionWarning = UseTransactionWarning.IsChecked.GetValueOrDefault(),
+                    useAlwaysEncryptedWarning = UseAlwaysEncryptedWarning.IsChecked.GetValueOrDefault(),
+                    usePreciseExecutionTime = UsePreciseExecutionTime.IsChecked.GetValueOrDefault(),
+                    alignNumericValuesToRight = AlignNumericValuesToRight.IsChecked.GetValueOrDefault()
+                },
                 TemplatesFolder = ScriptFolder.Text,
                 Snippets = snippets,
                 AsteriskExpansion = new SettingsManager.AsteriskExpansionSettings
