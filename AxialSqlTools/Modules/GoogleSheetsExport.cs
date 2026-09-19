@@ -135,7 +135,9 @@ namespace AxialSqlTools
                 if (!string.IsNullOrWhiteSpace(newRefreshToken) && !string.Equals(newRefreshToken, settings.refreshToken, StringComparison.Ordinal))
                 {
                     settings.refreshToken = newRefreshToken;
-                    SettingsManager.SaveGoogleSheetsSettings(settings);
+                    if (!SettingsManager.SaveGoogleSheetsSettings(settings))
+                        throw new InvalidOperationException("Google returned a new refresh token, but it could not be saved. "
+                            + SettingsManager.LastSaveError);
                 }
 
                 return token.Value<string>("access_token");

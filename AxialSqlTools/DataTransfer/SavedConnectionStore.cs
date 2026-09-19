@@ -8,8 +8,8 @@ namespace AxialSqlTools
     public static class SavedConnectionStore
     {
         private static readonly string PathToFile =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "AxialSQL", "data-transfer-connections.json");
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "AxialSqlTools", "data-transfer-connections.json");
 
         public static List<SettingsManager.DataTransferSavedConnection> Load()
         {

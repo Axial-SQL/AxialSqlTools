@@ -108,7 +108,9 @@ namespace AxialSqlTools
 
         private void SaveConnections()
         {
-            SettingsManager.SaveDataTransferSavedConnections(_connections.ToList());
+            if (!SettingsManager.SaveDataTransferSavedConnections(_connections.ToList()))
+                MessageBox.Show(SettingsManager.LastSaveError ?? "Could not save connections.",
+                    "Saved Connections", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         private void ClearEditor()

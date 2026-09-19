@@ -273,7 +273,12 @@ namespace AxialSqlTools
             settings.useSnippets = UseSnippets;
             settings.replaceKey = ReplaceKey;
             settings.cursorMarker = CursorMarker;
-            SettingsManager.SaveSnippetSettings(settings);
+            if (!SettingsManager.SaveSnippetSettings(settings))
+            {
+                MessageBox.Show(SettingsManager.LastSaveError ?? "Could not save snippet settings.",
+                    "Snippet Manager", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             MessageBox.Show("Settings saved.", "Snippet Manager", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 

@@ -161,6 +161,7 @@
     <Compile Include="Modules\ToolWindowThemeSupport.cs" />
     <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="Modules\SettingsManager.cs" />
+    <Compile Include="Modules\SettingsFileStore.cs" />
     <Compile Include="Modules\SQLBuilds.cs" />
     <Compile Include="Modules\SQLBuildsModels.cs" />
     <Compile Include="Modules\TsqlFormatter.cs" />

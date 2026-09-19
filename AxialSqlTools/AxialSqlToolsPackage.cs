@@ -1251,11 +1251,16 @@ namespace AxialSqlTools
             Dictionary<string, string> fileNamesCache = new Dictionary<string, string>();
 
             string Folder = SettingsManager.GetTemplatesFolder();
+            if (!Directory.Exists(Folder))
+            {
+                _logger.Warn("The configured templates folder is unavailable: {0}", Folder);
+                return;
+            }
             int i = 2;
             CreateCommands(ref i, ref fileNamesCache, Folder, m_commandRegistry, m_commandBarQueryTemplates);
 
             UpdateRenamedTemplatesControls(m_commandBarQueryTemplates, fileNamesCache);
-
+            
         }
 
         private void UpdateRenamedTemplatesControls(CommandBar commandBarFolder, Dictionary<string, string> fileNamesCache)

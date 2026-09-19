@@ -51,7 +51,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Copy Column Names from Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Column-Names-from-Grid): Quickly copy the column names from the results grid to the clipboard.
   
 - [**Copy Cell Values As ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Grid-Cells-As-...): Copy cell values to the clipboard in multiple formats: INSERT, CSV, JSON, XML, or HTML.
-- [**Fatal Action Warning ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Fatal-Action-Warning): The warning for potentially fatal actions requires confirmation before executing the SQL statement.
+- [**Fatal Action Warning**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Fatal-Action-Warning): The warning for potentially fatal actions requires confirmation before executing the SQL statement.
   
 ## Query Library
 
