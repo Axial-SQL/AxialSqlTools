@@ -127,8 +127,13 @@ namespace AxialSqlTools
 
                 try
                 {
-                    var formatter = SsmsFormatterHost.CreateForActiveDocument();
-                    TextSelection selection = dte.ActiveDocument.Selection as TextSelection;
+                    var document = dte.ActiveDocument;
+                    var formatter = SsmsFormatterHost.Create();
+                    // Loading SSMS settings can yield to the shell. Keep the original DTE document.
+                    if (!ReferenceEquals(document, dte.ActiveDocument))
+                        throw new InvalidOperationException("The active query changed while loading formatter settings. Try Format again.");
+                    TextSelection selection = document.Selection as TextSelection;
+                    if (selection == null) return;
 
                     string existingCommandText = selection.Text.Trim();
 
@@ -141,7 +146,7 @@ namespace AxialSqlTools
                     }
 
                     // continue formatiing the entire document when nothing is selected                    
-                    TextDocument textDoc = dte.ActiveDocument.Object("TextDocument") as TextDocument;
+                    TextDocument textDoc = document.Object("TextDocument") as TextDocument;
                     if (textDoc != null)
                     {
                         existingCommandText = textDoc.CreateEditPoint(textDoc.StartPoint).GetText(textDoc.EndPoint).Trim();

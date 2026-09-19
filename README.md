@@ -24,7 +24,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Right Alignment for Numeric Values in Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Align-numeric-values-in-the-grid-result-to-the-right): Automatically align numeric values in the grid result to the right. <br/>
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-before.png?raw=true"/> -> <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-after.png?raw=true"/>
 
-- [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Format SQL using the installed SSMS SQL Formatter settings and the active document's `.editorconfig`, then apply Axial's additional formatting options. Shift+Format still provides per-run overrides. Requires an SSMS version with the built-in SQL Formatter.
+- [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Format SQL using the installed SSMS SQL Formatter global settings, then apply Axial's additional formatting options. Shift+Format still provides per-run overrides. Requires an SSMS version with the built-in SQL Formatter.
   
 - [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access a saved collection of query templates for common tasks, reducing the time and effort required for routine work.
 
