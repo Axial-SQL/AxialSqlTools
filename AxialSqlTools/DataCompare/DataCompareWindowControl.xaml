@@ -1,0 +1,136 @@
+<UserControl x:Class="AxialSqlTools.DataCompare.DataCompareWindowControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:AxialSqlTools.DataCompare"
+    MinWidth="680" MinHeight="480" Background="{DynamicResource AxialThemeBackgroundBrush}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Table Data Compare" FontSize="20" FontWeight="SemiBold"/>
+                <TextBlock Text="Compare two SQL Server tables and synchronize selected rows from source to target." Margin="0,3,8,0" TextWrapping="Wrap"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="CompareButton" Content="Compare" Click="CompareClick" MinWidth="100" Margin="6,0" IsEnabled="False"/>
+                <Button x:Name="CancelButton" Content="Cancel" Click="CancelClick" MinWidth="80" IsEnabled="False"/>
+            </StackPanel>
+        </Grid>
+        <TabControl x:Name="MainTabs" Grid.Row="1">
+            <TabItem Header="Setup">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="SetupPanel" Margin="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <GroupBox Header="Source" Margin="0,0,6,8"><local:ComparisonEndpointControl x:Name="SourceEndpoint"/></GroupBox>
+                            <GroupBox Header="Target" Grid.Column="1" Margin="6,0,0,8"><local:ComparisonEndpointControl x:Name="TargetEndpoint"/></GroupBox>
+                        </Grid>
+                        <TextBlock x:Name="MappingStatus" Text="Select a source and target table to load their columns." TextWrapping="Wrap" Margin="0,4,0,8"/>
+                        <DockPanel Margin="0,0,0,8">
+                            <TextBlock Text="Comparison key" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <ComboBox x:Name="KeyBox" Width="330" HorizontalAlignment="Left" SelectionChanged="KeyChanged" DisplayMemberPath="Label"/>
+                        </DockPanel>
+                        <DataGrid x:Name="MappingGrid" Height="260" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                  EnableRowVirtualization="True" HeadersVisibility="Column" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn Header="Compare" Binding="{Binding Include, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
+                                <DataGridCheckBoxColumn Header="Key" Binding="{Binding IsKey, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
+                                <DataGridTextColumn Header="Source column" Binding="{Binding Source.Display}" IsReadOnly="True" Width="*"/>
+                                <DataGridTemplateColumn Header="Target column" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.TargetColumns, RelativeSource={RelativeSource AncestorType={x:Type local:DataCompareWindowControl}}}"
+                                                  SelectedItem="{Binding Target, UpdateSourceTrigger=PropertyChanged}" DisplayMemberPath="Display"/>
+                                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="Key matching uses exact values, including case and trailing spaces. Duplicate keys on either side stop the comparison." TextWrapping="Wrap" Margin="0,8,0,8"/>
+                        <WrapPanel>
+                            <CheckBox x:Name="IgnoreCaseBox" Content="Ignore case in non-key text" Margin="0,5,20,5" Click="OptionsChanged"/>
+                            <CheckBox x:Name="IgnoreSpacesBox" Content="Ignore trailing spaces in non-key text" Margin="0,5,20,5" Click="OptionsChanged"/>
+                            <CheckBox x:Name="SnapshotBox" Content="Use snapshot isolation on both databases" Margin="0,5,20,5" Click="OptionsChanged"/>
+                        </WrapPanel>
+                        <WrapPanel Margin="0,6,0,0">
+                            <TextBlock Text="Query timeout (seconds)" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBox x:Name="TimeoutBox" Text="120" Width="75" Margin="0,0,20,0" TextChanged="OptionsChanged"/>
+                            <TextBlock Text="Temporary storage limit (GiB)" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBox x:Name="DiskLimitBox" Text="20" Width="75" TextChanged="OptionsChanged"/>
+                        </WrapPanel>
+                        <TextBlock Text="Snapshot isolation must already be enabled. Otherwise, reads use read committed isolation. For a stable comparison, avoid concurrent writes. Values larger than 16 MiB must be excluded." TextWrapping="Wrap" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem x:Name="ResultsTab" Header="Results" IsEnabled="False">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="5"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock x:Name="SummaryText" TextWrapping="Wrap" Margin="0,0,0,8" FontWeight="SemiBold"/>
+                    <WrapPanel Grid.Row="1" x:Name="ResultActions" Margin="0,0,0,8">
+                        <ComboBox x:Name="KindBox" Width="225" DisplayMemberPath="Label" SelectionChanged="KindChanged" Margin="0,0,8,5"/>
+                        <Button Content="Select category" Click="SelectCategoryClick" Margin="0,0,6,5"/>
+                        <Button Content="Clear category" Click="ClearCategoryClick" Margin="0,0,18,5"/>
+                        <Button x:Name="PreviousButton" Content="Previous" Click="PreviousClick" Margin="0,0,6,5"/>
+                        <TextBlock x:Name="PageLabel" VerticalAlignment="Center" Margin="0,0,6,5"/>
+                        <Button x:Name="NextButton" Content="Next" Click="NextClick" Margin="0,0,6,5"/>
+                    </WrapPanel>
+                    <DataGrid x:Name="RowsGrid" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                              EnableRowVirtualization="True" SelectionChanged="RowChanged" SelectionMode="Single" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Sync" Width="50">
+                                <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanSelect}" HorizontalAlignment="Center"/>
+                                </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="2*" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Source values" Binding="{Binding SourceSummary}" Width="2*" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Target values" Binding="{Binding TargetSummary}" Width="2*" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Changed columns" Binding="{Binding Changes}" Width="2*" IsReadOnly="True"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <GridSplitter Grid.Row="3" HorizontalAlignment="Stretch" Height="5" ResizeDirection="Rows"/>
+                    <DataGrid x:Name="DetailsGrid" Grid.Row="4" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                              EnableRowVirtualization="True" MouseDoubleClick="DetailDoubleClick" HeadersVisibility="Column">
+                        <DataGrid.RowStyle><Style TargetType="DataGridRow">
+                            <Style.Triggers><DataTrigger Binding="{Binding Changed}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AxialThemeDiffModifiedBackgroundBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AxialThemeDiffModifiedForegroundBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </DataTrigger></Style.Triggers>
+                        </Style></DataGrid.RowStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Column mapping" Binding="{Binding Name}" Width="2*"/>
+                            <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="3*"/>
+                            <DataGridTextColumn Header="Target" Binding="{Binding Target}" Width="3*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Grid.Row="5" Margin="0,8,0,0">
+                        <TextBlock Text="Double-click a column for full values. Target-only rows are excluded until selected; selecting them generates deletes." TextWrapping="Wrap"/>
+                        <WrapPanel x:Name="SyncActions" Margin="0,8,0,0">
+                            <Button x:Name="GenerateButton" Content="Preview script" Click="GenerateClick" Margin="0,0,8,0"/>
+                            <Button x:Name="ExportScriptButton" Content="Save SQL..." Click="ExportScriptClick" Margin="0,0,8,0"/>
+                            <Button Content="Export comparison CSV..." Click="ExportCsvClick" Margin="0,0,8,0"/>
+                            <Button x:Name="ApplyButton" Content="Apply selected to target..." Click="ApplyClick" Margin="0,0,8,0"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+            <TabItem x:Name="ScriptTab" Header="Synchronization script" IsEnabled="False">
+                <DockPanel Margin="8">
+                    <TextBlock DockPanel.Dock="Top" x:Name="ScriptNote" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <TextBox x:Name="ScriptBox" IsReadOnly="True" FontFamily="Consolas" FontSize="12" AcceptsReturn="True" AcceptsTab="True"
+                             HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" TextWrapping="NoWrap"/>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+        <DockPanel Grid.Row="2" Margin="0,8,0,0">
+            <ProgressBar x:Name="BusyProgress" Width="90" Height="8" IsIndeterminate="True" Visibility="Collapsed" DockPanel.Dock="Right" Margin="10,0,0,0"/>
+            <TextBlock x:Name="StatusText" Text="Choose two tables to begin." TextWrapping="Wrap"/>
+        </DockPanel>
+    </Grid>
+</UserControl>

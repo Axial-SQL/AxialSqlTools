@@ -42,6 +42,8 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
   
 - [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics.
 
+- [**Table Data Compare**](docs/table-data-compare.md): Compare tables across SQL Server connections, inspect row and column differences, and generate or apply selected synchronization actions. Supports configurable keys, column mapping, paged results, and SQL/CSV export.
+
 - [**BULK Data Transfer**](https://github.com/Axial-SQL/AxialSqlTools/wiki/BULK-Data-Transfer): A simplified UI for trivial data copy use-cases.
   
 - [**Query History**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-History): A detailed log of executed queries, enabling auditing, tracking, and easy retrieval of past executions.

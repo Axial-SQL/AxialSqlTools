@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../AxialSqlTools/DataCompare/ComparisonModel.cs" Link="ComparisonModel.cs" />
+    <Compile Include="../../AxialSqlTools/DataCompare/ValueCodec.cs" Link="ValueCodec.cs" />
+    <Compile Include="../../AxialSqlTools/DataCompare/ComparisonStorage.cs" Link="ComparisonStorage.cs" />
+    <Compile Include="../../AxialSqlTools/DataCompare/ComparisonEngine.cs" Link="ComparisonEngine.cs" />
+    <Compile Include="../../AxialSqlTools/DataCompare/SynchronizationScript.cs" Link="SynchronizationScript.cs" />
+    <Compile Include="../../AxialSqlTools/DataCompare/ComparisonCsv.cs" Link="ComparisonCsv.cs" />
+  </ItemGroup>
+</Project>
