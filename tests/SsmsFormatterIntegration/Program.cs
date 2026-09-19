@@ -57,16 +57,23 @@ internal static class Program
         Check(document.Generator.Options.IndentationSize == 6, "Use document overrides.");
         Check(!new SettingsManager.TSqlCodeFormatSettings().disregardSsmsFormatterSettings, "Use SSMS settings by default.");
         Check(!new SettingsManager.TSqlCodeFormatSettings { disregardSsmsFormatterSettings = true }.HasAnyFormattingEnabled(), "Formatter mode is not an Axial post-processing option.");
+        var mappingsBefore = SqlFormatHelper.OptionsMappings;
         var defaults = await Create(buffer, disregardSsmsSettings: true);
+        Check(SqlFormatHelper.OptionsMappings == mappingsBefore + 1, "Disregard mode still applies SSMS settings before creating native instances.");
+        Check(!ReferenceEquals(defaults.Parser, SqlFormatHelper.LastParser), "Replace the SSMS parser with a fresh instance.");
+        Check(!ReferenceEquals(defaults.Generator, SqlFormatHelper.LastGenerator), "Replace the SSMS generator with a fresh instance.");
+        Check(SqlFormatHelper.LastParser.QuotedIdentifier && !defaults.Parser.QuotedIdentifier, "Use the original parser constructor argument, false.");
+        Check(SqlFormatHelper.LastGenerator.Options.KeywordCasing == KeywordCasing.Lowercase
+            && SqlFormatHelper.LastGenerator.Options.IndentationSize == 6, "Create the native generator with SSMS settings before replacing it.");
         Check(defaults.Parser.GetType() == document.Parser.GetType(), "Default parser retains effective SQL version.");
         Check(defaults.Generator.GetType() == document.Generator.GetType(), "Default generator retains effective SQL version.");
-        var expectedOptions = new SqlScriptGeneratorOptions { SqlVersion = SqlVersion.Sql160 };
+        var expectedGenerator = new Sql160ScriptGenerator();
+        var expectedOptions = expectedGenerator.Options;
         foreach (var property in typeof(SqlScriptGeneratorOptions).GetProperties().Where(p => p.CanRead && p.GetIndexParameters().Length == 0))
             Check(Equals(property.GetValue(defaults.Generator.Options), property.GetValue(expectedOptions)), "Default option: " + property.Name);
-        var expectedGenerator = new Sql160ScriptGenerator(expectedOptions);
         using (var reader = new StringReader("SELECT a, b FROM dbo.t;"))
         {
-            var fragment = new TSql160Parser(true).Parse(reader, out var errors);
+            var fragment = new TSql160Parser(false).Parse(reader, out var errors);
             expectedGenerator.GenerateScript(fragment, out var expected);
             Check(Format(defaults, "SELECT a, b FROM dbo.t;") == expected, "Default mode matches a freshly created generator.");
         }
@@ -80,6 +87,19 @@ internal static class Program
         });
         Check(withAxialOptions.Replace("\r", "").Contains("\n" + new string(' ', expectedOptions.IndentationSize) + "a"), "Axial transforms still run with default formatting.");
         Valid(withAxialOptions, defaults);
+        SqlFormatHelper.Use170Implementation = true;
+        var newerDefaults = await Create(buffer, disregardSsmsSettings: true);
+        Check(newerDefaults.Parser is TSql170Parser && newerDefaults.Generator is Sql170ScriptGenerator,
+            "Use the actual SSMS concrete types, not the settings enum.");
+        Check(!ReferenceEquals(newerDefaults.Parser, SqlFormatHelper.LastParser)
+            && !ReferenceEquals(newerDefaults.Generator, SqlFormatHelper.LastGenerator), "Create fresh instances for SQL 170 too.");
+        var expected170 = new Sql170ScriptGenerator();
+        foreach (var property in typeof(SqlScriptGeneratorOptions).GetProperties().Where(p => p.CanRead && p.GetIndexParameters().Length == 0))
+            Check(Equals(property.GetValue(newerDefaults.Generator.Options), property.GetValue(expected170.Options)), "SQL 170 constructor default: " + property.Name);
+        SqlFormatHelper.Use170Implementation = false;
+        var normal = await Create(buffer);
+        Check(ReferenceEquals(normal.Parser, SqlFormatHelper.LastParser) && ReferenceEquals(normal.Generator, SqlFormatHelper.LastGenerator),
+            "Normal mode retains the configured SSMS instances.");
         FormatSettingsLoader.Casing = KeywordCasing.Uppercase;
         var updated = await Create();
         Check(Format(updated, "select 1;").Contains("SELECT"), "Refresh settings for every invocation.");

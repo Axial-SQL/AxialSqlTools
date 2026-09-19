@@ -63,8 +63,25 @@ namespace Microsoft.SqlServer.Management.SqlFormatter
 
     internal static class SqlFormatHelper
     {
-        internal static SqlScriptGeneratorOptions ToScriptGeneratorOptions(FormatSettings settings) => settings.Options;
-        private static TSqlParser CreateParser(SqlVersion version, SqlEngineType engine) => new TSql160Parser(true, engine);
-        private static SqlScriptGenerator CreateScriptGenerator(SqlScriptGeneratorOptions options) => new Sql160ScriptGenerator(options);
+        internal static int OptionsMappings;
+        internal static TSqlParser LastParser;
+        internal static SqlScriptGenerator LastGenerator;
+        // Simulate a factory choosing a newer implementation than the settings enum suggests.
+        internal static bool Use170Implementation;
+        internal static SqlScriptGeneratorOptions ToScriptGeneratorOptions(FormatSettings settings)
+        {
+            OptionsMappings++;
+            return settings.Options;
+        }
+        private static TSqlParser CreateParser(SqlVersion version, SqlEngineType engine)
+        {
+            LastParser = Use170Implementation ? (TSqlParser)new TSql170Parser(true, engine) : new TSql160Parser(true, engine);
+            return LastParser;
+        }
+        private static SqlScriptGenerator CreateScriptGenerator(SqlScriptGeneratorOptions options)
+        {
+            LastGenerator = Use170Implementation ? (SqlScriptGenerator)new Sql170ScriptGenerator(options) : new Sql160ScriptGenerator(options);
+            return LastGenerator;
+        }
     }
 }
