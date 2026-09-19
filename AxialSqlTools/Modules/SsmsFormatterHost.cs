@@ -30,7 +30,8 @@ namespace AxialSqlTools
                 // The project reference binds to the installed SSMS formatter's real assembly identity.
                 // Internal formatter APIs still require reflection.
                 var assembly = typeof(Microsoft.SqlServer.Management.SqlFormatter.FormatSettings).Assembly;
-                return await SsmsFormatterReflection.CreateAsync(assembly, textBuffer, cancellationToken, disregardSsmsSettings);
+                return await SsmsFormatterReflection.CreateAsync(assembly, textBuffer, cancellationToken, disregardSsmsSettings,
+                    ResolveExtensibilityServiceAsync);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
@@ -39,6 +40,16 @@ namespace AxialSqlTools
                 AxialSqlToolsPackage._logger.Warn("Unable to initialize the SSMS formatter ({0}).", ex.GetType().Name);
                 throw new InvalidOperationException("Unable to use the SSMS SQL Formatter. " + ex.Message, ex);
             }
+        }
+
+        private static async Task<object> ResolveExtensibilityServiceAsync(Type serviceType, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // VisualStudioExtensibility is a registered shell service available to VSSDK packages,
+            // independently of the SQL formatter extension's lazy activation. Do not set its statics.
+            var service = await AsyncServiceProvider.GlobalProvider.GetServiceAsync(serviceType);
+            cancellationToken.ThrowIfCancellationRequested();
+            return service;
         }
 
         private static object GetActiveBuffer()

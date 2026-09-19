@@ -11,8 +11,9 @@ using System.Threading.Tasks;
 internal static class Program
 {
     private static int assertions;
-    private static Task<SsmsFormatterContext> Create(object buffer = null, CancellationToken token = default, bool disregardSsmsSettings = false)
-        => SsmsFormatterReflection.CreateAsync(Assembly.GetExecutingAssembly(), buffer, token, disregardSsmsSettings);
+    private static Task<SsmsFormatterContext> Create(object buffer = null, CancellationToken token = default, bool disregardSsmsSettings = false,
+        Func<Type, CancellationToken, Task<object>> resolver = null)
+        => SsmsFormatterReflection.CreateAsync(Assembly.GetExecutingAssembly(), buffer, token, disregardSsmsSettings, resolver);
     private static void Check(bool condition, string message)
     {
         assertions++;
@@ -177,7 +178,39 @@ internal static class Program
         Check(Comments(combined) == 1, "Combined Axial options retain comments.");
         await Reject(() => Task.FromResult(Format(special, "SELECT FROM ;")), "syntax error");
         SqlFormatterExtension.ExtensibilityInstance = null;
-        await Reject(() => Create(), "has not initialized");
+        await Reject(() => Create(), "settings service is unavailable");
+        var shellService = new object();
+        int serviceRequests = 0;
+        var beforeActivation = await Create(resolver: async (serviceType, token) =>
+        {
+            serviceRequests++;
+            Check(serviceType == typeof(object), "Resolve the exact type declared by the installed ExtensibilityInstance property.");
+            await Task.Yield();
+            return shellService;
+        });
+        Check(serviceRequests == 1 && ReferenceEquals(FormatSettingsLoader.LastExtensibility, shellService),
+            "Preview uses the shell service before formatter extension activation.");
+        Check(SqlFormatterExtension.ExtensibilityInstance == null, "Do not write the native extension's static instance.");
+        Check(beforeActivation.Generator.Options.KeywordCasing == FormatSettingsLoader.Casing
+            && beforeActivation.Generator.Options.IndentationSize == 2, "Load real global settings instead of falling back to defaults.");
+        Valid(Format(beforeActivation, "SELECT 1;"), beforeActivation);
+        await Reject(() => Create(resolver: (type, token) => Task.FromResult<object>(null)), "settings service is unavailable");
+        await Reject(() => Create(resolver: (type, token) => throw new InvalidOperationException("service resolution failed")), "service resolution failed");
+        using (var source = new CancellationTokenSource())
+            await Reject(() => Create(token: source.Token, resolver: (type, token) =>
+            {
+                source.Cancel();
+                return Task.FromResult(shellService);
+            }), "canceled");
+        var nativeService = new object();
+        await Create(resolver: (type, token) =>
+        {
+            SqlFormatterExtension.ExtensibilityInstance = nativeService;
+            return Task.FromResult(shellService);
+        });
+        Check(ReferenceEquals(FormatSettingsLoader.LastExtensibility, nativeService), "Prefer SSMS instance if it initializes during service resolution.");
+        await Create(resolver: (type, token) => throw new Exception("An initialized extension should not resolve a fallback service."));
+        Check(ReferenceEquals(FormatSettingsLoader.LastExtensibility, nativeService), "Use initialized SSMS extension directly.");
         SqlFormatterExtension.ExtensibilityInstance = new object();
         FormatSettingsLoader.Source = ConfigSource.Defaults;
         await Reject(() => Create(), "could not load");

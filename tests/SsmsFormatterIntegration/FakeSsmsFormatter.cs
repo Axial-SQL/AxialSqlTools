@@ -29,11 +29,13 @@ namespace Microsoft.SqlServer.Management.SqlFormatter
         internal static bool FailSynchronously;
         internal static bool FailAsynchronously;
         internal static object LastBuffer;
+        internal static object LastExtensibility;
         internal static int Loads;
 
         public static Task<FormatSettings> LoadAsync(object extensibility, object textView, object textBuffer,
             InvocationSource invocationSource, CancellationToken cancellationToken)
         {
+            LastExtensibility = extensibility;
             if (FailSynchronously) throw new InvalidOperationException("settings failed synchronously");
             return LoadCoreAsync(textBuffer, cancellationToken);
         }

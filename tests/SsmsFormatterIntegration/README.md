@@ -31,8 +31,12 @@ The bridge targets the internal API in the supplied decompilation of `Microsoft.
 3. Change SSMS SQL Formatter settings and format again without restarting. Check the Settings preview after toggling an Axial option.
 4. Format saved SQL files under different `.editorconfig` overrides and an unsaved query. Compare native SSMS formatting with Axial while its additional options are off. Confirm document-specific settings follow the active buffer.
 5. Test whole-document and selected-text formatting, Shift+Format overrides/cancel, and enabled Axial transformations together. Check comments appear exactly once.
-6. Open Settings without an active SQL query. If SSMS's formatter has not initialized, preview should show an explanatory message while the Settings UI remains usable. Open a query and toggle an option to retry.
+6. After restarting SSMS, open Settings before opening a SQL query. The preview should immediately load global SSMS formatter settings using the shell service, even though the native formatter extension has not activated. Change Axial options and toggle disregard mode; verify the preview updates without requiring a query window.
 7. Verify a parse error or unavailable/incompatible formatter leaves query text unchanged. Switch query windows while settings load and confirm formatting stops if the active DTE document or buffer changes.
 8. Enable Disregard SSMS Formatter settings and confirm default casing, indentation, and comments, retaining the effective SQL version. Verify Axial options still apply. Save/reopen Settings, discard an unsaved toggle, switch modes quickly in the preview, and test a Shift+Format override and Cancel without changing saved settings.
 9. Smoke-test scripting/export features, which still use their standalone path.
 
+
+## Preview before formatter activation
+
+When `SqlFormatterExtension.ExtensibilityInstance` is null, the host requests the installed `VisualStudioExtensibility` type through `AsyncServiceProvider.GlobalProvider.GetServiceAsync`. This follows the supported [service-provider integration for existing VSSDK extensions](https://learn.microsoft.com/en-us/visualstudio/extensibility/visualstudio.extensibility/get-started/in-proc-extensions?view=vs-2022#use-visualstudioextensibility-from-existing-vssdk-extensions). The returned service is passed to SSMS's settings loader without assigning the native extension's static state or substituting default settings. Once the native extension initializes, its own instance takes precedence. Cancellation and unavailable-service failures remain explicit.

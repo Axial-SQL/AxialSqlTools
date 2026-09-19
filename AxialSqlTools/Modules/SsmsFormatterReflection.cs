@@ -26,13 +26,27 @@ namespace AxialSqlTools
         private const BindingFlags StaticMembers = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
         internal static async Task<SsmsFormatterContext> CreateAsync(
-            Assembly assembly, object textBuffer, CancellationToken cancellationToken, bool disregardSsmsSettings = false)
+            Assembly assembly, object textBuffer, CancellationToken cancellationToken, bool disregardSsmsSettings = false,
+            Func<Type, CancellationToken, Task<object>> resolveExtensibilityService = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var extension = RequiredType(assembly, "SqlFormatterExtension");
-            var extensibility = extension.GetProperty("ExtensibilityInstance", StaticMembers)?.GetValue(null);
+            var extensibilityProperty = extension.GetProperty("ExtensibilityInstance", StaticMembers)
+                ?? throw Incompatible("Missing ExtensibilityInstance property.");
+            var extensibility = extensibilityProperty.GetValue(null);
+            if (extensibility == null && resolveExtensibilityService != null)
+            {
+                // Settings can open before SSMS's SQL-content-type extension is activated.
+                // Ask the shell for its service using the installed SDK's exact runtime type.
+                extensibility = await resolveExtensibilityService(extensibilityProperty.PropertyType, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                // Prefer the native instance if SSMS initialized while service resolution yielded.
+                extensibility = extensibilityProperty.GetValue(null) ?? extensibility;
+            }
             if (extensibility == null)
-                throw new InvalidOperationException("The SSMS SQL Formatter has not initialized. Open a SQL query window and try Format again.");
+                throw new InvalidOperationException("The SSMS formatter settings service is unavailable. Try again after SSMS finishes starting.");
+            if (!extensibilityProperty.PropertyType.IsInstanceOfType(extensibility))
+                throw Incompatible("The formatter settings service has an incompatible type.");
 
             var loader = RequiredType(assembly, "FormatSettingsLoader");
             var load = RequiredMethod(loader, "LoadAsync", 5);
