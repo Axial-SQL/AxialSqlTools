@@ -689,6 +689,7 @@ namespace AxialSqlTools
             // Re-color remaining tabs after a tab closes
             try
             {
+                QuerySafety.FatalActionGuard.ForgetDocument(Window?.Document);
                 GridAccess.ScheduleReapplyAllTabColors();
             }
             catch (Exception ex)
@@ -1191,6 +1192,22 @@ namespace AxialSqlTools
 
             try
             {
+                if (CancelDefault) return;
+                try
+                {
+                    if (QuerySafety.FatalActionGuard.ShouldCancel(GetGlobalService(typeof(DTE)) as DTE))
+                    {
+                        CancelDefault = true;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CancelDefault = true;
+                    _logger?.Error(ex, "Fatal action check failed. Query execution cancelled.");
+                    return;
+                }
+
                 EnsureStatisticsExecutionHookForActiveWindow("query-execute-before");
 
                 if (!StatisticsSummaryStore.IsWindowOpen())
