@@ -256,9 +256,15 @@
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Microsoft.Data.SqlClient.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Microsoft.SqlServer.Management.SqlFormatter">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Extensions\Microsoft\SSMS.SqlFormatter\Microsoft.SqlServer.Management.SqlFormatter.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.VisualStudio.CommandBars">
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.CommandBars.dll</HintPath>
       <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\CommonExtensions\Platform\MefHosting\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Imaging">
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Microsoft.VisualStudio.Imaging.dll</HintPath>
