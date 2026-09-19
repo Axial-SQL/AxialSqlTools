@@ -13,6 +13,7 @@ namespace AxialSqlTools
 
     public class SettingsManager
     {
+        public static string LastSaveError => SettingsFileStore.LastSaveError;
 
         public class HealthDashboardServerQueryTexts
         {
@@ -327,6 +328,30 @@ ORDER BY sd.[name];
             }
         }
 
+        private class StoredGoogleSheetsSettings
+        {
+            public bool includeSourceQuery;
+            public bool exportBoolsAsNumbers;
+            public string clientId;
+            public string clientSecretEncrypted;
+            public string refreshTokenEncrypted;
+            public string defaultSpreadsheetName = "DataExport_{yyyyMMdd_HHmmss}";
+        }
+
+        private static string EncryptGoogleSecret(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            var encrypted = ProtectedData.Protect(Encoding.UTF8.GetBytes(value), null, DataProtectionScope.CurrentUser);
+            return Convert.ToBase64String(encrypted);
+        }
+
+        private static string DecryptGoogleSecret(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            return Encoding.UTF8.GetString(ProtectedData.Unprotect(
+                Convert.FromBase64String(value), null, DataProtectionScope.CurrentUser));
+        }
+
         public class TSqlCodeFormatSettings
         {
             public bool preserveComments = false;
@@ -506,7 +531,7 @@ ORDER BY sd.[name];
             {
                 byte[] encPassword = Protect(Encoding.UTF8.GetBytes(smtpSettings.Password ?? string.Empty));
                 if (encPassword == null)
-                    return false;
+                    return SettingsFileStore.ReportSaveFailure(new CryptographicException());
 
                 return SettingsFileStore.SaveValues(new Dictionary<string, object>
                 {
@@ -517,29 +542,18 @@ ORDER BY sd.[name];
                     ["SMTP_EnableSSL"] = smtpSettings.EnableSsl
                 });
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
         public static string GetTemplatesFolder()
         {
             var folder = SettingsFileStore.GetValue("ScriptTemplatesFolder");
-
-            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
-            {
-                folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "AxialSqlToolsTemplates");
-
-                SaveTemplatesFolder(folder);
-
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-            }
-
-            return folder;
+            return string.IsNullOrWhiteSpace(folder)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "AxialSqlToolsTemplates")
+                : folder;
         }
 
         public static bool SaveTemplatesFolder(string folder)
@@ -652,9 +666,9 @@ ORDER BY sd.[name];
                 var normalized = NormalizeSnippetSettings(settings ?? new SnippetSettings());
                 return SettingsFileStore.SaveValue("SnippetSettings", normalized);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -720,9 +734,9 @@ ORDER BY sd.[name];
             {
                 return SettingsFileStore.SaveValue("AsteriskExpansionSettings", settings ?? new AsteriskExpansionSettings());
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -744,8 +758,17 @@ ORDER BY sd.[name];
         }
         public static bool SaveQueryHistoryConnectionString(string connectionString)
         {
-            byte[] encKey = Protect(Encoding.UTF8.GetBytes(connectionString));
-            return SettingsFileStore.SaveValue("QueryHistoryConnectionString", Convert.ToBase64String(encKey));
+            try
+            {
+                byte[] encKey = Protect(Encoding.UTF8.GetBytes(connectionString));
+                if (encKey == null)
+                    return SettingsFileStore.ReportSaveFailure(new CryptographicException());
+                return SettingsFileStore.SaveValue("QueryHistoryConnectionString", Convert.ToBase64String(encKey));
+            }
+            catch (Exception ex)
+            {
+                return SettingsFileStore.ReportSaveFailure(ex);
+            }
         }
 
         public static string GetQueryHistoryTableNameOrDefault()
@@ -811,9 +834,9 @@ ORDER BY sd.[name];
                 SavedConnectionStore.Save(connections ?? new List<DataTransferSavedConnection>());
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -842,9 +865,9 @@ ORDER BY sd.[name];
             {
                 return SettingsFileStore.SaveValue("ExcelExportSettings", settings);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -858,8 +881,17 @@ ORDER BY sd.[name];
                     return new GoogleSheetsSettings();
                 }
 
-                var settings = JsonConvert.DeserializeObject<GoogleSheetsSettings>(json);
-                return settings ?? new GoogleSheetsSettings();
+                var stored = JsonConvert.DeserializeObject<StoredGoogleSheetsSettings>(json);
+                if (stored == null) return new GoogleSheetsSettings();
+                return new GoogleSheetsSettings
+                {
+                    includeSourceQuery = stored.includeSourceQuery,
+                    exportBoolsAsNumbers = stored.exportBoolsAsNumbers,
+                    clientId = stored.clientId ?? string.Empty,
+                    clientSecret = DecryptGoogleSecret(stored.clientSecretEncrypted),
+                    refreshToken = DecryptGoogleSecret(stored.refreshTokenEncrypted),
+                    defaultSpreadsheetName = stored.defaultSpreadsheetName
+                };
             }
             catch
             {
@@ -871,11 +903,21 @@ ORDER BY sd.[name];
         {
             try
             {
-                return SettingsFileStore.SaveValue("GoogleSheetsSettings", settings);
+                if (settings == null) throw new ArgumentNullException(nameof(settings));
+                var stored = new StoredGoogleSheetsSettings
+                {
+                    includeSourceQuery = settings.includeSourceQuery,
+                    exportBoolsAsNumbers = settings.exportBoolsAsNumbers,
+                    clientId = settings.clientId,
+                    clientSecretEncrypted = EncryptGoogleSecret(settings.clientSecret),
+                    refreshTokenEncrypted = EncryptGoogleSecret(settings.refreshToken),
+                    defaultSpreadsheetName = settings.defaultSpreadsheetName
+                };
+                return SettingsFileStore.SaveValue("GoogleSheetsSettings", stored);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -902,9 +944,9 @@ ORDER BY sd.[name];
             {
                 return SettingsFileStore.SaveValue("TSqlCodeFormatSettings", settings);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -941,9 +983,9 @@ ORDER BY sd.[name];
             {
                 return SettingsFileStore.SaveValue("ConnectionColorRules", rules ?? new List<ConnectionColorRule>());
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 

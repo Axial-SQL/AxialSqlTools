@@ -134,6 +134,7 @@ as select 1;
             {
 
                 ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
+                UpdateTemplatesFolderStatus();
 
                 var snippetSettings = SettingsManager.GetSnippetSettings();
                 UseSnippets.IsChecked = snippetSettings.useSnippets;
@@ -247,9 +248,8 @@ as select 1;
 
         private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)
         {
-            SettingsManager.SaveTemplatesFolder(ScriptFolder.Text);
-
-            SavedMessage();
+            if (SaveSettings(() => SettingsManager.SaveTemplatesFolder(ScriptFolder.Text)))
+                UpdateTemplatesFolderStatus();
         }
 
 
@@ -260,15 +260,12 @@ as select 1;
             snippetSettings.snippetFolder = SnippetFolder.Text;
             snippetSettings.replaceKey = GetSelectedSnippetReplaceKey();
 
-            SettingsManager.SaveSnippetSettings(snippetSettings);
-
-            SettingsManager.SaveAsteriskExpansionSettings(new SettingsManager.AsteriskExpansionSettings
-            {
-                useAsteriskExpansion = UseAsteriskExpansion.IsChecked.GetValueOrDefault(),
-                triggerKey = GetSelectedAsteriskExpansionTriggerKey()
-            });
-
-            SavedMessage();
+            SaveSettings(() => SettingsManager.SaveSnippetSettings(snippetSettings)
+                && SettingsManager.SaveAsteriskExpansionSettings(new SettingsManager.AsteriskExpansionSettings
+                {
+                    useAsteriskExpansion = UseAsteriskExpansion.IsChecked.GetValueOrDefault(),
+                    triggerKey = GetSelectedAsteriskExpansionTriggerKey()
+                }));
         }
 
         private void buttonDownloadAxialScripts_Click(object sender, RoutedEventArgs e)
@@ -368,6 +365,34 @@ as select 1;
             File.Delete(zipPath);
         }
 
+        private bool SaveSettings(Func<bool> save)
+        {
+            try
+            {
+                if (save())
+                {
+                    SavedMessage();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                SettingsFileStore.ReportSaveFailure(ex);
+            }
+
+            MessageBox.Show(SettingsManager.LastSaveError ?? "The settings could not be saved. Please try again.",
+                "Settings not saved", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
+        }
+
+        private void UpdateTemplatesFolderStatus()
+        {
+            bool available = Directory.Exists(SettingsManager.GetTemplatesFolder());
+            TemplatesFolderStatus.Text = available ? string.Empty
+                : "The templates folder is currently unavailable or has not been created. The configured path is retained.";
+            TemplatesFolderStatus.Visibility = available ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         private void SavedMessage()
         {
             MessageBox.Show(
@@ -396,11 +421,8 @@ as select 1;
             bool success = int.TryParse(SMTP_Port.Text, out smptPort);
             smtpSettings.Port = smptPort;
 
-            SettingsManager.SaveSmtpSettings(smtpSettings);
-
-            SettingsManager.SaveMyEmail(MyEmailAddress.Text);
-
-            SavedMessage();
+            SaveSettings(() => SettingsManager.SaveSmtpSettings(smtpSettings)
+                && SettingsManager.SaveMyEmail(MyEmailAddress.Text));
 
         }
 
@@ -422,8 +444,7 @@ as select 1;
                 breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
             };
 
-            SettingsManager.SaveTSqlCodeFormatSettings(settings);
-            SavedMessage();
+            SaveSettings(() => SettingsManager.SaveTSqlCodeFormatSettings(settings));
         }
 
         private void button_SaveExcelExportSettings_Click(object sender, RoutedEventArgs e)
@@ -437,32 +458,24 @@ as select 1;
                 defaultFileName = ExcelExportDefaultFilename.Text
             };
 
-            SettingsManager.SaveExcelExportSettings(settings);
-            SavedMessage();
+            SaveSettings(() => SettingsManager.SaveExcelExportSettings(settings));
         }
 
         private void button_SaveGoogleSheetsSettings_Click(object sender, RoutedEventArgs e)
         {
             var settings = BuildGoogleSheetsSettings();
-            SettingsManager.SaveGoogleSheetsSettings(settings);
-            UpdateGoogleSheetsStatus(settings.refreshToken);
-            SavedMessage();
+            if (SaveSettings(() => SettingsManager.SaveGoogleSheetsSettings(settings)))
+                UpdateGoogleSheetsStatus(settings.refreshToken);
         }
 
         private void SaveQuerySafety_Click(object sender, RoutedEventArgs e)
         {
-            if (!SettingsManager.SaveWarnWhenRunningFatalAction(WarnWhenRunningFatalAction.IsChecked == true))
-            {
-                MessageBox.Show("Could not save query execution settings.", "Axial SQL Tools");
-                return;
-            }
-            SavedMessage();
+            SaveSettings(() => SettingsManager.SaveWarnWhenRunningFatalAction(WarnWhenRunningFatalAction.IsChecked == true));
         }
 
         private void button_SaveUpdateSettings_Click(object sender, RoutedEventArgs e)
         {
-            SettingsManager.SaveEnableUpdateChecks(EnableUpdateChecks.IsChecked.GetValueOrDefault(true));
-            SavedMessage();
+            SaveSettings(() => SettingsManager.SaveEnableUpdateChecks(EnableUpdateChecks.IsChecked.GetValueOrDefault(true)));
         }
 
         private void button_CheckUpdates_Click(object sender, RoutedEventArgs e)
@@ -518,9 +531,8 @@ as select 1;
                     settings.refreshToken = authResult.RefreshToken;
                 }
 
-                SettingsManager.SaveGoogleSheetsSettings(settings);
-                UpdateGoogleSheetsStatus(settings.refreshToken);
-                SavedMessage();
+                if (SaveSettings(() => SettingsManager.SaveGoogleSheetsSettings(settings)))
+                    UpdateGoogleSheetsStatus(settings.refreshToken);
             }
             catch (Exception ex)
             {
@@ -563,13 +575,10 @@ as select 1;
 
         private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)
         {
-            SettingsManager.SaveQueryHistoryConnectionString(_queryHistoryConnectionString);
-            SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text);
-            SettingsManager.SaveQueryHistoryStorageMode(GetSelectedQueryHistoryStorageType());
-
-            SavedMessage();
-
-            RefreshQueryHistoryCreateScript();
+            if (SaveSettings(() => SettingsManager.SaveQueryHistoryConnectionString(_queryHistoryConnectionString)
+                && SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text)
+                && SettingsManager.SaveQueryHistoryStorageMode(GetSelectedQueryHistoryStorageType())))
+                RefreshQueryHistoryCreateScript();
 
         }
 
@@ -707,9 +716,11 @@ as select 1;
         private void buttonSaveGitHubSettings_Click(object sender, RoutedEventArgs e)
         {
 
-            WindowsCredentialHelper.SaveToken("AxialSqlTools_GitHubToken", "AxialSqlTools_GitHubToken", GitHubToken.Password);
-
-            SavedMessage();
+            SaveSettings(() =>
+            {
+                WindowsCredentialHelper.SaveToken("AxialSqlTools_GitHubToken", "AxialSqlTools_GitHubToken", GitHubToken.Password);
+                return true;
+            });
 
         }
 
@@ -902,10 +913,11 @@ END
         private void Button_SaveConnectionColorRules_Click(object sender, RoutedEventArgs e)
         {
             var rules = new System.Collections.Generic.List<SettingsManager.ConnectionColorRule>(_connectionColorRules);
-            SettingsManager.SaveConnectionColorRules(rules);
-            GridAccess.ColorAllDocumentTabs();
-            GridAccess.ScheduleReapplyAllTabColors();
-            SavedMessage();
+            if (SaveSettings(() => SettingsManager.SaveConnectionColorRules(rules)))
+            {
+                GridAccess.ColorAllDocumentTabs();
+                GridAccess.ScheduleReapplyAllTabColors();
+            }
         }
 
     }

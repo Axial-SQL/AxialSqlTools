@@ -1251,8 +1251,26 @@ namespace AxialSqlTools
             Dictionary<string, string> fileNamesCache = new Dictionary<string, string>();
 
             string Folder = SettingsManager.GetTemplatesFolder();
+            if (!Directory.Exists(Folder))
+            {
+                _logger.Warn("The configured templates folder is unavailable: {0}", Folder);
+                return;
+            }
             int i = 2;
-            CreateCommands(ref i, ref fileNamesCache, Folder, m_commandRegistry, m_commandBarQueryTemplates);
+            try
+            {
+                CreateCommands(ref i, ref fileNamesCache, Folder, m_commandRegistry, m_commandBarQueryTemplates);
+            }
+            catch (IOException ex)
+            {
+                _logger.Warn(ex, "The templates folder became unavailable while loading templates.");
+                return;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.Warn(ex, "Cannot access the configured templates folder.");
+                return;
+            }
 
             UpdateRenamedTemplatesControls(m_commandBarQueryTemplates, fileNamesCache);
 

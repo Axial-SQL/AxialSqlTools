@@ -1,9 +1,11 @@
+using NLog;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Security.Cryptography;
 
 namespace AxialSqlTools
 {
@@ -13,23 +15,102 @@ namespace AxialSqlTools
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "AxialSqlTools", "settings.json");
 
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly object CacheLock = new object();
+        private static readonly Timer RefreshTimer = new Timer(RefreshCache, null, Timeout.Infinite, Timeout.Infinite);
+        private static Dictionary<string, string> _snapshot;
+        private static string _lastLoadedJson;
+        private static bool _readFailureReported;
+
+        [ThreadStatic]
+        private static string _lastSaveError;
+        internal static string LastSaveError => _lastSaveError;
+
         public static string GetValue(string name)
+        {
+            var snapshot = Volatile.Read(ref _snapshot);
+            if (snapshot == null)
+            {
+                lock (CacheLock)
+                {
+                    if (_snapshot == null)
+                    {
+                        RefreshCacheCore();
+                        if (_snapshot == null)
+                            Publish(new JObject());
+                        RefreshTimer.Change(2000, 2000);
+                    }
+                    snapshot = _snapshot;
+                }
+            }
+
+            return snapshot.TryGetValue(name, out string value) ? value : string.Empty;
+        }
+
+        private static void RefreshCache(object state)
+        {
+            // Poll in the background, including when the directory does not exist yet.
+            // Never queue overlapping refreshes when a redirected folder is slow.
+            if (!Monitor.TryEnter(CacheLock))
+                return;
+            try
+            {
+                RefreshCacheCore();
+            }
+            finally
+            {
+                Monitor.Exit(CacheLock);
+            }
+        }
+
+        private static void RefreshCacheCore()
         {
             try
             {
-                var value = Load()[name];
-                if (value == null || value.Type == JTokenType.Null)
-                    return string.Empty;
+                string json = ReadText();
+                if (!string.Equals(json, _lastLoadedJson, StringComparison.Ordinal))
+                {
+                    Publish(JObject.Parse(json));
+                    _lastLoadedJson = json;
+                }
+                _readFailureReported = false;
+            }
+            catch (Exception ex)
+            {
+                // Keep the last good snapshot while an external edit is incomplete.
+                if (!_readFailureReported)
+                    Logger.Warn("Could not reload settings file {0} ({1}). Keeping the last valid settings.",
+                        PathToFile, ex.GetType().Name);
+                _readFailureReported = true;
+            }
+        }
 
-                return value.Type == JTokenType.String
-                    ? value.Value<string>()
+        private static void Publish(JObject settings)
+        {
+            var snapshot = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var property in settings.Properties())
+            {
+                var value = property.Value;
+                snapshot[property.Name] = value.Type == JTokenType.Null ? string.Empty
+                    : value.Type == JTokenType.String ? value.Value<string>()
                     : value.ToString(Formatting.None);
             }
-            catch
-            {
-                // Keep the existing defaults when the file cannot be read.
-                return string.Empty;
-            }
+            // Published dictionaries are never mutated; readers need no lock or disk access.
+            Volatile.Write(ref _snapshot, snapshot);
+        }
+
+        internal static bool ReportSaveFailure(Exception ex)
+        {
+            _lastSaveError = ex is UnauthorizedAccessException ? "Access to the settings file was denied. Check its permissions."
+                : ex is JsonException ? "The settings file contains invalid JSON. Correct it before saving."
+                : ex is CryptographicException ? "The credentials could not be encrypted for the current Windows user."
+                : ex is TimeoutException ? "Another SSMS process is saving settings. Please try again."
+                : ex is IOException ? "The settings file could not be written. Check the folder, available space, and file access."
+                : "The settings could not be saved. See the Axial SQL Tools log for details.";
+            // Do not log JSON contents, tokens, passwords, or exception messages containing them.
+            Logger.Error("Settings save failed ({0}): {1} File: {2}. Stack: {3}",
+                ex.GetType().Name, _lastSaveError, PathToFile, ex.StackTrace);
+            return false;
         }
 
         public static bool SaveValue<T>(string name, T value)
@@ -39,6 +120,7 @@ namespace AxialSqlTools
 
         public static bool SaveValues(IDictionary<string, object> values)
         {
+            _lastSaveError = null;
             try
             {
                 // Serialize read/modify/write operations across SSMS processes.
@@ -57,17 +139,22 @@ namespace AxialSqlTools
                         }
 
                         if (!acquired)
-                            return false;
+                            return ReportSaveFailure(new TimeoutException());
 
-                        // Reload to preserve settings changed by another SSMS process.
-                        // A malformed or unreadable file must not be overwritten.
-                        var settings = Load();
-                        foreach (var pair in values)
-                            settings[pair.Key] = pair.Value == null
-                                ? JValue.CreateNull()
-                                : JToken.FromObject(pair.Value);
+                        lock (CacheLock)
+                        {
+                            // Always reload for writes; never overwrite a malformed file with cached data.
+                            var settings = JObject.Parse(ReadText());
+                            foreach (var pair in values)
+                                settings[pair.Key] = pair.Value == null
+                                    ? JValue.CreateNull()
+                                    : JToken.FromObject(pair.Value);
 
-                        Write(settings);
+                            Write(settings);
+                            Publish(settings);
+                            _lastLoadedJson = null;
+                            RefreshTimer.Change(2000, 2000);
+                        }
                         return true;
                     }
                     finally
@@ -77,13 +164,13 @@ namespace AxialSqlTools
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return ReportSaveFailure(ex);
             }
         }
 
-        private static JObject Load()
+        private static string ReadText()
         {
             try
             {
@@ -91,15 +178,15 @@ namespace AxialSqlTools
                 using (var stream = new FileStream(PathToFile, FileMode.Open, FileAccess.Read,
                     FileShare.ReadWrite | FileShare.Delete))
                 using (var reader = new StreamReader(stream))
-                    return JObject.Parse(reader.ReadToEnd());
+                    return reader.ReadToEnd();
             }
             catch (FileNotFoundException)
             {
-                return new JObject();
+                return "{}";
             }
             catch (DirectoryNotFoundException)
             {
-                return new JObject();
+                return "{}";
             }
         }
 
