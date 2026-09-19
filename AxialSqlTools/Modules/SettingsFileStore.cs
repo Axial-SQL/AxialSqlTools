@@ -10,8 +10,8 @@ namespace AxialSqlTools
     internal static class SettingsFileStore
     {
         private static readonly string PathToFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "AxialSQL", "settings.json");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "AxialSqlTools", "settings.json");
 
         public static string GetValue(string name)
         {

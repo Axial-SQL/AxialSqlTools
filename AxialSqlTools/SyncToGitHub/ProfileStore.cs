@@ -6,8 +6,8 @@ using System.IO;
 public static class ProfileStore
 {
     private static readonly string _path =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                     "AxialSQL", "github-sync-profiles.json");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                     "AxialSqlTools", "github-sync-profiles.json");
 
     public static List<GitHubSyncProfile> Load()
     {
