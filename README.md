@@ -42,8 +42,8 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
   
 - [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics.
 
-- [**Table Data Compare**](docs/table-data-compare.md): Compare tables across SQL Server connections, inspect row and column differences, and generate or apply selected synchronization actions. Supports configurable keys, column mapping, paged results, and SQL/CSV export.
-
+- [**Table Data Compare**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Table-Data-Compare): Compare tables across SQL Server connections, inspect row and column differences, and generate or apply selected synchronization actions.
+  
 - [**BULK Data Transfer**](https://github.com/Axial-SQL/AxialSqlTools/wiki/BULK-Data-Transfer): A simplified UI for trivial data copy use-cases.
   
 - [**Query History**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-History): A detailed log of executed queries, enabling auditing, tracking, and easy retrieval of past executions.
@@ -53,6 +53,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Copy Column Names from Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Column-Names-from-Grid): Quickly copy the column names from the results grid to the clipboard.
   
 - [**Copy Cell Values As ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Grid-Cells-As-...): Copy cell values to the clipboard in multiple formats: INSERT, CSV, JSON, XML, or HTML.
+  
 - [**Fatal Action Warning**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Fatal-Action-Warning): The warning for potentially fatal actions requires confirmation before executing the SQL statement.
   
 ## Query Library
