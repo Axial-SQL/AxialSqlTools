@@ -18,20 +18,32 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource AxialThemeBackgroundBrush}">
-        <DockPanel HorizontalAlignment="Left">
-            <TextBlock Margin="0"  FontWeight="Bold">
-                <Run Text="Data Source:" />
-                <Hyperlink Click="HyperlinkDataSource_Click">
-                    <Run Text="https://aka.ms/sqlserverbuilds" />
-                </Hyperlink>
-                <Run Text=" | " />
-                <Hyperlink Click="HyperlinkCopyAsTSQL_Click">
-                    <Run Text="Copy as TSQL" />
-                </Hyperlink>
+    <Grid Background="{DynamicResource AxialThemeBackgroundBrush}" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <WrapPanel Margin="0,0,0,8">
+            <TextBlock Text="SQL Server Builds" FontSize="18" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center"/>
+            <Button x:Name="RefreshButton" Content="Refresh" Click="Refresh_Click" Margin="0,0,8,0"/>
+            <Button x:Name="OpenWorkbookButton" Content="Open .xlsx..." Click="OpenWorkbook_Click" Margin="0,0,16,0"/>
+            <TextBlock VerticalAlignment="Center">
+                <Hyperlink Click="HyperlinkDataSource_Click"><Run Text="Microsoft source"/></Hyperlink>
+                <Run Text=" | "/>
+                <Hyperlink x:Name="CopySqlLink" Click="HyperlinkCopyAsTSQL_Click"><Run Text="Copy as TSQL"/></Hyperlink>
             </TextBlock>
-        </DockPanel>
-        <TreeView x:Name="sqlVersionTreeView" Margin="0,20,0,0"
+        </WrapPanel>
+        <Border Grid.Row="1" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}" Padding="10" Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock x:Name="StatusText" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                <TextBlock x:Name="SourceText" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                <ProgressBar x:Name="LoadingProgress" Height="4" IsIndeterminate="True" Visibility="Collapsed" Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+        <Expander x:Name="Diagnostics" Grid.Row="2" Header="Load and parsing details" Visibility="Collapsed" Margin="0,0,0,8">
+            <TextBox x:Name="DiagnosticText" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="180" VerticalScrollBarVisibility="Auto"/>
+        </Expander>
+        <TextBlock Panel.ZIndex="1" x:Name="EmptyText" Grid.Row="3" Text="No builds to display. Retry the download or open a readable .xlsx workbook." TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <TreeView x:Name="sqlVersionTreeView" Grid.Row="3" Margin="0"
                   Background="{DynamicResource AxialThemeBackgroundBrush}"
                   Foreground="{DynamicResource AxialThemeForegroundBrush}"
                   BorderBrush="{DynamicResource AxialThemeBorderBrush}">

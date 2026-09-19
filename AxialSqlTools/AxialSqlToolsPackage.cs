@@ -53,38 +53,64 @@ namespace AxialSqlTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasMultipleProjects_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasSingleProject_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [ProvideToolWindow(typeof(SettingsWindow))]
-    [ProvideToolWindow(typeof(AboutWindow))]
-    [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
-    [ProvideToolWindow(typeof(HealthDashboard_Server))]
-    [ProvideToolWindow(typeof(DataTransferWindow))]
-    [ProvideToolWindow(typeof(DataCompare.DataCompareWindow), MultiInstances = true)]
-    [ProvideToolWindow(typeof(SqlServerBuildsWindow))]
-    [ProvideToolWindow(typeof(QueryHistoryWindow))]
+    [ProvideToolWindow(typeof(SettingsWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(AboutWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(ToolWindowGridToEmail), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(HealthDashboard_Server), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(DataCompare.DataCompareWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(DataTransferWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(SqlServerBuildsWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(QueryHistoryWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(StatisticsSummaryWindow))]
-    [ProvideToolWindow(typeof(DatabaseScripterToolWindow))]
-    [ProvideToolWindow(typeof(DataImportWindow))]
-    [ProvideToolWindow(typeof(QuickSearchWindow))]
-    [ProvideToolWindow(typeof(SnippetManagerWindow))]
-    public sealed class AxialSqlToolsPackage : AsyncPackage
+    [ProvideToolWindow(typeof(DatabaseScripterToolWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(DataImportWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(QuickSearchWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(SnippetManagerWindow), Style = VsDockStyle.MDI)]
+    public sealed partial class AxialSqlToolsPackage : AsyncPackage
     {
 
-        public class SQLVersionInfo
+        public SQLBuildsData SQLBuildsDataInfo = new SQLBuildsData();
+        public SQLBuildsLoadResult SQLBuildsLoadState { get; private set; }
+        public SQLBuildsLoadResult SQLBuildsLastSuccess { get; private set; }
+        public bool SQLBuildsIsLoading { get; private set; }
+        public event EventHandler SQLBuildsChanged;
+        private Task _sqlBuildsRefreshTask;
+
+        public Task RefreshSqlServerBuildsAsync(string localFile = null)
         {
-            public string SqlVersion { get; set; }    // e.g. "SQL Server 2022"
-            public Version BuildNumber { get; set; }   // e.g. "16.0.1000"
-            public DateTime ReleaseDate { get; set; }
-            public string UpdateName { get; set; }    // e.g. "CU5" or "Security Update XYZ"
-            public string KbNumber { get; set; }    // e.g. "CU5" or "Security Update XYZ"
-            public string Url { get; set; }
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_sqlBuildsRefreshTask != null && !_sqlBuildsRefreshTask.IsCompleted) return _sqlBuildsRefreshTask;
+            return _sqlBuildsRefreshTask = RefreshSqlServerBuildsCoreAsync(localFile);
         }
 
-        public class SQLBuildsData
+        private async Task RefreshSqlServerBuildsCoreAsync(string localFile)
         {
-            public Dictionary<string, List<SQLVersionInfo>> Builds { get; set; } = new Dictionary<string, List<SQLVersionInfo>>();
+            SQLBuildsIsLoading = true;
+            SQLBuildsChanged?.Invoke(this, EventArgs.Empty);
+            try
+            {
+                var result = await Task.Run(() => SQLBuilds.DownloadSqlServerBuildInfo(localFile));
+                await JoinableTaskFactory.SwitchToMainThreadAsync();
+                SQLBuildsLoadState = result;
+                if (result.HasData)
+                {
+                    SQLBuildsDataInfo = result.Data;
+                    SQLBuildsLastSuccess = result;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, "SQL Server build refresh failed.");
+                SQLBuildsLoadState = new SQLBuildsLoadResult { Source = localFile ?? SQLBuilds.SourceUrl,
+                    Error = "SQL Server build refresh failed. Retry the download or open a readable .xlsx workbook.",
+                    Details = ex.GetType().Name + ": " + ex.Message };
+            }
+            finally
+            {
+                SQLBuildsIsLoading = false;
+                SQLBuildsChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
-
-        public SQLBuildsData SQLBuildsDataInfo;
 
         #region QueryHistory
         private class QueryHistoryEntry
@@ -407,10 +433,10 @@ namespace AxialSqlTools
 
             try
             {
-                SQLBuildsDataInfo = await Task.Run(() => SQLBuilds.DownloadSqlServerBuildInfo());
-
+                await JoinableTaskFactory.SwitchToMainThreadAsync();
                 MenuCommand CmdSqlServerBuilds = m_plugin.MenuCommandService.FindCommand(new CommandID(SqlServerBuildsWindowCommand.CommandSet, SqlServerBuildsWindowCommand.CommandId));
                 CmdSqlServerBuilds.Visible = true;
+                await RefreshSqlServerBuildsAsync();
 
             }
             catch (Exception ex)
@@ -665,6 +691,7 @@ namespace AxialSqlTools
             // Re-color remaining tabs after a tab closes
             try
             {
+                QuerySafety.FatalActionGuard.ForgetDocument(Window?.Document);
                 GridAccess.ScheduleReapplyAllTabColors();
             }
             catch (Exception ex)
@@ -1167,6 +1194,22 @@ namespace AxialSqlTools
 
             try
             {
+                if (CancelDefault) return;
+                try
+                {
+                    if (QuerySafety.FatalActionGuard.ShouldCancel(GetGlobalService(typeof(DTE)) as DTE))
+                    {
+                        CancelDefault = true;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CancelDefault = true;
+                    _logger?.Error(ex, "Fatal action check failed. Query execution cancelled.");
+                    return;
+                }
+
                 EnsureStatisticsExecutionHookForActiveWindow("query-execute-before");
 
                 if (!StatisticsSummaryStore.IsWindowOpen())
@@ -1210,11 +1253,16 @@ namespace AxialSqlTools
             Dictionary<string, string> fileNamesCache = new Dictionary<string, string>();
 
             string Folder = SettingsManager.GetTemplatesFolder();
+            if (!Directory.Exists(Folder))
+            {
+                _logger.Warn("The configured templates folder is unavailable: {0}", Folder);
+                return;
+            }
             int i = 2;
             CreateCommands(ref i, ref fileNamesCache, Folder, m_commandRegistry, m_commandBarQueryTemplates);
 
             UpdateRenamedTemplatesControls(m_commandBarQueryTemplates, fileNamesCache);
-
+            
         }
 
         private void UpdateRenamedTemplatesControls(CommandBar commandBarFolder, Dictionary<string, string> fileNamesCache)

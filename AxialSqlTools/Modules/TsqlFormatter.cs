@@ -23,7 +23,6 @@ namespace AxialSqlTools
             public List<CreateProcedureStatement> SprocDefinitionsCreate = new List<CreateProcedureStatement>();
             public List<AlterProcedureStatement> SprocDefinitionsAlter = new List<AlterProcedureStatement>();
             public List<CreateOrAlterProcedureStatement> SprocDefinitionsCreateAlter = new List<CreateOrAlterProcedureStatement>();
-            public List<QuerySpecification> SelectsWithTop = new List<QuerySpecification>();
 
             public override void ExplicitVisit(QualifiedJoin node)
             {
@@ -194,12 +193,7 @@ namespace AxialSqlTools
                 DeclareStatements.Add(node);
             }
 
-            public override void ExplicitVisit(QuerySpecification node)
-            {
-                base.ExplicitVisit(node);
-                if (node.TopRowFilter != null)
-                    SelectsWithTop.Add(node);
-            }
+
         }
 
         /// <summary>
@@ -289,10 +283,25 @@ namespace AxialSqlTools
 
         public static string FormatCode(string oldCode, SettingsManager.TSqlCodeFormatSettings settingsOverride = null)
         {
-            string resultCode = "";
+            // Non-editor callers (scripting/export) retain their standalone formatting behavior.
+            var generator = new Sql170ScriptGenerator();
+            generator.Options.AlignClauseBodies = false;
+            generator.Options.SqlVersion = SqlVersion.Sql170;
+            return FormatCodeCore(oldCode, settingsOverride ?? SettingsManager.GetTSqlCodeFormatSettings(),
+                new TSql170Parser(false), generator, useLegacyGeneration: true);
+        }
 
-            TSql170Parser sqlParser = new TSql170Parser(false);
+        internal static string FormatCode(string oldCode, SettingsManager.TSqlCodeFormatSettings settingsOverride,
+            TSqlParser sqlParser, SqlScriptGenerator gen)
+        {
+            var settings = settingsOverride ?? SettingsManager.GetTSqlCodeFormatSettings();
+            return FormatCodeCore(oldCode, settings, sqlParser, gen, settings.disregardSsmsFormatterSettings);
+        }
 
+        private static string FormatCodeCore(string oldCode, SettingsManager.TSqlCodeFormatSettings formatSettings,
+            TSqlParser sqlParser, SqlScriptGenerator gen, bool useLegacyGeneration)
+        {
+            string resultCode;
             IList<ParseError> parseErrors = new List<ParseError>();
             TSqlFragment result = sqlParser.Parse(new StringReader(oldCode), out parseErrors);
 
@@ -307,30 +316,36 @@ namespace AxialSqlTools
                 throw new Exception($"TSqlParser unable to load selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
-            var formatSettings = SettingsManager.GetTSqlCodeFormatSettings();
-            if (settingsOverride != null)
+            var preserveComments = gen.Options.GetType().GetProperty("PreserveComments");
+            if (useLegacyGeneration)
             {
-                formatSettings = settingsOverride;
+                // Match the pre-SSMS formatter: disable clause alignment and let Axial's
+                // interleaver handle comments. Keep the fresh generator's own SQL version.
+                gen.Options.AlignClauseBodies = false;
+                if (preserveComments?.CanWrite == true)
+                    preserveComments.SetValue(gen.Options, false);
+                if (formatSettings.preserveComments)
+                    resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
+                else
+                    gen.GenerateScript(result, out resultCode);
             }
-
-            Sql170ScriptGenerator gen = new Sql170ScriptGenerator();
-            gen.Options.AlignClauseBodies = false;
-            gen.Options.SqlVersion = SqlVersion.Sql170; //TODO - try to get from current connection
-
-            if (formatSettings.preserveComments)
+            else
             {
-                resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
-            }
-            else 
-            { 
-                gen.GenerateScript(result, out resultCode);
+                // SSMS mode keeps native comment handling, avoiding duplicate comments.
+                if (formatSettings.preserveComments && preserveComments?.CanWrite == true)
+                    preserveComments.SetValue(gen.Options, true);
+                bool nativeComments = preserveComments?.GetValue(gen.Options) is bool value && value;
+                if (formatSettings.preserveComments && !nativeComments)
+                    resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
+                else
+                    gen.GenerateScript(result, out resultCode);
             }
 
             if (formatSettings.HasAnyFormattingEnabled())
             {
                 try
                 {
-                    resultCode = ApplySpecialFormat(resultCode, sqlParser, formatSettings);
+                    resultCode = ApplySpecialFormat(resultCode, sqlParser, formatSettings, gen.Options.IndentationSize);
                 }
                 catch (Exception ex)
                 {
@@ -342,7 +357,7 @@ namespace AxialSqlTools
 
         }
 
-        private static string ApplySpecialFormat(string oldCode, TSql170Parser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings)
+        private static string ApplySpecialFormat(string oldCode, TSqlParser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings, int indentSize)
         {
             IList<ParseError> parseErrors = new List<ParseError>();
 
@@ -364,7 +379,7 @@ namespace AxialSqlTools
                         TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[NextTokenNumber - 1];
 
                         if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
-                            if (NextToken.Text == "\r\n")
+                            if (NextToken.Text.Contains("\n"))
                                 NextToken.Text = " ";
                             else if (NextToken.Text.Trim() == "")
                                 NextToken.Text = "";
@@ -717,7 +732,10 @@ namespace AxialSqlTools
                     for (int ti = startIdx; ti <= endIdx && ti < sqlFragment.ScriptTokenStream.Count; ti++)
                     {
                         var tok = sqlFragment.ScriptTokenStream[ti];
-                        if (tok.TokenType == TSqlTokenType.WhiteSpace && tok.Column == 1)
+                        // Earlier transforms can insert a newline without updating the token's
+                        // original Column (for example, moving CROSS JOIN/APPLY onto its own line).
+                        if (tok.TokenType == TSqlTokenType.WhiteSpace
+                            && (tok.Column == 1 || tok.Text.Contains("\r\n")))
                             tok.Text = RemoveOneIndent(tok.Text, indentString);
                     }
                 }
@@ -818,45 +836,6 @@ namespace AxialSqlTools
 
             }
 
-            // special case #11 - split SELECT fields after TOP, fixed indent up to FROM
-            // TODO - can't get this right, so disabled for now
-            if (formatSettings.breakSelectFieldsAfterTopAndUnindent)
-            {
-                //var tokens = sqlFragment.ScriptTokenStream;
-                //const string indent = "\t";
-
-                //foreach (var qs in visitor.SelectsWithTop)
-                //{
-                //    // 1) break right after TOP(...) into "\r\n\t"
-                //    int splitIdx = qs.TopRowFilter.LastTokenIndex + 1;
-                //    if (splitIdx < tokens.Count
-                //     && tokens[splitIdx].TokenType == TSqlTokenType.WhiteSpace)
-                //    {
-                //        tokens[splitIdx].Text = "\r\n" + indent;
-                //    }
-
-                //    //// 2) for every select‐element after the first, break before it into "\r\n\t"
-                //    //for (int i = 1; i < qs.SelectElements.Count; i++)
-                //    //{
-                //    //    var elem = qs.SelectElements[i];
-                //    //    int wsIdx = elem.FirstTokenIndex - 1;
-                //    //    if (wsIdx >= 0
-                //    //     && tokens[wsIdx].TokenType == TSqlTokenType.WhiteSpace)
-                //    //    {
-                //    //        tokens[wsIdx].Text = "\r\n" + indent;
-                //    //    }
-                //    //}
-
-                //    //// 3) unindent FROM back to column 1
-                //    //int wsBeforeFrom = qs.FromClause.FirstTokenIndex - 1;
-                //    //if (wsBeforeFrom >= 0
-                //    // && tokens[wsBeforeFrom].TokenType == TSqlTokenType.WhiteSpace)
-                //    //{
-                //    //    tokens[wsBeforeFrom].Text = "\r\n";
-                //    //}
-                //}
-            }
-
             // return full recompiled result
             StringBuilder sqlText = new StringBuilder();
             foreach (var Token in sqlFragment.ScriptTokenStream)
@@ -864,7 +843,11 @@ namespace AxialSqlTools
                 sqlText.Append(Token.Text);
             }
 
-            return sqlText.ToString();
+            string formatted = sqlText.ToString();
+            // Reparse after the other options so indentation uses the current positions, including moved BEGIN/END and CASE expressions.
+            return formatSettings.breakSelectFieldsAfterTopAndUnindent
+                ? TsqlSelectFieldIndentation.Format(formatted, sqlParser, indentSize)
+                : formatted;
         }
 
         // Helper: for a whitespace token that looks like "\r\n    …",

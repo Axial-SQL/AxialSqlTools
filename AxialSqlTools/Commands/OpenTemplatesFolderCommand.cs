@@ -2,6 +2,8 @@
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Windows;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
@@ -94,7 +96,14 @@ namespace AxialSqlTools
 
             try
             {
-                Process.Start("explorer.exe", SettingsManager.GetTemplatesFolder());
+                string folder = SettingsManager.GetTemplatesFolder();
+                if (!Directory.Exists(folder))
+                {
+                    MessageBox.Show("The templates folder is unavailable or has not been created: " + folder,
+                        "Axial SQL Tools", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                Process.Start("explorer.exe", folder);
             }
             catch
             {

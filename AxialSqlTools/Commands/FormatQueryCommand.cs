@@ -127,27 +127,33 @@ namespace AxialSqlTools
 
                 try
                 {
-                    TextSelection selection = dte.ActiveDocument.Selection as TextSelection;
+                    var document = dte.ActiveDocument;
+                    var formatter = SsmsFormatterHost.Create(formatSettings.disregardSsmsFormatterSettings);
+                    // Loading SSMS settings can yield to the shell. Keep the original DTE document.
+                    if (!ReferenceEquals(document, dte.ActiveDocument))
+                        throw new InvalidOperationException("The active query changed while loading formatter settings. Try Format again.");
+                    TextSelection selection = document.Selection as TextSelection;
+                    if (selection == null) return;
 
                     string existingCommandText = selection.Text.Trim();
 
                     if (!string.IsNullOrEmpty(existingCommandText))
                     {
-                        string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings);
+                        string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings, formatter.Parser, formatter.Generator);
                         selection.Delete();
                         selection.Insert(result);
                         return;
                     }
 
                     // continue formatiing the entire document when nothing is selected                    
-                    TextDocument textDoc = dte.ActiveDocument.Object("TextDocument") as TextDocument;
+                    TextDocument textDoc = document.Object("TextDocument") as TextDocument;
                     if (textDoc != null)
                     {
                         existingCommandText = textDoc.CreateEditPoint(textDoc.StartPoint).GetText(textDoc.EndPoint).Trim();
 
                         if (!string.IsNullOrEmpty(existingCommandText))
                         {
-                            string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings);
+                            string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings, formatter.Parser, formatter.Generator);
 
 
                             EditPoint startPoint = textDoc.StartPoint.CreateEditPoint();
@@ -165,7 +171,7 @@ namespace AxialSqlTools
                     VsShellUtilities.ShowMessageBox(
                         this.package,
                         ex.Message,
-                        "Error parsing the code",
+                        "Unable to format SQL",
                         OLEMSGICON.OLEMSGICON_WARNING,
                         OLEMSGBUTTON.OLEMSGBUTTON_OK,
                         OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);

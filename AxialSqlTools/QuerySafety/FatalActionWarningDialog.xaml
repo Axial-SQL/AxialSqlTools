@@ -1,0 +1,36 @@
+<Window x:Class="AxialSqlTools.QuerySafety.FatalActionWarningDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Confirm query execution" Width="710" MinWidth="570" Height="460" MinHeight="360"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource AxialThemeBackgroundBrush}"
+        Foreground="{DynamicResource AxialThemeForegroundBrush}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="This query may change or remove data" FontSize="19" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap"
+                       Text="UPDATE and DELETE without WHERE, and TRUNCATE TABLE, require your approval. Cancel to review the query."/>
+        </StackPanel>
+        <TextBlock x:Name="ContextText" Grid.Row="1" Margin="0,12" TextWrapping="Wrap"/>
+        <TextBox x:Name="ActionText" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" Padding="8"/>
+        <TextBlock x:Name="RepeatText" Grid.Row="3" Margin="0,12" TextWrapping="Wrap"/>
+        <WrapPanel Grid.Row="4" HorizontalAlignment="Right">
+            <Button x:Name="RepeatButton" Content="Allow repeats this session" Margin="0,0,8,0" Padding="10,6"
+                    IsDefault="True" Click="AllowRepeats_Click"/>
+            <Button Content="Run once" MinWidth="90" Margin="0,0,8,0" Padding="10,6" Click="RunOnce_Click"/>
+            <Button x:Name="CancelButton" Content="Cancel" MinWidth="85" Padding="10,6" IsCancel="True"/>
+        </WrapPanel>
+    </Grid>
+</Window>

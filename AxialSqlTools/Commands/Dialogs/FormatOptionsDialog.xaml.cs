@@ -16,6 +16,7 @@ namespace AxialSqlTools
 
         private void ApplySettingsToUi()
         {
+            DisregardSsmsFormatterSettings.IsChecked = Settings.disregardSsmsFormatterSettings;
             PreserveComments.IsChecked = Settings.preserveComments;
             RemoveNewLineAfterJoin.IsChecked = Settings.removeNewLineAfterJoin;
             AddTabAfterJoinOn.IsChecked = Settings.addTabAfterJoinOn;
@@ -27,6 +28,7 @@ namespace AxialSqlTools
             UnindentBeginEndBlocks.IsChecked = Settings.unindentBeginEndBlocks;
             BreakVariableDefinitionsPerLine.IsChecked = Settings.breakVariableDefinitionsPerLine;
             BreakSprocDefinitionParametersPerLine.IsChecked = Settings.breakSprocDefinitionParametersPerLine;
+            BreakSelectFieldsAfterTopAndUnindent.IsChecked = Settings.breakSelectFieldsAfterTopAndUnindent;
         }
 
         private void formatSetting_Checked(object sender, RoutedEventArgs e)
@@ -51,6 +53,7 @@ namespace AxialSqlTools
             UnindentBeginEndBlocks.IsChecked = value;
             BreakVariableDefinitionsPerLine.IsChecked = value;
             BreakSprocDefinitionParametersPerLine.IsChecked = value;
+            BreakSelectFieldsAfterTopAndUnindent.IsChecked = value;
         }
 
         private void CheckAllOptions_Click(object sender, RoutedEventArgs e)
@@ -65,6 +68,7 @@ namespace AxialSqlTools
 
         private void SyncFromUi()
         {
+            Settings.disregardSsmsFormatterSettings = DisregardSsmsFormatterSettings.IsChecked == true;
             Settings.preserveComments = PreserveComments.IsChecked == true;
             Settings.removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked == true;
             Settings.addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked == true;
@@ -76,6 +80,7 @@ namespace AxialSqlTools
             Settings.unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked == true;
             Settings.breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked == true;
             Settings.breakSprocDefinitionParametersPerLine = BreakSprocDefinitionParametersPerLine.IsChecked == true;
+            Settings.breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked == true;
         }
 
         private void Ok_Click(object sender, RoutedEventArgs e)
