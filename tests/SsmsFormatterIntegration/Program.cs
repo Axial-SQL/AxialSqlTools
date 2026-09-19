@@ -42,6 +42,44 @@ internal static class Program
         var tokens = new TSql170Parser(true).GetTokenStream(reader, out var errors);
         return tokens.Count(t => t.TokenType == TSqlTokenType.SingleLineComment || t.TokenType == TSqlTokenType.MultilineComment);
     }
+    private sealed class LegacyCase
+    {
+        public string Name { get; set; }
+        public string Sql { get; set; }
+        public int Mode { get; set; }
+        public string Expected { get; set; }
+    }
+
+    private static async Task CheckLegacyOutput()
+    {
+        // Expected output was produced by the unmodified formatter from commit ff4a9e4,
+        // using the same ScriptDOM package as these tests, not by the new implementation.
+        var cases = System.Text.Json.JsonSerializer.Deserialize<LegacyCase[]>(
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "LegacyOutputCases.json")));
+        SqlFormatHelper.Use170Implementation = true;
+        foreach (var item in cases)
+        {
+            var settings = new SettingsManager.TSqlCodeFormatSettings
+            {
+                disregardSsmsFormatterSettings = true,
+                preserveComments = item.Mode != 0,
+                removeNewLineAfterJoin = item.Mode == 2,
+                addTabAfterJoinOn = item.Mode == 2,
+                breakSelectFieldsAfterTopAndUnindent = item.Mode == 2,
+                uppercaseBuiltInFunctions = item.Mode == 2
+            };
+            var context = await Create(new object(), disregardSsmsSettings: true);
+            var actual = Format(context, item.Sql, settings);
+            Check(actual == item.Expected, "Disregard output must match original formatter exactly: " + item.Name);
+            Check(!context.Generator.Options.AlignClauseBodies, "Restore original clause alignment: " + item.Name);
+            Check(!context.Generator.Options.PreserveComments, "Use the original comment interleaver: " + item.Name);
+            Check(TSqlFormatter.FormatCode(item.Sql, settings) == item.Expected,
+                "Standalone output must also match original formatter exactly: " + item.Name);
+            Valid(actual, context);
+        }
+        SqlFormatHelper.Use170Implementation = false;
+    }
+
     private static async Task Main()
     {
         var context = await Create();
@@ -71,11 +109,12 @@ internal static class Program
         var expectedOptions = expectedGenerator.Options;
         foreach (var property in typeof(SqlScriptGeneratorOptions).GetProperties().Where(p => p.CanRead && p.GetIndexParameters().Length == 0))
             Check(Equals(property.GetValue(defaults.Generator.Options), property.GetValue(expectedOptions)), "Default option: " + property.Name);
+        expectedGenerator.Options.AlignClauseBodies = false;
         using (var reader = new StringReader("SELECT a, b FROM dbo.t;"))
         {
             var fragment = new TSql160Parser(false).Parse(reader, out var errors);
             expectedGenerator.GenerateScript(fragment, out var expected);
-            Check(Format(defaults, "SELECT a, b FROM dbo.t;") == expected, "Default mode matches a freshly created generator.");
+            Check(Format(defaults, "SELECT a, b FROM dbo.t;", new SettingsManager.TSqlCodeFormatSettings { disregardSsmsFormatterSettings = true }) == expected, "Default mode matches a freshly created generator.");
         }
         Check(document.Generator.Options.KeywordCasing == KeywordCasing.Lowercase && document.Generator.Options.IndentationSize == 6, "Default mode does not mutate SSMS options.");
         var resumed = await Create(buffer);
@@ -123,7 +162,7 @@ internal static class Program
         Check(specialSql.Replace("\r", "").Contains("\n  a"), "Axial SELECT indentation runs after SSMS with SSMS indent size.");
         Valid(specialSql, special);
         const string sample = "-- heading\nCREATE OR ALTER PROCEDURE dbo.p @x int, @y int AS BEGIN DECLARE @a int=1, @b int=2; SELECT DISTINCT TOP 5 t.a, GETDATE(), CASE WHEN t.a=1 THEN 'one' ELSE 'other' END AS label FROM dbo.t AS t INNER JOIN dbo.u AS u ON t.a=u.a CROSS JOIN dbo.v AS v; SELECT 2; END;";
-        foreach (var flag in typeof(SettingsManager.TSqlCodeFormatSettings).GetFields())
+        foreach (var flag in typeof(SettingsManager.TSqlCodeFormatSettings).GetFields().Where(f => f.Name != "disregardSsmsFormatterSettings"))
         {
             var settings = new SettingsManager.TSqlCodeFormatSettings();
             flag.SetValue(settings, true);
@@ -132,7 +171,7 @@ internal static class Program
             Check(Comments(result) == 1, "Axial option retains native comments: " + flag.Name);
         }
         var allOptions = new SettingsManager.TSqlCodeFormatSettings();
-        foreach (var flag in typeof(SettingsManager.TSqlCodeFormatSettings).GetFields()) flag.SetValue(allOptions, true);
+        foreach (var flag in typeof(SettingsManager.TSqlCodeFormatSettings).GetFields().Where(f => f.Name != "disregardSsmsFormatterSettings")) flag.SetValue(allOptions, true);
         var combined = Format(await Create(), sample, allOptions);
         Valid(combined, special);
         Check(Comments(combined) == 1, "Combined Axial options retain comments.");
@@ -153,6 +192,7 @@ internal static class Program
         FormatSettingsLoader.FailAsynchronously = false;
         await Reject(() => Create(token: new CancellationToken(true)), "canceled");
         await Reject(() => SsmsFormatterReflection.CreateAsync(typeof(string).Assembly, null, default), "Missing type");
+        await CheckLegacyOutput();
         Console.WriteLine($"Passed {assertions} SSMS formatter integration assertions.");
     }
 }

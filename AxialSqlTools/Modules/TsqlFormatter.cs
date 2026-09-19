@@ -287,11 +287,19 @@ namespace AxialSqlTools
             var generator = new Sql170ScriptGenerator();
             generator.Options.AlignClauseBodies = false;
             generator.Options.SqlVersion = SqlVersion.Sql170;
-            return FormatCode(oldCode, settingsOverride, new TSql170Parser(false), generator);
+            return FormatCodeCore(oldCode, settingsOverride ?? SettingsManager.GetTSqlCodeFormatSettings(),
+                new TSql170Parser(false), generator, useLegacyGeneration: true);
         }
 
         internal static string FormatCode(string oldCode, SettingsManager.TSqlCodeFormatSettings settingsOverride,
             TSqlParser sqlParser, SqlScriptGenerator gen)
+        {
+            var settings = settingsOverride ?? SettingsManager.GetTSqlCodeFormatSettings();
+            return FormatCodeCore(oldCode, settings, sqlParser, gen, settings.disregardSsmsFormatterSettings);
+        }
+
+        private static string FormatCodeCore(string oldCode, SettingsManager.TSqlCodeFormatSettings formatSettings,
+            TSqlParser sqlParser, SqlScriptGenerator gen, bool useLegacyGeneration)
         {
             string resultCode;
             IList<ParseError> parseErrors = new List<ParseError>();
@@ -308,22 +316,30 @@ namespace AxialSqlTools
                 throw new Exception($"TSqlParser unable to load selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
-            var formatSettings = SettingsManager.GetTSqlCodeFormatSettings();
-            if (settingsOverride != null)
-            {
-                formatSettings = settingsOverride;
-            }
-
-            // Preserve SSMS's comment setting. Axial's enabled option additionally requests preservation.
-            // Do not run the interleaver over comments already emitted by the native generator.
             var preserveComments = gen.Options.GetType().GetProperty("PreserveComments");
-            if (formatSettings.preserveComments && preserveComments?.CanWrite == true)
-                preserveComments.SetValue(gen.Options, true);
-            bool nativeComments = preserveComments?.GetValue(gen.Options) is bool value && value;
-            if (formatSettings.preserveComments && !nativeComments)
-                resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
+            if (useLegacyGeneration)
+            {
+                // Match the pre-SSMS formatter: disable clause alignment and let Axial's
+                // interleaver handle comments. Keep the fresh generator's own SQL version.
+                gen.Options.AlignClauseBodies = false;
+                if (preserveComments?.CanWrite == true)
+                    preserveComments.SetValue(gen.Options, false);
+                if (formatSettings.preserveComments)
+                    resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
+                else
+                    gen.GenerateScript(result, out resultCode);
+            }
             else
-                gen.GenerateScript(result, out resultCode);
+            {
+                // SSMS mode keeps native comment handling, avoiding duplicate comments.
+                if (formatSettings.preserveComments && preserveComments?.CanWrite == true)
+                    preserveComments.SetValue(gen.Options, true);
+                bool nativeComments = preserveComments?.GetValue(gen.Options) is bool value && value;
+                if (formatSettings.preserveComments && !nativeComments)
+                    resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
+                else
+                    gen.GenerateScript(result, out resultCode);
+            }
 
             if (formatSettings.HasAnyFormattingEnabled())
             {

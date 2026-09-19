@@ -6,6 +6,7 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <None Update="LegacyOutputCases.json" CopyToOutputDirectory="PreserveNewest" />
     <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="170.191.0" />
     <Compile Include="../../AxialSqlTools/Modules/SsmsFormatterReflection.cs" Link="SsmsFormatterReflection.cs" />
     <Compile Include="../../AxialSqlTools/Modules/TsqlFormatter.cs" Link="TsqlFormatter.cs" />
