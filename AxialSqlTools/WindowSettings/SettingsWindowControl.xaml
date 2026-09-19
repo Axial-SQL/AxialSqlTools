@@ -103,7 +103,7 @@
         <Border DockPanel.Dock="Bottom" Padding="10"
                 Background="{DynamicResource AxialThemeHeaderBackgroundBrush}"
                 BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <StackPanel Orientation="Horizontal">
                 <Button x:Name="SaveAllButton" Click="SaveAllSettings_Click" IsDefault="True"
                         MinWidth="90" Height="28" Margin="0,0,8,0" Padding="10,3" FontWeight="Bold">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
