@@ -15,6 +15,62 @@ namespace AxialSqlTools
     {
         public static string LastSaveError => SettingsFileStore.LastSaveError;
 
+        // One draft for every settings tab. Persist the file once so a failure cannot
+        // leave only some tabs saved or invalidate query approvals prematurely.
+        internal class WindowSettings
+        {
+            public string TemplatesFolder;
+            public SnippetSettings Snippets;
+            public AsteriskExpansionSettings AsteriskExpansion;
+            public string QueryHistoryConnectionString;
+            public string QueryHistoryTableName;
+            public string QueryHistoryStorageMode;
+            public string MyEmail;
+            public SmtpSettings Smtp;
+            public TSqlCodeFormatSettings CodeFormat;
+            public ExcelExportSettings ExcelExport;
+            public GoogleSheetsSettings GoogleSheets;
+            public List<ConnectionColorRule> ConnectionColorRules;
+            public bool WarnWhenRunningFatalAction;
+            public bool EnableUpdateChecks;
+        }
+
+        internal static bool SaveWindowSettings(WindowSettings settings)
+        {
+            try
+            {
+                if (settings == null) throw new ArgumentNullException(nameof(settings));
+                var values = CreateSmtpValues(settings.Smtp);
+                byte[] connectionString = Protect(Encoding.UTF8.GetBytes(settings.QueryHistoryConnectionString ?? string.Empty));
+                if (connectionString == null) throw new CryptographicException();
+
+                values["ScriptTemplatesFolder"] = settings.TemplatesFolder;
+                values["SnippetSettings"] = NormalizeSnippetSettings(settings.Snippets ?? new SnippetSettings());
+                values["AsteriskExpansionSettings"] = settings.AsteriskExpansion ?? new AsteriskExpansionSettings();
+                values["QueryHistoryConnectionString"] = Convert.ToBase64String(connectionString);
+                values["QueryHistoryTableName"] = settings.QueryHistoryTableName;
+                values["QueryHistoryStorageMode"] = string.IsNullOrWhiteSpace(settings.QueryHistoryStorageMode)
+                    ? "Database" : settings.QueryHistoryStorageMode;
+                values["MyEmail"] = settings.MyEmail;
+                values["TSqlCodeFormatSettings"] = settings.CodeFormat;
+                values["ExcelExportSettings"] = settings.ExcelExport;
+                values["GoogleSheetsSettings"] = CreateStoredGoogleSheetsSettings(settings.GoogleSheets);
+                values["ConnectionColorRules"] = settings.ConnectionColorRules ?? new List<ConnectionColorRule>();
+                values["WarnWhenRunningFatalAction"] = settings.WarnWhenRunningFatalAction;
+                values["EnableUpdateChecks"] = settings.EnableUpdateChecks;
+
+                if (!SettingsFileStore.SaveValues(values))
+                    return false;
+
+                QuerySafety.FatalActionGuard.ResetApprovals();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return SettingsFileStore.ReportSaveFailure(ex);
+            }
+        }
+
         public class HealthDashboardServerQueryTexts
         {
             #region m_BlockingRequestsQuery
@@ -529,23 +585,27 @@ ORDER BY sd.[name];
         {
             try
             {
-                byte[] encPassword = Protect(Encoding.UTF8.GetBytes(smtpSettings.Password ?? string.Empty));
-                if (encPassword == null)
-                    return SettingsFileStore.ReportSaveFailure(new CryptographicException());
-
-                return SettingsFileStore.SaveValues(new Dictionary<string, object>
-                {
-                    ["SMTP_Username"] = smtpSettings.Username,
-                    ["SMTP_Password"] = Convert.ToBase64String(encPassword),
-                    ["SMTP_Server"] = smtpSettings.ServerName,
-                    ["SMTP_Port"] = smtpSettings.Port,
-                    ["SMTP_EnableSSL"] = smtpSettings.EnableSsl
-                });
+                return SettingsFileStore.SaveValues(CreateSmtpValues(smtpSettings));
             }
             catch (Exception ex)
             {
                 return SettingsFileStore.ReportSaveFailure(ex);
             }
+        }
+
+        private static Dictionary<string, object> CreateSmtpValues(SmtpSettings settings)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            byte[] password = Protect(Encoding.UTF8.GetBytes(settings.Password ?? string.Empty));
+            if (password == null) throw new CryptographicException();
+            return new Dictionary<string, object>
+            {
+                ["SMTP_Username"] = settings.Username,
+                ["SMTP_Password"] = Convert.ToBase64String(password),
+                ["SMTP_Server"] = settings.ServerName,
+                ["SMTP_Port"] = settings.Port,
+                ["SMTP_EnableSSL"] = settings.EnableSsl
+            };
         }
 
         public static string GetTemplatesFolder()
@@ -903,22 +963,26 @@ ORDER BY sd.[name];
         {
             try
             {
-                if (settings == null) throw new ArgumentNullException(nameof(settings));
-                var stored = new StoredGoogleSheetsSettings
-                {
-                    includeSourceQuery = settings.includeSourceQuery,
-                    exportBoolsAsNumbers = settings.exportBoolsAsNumbers,
-                    clientId = settings.clientId,
-                    clientSecretEncrypted = EncryptGoogleSecret(settings.clientSecret),
-                    refreshTokenEncrypted = EncryptGoogleSecret(settings.refreshToken),
-                    defaultSpreadsheetName = settings.defaultSpreadsheetName
-                };
-                return SettingsFileStore.SaveValue("GoogleSheetsSettings", stored);
+                return SettingsFileStore.SaveValue("GoogleSheetsSettings", CreateStoredGoogleSheetsSettings(settings));
             }
             catch (Exception ex)
             {
                 return SettingsFileStore.ReportSaveFailure(ex);
             }
+        }
+
+        private static StoredGoogleSheetsSettings CreateStoredGoogleSheetsSettings(GoogleSheetsSettings settings)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            return new StoredGoogleSheetsSettings
+            {
+                includeSourceQuery = settings.includeSourceQuery,
+                exportBoolsAsNumbers = settings.exportBoolsAsNumbers,
+                clientId = settings.clientId,
+                clientSecretEncrypted = EncryptGoogleSecret(settings.clientSecret),
+                refreshTokenEncrypted = EncryptGoogleSecret(settings.refreshToken),
+                defaultSpreadsheetName = settings.defaultSpreadsheetName
+            };
         }
 
         public static TSqlCodeFormatSettings GetTSqlCodeFormatSettings()

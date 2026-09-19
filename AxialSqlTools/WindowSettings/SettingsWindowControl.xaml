@@ -100,7 +100,25 @@
 					   HorizontalAlignment="Center"/>
         </Border>
 
-        <TabControl Margin="5"
+        <Border DockPanel.Dock="Bottom" Padding="10"
+                Background="{DynamicResource AxialThemeHeaderBackgroundBrush}"
+                BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="SaveAllButton" Click="SaveAllSettings_Click" IsDefault="True"
+                        MinWidth="90" Height="28" Margin="0,0,8,0" Padding="10,3" FontWeight="Bold">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                            <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
+                        </Viewbox>
+                        <TextBlock Text="Save" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Content="Discard changes" Click="DiscardChanges_Click"
+                        MinWidth="120" Height="28" Padding="10,3"/>
+            </StackPanel>
+        </Border>
+
+        <TabControl x:Name="SettingsTabs" Margin="5"
                     Background="{DynamicResource AxialThemeBackgroundBrush}"
                     BorderBrush="{DynamicResource AxialThemeBorderBrush}"
 					BorderThickness="1">
@@ -145,21 +163,7 @@
 							FontWeight="Bold"/>                   
 
 
-                    <Button Grid.Row="3" Grid.Column="0"
-							x:Name="button_SaveScriptFolder"							
-							Click="Button_SaveScriptFolder_Click"
-							Width="80" 
-							Height="24"
-							Margin="5"
-							FontWeight="Bold"
-                            HorizontalAlignment="Left">
-							<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                    <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-                                </Viewbox>
-								<TextBlock Text="Save" VerticalAlignment="Center"/>
-							</StackPanel>
-                    </Button>
+
 
                                      
 
@@ -267,21 +271,7 @@
                         <ComboBoxItem Content="Ctrl+Space" Tag="CtrlSpace" />
                     </ComboBox>
 
-                    <Button Grid.Row="7" Grid.Column="0"
-                                                        x:Name="button_SaveSnippetFolder"
-                                                        Click="Button_SaveSnippetFolder_Click"
-                                                        Width="80"
-                                                        Height="24"
-							Margin="5"
-							FontWeight="Bold" 
-                            HorizontalAlignment="Left">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-							<Viewbox Width="16" Height="16" Margin="0,0,4,0">
-								<Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-							</Viewbox>
-							<TextBlock Text="Save" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+
                 </Grid>
             </TabItem>
 
@@ -402,20 +392,7 @@
                         </Grid>
                     </GroupBox>
 
-                    <Button Grid.Row="9" Grid.Column="0"
-                x:Name="button_SaveQueryHistory"
-                Click="Button_SaveQueryHistory_Click"
-                Width="80"
-                Height="24"
-                Margin="5"
-                FontWeight="Bold" HorizontalAlignment="Left">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-							<Viewbox Width="16" Height="16" Margin="0,0,4,0">
-								<Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-							</Viewbox>
-                            <TextBlock Text="Save" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+
 
                 </Grid>
             </TabItem>
@@ -504,22 +481,7 @@
 
                     </UniformGrid>
 
-                    <Button
-                        Grid.Row="9"
-                        x:Name="button_SaveApplyAdditionalFormat"
-                        Click="Button_SaveApplyAdditionalFormat_Click"
-                        Width="80" 
-                        Height="24"
-                        Margin="5"
-                        HorizontalAlignment="Left"
-                        FontWeight="Bold">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-							<Viewbox Width="16" Height="16" Margin="0,0,4,0">
-								<Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-							</Viewbox>
-                            <TextBlock Text="Save" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+
 
                     <Grid Grid.Row="10">
                         <Grid.ColumnDefinitions>
@@ -625,22 +587,7 @@
 						Content="Leave blank → DataExport__{yyyyMMdd__HHmmss}.xlsx; use {...} for date-wildcards" Margin="0,0,0,0"/>
 
 
-                    <Button
-						Grid.Row="9"
-						x:Name="button_SaveExcelExportSettings" 
-						Click="button_SaveExcelExportSettings_Click"
-						Width="80" 
-						Height="24"
-						Margin="5"
-						HorizontalAlignment="Left"
-						FontWeight="Bold">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-                            </Viewbox>
-                            <TextBlock Text="Save" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+
                 </Grid>
             </TabItem>
 
@@ -679,10 +626,10 @@
                     <TextBox Grid.Row="3" Grid.Column="1" x:Name="GoogleSheetsDefaultSpreadsheetName" ToolTip="Leave blank to use DataExport_{yyyyMMdd_HHmmss}" VerticalContentAlignment="Center" Margin="5"/>
 
                     <Label Grid.Row="4" Grid.Column="0" Content="Client ID:" Margin="5"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" x:Name="GoogleSheetsClientId" Margin="5"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" x:Name="GoogleSheetsClientId" TextChanged="GoogleSheetsCredentialsChanged" Margin="5"/>
 
                     <Label Grid.Row="5" Grid.Column="0" Content="Client Secret:" Margin="5"/>
-                    <PasswordBox Grid.Row="5" Grid.Column="1" x:Name="GoogleSheetsClientSecret" Margin="5"/>
+                    <PasswordBox Grid.Row="5" Grid.Column="1" x:Name="GoogleSheetsClientSecret" PasswordChanged="GoogleSheetsCredentialsChanged" Margin="5"/>
 
                     <Label Grid.Row="6" Grid.Column="0" Content="Authorization Status:" Margin="5"/>
                     <TextBlock Grid.Row="6" Grid.Column="1" x:Name="GoogleSheetsRefreshTokenLabel" Margin="5" />
@@ -694,14 +641,7 @@
                                 <TextBlock Text="Authorize Google Sheets" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button x:Name="button_SaveGoogleSheetsSettings" Click="button_SaveGoogleSheetsSettings_Click" Width="80" Height="24">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-								<Viewbox Width="16" Height="16" Margin="0,0,4,0">
-									<Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-								</Viewbox>
-                                <TextBlock Text="Save" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -806,25 +746,11 @@
                         </DockPanel>
                     </GroupBox>
 
-                    <Button Grid.Row="3"
-                            x:Name="button_SaveConnectionColorRules"
-                            Click="Button_SaveConnectionColorRules_Click"
-                            Width="80"
-                            Height="24"
-                            Margin="0,10,0,0"
-                            HorizontalAlignment="Left"
-                            FontWeight="Bold">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-							<Viewbox Width="16" Height="16" Margin="0,0,4,0">
-								<Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-							</Viewbox>
-                            <TextBlock Text="Save" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+
                 </Grid>
             </TabItem>
 
-            <TabItem Header="SMTP Settings">
+            <TabItem x:Name="SmtpSettingsTab" Header="SMTP Settings">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -891,22 +817,7 @@
 							  Content="Enable SSL/TLS"
 							  Margin="5"/>
 
-                    <Button Grid.Row="7" Grid.Column="0"							
-							x:Name="buttonSaveSmtpSettings"
-							Click="ButtonSaveSmtpSettings_Click"
-							Width="80" 
-                            Height="24"
-							Margin="5"
-							HorizontalAlignment="Left"
-                            VerticalAlignment="Top"
-							FontWeight="Bold">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-                            </Viewbox>
-                            <TextBlock Text="Save" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+
                 </Grid>
             </TabItem>
 
@@ -925,18 +836,7 @@
                                Text="Ask before running UPDATE or DELETE without a WHERE clause, or TRUNCATE TABLE. Temp tables and table variables are excluded. Enabled by default."/>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
                                Text="The warning lets you cancel, run once, or allow repeated execution of the same SQL in the same query window and connection. Saving this setting clears repeat approvals."/>
-                    <Button Click="SaveQuerySafety_Click"
-                            Width="80"
-                            Height="24"
-                            HorizontalAlignment="Left"
-                            FontWeight="Bold">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-                            </Viewbox>
-                            <TextBlock Text="Save" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+
                 </StackPanel>
             </TabItem>
 
@@ -955,19 +855,7 @@
                               Margin="5"/>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
-                        <Button x:Name="button_SaveUpdateSettings"
-                                Click="button_SaveUpdateSettings_Click"
-                                Width="80"
-                                Height="24"
-                                Margin="0,0,10,0"
-                                FontWeight="Bold">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                    <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-                                </Viewbox>
-                                <TextBlock Text="Save" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+
 
                         <Button x:Name="button_CheckUpdates"
                                 Click="button_CheckUpdates_Click"
@@ -1020,22 +908,7 @@
 							 x:Name="GitHubToken"
 							 Margin="5"/>
 
-                    <Button Grid.Row="7" Grid.Column="0"							
-				        x:Name="buttonSaveGitHubSettings"
-				        Click="buttonSaveGitHubSettings_Click"
-				        Width="80" 
-                        Height="24"
-				        Margin="5"
-				        HorizontalAlignment="Left"
-                        VerticalAlignment="Top"
-				        FontWeight="Bold">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
-                                <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
-                            </Viewbox>
-                            <TextBlock Text="Save" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+
                 </Grid>
             </TabItem>
 

@@ -27,10 +27,10 @@
                  VerticalScrollBarVisibility="Auto" Padding="8"/>
         <TextBlock x:Name="RepeatText" Grid.Row="3" Margin="0,12" TextWrapping="Wrap"/>
         <WrapPanel Grid.Row="4" HorizontalAlignment="Right">
-            <Button x:Name="CancelButton" Content="Cancel" MinWidth="85" Margin="0,0,8,0" Padding="10,6"
-                    IsDefault="True" IsCancel="True"/>
+            <Button x:Name="RepeatButton" Content="Allow repeats this session" Margin="0,0,8,0" Padding="10,6"
+                    IsDefault="True" Click="AllowRepeats_Click"/>
             <Button Content="Run once" MinWidth="90" Margin="0,0,8,0" Padding="10,6" Click="RunOnce_Click"/>
-            <Button x:Name="RepeatButton" Content="Allow repeats this session" Padding="10,6" Click="AllowRepeats_Click"/>
+            <Button x:Name="CancelButton" Content="Cancel" MinWidth="85" Padding="10,6" IsCancel="True"/>
         </WrapPanel>
     </Grid>
 </Window>
