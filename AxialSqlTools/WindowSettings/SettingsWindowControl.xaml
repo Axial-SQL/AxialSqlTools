@@ -917,7 +917,18 @@
                                Text="Ask before running UPDATE or DELETE without a WHERE clause, or TRUNCATE TABLE. Temp tables and table variables are excluded. Enabled by default."/>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
                                Text="The warning lets you cancel, run once, or allow repeated execution of the same SQL in the same query window and connection. Saving this setting clears repeat approvals."/>
-                    <Button Content="Save" Click="SaveQuerySafety_Click" Width="80" Height="24" HorizontalAlignment="Left"/>
+                    <Button Click="SaveQuerySafety_Click"
+                            Width="80"
+                            Height="24"
+                            HorizontalAlignment="Left"
+                            FontWeight="Bold">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                                <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
+                            </Viewbox>
+                            <TextBlock Text="Save" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </TabItem>
 
