@@ -53,6 +53,8 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Copy Cell Values As ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Grid-Cells-As-...): Copy cell values to the clipboard in multiple formats: INSERT, CSV, JSON, XML, or HTML.
 - [**Fatal Action Warning**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Fatal-Action-Warning): The warning for potentially fatal actions requires confirmation before executing the SQL statement.
   
+- **Quoted String Selection**: Double-click inside a SQL string to select its full contents, including spaces and hyphens. Quotes and the optional `N` prefix are excluded. Toggle this behavior under **Settings > Editor**. Hold Ctrl, Shift, or Alt for normal editor behavior.
+
 ## Query Library
 
 The extension includes a query library compiled over time with ideas and best practices from SQL Server practitioners and community experts. These templates cover a wide range of scenarios and help users complete complex or repetitive tasks faster.

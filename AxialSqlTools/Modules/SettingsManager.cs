@@ -561,6 +561,17 @@ ORDER BY sd.[name];
             return SettingsFileStore.SaveValue("ScriptTemplatesFolder", folder);
         }
 
+        public static bool GetSelectQuotedStringOnDoubleClick()
+        {
+            string value = SettingsFileStore.GetValue("SelectQuotedStringOnDoubleClick");
+            return !bool.TryParse(value, out bool enabled) || enabled;
+        }
+
+        public static bool SaveSelectQuotedStringOnDoubleClick(bool enabled)
+        {
+            return SettingsFileStore.SaveValue("SelectQuotedStringOnDoubleClick", enabled);
+        }
+
         public static bool GetWarnWhenRunningFatalAction()
         {
             string value = SettingsFileStore.GetValue("WarnWhenRunningFatalAction");

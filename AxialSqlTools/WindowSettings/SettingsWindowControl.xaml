@@ -910,6 +910,26 @@
                 </Grid>
             </TabItem>
 
+            <TabItem Header="Editor">
+                <StackPanel Margin="15">
+                    <CheckBox x:Name="SelectQuotedStringOnDoubleClick"
+                              Content="Select the entire quoted string on double-click" Margin="0,0,0,10"/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                               Text="Double-click inside a SQL string to select its contents, including spaces and hyphens. The outer quotes and optional N prefix are excluded. Enabled by default."/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                               Text="Hold Ctrl, Shift, or Alt to keep normal editor behavior. Comments, identifiers, and unfinished strings use normal selection. Scripts larger than 1,048,576 characters also use normal selection."/>
+                    <Button Click="SaveEditorSelection_Click" Width="80" Height="24"
+                            HorizontalAlignment="Left" FontWeight="Bold">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Viewbox Width="16" Height="16" Margin="0,0,4,0">
+                                <Path Style="{StaticResource AxialSaveIconPathStyle}" Data="{StaticResource SaveIconGeometry}"/>
+                            </Viewbox>
+                            <TextBlock Text="Save" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </TabItem>
+
             <TabItem Header="Query Execution">
                 <StackPanel Margin="15">
                     <CheckBox x:Name="WarnWhenRunningFatalAction" Content="Warn when running fatal actions" Margin="0,0,0,10"/>

@@ -161,6 +161,9 @@
     <Compile Include="Modules\ToolWindowThemeSupport.cs" />
     <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="Modules\SettingsManager.cs" />
+    <Compile Include="EditorSelection\QuotedStringMouseProcessorProvider.cs" />
+    <Compile Include="EditorSelection\QuotedStringMouseProcessor.cs" />
+    <Compile Include="EditorSelection\SqlStringSelectionResolver.cs" />
     <Compile Include="Modules\SettingsFileStore.cs" />
     <Compile Include="Modules\SQLBuilds.cs" />
     <Compile Include="Modules\SQLBuildsModels.cs" />
@@ -342,6 +345,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Data" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
@@ -359,6 +363,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Text.UI.Wpf" Version="17.14.249" ExcludeAssets="runtime" />
     <PackageReference Include="AvalonEdit">
       <Version>6.3.1.120</Version>
     </PackageReference>
