@@ -1,8 +1,8 @@
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.TextManager.Interop;
 using System;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,12 +10,16 @@ namespace AxialSqlTools
 {
     internal static class SsmsFormatterHost
     {
+        private const string EditorAdapterContract = "Microsoft.VisualStudio.Editor.IVsEditorAdaptersFactoryService";
+
         internal static SsmsFormatterContext Create()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            // Query text stays on the existing DTE path. Load SSMS global settings without
-            // resolving a managed editor buffer or loading additional editor assemblies.
-            return ThreadHelper.JoinableTaskFactory.Run(() => CreateAsync(null, CancellationToken.None));
+            var buffer = GetActiveBuffer();
+            var context = ThreadHelper.JoinableTaskFactory.Run(() => CreateAsync(buffer, CancellationToken.None));
+            if (!ReferenceEquals(buffer, GetActiveBuffer()))
+                throw new InvalidOperationException("The active query changed while loading formatter settings. Try Format again.");
+            return context;
         }
 
         internal static async Task<SsmsFormatterContext> CreateAsync(object textBuffer, CancellationToken cancellationToken)
@@ -23,17 +27,9 @@ namespace AxialSqlTools
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             try
             {
-                var assembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(
-                    a => a.GetName().Name == SsmsFormatterReflection.AssemblyName);
-                if (assembly == null)
-                {
-                    // Load only from the running SSMS installation, never from a query/project folder.
-                    var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Extensions", "Microsoft",
-                        "SSMS.SqlFormatter", SsmsFormatterReflection.AssemblyName + ".dll");
-                    if (!File.Exists(path))
-                        throw new FileNotFoundException("The SSMS SQL Formatter is not installed in this SSMS version.");
-                    assembly = Assembly.LoadFrom(path);
-                }
+                // The project reference binds to the installed SSMS formatter's real assembly identity.
+                // Internal formatter APIs still require reflection.
+                var assembly = typeof(Microsoft.SqlServer.Management.SqlFormatter.FormatSettings).Assembly;
                 return await SsmsFormatterReflection.CreateAsync(assembly, textBuffer, cancellationToken);
             }
             catch (OperationCanceledException) { throw; }
@@ -45,5 +41,26 @@ namespace AxialSqlTools
             }
         }
 
+        private static object GetActiveBuffer()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var manager = Package.GetGlobalService(typeof(SVsTextManager)) as IVsTextManager;
+            if (manager == null || manager.GetActiveView(0, null, out var view) < 0 || view == null
+                || view.GetBuffer(out var nativeBuffer) < 0 || nativeBuffer == null)
+                throw new InvalidOperationException("No active SQL editor buffer is available for formatting.");
+
+            var componentModel = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+            if (componentModel == null)
+                throw new InvalidOperationException("The SSMS editor component service is unavailable.");
+
+            // Resolve SSMS's existing export by contract. Its runtime interface supplies the method,
+            // so there is no Assembly.Load or guessed identity for Microsoft.VisualStudio.Editor.
+            var adapter = componentModel.DefaultExportProvider.GetExportedValue<object>(EditorAdapterContract);
+            var adapterType = adapter.GetType().GetInterfaces().SingleOrDefault(t => t.FullName == EditorAdapterContract);
+            var getBuffer = adapterType?.GetMethod("GetDocumentBuffer")
+                ?? throw new InvalidOperationException("This SSMS version does not expose the expected editor buffer API.");
+            return getBuffer.Invoke(adapter, new object[] { nativeBuffer })
+                ?? throw new InvalidOperationException("The active query has no managed editor buffer.");
+        }
     }
 }
