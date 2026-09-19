@@ -51,7 +51,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Copy Column Names from Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Column-Names-from-Grid): Quickly copy the column names from the results grid to the clipboard.
   
 - [**Copy Cell Values As ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Grid-Cells-As-...): Copy cell values to the clipboard in multiple formats: INSERT, CSV, JSON, XML, or HTML.
-- [**Fatal Action Warning ...**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Fatal-Action-Warning): The warning for potentially fatal actions requires confirmation before executing the SQL statement.
+- [**Fatal Action Warning**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Fatal-Action-Warning): The warning for potentially fatal actions requires confirmation before executing the SQL statement.
   
 ## Query Library
 
@@ -67,14 +67,6 @@ To install the add-in, choose one of the following options:
 
 After installation and an SSMS restart, the **Axial SQL Tools** toolbar will appear in the list of available toolbars in SSMS, providing quick access to all features.<br/>
 <img width="824" height="399" alt="image" src="https://github.com/user-attachments/assets/dc57882f-5a01-46dd-ac99-865ca246a255" />
-
-## Settings storage
-
-Application settings are saved in `%LOCALAPPDATA%\AxialSQL\settings.json`, alongside the existing `data-transfer-connections.json` and `github-sync-profiles.json` files. Structured settings are stored as JSON objects and arrays.
-
-The extension no longer reads or writes settings in the Windows registry. Existing registry settings are not imported or deleted. Previously registry-backed options start with their defaults and can be configured again through the Settings window.
-
-SMTP passwords, the OpenAI API key, and the query history connection string retain their existing Windows current-user encryption. Encrypted values remain tied to that Windows user. Existing file-based settings keep their current locations and formats.
 
 ## Contributing
 
