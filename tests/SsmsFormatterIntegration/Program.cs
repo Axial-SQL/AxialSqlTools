@@ -105,6 +105,48 @@ internal static class Program
             "Reuse the already-loaded formatter without probing the filesystem.");
     }
 
+    private static void CheckMovedJoinUnindent()
+    {
+        foreach (var join in new[] { "CROSS JOIN Regions r", "CROSS APPLY dbo.fn(c.CustomerID) r", "OUTER APPLY dbo.fn(c.CustomerID) r" })
+        foreach (bool disregard in new[] { false, true })
+        foreach (int depth in new[] { 1, 2 })
+        {
+            var select = "SELECT c.CustomerID FROM Customers c INNER JOIN Orders o ON c.CustomerID=o.CustomerID "
+                + join + " WHERE c.IsActive=1;";
+            var sql = "WHILE (1=0) BEGIN " + (depth == 2 ? "IF (1=0) BEGIN " : "")
+                + select + (depth == 2 ? " END" : "") + " END; " + select;
+            var settings = new SettingsManager.TSqlCodeFormatSettings
+            {
+                disregardSsmsFormatterSettings = disregard,
+                removeNewLineAfterJoin = true,
+                addTabAfterJoinOn = true,
+                moveCrossJoinToNewLine = true
+            };
+            var context = new SsmsFormatterContext(new TSql170Parser(false), new Sql170ScriptGenerator());
+            // Use a four-space base layout in both modes to isolate the Axial block adjustment.
+            context.Generator.Options.AlignClauseBodies = false;
+            context.Generator.Options.IndentationSize = 4;
+            var before = Format(context, sql, settings).Split('\n');
+            settings.unindentBeginEndBlocks = true;
+            var formatted = Format(context, sql, settings);
+            var after = formatted.Split('\n');
+            var keyword = join.StartsWith("CROSS JOIN") ? "CROSS JOIN" : join.StartsWith("CROSS APPLY") ? "CROSS APPLY" : "OUTER APPLY";
+            Func<string, int> indent = line => line.Length - line.TrimStart().Length;
+            var beforeJoins = before.Where(line => line.TrimStart().StartsWith(keyword)).ToArray();
+            var afterJoins = after.Where(line => line.TrimStart().StartsWith(keyword)).ToArray();
+            var label = keyword + ", disregard=" + disregard + ", depth=" + depth;
+            Check(beforeJoins.Length == 2 && afterJoins.Length == 2, "Keep each join on its own line: " + label);
+            Check(indent(afterJoins[0]) == indent(beforeJoins[0]) - 4 * depth,
+                "Move newly inserted join line left once per enclosing block: " + label);
+            Check(indent(afterJoins[0]) == indent(after.First(line => line.TrimStart().StartsWith("INNER JOIN"))),
+                "Align the moved join with INNER JOIN: " + label);
+            Check(afterJoins[1] == beforeJoins[1], "Leave joins outside BEGIN/END unchanged: " + label);
+            Check(before.Select(line => line.TrimStart()).SequenceEqual(after.Select(line => line.TrimStart())),
+                "Only change line indentation: " + label);
+            Valid(formatted, context);
+        }
+    }
+
     private static async Task Main()
     {
         CheckAssemblyLoading();
@@ -250,6 +292,7 @@ internal static class Program
         FormatSettingsLoader.FailAsynchronously = false;
         await Reject(() => Create(token: new CancellationToken(true)), "canceled");
         await Reject(() => SsmsFormatterReflection.CreateAsync(typeof(string).Assembly, null, default), "Missing type");
+        CheckMovedJoinUnindent();
         await CheckLegacyOutput();
         Console.WriteLine($"Passed {assertions} SSMS formatter integration assertions.");
     }
