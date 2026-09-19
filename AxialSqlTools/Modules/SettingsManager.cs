@@ -410,6 +410,7 @@ ORDER BY sd.[name];
 
         public class TSqlCodeFormatSettings
         {
+            public bool disregardSsmsFormatterSettings = false;
             public bool preserveComments = false;
             public bool removeNewLineAfterJoin = false;
             public bool addTabAfterJoinOn = false;
@@ -426,7 +427,7 @@ ORDER BY sd.[name];
 
             public bool HasAnyFormattingEnabled()
             {
-                // preserveComments option is not included because it belongs to a separate code branch.
+                // Formatter selection and comment preservation are handled before post-processing.
                 return removeNewLineAfterJoin
                     || addTabAfterJoinOn
                     || moveCrossJoinToNewLine

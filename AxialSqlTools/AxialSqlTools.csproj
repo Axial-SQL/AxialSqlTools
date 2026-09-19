@@ -166,6 +166,9 @@
     <Compile Include="Modules\SQLBuilds.cs" />
     <Compile Include="Modules\SQLBuildsModels.cs" />
     <Compile Include="Modules\TsqlFormatter.cs" />
+    <Compile Include="Modules\SsmsFormatterReflection.cs" />
+    <Compile Include="Modules\SsmsFormatterHost.cs" />
+    <Compile Include="Modules\SsmsFormatterAssemblyLoader.cs" />
     <Compile Include="Modules\TsqlSelectFieldIndentation.cs" />
     <Compile Include="Modules\WindowsCredentialHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -259,6 +262,10 @@
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.CommandBars.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\CommonExtensions\Platform\MefHosting\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Microsoft.VisualStudio.Imaging">
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Microsoft.VisualStudio.Imaging.dll</HintPath>
       <Private>False</Private>
@@ -343,6 +350,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Data" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />

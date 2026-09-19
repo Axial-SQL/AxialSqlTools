@@ -173,6 +173,7 @@ as select 1;
                 SMTP_EnableSSL.IsChecked = smtpSettings.EnableSsl;
 
                 var tsqlCodeFormatSettings = SettingsManager.GetTSqlCodeFormatSettings();
+                DisregardSsmsFormatterSettings.IsChecked = tsqlCodeFormatSettings.disregardSsmsFormatterSettings;
                 PreserveComments.IsChecked = tsqlCodeFormatSettings.preserveComments;
                 RemoveNewLineAfterJoin.IsChecked = tsqlCodeFormatSettings.removeNewLineAfterJoin;
                 AddTabAfterJoinOn.IsChecked = tsqlCodeFormatSettings.addTabAfterJoinOn;
@@ -720,6 +721,7 @@ as select 1;
         {
             return new SettingsManager.TSqlCodeFormatSettings
             {
+                disregardSsmsFormatterSettings = DisregardSsmsFormatterSettings.IsChecked.GetValueOrDefault(false),
                 preserveComments = PreserveComments.IsChecked.GetValueOrDefault(false),
                 removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
                 addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
@@ -736,9 +738,37 @@ as select 1;
 
         }
 
-        private void formatTSqlExample()
+        private int _formatterPreviewRequest;
+        private bool _formatterPreviewDisregardSsmsSettings;
+        private System.Threading.Tasks.Task<SsmsFormatterContext> _formatterPreviewContextTask;
+
+        private async void formatTSqlExample()
         {
-            FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, BuildCodeFormatSettings());
+            // Checked events can fire while InitializeComponent is still building the controls.
+            if (SourceQueryPreview == null || FormattedQueryPreview == null
+                || BreakSelectFieldsAfterTopAndUnindent == null || DisregardSsmsFormatterSettings == null) return;
+            int request = ++_formatterPreviewRequest;
+            try
+            {
+                string source = SourceQueryPreview.Text;
+                var settings = BuildCodeFormatSettings();
+                // Coalesce checkbox events raised together when settings are loaded/discarded.
+                if (_formatterPreviewContextTask == null || _formatterPreviewContextTask.IsCompleted
+                    || _formatterPreviewDisregardSsmsSettings != settings.disregardSsmsFormatterSettings)
+                {
+                    _formatterPreviewDisregardSsmsSettings = settings.disregardSsmsFormatterSettings;
+                    _formatterPreviewContextTask = SsmsFormatterHost.CreateAsync(null,
+                        System.Threading.CancellationToken.None, settings.disregardSsmsFormatterSettings);
+                }
+                var formatter = await _formatterPreviewContextTask;
+                if (request != _formatterPreviewRequest) return;
+                FormattedQueryPreview.Text = TSqlFormatter.FormatCode(source, settings, formatter.Parser, formatter.Generator);
+            }
+            catch (Exception ex)
+            {
+                if (request == _formatterPreviewRequest)
+                    FormattedQueryPreview.Text = "Preview unavailable: " + ex.Message;
+            }
         }
 
         private void formatSetting_Checked(object sender, RoutedEventArgs e)

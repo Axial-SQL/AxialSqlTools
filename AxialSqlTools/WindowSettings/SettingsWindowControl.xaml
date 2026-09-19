@@ -424,13 +424,23 @@
                         </Hyperlink>
                     </TextBlock>
 
+                    <TextBlock Grid.Row="2" Margin="10,0,10,8" TextWrapping="Wrap"
+                               Text="Format starts with built-in SSMS Formatter settings, then applies the Axial options above."/>
+
+                    <CheckBox x:Name="DisregardSsmsFormatterSettings" Grid.Row="3" Margin="10,0,10,8"
+                              Content="Disregard built-in SSMS Formatter settings"
+                              ToolTip="Use fresh instances of the parser and generator types selected by SSMS, then use the original Axial code generation, alignment, and comment handling. Axial formatting options still apply afterward."
+                              Checked="formatSetting_Checked"
+                              Unchecked="formatSetting_Unchecked"/>
+
                     <!-- all checkboxes in a 3-column UniformGrid -->
                     <UniformGrid Grid.Row="1"
                              Columns="3"
                              Margin="5"
                              HorizontalAlignment="Left">
                         <CheckBox x:Name="PreserveComments" Margin="5"
-                              Content="Preserve comments" 
+                              Content="Preserve comments"
+                              ToolTip="Always preserve comments. When unchecked, Format follows the selected formatter mode&apos;s comment setting." 
                               Checked="formatSetting_Checked"
                               Unchecked="formatSetting_Unchecked"/>
                         <CheckBox x:Name="RemoveNewLineAfterJoin" Margin="5"

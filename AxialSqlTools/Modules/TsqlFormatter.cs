@@ -283,10 +283,25 @@ namespace AxialSqlTools
 
         public static string FormatCode(string oldCode, SettingsManager.TSqlCodeFormatSettings settingsOverride = null)
         {
-            string resultCode = "";
+            // Non-editor callers (scripting/export) retain their standalone formatting behavior.
+            var generator = new Sql170ScriptGenerator();
+            generator.Options.AlignClauseBodies = false;
+            generator.Options.SqlVersion = SqlVersion.Sql170;
+            return FormatCodeCore(oldCode, settingsOverride ?? SettingsManager.GetTSqlCodeFormatSettings(),
+                new TSql170Parser(false), generator, useLegacyGeneration: true);
+        }
 
-            TSql170Parser sqlParser = new TSql170Parser(false);
+        internal static string FormatCode(string oldCode, SettingsManager.TSqlCodeFormatSettings settingsOverride,
+            TSqlParser sqlParser, SqlScriptGenerator gen)
+        {
+            var settings = settingsOverride ?? SettingsManager.GetTSqlCodeFormatSettings();
+            return FormatCodeCore(oldCode, settings, sqlParser, gen, settings.disregardSsmsFormatterSettings);
+        }
 
+        private static string FormatCodeCore(string oldCode, SettingsManager.TSqlCodeFormatSettings formatSettings,
+            TSqlParser sqlParser, SqlScriptGenerator gen, bool useLegacyGeneration)
+        {
+            string resultCode;
             IList<ParseError> parseErrors = new List<ParseError>();
             TSqlFragment result = sqlParser.Parse(new StringReader(oldCode), out parseErrors);
 
@@ -301,23 +316,29 @@ namespace AxialSqlTools
                 throw new Exception($"TSqlParser unable to load selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
-            var formatSettings = SettingsManager.GetTSqlCodeFormatSettings();
-            if (settingsOverride != null)
+            var preserveComments = gen.Options.GetType().GetProperty("PreserveComments");
+            if (useLegacyGeneration)
             {
-                formatSettings = settingsOverride;
+                // Match the pre-SSMS formatter: disable clause alignment and let Axial's
+                // interleaver handle comments. Keep the fresh generator's own SQL version.
+                gen.Options.AlignClauseBodies = false;
+                if (preserveComments?.CanWrite == true)
+                    preserveComments.SetValue(gen.Options, false);
+                if (formatSettings.preserveComments)
+                    resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
+                else
+                    gen.GenerateScript(result, out resultCode);
             }
-
-            Sql170ScriptGenerator gen = new Sql170ScriptGenerator();
-            gen.Options.AlignClauseBodies = false;
-            gen.Options.SqlVersion = SqlVersion.Sql170; //TODO - try to get from current connection
-
-            if (formatSettings.preserveComments)
+            else
             {
-                resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
-            }
-            else 
-            { 
-                gen.GenerateScript(result, out resultCode);
+                // SSMS mode keeps native comment handling, avoiding duplicate comments.
+                if (formatSettings.preserveComments && preserveComments?.CanWrite == true)
+                    preserveComments.SetValue(gen.Options, true);
+                bool nativeComments = preserveComments?.GetValue(gen.Options) is bool value && value;
+                if (formatSettings.preserveComments && !nativeComments)
+                    resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
+                else
+                    gen.GenerateScript(result, out resultCode);
             }
 
             if (formatSettings.HasAnyFormattingEnabled())
@@ -336,7 +357,7 @@ namespace AxialSqlTools
 
         }
 
-        private static string ApplySpecialFormat(string oldCode, TSql170Parser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings, int indentSize)
+        private static string ApplySpecialFormat(string oldCode, TSqlParser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings, int indentSize)
         {
             IList<ParseError> parseErrors = new List<ParseError>();
 

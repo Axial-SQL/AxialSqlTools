@@ -1,0 +1,74 @@
+[
+  {
+    "Name": "Query 1, mode 0",
+    "Sql": "SELECT DISTINCT TOP 5 a, b, SUM(c) AS total FROM dbo.t WHERE a \u003E 0 GROUP BY a, b HAVING SUM(c) \u003E 1 ORDER BY a;",
+    "Mode": 0,
+    "Expected": "SELECT DISTINCT TOP 5 a,\n                      b,\n                      SUM(c) AS total\nFROM dbo.t\nWHERE a \u003E 0\nGROUP BY a, b\nHAVING SUM(c) \u003E 1\nORDER BY a;\n\n"
+  },
+  {
+    "Name": "Query 1, mode 1",
+    "Sql": "SELECT DISTINCT TOP 5 a, b, SUM(c) AS total FROM dbo.t WHERE a \u003E 0 GROUP BY a, b HAVING SUM(c) \u003E 1 ORDER BY a;",
+    "Mode": 1,
+    "Expected": "SELECT DISTINCT TOP 5 a,\n                      b,\n                      SUM(c) AS total\nFROM dbo.t\nWHERE a \u003E 0\nGROUP BY a, b\nHAVING SUM(c) \u003E 1\nORDER BY a;\n\n"
+  },
+  {
+    "Name": "Query 1, mode 2",
+    "Sql": "SELECT DISTINCT TOP 5 a, b, SUM(c) AS total FROM dbo.t WHERE a \u003E 0 GROUP BY a, b HAVING SUM(c) \u003E 1 ORDER BY a;",
+    "Mode": 2,
+    "Expected": "SELECT DISTINCT TOP 5\n    a,\n    b,\n    SUM(c) AS total\nFROM dbo.t\nWHERE a \u003E 0\nGROUP BY a, b\nHAVING SUM(c) \u003E 1\nORDER BY a;\n\n"
+  },
+  {
+    "Name": "Query 2, mode 0",
+    "Sql": "-- heading\nSELECT t.a, /* inline */ u.b FROM dbo.t AS t INNER JOIN dbo.u AS u ON t.id=u.id WHERE t.a\u003E1; -- trailing\n",
+    "Mode": 0,
+    "Expected": "SELECT t.a,\n       u.b\nFROM dbo.t AS t\n     INNER JOIN\n     dbo.u AS u\n     ON t.id = u.id\nWHERE t.a \u003E 1;\n\n"
+  },
+  {
+    "Name": "Query 2, mode 1",
+    "Sql": "-- heading\nSELECT t.a, /* inline */ u.b FROM dbo.t AS t INNER JOIN dbo.u AS u ON t.id=u.id WHERE t.a\u003E1; -- trailing\n",
+    "Mode": 1,
+    "Expected": "\n-- heading\nSELECT t.a,\n       /* inline */ u.b\nFROM dbo.t AS t\n     INNER JOIN\n     dbo.u AS u\n     ON t.id = u.id\nWHERE t.a \u003E 1;\n\n-- trailing\n"
+  },
+  {
+    "Name": "Query 2, mode 2",
+    "Sql": "-- heading\nSELECT t.a, /* inline */ u.b FROM dbo.t AS t INNER JOIN dbo.u AS u ON t.id=u.id WHERE t.a\u003E1; -- trailing\n",
+    "Mode": 2,
+    "Expected": "\n-- heading\nSELECT t.a,\n       /* inline */ u.b\nFROM dbo.t AS t\n     INNER JOIN dbo.u AS u\n         ON t.id = u.id\nWHERE t.a \u003E 1;\n\n-- trailing\n"
+  },
+  {
+    "Name": "Query 3, mode 0",
+    "Sql": "WITH cte AS (SELECT DISTINCT TOP 10 a, b FROM dbo.t) SELECT a, (SELECT MAX(b) FROM dbo.u) AS value FROM cte;",
+    "Mode": 0,
+    "Expected": "WITH cte\nAS (SELECT DISTINCT TOP 10 a,\n                           b\n    FROM dbo.t)\nSELECT a,\n       (SELECT MAX(b)\n        FROM dbo.u) AS value\nFROM cte;\n\n"
+  },
+  {
+    "Name": "Query 3, mode 1",
+    "Sql": "WITH cte AS (SELECT DISTINCT TOP 10 a, b FROM dbo.t) SELECT a, (SELECT MAX(b) FROM dbo.u) AS value FROM cte;",
+    "Mode": 1,
+    "Expected": "WITH cte\nAS (SELECT DISTINCT TOP 10 a,\n                           b\n    FROM dbo.t)\nSELECT a,\n       (SELECT MAX(b)\n        FROM dbo.u) AS value\nFROM cte;\n\n"
+  },
+  {
+    "Name": "Query 3, mode 2",
+    "Sql": "WITH cte AS (SELECT DISTINCT TOP 10 a, b FROM dbo.t) SELECT a, (SELECT MAX(b) FROM dbo.u) AS value FROM cte;",
+    "Mode": 2,
+    "Expected": "WITH cte\nAS (SELECT DISTINCT TOP 10\n        a,\n        b\n    FROM dbo.t)\nSELECT a,\n       (SELECT MAX(b)\n        FROM dbo.u) AS value\nFROM cte;\n\n"
+  },
+  {
+    "Name": "Query 4, mode 0",
+    "Sql": "CREATE OR ALTER PROCEDURE dbo.p @x int, @y int AS BEGIN -- body\nDECLARE @a int=1, @b int=2; SELECT TOP 5 a, GETDATE() AS now FROM dbo.t WHERE a=@x; SELECT @a; END;",
+    "Mode": 0,
+    "Expected": "CREATE OR ALTER PROCEDURE dbo.p\n@x INT, @y INT\nAS\nBEGIN\n    DECLARE @a AS INT = 1, @b AS INT = 2;\n    SELECT TOP 5 a,\n                 GETDATE() AS now\n    FROM dbo.t\n    WHERE a = @x;\n    SELECT @a;\nEND\n\n"
+  },
+  {
+    "Name": "Query 4, mode 1",
+    "Sql": "CREATE OR ALTER PROCEDURE dbo.p @x int, @y int AS BEGIN -- body\nDECLARE @a int=1, @b int=2; SELECT TOP 5 a, GETDATE() AS now FROM dbo.t WHERE a=@x; SELECT @a; END;",
+    "Mode": 1,
+    "Expected": "CREATE OR ALTER PROCEDURE dbo.p\n@x INT, @y INT\nAS\nBEGIN\n    -- body\nDECLARE @a AS INT = 1, @b AS INT = 2;\n    SELECT TOP 5 a,\n                 GETDATE() AS now\n    FROM dbo.t\n    WHERE a = @x;\n    SELECT @a;\nEND\n\n"
+  },
+  {
+    "Name": "Query 4, mode 2",
+    "Sql": "CREATE OR ALTER PROCEDURE dbo.p @x int, @y int AS BEGIN -- body\nDECLARE @a int=1, @b int=2; SELECT TOP 5 a, GETDATE() AS now FROM dbo.t WHERE a=@x; SELECT @a; END;",
+    "Mode": 2,
+    "Expected": "CREATE OR ALTER PROCEDURE dbo.p\n@x INT, @y INT\nAS\nBEGIN\n    -- body\nDECLARE @a AS INT = 1, @b AS INT = 2;\n    SELECT TOP 5\n        a,\n        GETDATE() AS now\n    FROM dbo.t\n    WHERE a = @x;\n    SELECT @a;\nEND\n\n"
+  }
+]
