@@ -68,6 +68,14 @@ To install the add-in, choose one of the following options:
 After installation and an SSMS restart, the **Axial SQL Tools** toolbar will appear in the list of available toolbars in SSMS, providing quick access to all features.<br/>
 <img width="824" height="399" alt="image" src="https://github.com/user-attachments/assets/dc57882f-5a01-46dd-ac99-865ca246a255" />
 
+## Settings storage
+
+Application settings are saved in `%LOCALAPPDATA%\AxialSQL\settings.json`, alongside the existing `data-transfer-connections.json` and `github-sync-profiles.json` files. Structured settings are stored as JSON objects and arrays.
+
+The extension no longer reads or writes settings in the Windows registry. Existing registry settings are not imported or deleted. Previously registry-backed options start with their defaults and can be configured again through the Settings window.
+
+SMTP passwords, the OpenAI API key, and the query history connection string retain their existing Windows current-user encryption. Encrypted values remain tied to that Windows user. Existing file-based settings keep their current locations and formats.
+
 ## Contributing
 
 Axial SQL Tools is maintained as an open-source project, and community participation is encouraged. Contributions can include bug reports, feature ideas, documentation improvements, query library additions, testing, and code changes.
