@@ -193,6 +193,7 @@ as select 1;
                 GoogleSheetsClientSecret.Password = googleSettings.clientSecret;
                 UpdateGoogleSheetsStatus(googleSettings.refreshToken);
 
+                SelectQuotedStringOnDoubleClick.IsChecked = SettingsManager.GetSelectQuotedStringOnDoubleClick();
                 WarnWhenRunningFatalAction.IsChecked = SettingsManager.GetWarnWhenRunningFatalAction();
                 EnableUpdateChecks.IsChecked = SettingsManager.GetEnableUpdateChecks();
                 UpdateUpdateStatus();
@@ -466,6 +467,12 @@ as select 1;
             var settings = BuildGoogleSheetsSettings();
             if (SaveSettings(() => SettingsManager.SaveGoogleSheetsSettings(settings)))
                 UpdateGoogleSheetsStatus(settings.refreshToken);
+        }
+
+        private void SaveEditorSelection_Click(object sender, RoutedEventArgs e)
+        {
+            SaveSettings(() => SettingsManager.SaveSelectQuotedStringOnDoubleClick(
+                SelectQuotedStringOnDoubleClick.IsChecked == true));
         }
 
         private void SaveQuerySafety_Click(object sender, RoutedEventArgs e)
