@@ -47,14 +47,14 @@ namespace AxialSqlTools
             {
                 await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                ToolWindowPane window = await this.package.ShowToolWindowAsync(typeof(SnippetManagerWindow), 0, true, this.package.DisposalToken);
+                ToolWindowPane window = await this.package.FindToolWindowAsync(typeof(SnippetManagerWindow), 0, true, this.package.DisposalToken);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
                 if ((null == window) || (null == window.Frame))
                 {
                     throw new NotSupportedException("Cannot create tool window");
                 }
 
-                IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
-                windowFrame.SetProperty((int)__VSFPROPID.VSFPROPID_FrameMode, VSFRAMEMODE.VSFM_MdiChild);
+                ToolWindowDisplay.ShowAsDocument(window);
             });
         }
     }

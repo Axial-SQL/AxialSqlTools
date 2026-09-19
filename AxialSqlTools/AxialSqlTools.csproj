@@ -158,6 +158,7 @@
     <Compile Include="Modules\GridAccess.cs" />
     <Compile Include="Modules\KeypressCommandFilter.cs" />
     <Compile Include="Modules\MetricsService.cs" />
+    <Compile Include="Modules\ToolWindowDisplay.cs" />
     <Compile Include="Modules\ToolWindowThemeSupport.cs" />
     <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="Modules\SettingsManager.cs" />
