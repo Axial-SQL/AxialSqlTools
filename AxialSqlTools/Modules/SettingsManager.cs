@@ -624,28 +624,6 @@ ORDER BY sd.[name];
 
         }
 
-        public static string GetOpenAiApiKey()
-        {
-            string key = "";
-            try
-            {
-                string encKey = SettingsFileStore.GetValue("OpenAI_ApiKeyEnc");
-                byte[] decryptedData = Unprotect(Convert.FromBase64String(encKey));
-                key = Encoding.UTF8.GetString(decryptedData);
-            }
-            catch
-            {
-            }
-
-            return key;
-        }
-        public static bool SaveOpenAiApiKey(string ApiKey)
-        {
-            byte[] encKey = Protect(Encoding.UTF8.GetBytes(ApiKey));
-            return SettingsFileStore.SaveValue("OpenAI_ApiKeyEnc", Convert.ToBase64String(encKey));
-        }
-
-
         public static SnippetSettings GetSnippetSettings()
         {
             try

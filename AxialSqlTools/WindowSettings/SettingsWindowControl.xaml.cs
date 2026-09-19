@@ -176,8 +176,6 @@ as select 1;
                 BreakSprocDefinitionParametersPerLine.IsChecked = tsqlCodeFormatSettings.breakSprocDefinitionParametersPerLine;
                 BreakSelectFieldsAfterTopAndUnindent.IsChecked = tsqlCodeFormatSettings.breakSelectFieldsAfterTopAndUnindent;
 
-                OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
-
                 // Excel export settings
                 var excelSettings = SettingsManager.GetExcelExportSettings();
                 ExcelExportIncludeSourceQuery.IsChecked = excelSettings.includeSourceQuery;
@@ -561,13 +559,6 @@ as select 1;
         {
             Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
             e.Handled = true;
-        }
-
-        private void Button_SaveOpenAi_Click(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.SaveOpenAiApiKey(OpenAiApiKey.Password);
-
-            SavedMessage();
         }
 
         private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)

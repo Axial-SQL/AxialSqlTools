@@ -1019,36 +1019,6 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="OpenAI - ChatGPT integration"
-					Visibility="Collapsed">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="120"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Label Grid.Row="0" Grid.Column="0"
-						   Content="API key:"
-						   Margin="5"/>
-                    <PasswordBox Grid.Row="0" Grid.Column="1"
-								 x:Name="OpenAiApiKey"
-								 Margin="5"/>
-
-                    <Button Grid.Row="1" Grid.Column="1"
-							Content="Save"
-							x:Name="button_SaveOpenAi"
-							Click="Button_SaveOpenAi_Click"
-							Width="60"
-							Margin="5"
-							HorizontalAlignment="Left"
-							FontWeight="Bold"/>
-                </Grid>
-            </TabItem>
-
         </TabControl>
     </DockPanel>
 </UserControl>
