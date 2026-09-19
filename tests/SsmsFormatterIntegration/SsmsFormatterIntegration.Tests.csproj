@@ -6,6 +6,8 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../FormatterAssemblyFixture/FormatterAssemblyFixture.csproj" ReferenceOutputAssembly="false" />
+    <Compile Include="../../AxialSqlTools/Modules/SsmsFormatterAssemblyLoader.cs" Link="SsmsFormatterAssemblyLoader.cs" />
     <None Update="LegacyOutputCases.json" CopyToOutputDirectory="PreserveNewest" />
     <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="170.191.0" />
     <Compile Include="../../AxialSqlTools/Modules/SsmsFormatterReflection.cs" Link="SsmsFormatterReflection.cs" />
@@ -13,4 +15,10 @@
     <Compile Include="../../AxialSqlTools/Modules/TsqlFormatterCommentInterleaver.cs" Link="TsqlFormatterCommentInterleaver.cs" />
     <Compile Include="../../AxialSqlTools/Modules/TsqlSelectFieldIndentation.cs" Link="TsqlSelectFieldIndentation.cs" />
   </ItemGroup>
+  <Target Name="CopyFormatterAssemblyFixture" AfterTargets="Build">
+    <MSBuild Projects="../FormatterAssemblyFixture/FormatterAssemblyFixture.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="FormatterFixtureOutput" />
+    </MSBuild>
+    <Copy SourceFiles="@(FormatterFixtureOutput)" DestinationFolder="$(OutDir)FakeSsms/Extensions/Microsoft/SSMS.SqlFormatter" />
+  </Target>
 </Project>

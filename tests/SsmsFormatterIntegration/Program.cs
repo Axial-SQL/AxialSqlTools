@@ -81,8 +81,33 @@ internal static class Program
         SqlFormatHelper.Use170Implementation = false;
     }
 
+    private static void CheckAssemblyLoading()
+    {
+        Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == SsmsFormatterReflection.AssemblyName),
+            "Cold-start test must begin without the formatter loaded.");
+        var missingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            SsmsFormatterAssemblyLoader.Load(missingDirectory);
+            throw new Exception("Missing formatter must fail.");
+        }
+        catch (FileNotFoundException ex)
+        {
+            Check(ex.Message.Contains("running SSMS installation"), "Missing formatter has an actionable error.");
+            Check(ex.FileName.StartsWith(missingDirectory), "Probe only the running SSMS installation.");
+        }
+        var ide = Path.Combine(AppContext.BaseDirectory, "FakeSsms");
+        var assembly = SsmsFormatterAssemblyLoader.Load(ide);
+        Check(assembly.GetName().Name == SsmsFormatterReflection.AssemblyName, "Load native formatter by installed path.");
+        Check(assembly.GetName().Version == new Version(22, 999, 0, 0), "Do not pin the formatter's build-time version.");
+        Check(assembly.Location.StartsWith(ide), "Load the DLL from this SSMS installation.");
+        Check(ReferenceEquals(assembly, SsmsFormatterAssemblyLoader.Load(missingDirectory)),
+            "Reuse the already-loaded formatter without probing the filesystem.");
+    }
+
     private static async Task Main()
     {
+        CheckAssemblyLoading();
         var context = await Create();
         Check(context.Parser is TSql160Parser && context.Generator is Sql160ScriptGenerator, "Use SSMS factories/version.");
         Check(context.Generator.Options.AlignClauseBodies, "Keep SSMS alignment.");

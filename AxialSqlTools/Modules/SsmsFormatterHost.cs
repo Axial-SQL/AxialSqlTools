@@ -3,6 +3,8 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.Linq;
+using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,9 +29,11 @@ namespace AxialSqlTools
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             try
             {
-                // The project reference binds to the installed SSMS formatter's real assembly identity.
-                // Internal formatter APIs still require reflection.
-                var assembly = typeof(Microsoft.SqlServer.Management.SqlFormatter.FormatSettings).Assembly;
+                // The formatter lives outside the normal CLR probing path. Resolve it from
+                // this SSMS process, not the version/path used to build the extension.
+                System.Reflection.Assembly assembly;
+                using (var process = Process.GetCurrentProcess())
+                    assembly = SsmsFormatterAssemblyLoader.Load(Path.GetDirectoryName(process.MainModule.FileName));
                 return await SsmsFormatterReflection.CreateAsync(assembly, textBuffer, cancellationToken, disregardSsmsSettings,
                     ResolveExtensibilityServiceAsync);
             }

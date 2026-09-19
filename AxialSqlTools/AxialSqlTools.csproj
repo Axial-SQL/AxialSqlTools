@@ -167,6 +167,7 @@
     <Compile Include="Modules\TsqlFormatter.cs" />
     <Compile Include="Modules\SsmsFormatterReflection.cs" />
     <Compile Include="Modules\SsmsFormatterHost.cs" />
+    <Compile Include="Modules\SsmsFormatterAssemblyLoader.cs" />
     <Compile Include="Modules\TsqlSelectFieldIndentation.cs" />
     <Compile Include="Modules\WindowsCredentialHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -254,10 +255,6 @@
     </Reference>
     <Reference Include="Microsoft.Data.SqlClient">
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Microsoft.Data.SqlClient.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.SqlServer.Management.SqlFormatter">
-      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Extensions\Microsoft\SSMS.SqlFormatter\Microsoft.SqlServer.Management.SqlFormatter.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.CommandBars">
