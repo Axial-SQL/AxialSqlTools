@@ -17,6 +17,7 @@ namespace Microsoft.SqlServer.Management.SqlFormatter
     internal sealed class FormatSettings
     {
         public ConfigSource ConfigSource { get; set; }
+        public SqlVersion SqlVersion => Options.SqlVersion;
         internal SqlScriptGeneratorOptions Options { get; set; }
     }
 

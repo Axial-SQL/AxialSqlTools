@@ -11,8 +11,8 @@ using System.Threading.Tasks;
 internal static class Program
 {
     private static int assertions;
-    private static Task<SsmsFormatterContext> Create(object buffer = null, CancellationToken token = default)
-        => SsmsFormatterReflection.CreateAsync(Assembly.GetExecutingAssembly(), buffer, token);
+    private static Task<SsmsFormatterContext> Create(object buffer = null, CancellationToken token = default, bool disregardSsmsSettings = false)
+        => SsmsFormatterReflection.CreateAsync(Assembly.GetExecutingAssembly(), buffer, token, disregardSsmsSettings);
     private static void Check(bool condition, string message)
     {
         assertions++;
@@ -55,6 +55,31 @@ internal static class Program
         var document = await Create(buffer);
         Check(ReferenceEquals(FormatSettingsLoader.LastBuffer, buffer), "Forward active document buffer.");
         Check(document.Generator.Options.IndentationSize == 6, "Use document overrides.");
+        Check(!new SettingsManager.TSqlCodeFormatSettings().disregardSsmsFormatterSettings, "Use SSMS settings by default.");
+        Check(!new SettingsManager.TSqlCodeFormatSettings { disregardSsmsFormatterSettings = true }.HasAnyFormattingEnabled(), "Formatter mode is not an Axial post-processing option.");
+        var defaults = await Create(buffer, disregardSsmsSettings: true);
+        Check(defaults.Parser.GetType() == document.Parser.GetType(), "Default parser retains effective SQL version.");
+        Check(defaults.Generator.GetType() == document.Generator.GetType(), "Default generator retains effective SQL version.");
+        var expectedOptions = new SqlScriptGeneratorOptions { SqlVersion = SqlVersion.Sql160 };
+        foreach (var property in typeof(SqlScriptGeneratorOptions).GetProperties().Where(p => p.CanRead && p.GetIndexParameters().Length == 0))
+            Check(Equals(property.GetValue(defaults.Generator.Options), property.GetValue(expectedOptions)), "Default option: " + property.Name);
+        var expectedGenerator = new Sql160ScriptGenerator(expectedOptions);
+        using (var reader = new StringReader("SELECT a, b FROM dbo.t;"))
+        {
+            var fragment = new TSql160Parser(true).Parse(reader, out var errors);
+            expectedGenerator.GenerateScript(fragment, out var expected);
+            Check(Format(defaults, "SELECT a, b FROM dbo.t;") == expected, "Default mode matches a freshly created generator.");
+        }
+        Check(document.Generator.Options.KeywordCasing == KeywordCasing.Lowercase && document.Generator.Options.IndentationSize == 6, "Default mode does not mutate SSMS options.");
+        var resumed = await Create(buffer);
+        Check(resumed.Generator.Options.KeywordCasing == KeywordCasing.Lowercase && resumed.Generator.Options.IndentationSize == 6, "Switching back restores SSMS options.");
+        var withAxialOptions = Format(defaults, "SELECT DISTINCT TOP 5 a, b FROM dbo.t;", new SettingsManager.TSqlCodeFormatSettings
+        {
+            disregardSsmsFormatterSettings = true,
+            breakSelectFieldsAfterTopAndUnindent = true
+        });
+        Check(withAxialOptions.Replace("\r", "").Contains("\n" + new string(' ', expectedOptions.IndentationSize) + "a"), "Axial transforms still run with default formatting.");
+        Valid(withAxialOptions, defaults);
         FormatSettingsLoader.Casing = KeywordCasing.Uppercase;
         var updated = await Create();
         Check(Format(updated, "select 1;").Contains("SELECT"), "Refresh settings for every invocation.");

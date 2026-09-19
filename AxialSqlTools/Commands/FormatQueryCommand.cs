@@ -128,7 +128,7 @@ namespace AxialSqlTools
                 try
                 {
                     var document = dte.ActiveDocument;
-                    var formatter = SsmsFormatterHost.Create();
+                    var formatter = SsmsFormatterHost.Create(formatSettings.disregardSsmsFormatterSettings);
                     // Loading SSMS settings can yield to the shell. Keep the original DTE document.
                     if (!ReferenceEquals(document, dte.ActiveDocument))
                         throw new InvalidOperationException("The active query changed while loading formatter settings. Try Format again.");

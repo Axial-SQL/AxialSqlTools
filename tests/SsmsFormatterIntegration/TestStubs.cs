@@ -7,6 +7,7 @@ namespace AxialSqlTools
         public static TSqlCodeFormatSettings GetTSqlCodeFormatSettings() => new TSqlCodeFormatSettings();
         public class TSqlCodeFormatSettings
         {
+            public bool disregardSsmsFormatterSettings = false;
             public bool preserveComments = false;
             public bool removeNewLineAfterJoin = false;
             public bool addTabAfterJoinOn = false;

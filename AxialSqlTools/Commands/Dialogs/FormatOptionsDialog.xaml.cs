@@ -16,6 +16,7 @@ namespace AxialSqlTools
 
         private void ApplySettingsToUi()
         {
+            DisregardSsmsFormatterSettings.IsChecked = Settings.disregardSsmsFormatterSettings;
             PreserveComments.IsChecked = Settings.preserveComments;
             RemoveNewLineAfterJoin.IsChecked = Settings.removeNewLineAfterJoin;
             AddTabAfterJoinOn.IsChecked = Settings.addTabAfterJoinOn;
@@ -67,6 +68,7 @@ namespace AxialSqlTools
 
         private void SyncFromUi()
         {
+            Settings.disregardSsmsFormatterSettings = DisregardSsmsFormatterSettings.IsChecked == true;
             Settings.preserveComments = PreserveComments.IsChecked == true;
             Settings.removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked == true;
             Settings.addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked == true;

@@ -12,17 +12,17 @@ namespace AxialSqlTools
     {
         private const string EditorAdapterContract = "Microsoft.VisualStudio.Editor.IVsEditorAdaptersFactoryService";
 
-        internal static SsmsFormatterContext Create()
+        internal static SsmsFormatterContext Create(bool disregardSsmsSettings = false)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var buffer = GetActiveBuffer();
-            var context = ThreadHelper.JoinableTaskFactory.Run(() => CreateAsync(buffer, CancellationToken.None));
+            var context = ThreadHelper.JoinableTaskFactory.Run(() => CreateAsync(buffer, CancellationToken.None, disregardSsmsSettings));
             if (!ReferenceEquals(buffer, GetActiveBuffer()))
                 throw new InvalidOperationException("The active query changed while loading formatter settings. Try Format again.");
             return context;
         }
 
-        internal static async Task<SsmsFormatterContext> CreateAsync(object textBuffer, CancellationToken cancellationToken)
+        internal static async Task<SsmsFormatterContext> CreateAsync(object textBuffer, CancellationToken cancellationToken, bool disregardSsmsSettings = false)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             try
@@ -30,7 +30,7 @@ namespace AxialSqlTools
                 // The project reference binds to the installed SSMS formatter's real assembly identity.
                 // Internal formatter APIs still require reflection.
                 var assembly = typeof(Microsoft.SqlServer.Management.SqlFormatter.FormatSettings).Assembly;
-                return await SsmsFormatterReflection.CreateAsync(assembly, textBuffer, cancellationToken);
+                return await SsmsFormatterReflection.CreateAsync(assembly, textBuffer, cancellationToken, disregardSsmsSettings);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)

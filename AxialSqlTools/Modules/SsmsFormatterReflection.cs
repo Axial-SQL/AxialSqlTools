@@ -26,7 +26,7 @@ namespace AxialSqlTools
         private const BindingFlags StaticMembers = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
         internal static async Task<SsmsFormatterContext> CreateAsync(
-            Assembly assembly, object textBuffer, CancellationToken cancellationToken)
+            Assembly assembly, object textBuffer, CancellationToken cancellationToken, bool disregardSsmsSettings = false)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var extension = RequiredType(assembly, "SqlFormatterExtension");
@@ -50,12 +50,25 @@ namespace AxialSqlTools
                 throw new InvalidOperationException("SSMS could not load its SQL Formatter settings. Check the SSMS SQL Formatter options and try again.");
 
             var helper = RequiredType(assembly, "SqlFormatHelper");
-            var options = Invoke(RequiredMethod(helper, "ToScriptGeneratorOptions", 1), settings);
-            if (!(options is SqlScriptGeneratorOptions sharedOptions))
-                throw Incompatible("SSMS and Axial SQL Tools are using incompatible ScriptDOM assemblies.");
+            SqlScriptGeneratorOptions sharedOptions;
+            if (disregardSsmsSettings)
+            {
+                // Keep the effective SQL language version, but start with fresh defaults for
+                // every other option. Never mutate SSMS's settings or cached options.
+                var version = settings.GetType().GetProperty("SqlVersion")?.GetValue(settings);
+                if (!(version is SqlVersion sqlVersion))
+                    throw Incompatible("The SQL version has an incompatible ScriptDOM type.");
+                sharedOptions = new SqlScriptGeneratorOptions { SqlVersion = sqlVersion };
+            }
+            else
+            {
+                sharedOptions = Invoke(RequiredMethod(helper, "ToScriptGeneratorOptions", 1), settings) as SqlScriptGeneratorOptions;
+                if (sharedOptions == null)
+                    throw Incompatible("SSMS and Axial SQL Tools are using incompatible ScriptDOM assemblies.");
+            }
             var parser = Invoke(RequiredMethod(helper, "CreateParser", 2),
                 sharedOptions.SqlVersion, sharedOptions.SqlEngineType) as TSqlParser;
-            var generator = Invoke(RequiredMethod(helper, "CreateScriptGenerator", 1), options) as SqlScriptGenerator;
+            var generator = Invoke(RequiredMethod(helper, "CreateScriptGenerator", 1), sharedOptions) as SqlScriptGenerator;
             if (parser == null || generator == null)
                 throw Incompatible("The parser or generator has an incompatible ScriptDOM type.");
             return new SsmsFormatterContext(parser, generator);

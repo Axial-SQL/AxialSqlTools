@@ -12,7 +12,8 @@ The tests link the production reflection bridge and formatting pipeline. A handw
 
 The Format command keeps the original DTE `ActiveDocument`, `TextSelection`, and `TextDocument` path for reading and replacing SQL. It obtains the active managed buffer from SSMS's editor adapter MEF export through the directly referenced `IComponentModel`. `FormatSettingsLoader.LoadAsync` receives that buffer and `SqlFormatterExtension.ExtensibilityInstance`, so SSMS applies global settings and document-specific `.editorconfig` overrides. Neither ComponentModelHost nor the editor adapter is loaded by a guessed assembly name. The bridge invokes `SqlFormatHelper.ToScriptGeneratorOptions`, `CreateParser`, and `CreateScriptGenerator`, including their non-public members, and passes the resulting ScriptDOM objects into Axial's existing post-processing pipeline.
 
-- SSMS controls the initial SQL version, engine, layout, casing, and comments.
+- SSMS controls the initial SQL version, engine, layout, casing, and comments by default.
+- Enable **Disregard SSMS Formatter settings** in Settings > Code Format or the Shift+Format dialog to use a newly created parser/generator with default options for the same effective SQL version. SSMS settings are still read to determine that version; other options are reset. Existing Axial options run afterward. The setting defaults to off, is saved by Settings, and can be overridden for a single run in the popup. Check all / Uncheck all affect Axial transformations, not this mode selector.
 - Enabled Axial options, including Shift+Format overrides, run afterward and may change that layout. Existing Axial transforms that explicitly insert spaces retain that behavior even when SSMS uses tabs.
 - Axial's Preserve comments option forces preservation. When unchecked, the native SSMS comment setting applies. The interleaver is only used when a generator cannot preserve comments itself.
 - The Settings preview uses SSMS global settings without a document's `.editorconfig`.
@@ -30,5 +31,6 @@ The bridge targets the internal API in the supplied decompilation of `Microsoft.
 5. Test whole-document and selected-text formatting, Shift+Format overrides/cancel, and enabled Axial transformations together. Check comments appear exactly once.
 6. Open Settings without an active SQL query. If SSMS's formatter has not initialized, preview should show an explanatory message while the Settings UI remains usable. Open a query and toggle an option to retry.
 7. Verify a parse error or unavailable/incompatible formatter leaves query text unchanged. Switch query windows while settings load and confirm formatting stops if the active DTE document or buffer changes.
-8. Smoke-test scripting/export features, which still use their standalone path.
+8. Enable Disregard SSMS Formatter settings and confirm default casing, indentation, and comments, retaining the effective SQL version. Verify Axial options still apply. Save/reopen Settings, discard an unsaved toggle, switch modes quickly in the preview, and test a Shift+Format override and Cancel without changing saved settings.
+9. Smoke-test scripting/export features, which still use their standalone path.
 
