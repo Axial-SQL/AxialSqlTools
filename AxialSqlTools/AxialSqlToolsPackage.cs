@@ -809,68 +809,73 @@ namespace AxialSqlTools
 
             ThreadHelper.ThrowIfNotOnUIThread();
 
+            var generalSettings = SettingsManager.GetGeneralSettings();
+
             try
             {
-                //1. Align numeric types to the right
-                CollectionBase gridContainers = GridAccess.GetGridContainers();
-
-                foreach (var gridContainer in gridContainers)
+                if (generalSettings.alignNumericValuesToRight)
                 {
-                    var grid = GridAccess.GetNonPublicField(gridContainer, "m_grid") as GridControl;
-                    var gridStorage = grid.GridStorage;
-                    var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
+                    //1. Align numeric types to the right
+                    CollectionBase gridContainers = GridAccess.GetGridContainers();
 
-                    var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
-                    if (gridColumns != null)
+                    foreach (var gridContainer in gridContainers)
                     {
-                        //Why no "flot"? Because it cannot be aligned "good" due to the varying number of digits in the decimal part.
-                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "smallmoney", "decimal", "numeric" };
+                        var grid = GridAccess.GetNonPublicField(gridContainer, "m_grid") as GridControl;
+                        var gridStorage = grid.GridStorage;
+                        var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
 
-                        List<int> columnsToAlignRight = new List<int> { };
-
-                        for (int c = 0; c < schemaTable.Rows.Count; c++)
+                        var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
+                        if (gridColumns != null)
                         {
-                            int columnOrdinal = (int)schemaTable.Rows[c][1];
-                            var sqlDataTypeName = schemaTable.Rows[c][24];
+                            //Why no "flot"? Because it cannot be aligned "good" due to the varying number of digits in the decimal part.
+                            string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "smallmoney", "decimal", "numeric" };
 
-                            if (typeToAlignRight.Contains(sqlDataTypeName))
+                            List<int> columnsToAlignRight = new List<int> { };
+
+                            for (int c = 0; c < schemaTable.Rows.Count; c++)
                             {
-                                columnsToAlignRight.Add(columnOrdinal);
-                            }
-                        }
+                                int columnOrdinal = (int)schemaTable.Rows[c][1];
+                                var sqlDataTypeName = schemaTable.Rows[c][24];
 
-                        foreach (Microsoft.SqlServer.Management.UI.Grid.GridColumn gridColumn in gridColumns)
-                        {
-
-                            if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
-                            {
-                                // not needed
-                                //var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
-                                //if (textAlignField != null)
-                                //{
-                                //    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                                //}
-
-                                // applies to the row number column 
-                                var textAlignField2 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_myAlign");
-                                if (textAlignField2 != null)
+                                if (typeToAlignRight.Contains(sqlDataTypeName))
                                 {
-                                    textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                                }
-
-                                var textAlignField3 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_textFormat");
-                                if (textAlignField3 != null)
-                                {
-                                    System.Windows.Forms.TextFormatFlags flags = (System.Windows.Forms.TextFormatFlags)GridAccess.GetNonPublicField(gridColumn, "m_textFormat");
-                                    textAlignField3.SetValue(gridColumn, flags | System.Windows.Forms.TextFormatFlags.Right);
+                                    columnsToAlignRight.Add(columnOrdinal);
                                 }
                             }
 
+                            foreach (Microsoft.SqlServer.Management.UI.Grid.GridColumn gridColumn in gridColumns)
+                            {
+
+                                if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
+                                {
+                                    // not needed
+                                    //var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
+                                    //if (textAlignField != null)
+                                    //{
+                                    //    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                                    //}
+
+                                    // applies to the row number column 
+                                    var textAlignField2 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_myAlign");
+                                    if (textAlignField2 != null)
+                                    {
+                                        textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                                    }
+
+                                    var textAlignField3 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_textFormat");
+                                    if (textAlignField3 != null)
+                                    {
+                                        System.Windows.Forms.TextFormatFlags flags = (System.Windows.Forms.TextFormatFlags)GridAccess.GetNonPublicField(gridColumn, "m_textFormat");
+                                        textAlignField3.SetValue(gridColumn, flags | System.Windows.Forms.TextFormatFlags.Right);
+                                    }
+                                }
+
+                            }
                         }
+
+                        grid.Refresh();
+
                     }
-
-                    grid.Refresh();
-
                 }
             }
             catch (Exception ex)
@@ -887,7 +892,7 @@ namespace AxialSqlTools
                 var m_SqlExec = GridAccess.GetNonPublicField(SQLResultsControl, "m_sqlExec");
 
                 Microsoft.Data.SqlClient.SqlConnection connection = GridAccess.GetNonPublicField(m_SqlExec, "m_conn") as Microsoft.Data.SqlClient.SqlConnection;
-                if (connection.State == ConnectionState.Open)
+                if (generalSettings.useTransactionWarning && connection != null && connection.State == ConnectionState.Open)
                 {
                     using (Microsoft.Data.SqlClient.SqlCommand command = new Microsoft.Data.SqlClient.SqlCommand("SELECT @@TRANCOUNT", connection))
                     {
@@ -896,13 +901,17 @@ namespace AxialSqlTools
                     }
                 }
 
-                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(connection.ConnectionString);
-                bool isColumnEncryptionSettingOn = builder.ColumnEncryptionSetting == SqlConnectionColumnEncryptionSetting.Enabled;
+                bool isColumnEncryptionSettingOn = generalSettings.useAlwaysEncryptedWarning && connection != null
+                    && new SqlConnectionStringBuilder(connection.ConnectionString).ColumnEncryptionSetting == SqlConnectionColumnEncryptionSetting.Enabled;
 
-                var editorProperties = GridAccess.GetNonPublicField(m_SqlExec, "editorProperties");
-                var editorProperties_ElapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
+                string elapsedTime = null;
+                if (generalSettings.usePreciseExecutionTime)
+                {
+                    var editorProperties = GridAccess.GetNonPublicField(m_SqlExec, "editorProperties");
+                    elapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
+                }
 
-                GridAccess.ChangeStatusBarContent(openTranCount, isColumnEncryptionSettingOn, editorProperties_ElapsedTime);
+                GridAccess.ChangeStatusBarContent(openTranCount, isColumnEncryptionSettingOn, elapsedTime, generalSettings);
 
                 // Re-apply connection color after status bar update
                 string dataSource = (string)GridAccess.GetProperty(connection, "DataSource");

@@ -19,6 +19,7 @@ namespace AxialSqlTools
         // leave only some tabs saved or invalidate query approvals prematurely.
         internal class WindowSettings
         {
+            public GeneralSettings General;
             public string TemplatesFolder;
             public SnippetSettings Snippets;
             public AsteriskExpansionSettings AsteriskExpansion;
@@ -44,6 +45,7 @@ namespace AxialSqlTools
                 byte[] connectionString = Protect(Encoding.UTF8.GetBytes(settings.QueryHistoryConnectionString ?? string.Empty));
                 if (connectionString == null) throw new CryptographicException();
 
+                values["GeneralSettings"] = settings.General ?? new GeneralSettings();
                 values["ScriptTemplatesFolder"] = settings.TemplatesFolder;
                 values["SnippetSettings"] = NormalizeSnippetSettings(settings.Snippets ?? new SnippetSettings());
                 values["AsteriskExpansionSettings"] = settings.AsteriskExpansion ?? new AsteriskExpansionSettings();
@@ -69,6 +71,30 @@ namespace AxialSqlTools
             {
                 return SettingsFileStore.ReportSaveFailure(ex);
             }
+        }
+
+        public class GeneralSettings
+        {
+            // Preserve existing behavior when the section or an individual setting is absent.
+            public bool useTransactionWarning = true;
+            public bool useAlwaysEncryptedWarning = true;
+            public bool usePreciseExecutionTime = true;
+            public bool alignNumericValuesToRight = true;
+        }
+
+        public static GeneralSettings GetGeneralSettings()
+        {
+            try
+            {
+                string json = SettingsFileStore.GetValue("GeneralSettings");
+                if (!string.IsNullOrEmpty(json))
+                    return JsonConvert.DeserializeObject<GeneralSettings>(json) ?? new GeneralSettings();
+            }
+            catch (JsonException)
+            {
+                // Use defaults if this section cannot be read.
+            }
+            return new GeneralSettings();
         }
 
         public class HealthDashboardServerQueryTexts
