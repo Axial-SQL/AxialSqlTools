@@ -60,7 +60,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(DataTransferWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(SqlServerBuildsWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(QueryHistoryWindow), Style = VsDockStyle.MDI)]
-    [ProvideToolWindow(typeof(StatisticsSummaryWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(StatisticsSummaryWindow))]
     [ProvideToolWindow(typeof(DatabaseScripterToolWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(DataImportWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(QuickSearchWindow), Style = VsDockStyle.MDI)]

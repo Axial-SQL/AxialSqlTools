@@ -41,14 +41,11 @@ namespace AxialSqlTools
 
                 try
                 {
-                    var window = await package.FindToolWindowAsync(typeof(StatisticsSummaryWindow), 0, true, package.DisposalToken);
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
+                    var window = await package.ShowToolWindowAsync(typeof(StatisticsSummaryWindow), 0, true, package.DisposalToken);
                     if (window?.Frame == null)
                     {
                         throw new NotSupportedException("Cannot create tool window");
                     }
-
-                    ToolWindowDisplay.ShowAsDocument(window);
 
                     StatisticsSummaryStore.SetWindowOpen(true);
                     AxialSqlToolsPackage.EnsureStatisticsExecutionHookForActiveWindow("statistics-window-open");
