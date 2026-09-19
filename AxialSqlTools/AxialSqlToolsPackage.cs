@@ -1257,23 +1257,10 @@ namespace AxialSqlTools
                 return;
             }
             int i = 2;
-            try
-            {
-                CreateCommands(ref i, ref fileNamesCache, Folder, m_commandRegistry, m_commandBarQueryTemplates);
-            }
-            catch (IOException ex)
-            {
-                _logger.Warn(ex, "The templates folder became unavailable while loading templates.");
-                return;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _logger.Warn(ex, "Cannot access the configured templates folder.");
-                return;
-            }
+            CreateCommands(ref i, ref fileNamesCache, Folder, m_commandRegistry, m_commandBarQueryTemplates);
 
             UpdateRenamedTemplatesControls(m_commandBarQueryTemplates, fileNamesCache);
-
+            
         }
 
         private void UpdateRenamedTemplatesControls(CommandBar commandBarFolder, Dictionary<string, string> fileNamesCache)
