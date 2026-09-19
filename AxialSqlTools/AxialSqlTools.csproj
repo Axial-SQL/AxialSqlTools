@@ -165,6 +165,8 @@
     <Compile Include="Modules\SQLBuilds.cs" />
     <Compile Include="Modules\SQLBuildsModels.cs" />
     <Compile Include="Modules\TsqlFormatter.cs" />
+    <Compile Include="Modules\SsmsFormatterReflection.cs" />
+    <Compile Include="Modules\SsmsFormatterHost.cs" />
     <Compile Include="Modules\TsqlSelectFieldIndentation.cs" />
     <Compile Include="Modules\WindowsCredentialHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

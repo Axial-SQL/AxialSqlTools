@@ -127,13 +127,14 @@ namespace AxialSqlTools
 
                 try
                 {
+                    var formatter = SsmsFormatterHost.CreateForActiveDocument();
                     TextSelection selection = dte.ActiveDocument.Selection as TextSelection;
 
                     string existingCommandText = selection.Text.Trim();
 
                     if (!string.IsNullOrEmpty(existingCommandText))
                     {
-                        string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings);
+                        string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings, formatter.Parser, formatter.Generator);
                         selection.Delete();
                         selection.Insert(result);
                         return;
@@ -147,7 +148,7 @@ namespace AxialSqlTools
 
                         if (!string.IsNullOrEmpty(existingCommandText))
                         {
-                            string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings);
+                            string result = TSqlFormatter.FormatCode(existingCommandText, formatSettings, formatter.Parser, formatter.Generator);
 
 
                             EditPoint startPoint = textDoc.StartPoint.CreateEditPoint();
@@ -165,7 +166,7 @@ namespace AxialSqlTools
                     VsShellUtilities.ShowMessageBox(
                         this.package,
                         ex.Message,
-                        "Error parsing the code",
+                        "Unable to format SQL",
                         OLEMSGICON.OLEMSGICON_WARNING,
                         OLEMSGBUTTON.OLEMSGBUTTON_OK,
                         OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);

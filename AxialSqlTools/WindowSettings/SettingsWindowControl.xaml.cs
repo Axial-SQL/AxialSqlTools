@@ -736,9 +736,31 @@ as select 1;
 
         }
 
-        private void formatTSqlExample()
+        private int _formatterPreviewRequest;
+        private System.Threading.Tasks.Task<SsmsFormatterContext> _formatterPreviewContextTask;
+
+        private async void formatTSqlExample()
         {
-            FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, BuildCodeFormatSettings());
+            // Checked events can fire while InitializeComponent is still building the controls.
+            if (SourceQueryPreview == null || FormattedQueryPreview == null
+                || BreakSelectFieldsAfterTopAndUnindent == null) return;
+            int request = ++_formatterPreviewRequest;
+            try
+            {
+                string source = SourceQueryPreview.Text;
+                var settings = BuildCodeFormatSettings();
+                // Coalesce checkbox events raised together when settings are loaded/discarded.
+                if (_formatterPreviewContextTask == null || _formatterPreviewContextTask.IsCompleted)
+                    _formatterPreviewContextTask = SsmsFormatterHost.CreateAsync(null, System.Threading.CancellationToken.None);
+                var formatter = await _formatterPreviewContextTask;
+                if (request != _formatterPreviewRequest) return;
+                FormattedQueryPreview.Text = TSqlFormatter.FormatCode(source, settings, formatter.Parser, formatter.Generator);
+            }
+            catch (Exception ex)
+            {
+                if (request == _formatterPreviewRequest)
+                    FormattedQueryPreview.Text = "Preview unavailable: " + ex.Message;
+            }
         }
 
         private void formatSetting_Checked(object sender, RoutedEventArgs e)

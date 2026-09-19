@@ -283,10 +283,17 @@ namespace AxialSqlTools
 
         public static string FormatCode(string oldCode, SettingsManager.TSqlCodeFormatSettings settingsOverride = null)
         {
-            string resultCode = "";
+            // Non-editor callers (scripting/export) retain their standalone formatting behavior.
+            var generator = new Sql170ScriptGenerator();
+            generator.Options.AlignClauseBodies = false;
+            generator.Options.SqlVersion = SqlVersion.Sql170;
+            return FormatCode(oldCode, settingsOverride, new TSql170Parser(false), generator);
+        }
 
-            TSql170Parser sqlParser = new TSql170Parser(false);
-
+        internal static string FormatCode(string oldCode, SettingsManager.TSqlCodeFormatSettings settingsOverride,
+            TSqlParser sqlParser, SqlScriptGenerator gen)
+        {
+            string resultCode;
             IList<ParseError> parseErrors = new List<ParseError>();
             TSqlFragment result = sqlParser.Parse(new StringReader(oldCode), out parseErrors);
 
@@ -307,18 +314,16 @@ namespace AxialSqlTools
                 formatSettings = settingsOverride;
             }
 
-            Sql170ScriptGenerator gen = new Sql170ScriptGenerator();
-            gen.Options.AlignClauseBodies = false;
-            gen.Options.SqlVersion = SqlVersion.Sql170; //TODO - try to get from current connection
-
-            if (formatSettings.preserveComments)
-            {
+            // Preserve SSMS's comment setting. Axial's enabled option additionally requests preservation.
+            // Do not run the interleaver over comments already emitted by the native generator.
+            var preserveComments = gen.Options.GetType().GetProperty("PreserveComments");
+            if (formatSettings.preserveComments && preserveComments?.CanWrite == true)
+                preserveComments.SetValue(gen.Options, true);
+            bool nativeComments = preserveComments?.GetValue(gen.Options) is bool value && value;
+            if (formatSettings.preserveComments && !nativeComments)
                 resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
-            }
-            else 
-            { 
+            else
                 gen.GenerateScript(result, out resultCode);
-            }
 
             if (formatSettings.HasAnyFormattingEnabled())
             {
@@ -336,7 +341,7 @@ namespace AxialSqlTools
 
         }
 
-        private static string ApplySpecialFormat(string oldCode, TSql170Parser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings, int indentSize)
+        private static string ApplySpecialFormat(string oldCode, TSqlParser sqlParser, SettingsManager.TSqlCodeFormatSettings formatSettings, int indentSize)
         {
             IList<ParseError> parseErrors = new List<ParseError>();
 
