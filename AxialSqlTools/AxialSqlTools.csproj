@@ -488,6 +488,8 @@
     <Content Include="Resources\server-health.png" />
     <Content Include="Resources\settings.png" />
     <Content Include="Resources\snippet.png" />
+    <Content Include="Resources\sort-ascending.png" />
+    <Content Include="Resources\sort-descending.png" />
     <Content Include="Resources\sql-build-info.png" />
     <Content Include="Resources\statistics-summary.png" />
     <Content Include="Resources\template.png" />
