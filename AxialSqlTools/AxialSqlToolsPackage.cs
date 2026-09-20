@@ -48,6 +48,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(ToolWindowGridToEmail), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(HealthDashboard_Server), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(DataCompare.DataCompareWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(PivotGrid.PivotGridWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(DataTransferWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(SqlServerBuildsWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(QueryHistoryWindow), Style = VsDockStyle.MDI)]
@@ -197,6 +198,7 @@ namespace AxialSqlTools
                 await DataCompare.DataCompareWindowCommand.InitializeAsync(this);
                 await DataImportWindowCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
+                await PivotGrid.PivotGridCommand.InitializeAsync(this);
                 await SqlServerBuildsWindowCommand.InitializeAsync(this);
                 await QueryHistoryWindowCommand.InitializeAsync(this);
                 await StatisticsSummaryWindowCommand.InitializeAsync(this);

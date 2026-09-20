@@ -65,6 +65,16 @@
     <UseWinFormsOutOfProcDesigner>True</UseWinFormsOutOfProcDesigner>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="PivotGrid\PivotDetailsWindow.xaml.cs">
+      <DependentUpon>PivotDetailsWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PivotGrid\PivotEngine.cs" />
+    <Compile Include="PivotGrid\PivotGridSnapshot.cs" />
+    <Compile Include="PivotGrid\PivotGridCommand.cs" />
+    <Compile Include="PivotGrid\PivotGridWindow.cs" />
+    <Compile Include="PivotGrid\PivotGridWindowControl.xaml.cs">
+      <DependentUpon>PivotGridWindowControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="DataImport\DataImportWindow.cs" />
     <Compile Include="DataImport\DataImportWindowCommand.cs" />
     <Compile Include="DataImport\DataImportWindowControl.xaml.cs">
@@ -409,6 +419,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="NReco.PivotData">
+      <Version>1.5.1</Version>
+    </PackageReference>
     <PackageReference Include="NLog">
       <Version>6.2.1</Version>
     </PackageReference>
@@ -467,6 +480,10 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="ThirdPartyNotices\NReco.PivotData-LICENSE.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="Resources\attention.png" />
     <Content Include="Resources\compare-schemas.png" />
     <Content Include="Resources\data-source-target.png" />
@@ -501,6 +518,14 @@
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="PivotGrid\PivotDetailsWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="PivotGrid\PivotGridWindowControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="QuerySafety\FatalActionWarningDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
