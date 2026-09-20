@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
+using System.Windows.Input;
 using Task = System.Threading.Tasks.Task;
 
 namespace AxialSqlTools
@@ -73,12 +74,13 @@ namespace AxialSqlTools
         private void Execute(bool descending)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            bool vertical = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
             try
             {
                 if (!TryGetSelection(out var view, out var span)) return;
                 ErrorHandler.ThrowOnFailure(view.GetBuffer(out var buffer));
                 ErrorHandler.ThrowOnFailure(buffer.GetLineText(span.iStartLine, span.iStartIndex, span.iEndLine, span.iEndIndex, out string text));
-                string sorted = SelectedTextSorter.Sort(text, descending);
+                string sorted = SelectedTextSorter.Sort(text, descending, vertical);
                 if (sorted == text) return;
 
                 IntPtr replacement = Marshal.StringToHGlobalUni(sorted);

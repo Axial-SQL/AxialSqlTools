@@ -327,6 +327,7 @@
           <ButtonText>Sort Selected Text Ascending</ButtonText>
           <CanonicalName>AxialSqlTools.SortSelectedTextAscending</CanonicalName>
           <LocCanonicalName>AxialSqlTools.SortSelectedTextAscending</LocCanonicalName>
+          <ToolTipText>Sort selected comma-separated text horizontally (hold Shift for a vertical list)</ToolTipText>
         </Strings>
       </Button>
 
@@ -337,6 +338,7 @@
           <ButtonText>Sort Selected Text Descending</ButtonText>
           <CanonicalName>AxialSqlTools.SortSelectedTextDescending</CanonicalName>
           <LocCanonicalName>AxialSqlTools.SortSelectedTextDescending</LocCanonicalName>
+          <ToolTipText>Sort selected comma-separated text horizontally (hold Shift for a vertical list)</ToolTipText>
         </Strings>
       </Button>
 
