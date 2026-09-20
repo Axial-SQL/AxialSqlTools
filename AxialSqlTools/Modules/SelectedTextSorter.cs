@@ -12,8 +12,8 @@ namespace AxialSqlTools
         {
             if (string.IsNullOrWhiteSpace(text) || text.IndexOf(',') < 0) return text;
 
-            // The user selects the list. Every comma is a separator; do not parse SQL.
-            var items = text.Split(',').Select(item => item.Trim()).ToArray();
+            var items = SplitItems(text);
+            if (items.Length < 2) return text;
             var numbers = items.Select(NumericKey.Parse).ToArray();
             bool numeric = numbers.All(number => number != null);
             var comparer = Comparer<int>.Create((a, b) => numeric
@@ -22,6 +22,33 @@ namespace AxialSqlTools
             var indexes = Enumerable.Range(0, items.Length);
             var ordered = descending ? indexes.OrderByDescending(i => i, comparer) : indexes.OrderBy(i => i, comparer);
             return string.Join(vertical ? "," + Environment.NewLine : ", ", ordered.Select(i => items[i]));
+        }
+
+        private static string[] SplitItems(string text)
+        {
+            var items = new List<string>();
+            int start = 0;
+            bool inString = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (text[i] == '\'')
+                {
+                    // SQL escapes a quote inside a string by doubling it.
+                    if (inString && i + 1 < text.Length && text[i + 1] == '\'')
+                        i++;
+                    else
+                        inString = !inString;
+                }
+                else if (text[i] == ',' && !inString)
+                {
+                    items.Add(text.Substring(start, i - start).Trim());
+                    start = i + 1;
+                }
+            }
+            if (inString)
+                throw new ArgumentException("The selection contains an unclosed string. Select complete comma-separated values, including their closing quotes.");
+            items.Add(text.Substring(start).Trim());
+            return items.ToArray();
         }
 
         // Compare decimal/scientific literals exactly, including SQL decimal(38, s),

@@ -322,9 +322,11 @@
 
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSortSelectedTextAscending" priority="0x0200" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" />
+        <Icon guid="guidSortAscending" id="bmpSortAscending" />
+        <CommandFlag>IconAndText</CommandFlag>
         <CommandFlag>DefaultDisabled</CommandFlag>
         <Strings>
-          <ButtonText>Sort Selected Text Ascending</ButtonText>
+          <ButtonText>Sort Ascending (+Shift: Vertical)</ButtonText>
           <CanonicalName>AxialSqlTools.SortSelectedTextAscending</CanonicalName>
           <LocCanonicalName>AxialSqlTools.SortSelectedTextAscending</LocCanonicalName>
           <ToolTipText>Sort selected comma-separated text horizontally (hold Shift for a vertical list)</ToolTipText>
@@ -333,9 +335,11 @@
 
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSortSelectedTextDescending" priority="0x0210" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" />
+        <Icon guid="guidSortDescending" id="bmpSortDescending" />
+        <CommandFlag>IconAndText</CommandFlag>
         <CommandFlag>DefaultDisabled</CommandFlag>
         <Strings>
-          <ButtonText>Sort Selected Text Descending</ButtonText>
+          <ButtonText>Sort Descending (+Shift: Vertical)</ButtonText>
           <CanonicalName>AxialSqlTools.SortSelectedTextDescending</CanonicalName>
           <LocCanonicalName>AxialSqlTools.SortSelectedTextDescending</LocCanonicalName>
           <ToolTipText>Sort selected comma-separated text horizontally (hold Shift for a vertical list)</ToolTipText>
@@ -371,6 +375,8 @@
       <Bitmap guid="guidSelect" href="Resources\select.png" usedList="bmpSelect" />
       <Bitmap guid="guidSnippet" href="Resources\snippet.png" usedList="bmpSnippet" />
       <Bitmap guid="guidToggleBlockComment" href="Resources\toggle-comment.png" usedList="bmpToggleBlockComment" />
+      <Bitmap guid="guidSortAscending" href="Resources\sort-ascending.png" usedList="bmpSortAscending" />
+      <Bitmap guid="guidSortDescending" href="Resources\sort-descending.png" usedList="bmpSortDescending" />
     </Bitmaps>    
   </Commands>
 
@@ -513,5 +519,11 @@
     </GuidSymbol>
 
 
+    <GuidSymbol name="guidSortAscending" value="{b9a510f9-e552-4641-a0c5-07b1ae8a407f}">
+      <IDSymbol name="bmpSortAscending" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidSortDescending" value="{c032f833-8bc7-4c8d-8b89-0df7fbd89b19}">
+      <IDSymbol name="bmpSortDescending" value="1" />
+    </GuidSymbol>
   </Symbols>
 </CommandTable>
