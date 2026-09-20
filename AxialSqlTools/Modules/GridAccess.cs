@@ -867,7 +867,8 @@ namespace AxialSqlTools
             int? NumericPrecision = schemaRow[3] != DBNull.Value ? Convert.ToInt32(schemaRow[3]) : (int?)null;
             int? NumericScale = schemaRow[4] != DBNull.Value ? Convert.ToInt32(schemaRow[4]) : (int?)null;
 
-            string sqlDataTypeName = ((string)schemaRow[24]).ToUpper();
+            // SQL type names must not follow UI culture casing (e.g. Turkish i -> İ).
+            string sqlDataTypeName = ((string)schemaRow[24]).ToUpperInvariant();
 
             if (sqlDataTypeName == "NVARCHAR" || sqlDataTypeName == "NCHAR"
                 || sqlDataTypeName == "VARCHAR" || sqlDataTypeName == "CHAR"
