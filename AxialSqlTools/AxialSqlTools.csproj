@@ -193,6 +193,15 @@
     <Compile Include="Modules\WindowsCredentialHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AxialSqlToolsPackage.cs" />
+    <Compile Include="AxialSqlToolsPackage.Editor.cs">
+      <DependentUpon>AxialSqlToolsPackage.cs</DependentUpon>
+    </Compile>
+    <Compile Include="AxialSqlToolsPackage.QueryExecution.cs">
+      <DependentUpon>AxialSqlToolsPackage.cs</DependentUpon>
+    </Compile>
+    <Compile Include="AxialSqlToolsPackage.QueryHistory.cs">
+      <DependentUpon>AxialSqlToolsPackage.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
