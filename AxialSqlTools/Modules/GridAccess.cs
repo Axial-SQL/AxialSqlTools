@@ -152,58 +152,69 @@ namespace AxialSqlTools
             }
         }
 
-        public static void ChangeStatusBarContent(int OpenTranCount, bool isColumnEncryptionSettingOn, string ActualElapsedTime)
+        public static void ChangeStatusBarContent(int OpenTranCount, bool isColumnEncryptionSettingOn, string ActualElapsedTime,
+            SettingsManager.GeneralSettings settings)
         {
-            QEStatusBarManager statusBarManager = GetStatusBarManager();
+            if (!settings.useTransactionWarning && !settings.useAlwaysEncryptedWarning && !settings.usePreciseExecutionTime)
+                return;
 
-            if (OpenTranCount > 0)
+            QEStatusBarManager statusBarManager = GetStatusBarManager();
+            if (settings.useTransactionWarning || settings.useAlwaysEncryptedWarning)
             {
-                var msg = "One transaction is still open!";
-                if (OpenTranCount > 1)
+                // Suppress each warning independently, including its color/font changes.
+                if (!settings.useTransactionWarning) OpenTranCount = 0;
+                if (!settings.useAlwaysEncryptedWarning) isColumnEncryptionSettingOn = false;
+
+                if (OpenTranCount > 0)
                 {
-                    msg = $"{OpenTranCount} transactions are still open!";
+                    var msg = "One transaction is still open!";
+                    if (OpenTranCount > 1)
+                    {
+                        msg = $"{OpenTranCount} transactions are still open!";
+                    }
+
+                    var currentMsg = statusBarManager.StatusText;
+                    statusBarManager.SetKnownState(QEStatusBarKnownStates.Executing);
+                    statusBarManager.StatusText = currentMsg + " | " + msg;
                 }
 
-                var currentMsg = statusBarManager.StatusText;
-                statusBarManager.SetKnownState(QEStatusBarKnownStates.Executing);
-                statusBarManager.StatusText = currentMsg + " | " + msg;
+                if (isColumnEncryptionSettingOn)
+                {
+                    var oeMsg = "Column Encryption Setting is ON";
+                    statusBarManager.StatusText = statusBarManager.StatusText + " | " + oeMsg;
+                }
+
+                var generalPanel = GetNonPublicField(statusBarManager, "generalPanel");
+                if (OpenTranCount > 0)
+                {
+                    SetPropertyValue(generalPanel, "ForeColor", Color.Red);
+                }
+                else
+                {
+                    SetPropertyValue(generalPanel, "ForeColor", Color.Black);
+                }
+
+                // TODO - need to contract font from existing property..
+                Font defaultFont = new Font("Segoe UI", 9);
+                Font boldFont = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                var statusStrip = GetNonPublicField(statusBarManager, "statusStrip");
+                if (OpenTranCount > 0 || isColumnEncryptionSettingOn)
+                {
+                    SetPropertyValue(statusStrip, "Font", boldFont);
+                }
+                else
+                {
+                    SetPropertyValue(statusStrip, "Font", defaultFont);
+                }
             }
 
-            if (isColumnEncryptionSettingOn)
+            if (settings.usePreciseExecutionTime)
             {
-                var oeMsg = "Column Encryption Setting is ON";
-                statusBarManager.StatusText = statusBarManager.StatusText + " | " + oeMsg;
+                var executionTimePanel = GetNonPublicField(statusBarManager, "executionTimePanel");
+                SetPropertyValue(executionTimePanel, "Text", ActualElapsedTime);
             }
 
-            var statusBarManager_executionTimePanel = GetNonPublicField(statusBarManager, "executionTimePanel");
-            SetPropertyValue(statusBarManager_executionTimePanel, "Text", ActualElapsedTime);
-
-            var statusBarManager_completedTimePanel = GetNonPublicField(statusBarManager, "completedTimePanel");
-            //statusBarManager_completedTimePanel.Visible = true;
-
-            var generalPanel = GetNonPublicField(statusBarManager, "generalPanel");
-            if (OpenTranCount > 0)
-            {
-                SetPropertyValue(generalPanel, "ForeColor", Color.Red);
-            }
-            else
-            {
-                SetPropertyValue(generalPanel, "ForeColor", Color.Black);
-            }
-
-            // TODO - need to contract font from existing property..
-            Font defaultFont = new Font("Segoe UI", 9);
-            Font boldFont = new Font("Segoe UI", 10, FontStyle.Bold);
-
-            var statusStrip = GetNonPublicField(statusBarManager, "statusStrip");
-            if (OpenTranCount > 0 || isColumnEncryptionSettingOn)
-            {
-                SetPropertyValue(statusStrip, "Font", boldFont);
-            }
-            else
-            {
-                SetPropertyValue(statusStrip, "Font", defaultFont);
-            }
         }
 
         public static Color? FindMatchingConnectionColor(string serverName, string databaseName)

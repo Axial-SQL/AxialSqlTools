@@ -28,19 +28,24 @@
         private const string QueryHistoryStorageModeDisabled = "Disabled";
 
         private string _queryHistoryConnectionString;
+        private bool _settingsLoaded;
+        private bool _authorizingGoogleSheets;
+        private int _authorizationVersion;
+        private string _savedGitHubToken = string.Empty;
+        private SettingsManager.GoogleSheetsSettings _googleSheetsDraft;
         private readonly ToolWindowThemeController _themeController;
         private bool updateResultSubscribed;
         private ObservableCollection<SettingsManager.ConnectionColorRule> _connectionColorRules;
 
         private string tsqlFormatExample = @"while (1=0) 
-begin 
-select top 10
+begin -- inline comment
+select distinct top 10
     c.CustomerID, getDate(),
     CASE WHEN o.TotalAmount > 1000 THEN 'High' ELSE 'Low' END AS OrderSize
 FROM Customers c
 JOIN Orders o ON c.CustomerID = o.CustomerID CROSS JOIN Regions r
-WHERE c.IsActive = 1;
-
+WHERE c.IsActive = 1; /* multi-line 
+comment */
 SELECT dbo.func(p.ProductID), p.ProductName FROM Products p; EXEC dbo.test @a = 0, @b = 1;
 end
 if 1=0 begin select 1; declare @a int, @b varchar(10) = ''
@@ -73,7 +78,8 @@ as select 1;
         private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
         {
             SubscribeToUpdateResultChanges();
-            LoadSavedSettings();
+            if (!_settingsLoaded)
+                LoadSavedSettings();
         }
 
         private void UserControl_Unloaded(object sender, System.Windows.RoutedEventArgs e)
@@ -124,16 +130,26 @@ as select 1;
                 return;
             }
 
-            bool isAuthorized = string.Equals(GoogleSheetsRefreshTokenLabel.Text, "Authorized", StringComparison.OrdinalIgnoreCase);
+            bool isAuthorized = GoogleSheetsRefreshTokenLabel.Text.StartsWith("Authorized", StringComparison.OrdinalIgnoreCase);
             GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(isAuthorized);
         }
 
         private void LoadSavedSettings()
         {
+            _authorizationVersion++;
+            _settingsLoaded = false;
+            SaveAllButton.IsEnabled = false;
             try
             {
 
+                var generalSettings = SettingsManager.GetGeneralSettings();
+                UseTransactionWarning.IsChecked = generalSettings.useTransactionWarning;
+                UseAlwaysEncryptedWarning.IsChecked = generalSettings.useAlwaysEncryptedWarning;
+                UsePreciseExecutionTime.IsChecked = generalSettings.usePreciseExecutionTime;
+                AlignNumericValuesToRight.IsChecked = generalSettings.alignNumericValuesToRight;
+
                 ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
+                UpdateTemplatesFolderStatus();
 
                 var snippetSettings = SettingsManager.GetSnippetSettings();
                 UseSnippets.IsChecked = snippetSettings.useSnippets;
@@ -163,6 +179,7 @@ as select 1;
                 SMTP_EnableSSL.IsChecked = smtpSettings.EnableSsl;
 
                 var tsqlCodeFormatSettings = SettingsManager.GetTSqlCodeFormatSettings();
+                DisregardSsmsFormatterSettings.IsChecked = tsqlCodeFormatSettings.disregardSsmsFormatterSettings;
                 PreserveComments.IsChecked = tsqlCodeFormatSettings.preserveComments;
                 RemoveNewLineAfterJoin.IsChecked = tsqlCodeFormatSettings.removeNewLineAfterJoin;
                 AddTabAfterJoinOn.IsChecked = tsqlCodeFormatSettings.addTabAfterJoinOn;
@@ -174,9 +191,7 @@ as select 1;
                 UnindentBeginEndBlocks.IsChecked = tsqlCodeFormatSettings.unindentBeginEndBlocks;
                 BreakVariableDefinitionsPerLine.IsChecked = tsqlCodeFormatSettings.breakVariableDefinitionsPerLine;  
                 BreakSprocDefinitionParametersPerLine.IsChecked = tsqlCodeFormatSettings.breakSprocDefinitionParametersPerLine;
-                // BreakSelectFieldsAfterTopAndUnindent.IsChecked = tsqlCodeFormatSettings.breakSelectFieldsAfterTopAndUnindent;
-
-                OpenAiApiKey.Password = SettingsManager.GetOpenAiApiKey();
+                BreakSelectFieldsAfterTopAndUnindent.IsChecked = tsqlCodeFormatSettings.breakSelectFieldsAfterTopAndUnindent;
 
                 // Excel export settings
                 var excelSettings = SettingsManager.GetExcelExportSettings();
@@ -187,6 +202,7 @@ as select 1;
                 ExcelExportDefaultFilename.Text = excelSettings.defaultFileName;
 
                 var googleSettings = SettingsManager.GetGoogleSheetsSettings();
+                _googleSheetsDraft = googleSettings;
                 GoogleSheetsIncludeSourceQuery.IsChecked = googleSettings.includeSourceQuery;
                 GoogleSheetsExportBoolsAsNumbers.IsChecked = googleSettings.exportBoolsAsNumbers;
                 GoogleSheetsDefaultSpreadsheetName.Text = googleSettings.defaultSpreadsheetName;
@@ -194,10 +210,17 @@ as select 1;
                 GoogleSheetsClientSecret.Password = googleSettings.clientSecret;
                 UpdateGoogleSheetsStatus(googleSettings.refreshToken);
 
+                WarnWhenRunningFatalAction.IsChecked = SettingsManager.GetWarnWhenRunningFatalAction();
                 EnableUpdateChecks.IsChecked = SettingsManager.GetEnableUpdateChecks();
                 UpdateUpdateStatus();
 
                 LoadConnectionColorRules();
+                NewRuleServerPattern.Clear();
+                NewRuleDatabasePattern.Clear();
+                NewRuleColorPreview.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44));
+                SourceQueryPreview.Text = tsqlFormatExample;
+                formatTSqlExample();
+                _settingsLoaded = true;
 
             }
             catch (Exception ex)
@@ -208,14 +231,17 @@ as select 1;
                 MessageBox.Show(msg, "Error");
             }
 
+            GitHubToken.Password = string.Empty;
             try
             {
                 GitHubToken.Password = WindowsCredentialHelper.LoadToken("AxialSqlTools_GitHubToken");
             }
             catch 
             {
-                // ??
+                // No credential has been saved, or Credential Manager is unavailable.
             }
+            _savedGitHubToken = GitHubToken.Password;
+            SaveAllButton.IsEnabled = _settingsLoaded && !_authorizingGoogleSheets;
 
         }
 
@@ -244,32 +270,6 @@ as select 1;
                 }
             }
 
-        }
-
-        private void Button_SaveScriptFolder_Click(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.SaveTemplatesFolder(ScriptFolder.Text);
-
-            SavedMessage();
-        }
-
-
-        private void Button_SaveSnippetFolder_Click(object sender, RoutedEventArgs e)
-        {
-            var snippetSettings = SettingsManager.GetSnippetSettings();
-            snippetSettings.useSnippets = UseSnippets.IsChecked.GetValueOrDefault();
-            snippetSettings.snippetFolder = SnippetFolder.Text;
-            snippetSettings.replaceKey = GetSelectedSnippetReplaceKey();
-
-            SettingsManager.SaveSnippetSettings(snippetSettings);
-
-            SettingsManager.SaveAsteriskExpansionSettings(new SettingsManager.AsteriskExpansionSettings
-            {
-                useAsteriskExpansion = UseAsteriskExpansion.IsChecked.GetValueOrDefault(),
-                triggerKey = GetSelectedAsteriskExpansionTriggerKey()
-            });
-
-            SavedMessage();
         }
 
         private void buttonDownloadAxialScripts_Click(object sender, RoutedEventArgs e)
@@ -369,91 +369,143 @@ as select 1;
             File.Delete(zipPath);
         }
 
+        private void SaveAllSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_settingsLoaded || _authorizingGoogleSheets)
+                return;
+
+            if (!int.TryParse(SMTP_Port.Text, out int smtpPort) || smtpPort < 1 || smtpPort > 65535)
+            {
+                SettingsTabs.SelectedItem = SmtpSettingsTab;
+                MessageBox.Show("Enter an SMTP port between 1 and 65535.", "Invalid settings",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                SMTP_Port.Focus();
+                SMTP_Port.SelectAll();
+                return;
+            }
+
+            var snippets = SettingsManager.GetSnippetSettings();
+            snippets.useSnippets = UseSnippets.IsChecked.GetValueOrDefault();
+            snippets.snippetFolder = SnippetFolder.Text;
+            snippets.replaceKey = GetSelectedSnippetReplaceKey();
+
+            var settings = new SettingsManager.WindowSettings
+            {
+                General = new SettingsManager.GeneralSettings
+                {
+                    useTransactionWarning = UseTransactionWarning.IsChecked.GetValueOrDefault(),
+                    useAlwaysEncryptedWarning = UseAlwaysEncryptedWarning.IsChecked.GetValueOrDefault(),
+                    usePreciseExecutionTime = UsePreciseExecutionTime.IsChecked.GetValueOrDefault(),
+                    alignNumericValuesToRight = AlignNumericValuesToRight.IsChecked.GetValueOrDefault()
+                },
+                TemplatesFolder = ScriptFolder.Text,
+                Snippets = snippets,
+                AsteriskExpansion = new SettingsManager.AsteriskExpansionSettings
+                {
+                    useAsteriskExpansion = UseAsteriskExpansion.IsChecked.GetValueOrDefault(),
+                    triggerKey = GetSelectedAsteriskExpansionTriggerKey()
+                },
+                QueryHistoryConnectionString = _queryHistoryConnectionString,
+                QueryHistoryTableName = QueryHistoryTableName.Text,
+                QueryHistoryStorageMode = GetSelectedQueryHistoryStorageType(),
+                MyEmail = MyEmailAddress.Text,
+                Smtp = new SettingsManager.SmtpSettings
+                {
+                    ServerName = SMTP_Server.Text,
+                    Port = smtpPort,
+                    Username = SMTP_UserName.Text,
+                    Password = SMTP_Password.Password,
+                    EnableSsl = SMTP_EnableSSL.IsChecked.GetValueOrDefault()
+                },
+                CodeFormat = BuildCodeFormatSettings(),
+                ExcelExport = new SettingsManager.ExcelExportSettings
+                {
+                    includeSourceQuery = ExcelExportIncludeSourceQuery.IsChecked.GetValueOrDefault(),
+                    addAutofilter = ExcelExportAddAutoFilter.IsChecked.GetValueOrDefault(),
+                    exportBoolsAsNumbers = ExcelExportBoolsAsNumbers.IsChecked.GetValueOrDefault(),
+                    defaultDirectory = ExcelExportDefaultDirectory.Text,
+                    defaultFileName = ExcelExportDefaultFilename.Text
+                },
+                GoogleSheets = BuildGoogleSheetsSettings(),
+                ConnectionColorRules = new System.Collections.Generic.List<SettingsManager.ConnectionColorRule>(_connectionColorRules),
+                WarnWhenRunningFatalAction = WarnWhenRunningFatalAction.IsChecked == true,
+                EnableUpdateChecks = EnableUpdateChecks.IsChecked.GetValueOrDefault(true)
+            };
+
+            if (!SaveSettings(() => SettingsManager.SaveWindowSettings(settings)))
+                return;
+
+            _googleSheetsDraft = settings.GoogleSheets;
+            UpdateGoogleSheetsStatus(_googleSheetsDraft.refreshToken);
+            UpdateTemplatesFolderStatus();
+            RefreshQueryHistoryCreateScript();
+            GridAccess.ColorAllDocumentTabs();
+            GridAccess.ScheduleReapplyAllTabColors();
+
+            // The hidden GitHub tab uses Credential Manager, not settings.json.
+            // Leave its credential alone unless it was explicitly edited.
+            if (!string.Equals(GitHubToken.Password, _savedGitHubToken, StringComparison.Ordinal))
+            {
+                try
+                {
+                    WindowsCredentialHelper.SaveToken("AxialSqlTools_GitHubToken", "AxialSqlTools_GitHubToken", GitHubToken.Password);
+                    _savedGitHubToken = GitHubToken.Password;
+                }
+                catch (Exception ex)
+                {
+                    SettingsFileStore.ReportSaveFailure(ex);
+                    MessageBox.Show("Settings were saved, but the GitHub token could not be saved to Windows Credential Manager. Please try again.",
+                        "GitHub token not saved", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+
+            SavedMessage();
+        }
+
+        private void DiscardChanges_Click(object sender, RoutedEventArgs e)
+        {
+            LoadSavedSettings();
+        }
+
+        private bool SaveSettings(Func<bool> save)
+        {
+            try
+            {
+                if (save())
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                SettingsFileStore.ReportSaveFailure(ex);
+            }
+
+            MessageBox.Show(SettingsManager.LastSaveError ?? "The settings could not be saved. Please try again.",
+                "Settings not saved", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
+        }
+
+        private void UpdateTemplatesFolderStatus()
+        {
+            bool available = Directory.Exists(SettingsManager.GetTemplatesFolder());
+            TemplatesFolderStatus.Text = available ? string.Empty
+                : "The templates folder is currently unavailable or has not been created. The configured path is retained.";
+            TemplatesFolderStatus.Visibility = available ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         private void SavedMessage()
         {
             MessageBox.Show(
-                string.Format(System.Globalization.CultureInfo.CurrentUICulture, "The change has been saved", this.ToString()),
-                "Setting saved");
+                "All settings have been saved.",
+                "Settings saved");
         }
 
         private void buttonWikiPage_Click(object sender, RequestNavigateEventArgs e)
         {
             Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
             e.Handled = true;
-        }
-
-        private void ButtonSaveSmtpSettings_Click(object sender, RoutedEventArgs e)
-        {
-            
-            SettingsManager.SmtpSettings smtpSettings = new SettingsManager.SmtpSettings()
-            {
-                ServerName = SMTP_Server.Text,
-                Username = SMTP_UserName.Text,
-                Password = SMTP_Password.Password,
-                EnableSsl = SMTP_EnableSSL.IsChecked.GetValueOrDefault()
-            };
-
-            int smptPort = 587;
-            bool success = int.TryParse(SMTP_Port.Text, out smptPort);
-            smtpSettings.Port = smptPort;
-
-            SettingsManager.SaveSmtpSettings(smtpSettings);
-
-            SettingsManager.SaveMyEmail(MyEmailAddress.Text);
-
-            SavedMessage();
-
-        }
-
-        private void Button_SaveApplyAdditionalFormat_Click(object sender, RoutedEventArgs e)
-        {
-            var settings = new SettingsManager.TSqlCodeFormatSettings
-            {
-                preserveComments = PreserveComments.IsChecked.GetValueOrDefault(false),
-                removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
-                addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
-                moveCrossJoinToNewLine = MoveCrossJoinToNewLine.IsChecked.GetValueOrDefault(false),
-                formatCaseAsMultiline = FormatCaseAsMultiline.IsChecked.GetValueOrDefault(false),
-                addNewLineBetweenStatementsInBlocks = AddNewLineBetweenStatementsInBlocks.IsChecked.GetValueOrDefault(false),
-                breakSprocParametersPerLine = BreakSprocParametersPerLine.IsChecked.GetValueOrDefault(false),
-                uppercaseBuiltInFunctions = UppercaseBuiltInFunctions.IsChecked.GetValueOrDefault(false),
-                unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false),
-                breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked.GetValueOrDefault(false),
-                breakSprocDefinitionParametersPerLine = BreakSprocDefinitionParametersPerLine.IsChecked.GetValueOrDefault(false),
-                // breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
-            };
-
-            SettingsManager.SaveTSqlCodeFormatSettings(settings);
-            SavedMessage();
-        }
-
-        private void button_SaveExcelExportSettings_Click(object sender, RoutedEventArgs e)
-        {
-            var settings = new SettingsManager.ExcelExportSettings
-            {
-                includeSourceQuery = ExcelExportIncludeSourceQuery.IsChecked.GetValueOrDefault(false),
-                addAutofilter = ExcelExportAddAutoFilter.IsChecked.GetValueOrDefault(false),
-                exportBoolsAsNumbers = ExcelExportBoolsAsNumbers.IsChecked.GetValueOrDefault(false),
-                defaultDirectory = ExcelExportDefaultDirectory.Text,
-                defaultFileName = ExcelExportDefaultFilename.Text
-            };
-
-            SettingsManager.SaveExcelExportSettings(settings);
-            SavedMessage();
-        }
-
-        private void button_SaveGoogleSheetsSettings_Click(object sender, RoutedEventArgs e)
-        {
-            var settings = BuildGoogleSheetsSettings();
-            SettingsManager.SaveGoogleSheetsSettings(settings);
-            UpdateGoogleSheetsStatus(settings.refreshToken);
-            SavedMessage();
-        }
-
-        private void button_SaveUpdateSettings_Click(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.SaveEnableUpdateChecks(EnableUpdateChecks.IsChecked.GetValueOrDefault(true));
-            SavedMessage();
         }
 
         private void button_CheckUpdates_Click(object sender, RoutedEventArgs e)
@@ -483,7 +535,9 @@ as select 1;
 
         private async void button_AuthorizeGoogleSheets_Click(object sender, RoutedEventArgs e)
         {
+            if (_authorizingGoogleSheets) return;
             var settings = BuildGoogleSheetsSettings();
+            int authorizationVersion = _authorizationVersion;
 
             if (!settings.HasClientConfiguration())
             {
@@ -491,6 +545,9 @@ as select 1;
                 return;
             }
 
+            _authorizingGoogleSheets = true;
+            button_AuthorizeGoogleSheets.IsEnabled = false;
+            SaveAllButton.IsEnabled = false;
             try
             {
                 string authorizationUrl = GoogleSheetsExport.BuildAuthorizationUrl(settings);
@@ -504,18 +561,30 @@ as select 1;
 
                 var authResult = await GoogleSheetsExport.ExchangeAuthorizationCodeAsync(settings, authorizationCode.Trim(), CancellationToken.None);
 
+                if (authorizationVersion != _authorizationVersion
+                    || !string.Equals(settings.clientId, GoogleSheetsClientId.Text, StringComparison.Ordinal)
+                    || !string.Equals(settings.clientSecret, GoogleSheetsClientSecret.Password, StringComparison.Ordinal))
+                    return;
+
                 if (!string.IsNullOrWhiteSpace(authResult.RefreshToken))
                 {
                     settings.refreshToken = authResult.RefreshToken;
                 }
 
-                SettingsManager.SaveGoogleSheetsSettings(settings);
+                _googleSheetsDraft = settings;
                 UpdateGoogleSheetsStatus(settings.refreshToken);
-                SavedMessage();
+                if (!string.IsNullOrWhiteSpace(settings.refreshToken))
+                    GoogleSheetsRefreshTokenLabel.Text = "Authorized (click Save to keep changes)";
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Authorization failed: {ex.Message}", "Google Sheets", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _authorizingGoogleSheets = false;
+                button_AuthorizeGoogleSheets.IsEnabled = true;
+                SaveAllButton.IsEnabled = _settingsLoaded;
             }
         }
 
@@ -528,8 +597,17 @@ as select 1;
                 defaultSpreadsheetName = GoogleSheetsDefaultSpreadsheetName.Text,
                 clientId = GoogleSheetsClientId.Text,
                 clientSecret = GoogleSheetsClientSecret.Password,
-                refreshToken = SettingsManager.GetGoogleSheetsSettings().refreshToken
+                refreshToken = _googleSheetsDraft != null
+                    && string.Equals(_googleSheetsDraft.clientId, GoogleSheetsClientId.Text, StringComparison.Ordinal)
+                    && string.Equals(_googleSheetsDraft.clientSecret, GoogleSheetsClientSecret.Password, StringComparison.Ordinal)
+                        ? _googleSheetsDraft.refreshToken : string.Empty
             };
+        }
+
+        private void GoogleSheetsCredentialsChanged(object sender, RoutedEventArgs e)
+        {
+            if (_settingsLoaded)
+                UpdateGoogleSheetsStatus(BuildGoogleSheetsSettings().refreshToken);
         }
 
         private void UpdateGoogleSheetsStatus(string refreshToken)
@@ -537,12 +615,12 @@ as select 1;
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
                 GoogleSheetsRefreshTokenLabel.Text = "Not authorized";
-                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkRed);
+                GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(false);
             }
             else
             {
                 GoogleSheetsRefreshTokenLabel.Text = "Authorized";
-                GoogleSheetsRefreshTokenLabel.Foreground = new SolidColorBrush(Colors.DarkGreen);
+                GoogleSheetsRefreshTokenLabel.Foreground = GetThemedStatusBrush(true);
             }
         }
 
@@ -550,25 +628,6 @@ as select 1;
         {
             Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
             e.Handled = true;
-        }
-
-        private void Button_SaveOpenAi_Click(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.SaveOpenAiApiKey(OpenAiApiKey.Password);
-
-            SavedMessage();
-        }
-
-        private void Button_SaveQueryHistory_Click(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.SaveQueryHistoryConnectionString(_queryHistoryConnectionString);
-            SettingsManager.SaveQueryHistoryTableName(QueryHistoryTableName.Text);
-            SettingsManager.SaveQueryHistoryStorageMode(GetSelectedQueryHistoryStorageType());
-
-            SavedMessage();
-
-            RefreshQueryHistoryCreateScript();
-
         }
 
         private void Button_SelectDatabaseFromObjectExplorer_Click(object sender, RoutedEventArgs e)
@@ -671,10 +730,11 @@ as select 1;
             });
         }
 
-        private void formatTSqlExample()
+        private SettingsManager.TSqlCodeFormatSettings BuildCodeFormatSettings()
         {
-            var settings = new SettingsManager.TSqlCodeFormatSettings
+            return new SettingsManager.TSqlCodeFormatSettings
             {
+                disregardSsmsFormatterSettings = DisregardSsmsFormatterSettings.IsChecked.GetValueOrDefault(false),
                 preserveComments = PreserveComments.IsChecked.GetValueOrDefault(false),
                 removeNewLineAfterJoin = RemoveNewLineAfterJoin.IsChecked.GetValueOrDefault(false),
                 addTabAfterJoinOn = AddTabAfterJoinOn.IsChecked.GetValueOrDefault(false),
@@ -686,10 +746,42 @@ as select 1;
                 unindentBeginEndBlocks = UnindentBeginEndBlocks.IsChecked.GetValueOrDefault(false),
                 breakVariableDefinitionsPerLine = BreakVariableDefinitionsPerLine.IsChecked.GetValueOrDefault(false),
                 breakSprocDefinitionParametersPerLine = BreakSprocDefinitionParametersPerLine.IsChecked.GetValueOrDefault(false),
-                // breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
+                breakSelectFieldsAfterTopAndUnindent = BreakSelectFieldsAfterTopAndUnindent.IsChecked.GetValueOrDefault(false)
             };
 
-            FormattedQueryPreview.Text = TSqlFormatter.FormatCode(SourceQueryPreview.Text, settings);
+        }
+
+        private int _formatterPreviewRequest;
+        private bool _formatterPreviewDisregardSsmsSettings;
+        private System.Threading.Tasks.Task<SsmsFormatterContext> _formatterPreviewContextTask;
+
+        private async void formatTSqlExample()
+        {
+            // Checked events can fire while InitializeComponent is still building the controls.
+            if (SourceQueryPreview == null || FormattedQueryPreview == null
+                || BreakSelectFieldsAfterTopAndUnindent == null || DisregardSsmsFormatterSettings == null) return;
+            int request = ++_formatterPreviewRequest;
+            try
+            {
+                string source = SourceQueryPreview.Text;
+                var settings = BuildCodeFormatSettings();
+                // Coalesce checkbox events raised together when settings are loaded/discarded.
+                if (_formatterPreviewContextTask == null || _formatterPreviewContextTask.IsCompleted
+                    || _formatterPreviewDisregardSsmsSettings != settings.disregardSsmsFormatterSettings)
+                {
+                    _formatterPreviewDisregardSsmsSettings = settings.disregardSsmsFormatterSettings;
+                    _formatterPreviewContextTask = SsmsFormatterHost.CreateAsync(null,
+                        System.Threading.CancellationToken.None, settings.disregardSsmsFormatterSettings);
+                }
+                var formatter = await _formatterPreviewContextTask;
+                if (request != _formatterPreviewRequest) return;
+                FormattedQueryPreview.Text = TSqlFormatter.FormatCode(source, settings, formatter.Parser, formatter.Generator);
+            }
+            catch (Exception ex)
+            {
+                if (request == _formatterPreviewRequest)
+                    FormattedQueryPreview.Text = "Preview unavailable: " + ex.Message;
+            }
         }
 
         private void formatSetting_Checked(object sender, RoutedEventArgs e)
@@ -701,16 +793,6 @@ as select 1;
         {
             formatTSqlExample();
         }
-
-        private void buttonSaveGitHubSettings_Click(object sender, RoutedEventArgs e)
-        {
-
-            WindowsCredentialHelper.SaveToken("AxialSqlTools_GitHubToken", "AxialSqlTools_GitHubToken", GitHubToken.Password);
-
-            SavedMessage();
-
-        }
-
 
         private static string DefaultQueryHistoryTableName => "[dbo].[QueryHistory]";
 
@@ -895,15 +977,6 @@ END
             {
                 _connectionColorRules.Remove(selectedRule);
             }
-        }
-
-        private void Button_SaveConnectionColorRules_Click(object sender, RoutedEventArgs e)
-        {
-            var rules = new System.Collections.Generic.List<SettingsManager.ConnectionColorRule>(_connectionColorRules);
-            SettingsManager.SaveConnectionColorRules(rules);
-            GridAccess.ColorAllDocumentTabs();
-            GridAccess.ScheduleReapplyAllTabColors();
-            SavedMessage();
         }
 
     }

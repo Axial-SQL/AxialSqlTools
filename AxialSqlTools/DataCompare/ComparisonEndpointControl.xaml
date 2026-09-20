@@ -1,0 +1,17 @@
+<UserControl x:Class="AxialSqlTools.DataCompare.ComparisonEndpointControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <WrapPanel x:Name="ConnectionButtons">
+            <Button Content="Object Explorer" ToolTip="Use the database selected in Object Explorer" Click="ObjectExplorerClick" Margin="0,0,6,6"/>
+            <Button Content="Active query" ToolTip="Use the connection of the active SQL query" Click="ActiveQueryClick" Margin="0,0,6,6"/>
+            <Button Content="New connection..." Click="NewConnectionClick" Margin="0,0,6,6"/>
+            <Button Content="Refresh" Click="RefreshClick" Margin="0,0,0,6"/>
+        </WrapPanel>
+        <TextBlock x:Name="ConnectionLabel" Text="Choose a SQL Server connection" TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <ComboBox x:Name="TableBox" IsEditable="True" IsReadOnly="True" IsTextSearchEnabled="True"
+                  TextSearch.TextPath="QualifiedName" MaxDropDownHeight="350" MinHeight="28"
+                  SelectionChanged="TableSelectionChanged" AutomationProperties.Name="Table"/>
+        <TextBlock x:Name="ErrorLabel" TextWrapping="Wrap" Foreground="{DynamicResource AxialThemeStatusErrorBrush}" Margin="0,5,0,0"/>
+    </StackPanel>
+</UserControl>

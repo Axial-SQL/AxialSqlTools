@@ -3,6 +3,7 @@
   <PropertyGroup>
     <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <UseWinFormsOutOfProcDesigner>True</UseWinFormsOutOfProcDesigner>
@@ -27,7 +28,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AxialSqlTools</RootNamespace>
     <AssemblyName>AxialSqlTools</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <RuntimeIdentifier>win</RuntimeIdentifier>
     <RuntimeIdentifiers>win</RuntimeIdentifiers>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
@@ -96,6 +97,12 @@
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml.cs">
       <DependentUpon>DatabaseScripterToolWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="QuerySafety\FatalActionAnalyzer.cs" />
+    <Compile Include="QuerySafety\FatalActionSession.cs" />
+    <Compile Include="QuerySafety\FatalActionGuard.cs" />
+    <Compile Include="QuerySafety\FatalActionWarningDialog.xaml.cs">
+      <DependentUpon>FatalActionWarningDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Modules\AuroraCore.cs" />
     <Compile Include="Modules\AsteriskExpansionService.cs" />
     <Compile Include="UpdateChecker.cs" />
@@ -127,6 +134,25 @@
       <DependentUpon>SnippetManagerWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="DataTransfer\DataTransferWindow.cs" />
+    <Compile Include="DataCompare\ComparisonModel.cs" />
+    <Compile Include="DataCompare\ValueCodec.cs" />
+    <Compile Include="DataCompare\ComparisonStorage.cs" />
+    <Compile Include="DataCompare\ComparisonEngine.cs" />
+    <Compile Include="DataCompare\ComparisonCsv.cs" />
+    <Compile Include="DataCompare\SqlTableReader.cs" />
+    <Compile Include="DataCompare\SynchronizationScript.cs" />
+    <Compile Include="DataCompare\SqlSynchronizer.cs" />
+    <Compile Include="DataCompare\DataCompareWindow.cs" />
+    <Compile Include="DataCompare\DataCompareWindowCommand.cs" />
+    <Compile Include="DataCompare\DataCompareWindowControl.xaml.cs">
+      <DependentUpon>DataCompareWindowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DataCompare\ComparisonEndpointControl.xaml.cs">
+      <DependentUpon>ComparisonEndpointControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DataCompare\SqlConnectionDialog.xaml.cs">
+      <DependentUpon>SqlConnectionDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="DataTransfer\DataTransferWindowCommand.cs" />
     <Compile Include="DataTransfer\DataTransferWindowControl.xaml.cs">
       <DependentUpon>DataTransferWindowControl.xaml</DependentUpon>
@@ -159,12 +185,18 @@
     <Compile Include="Modules\GridAccess.cs" />
     <Compile Include="Modules\KeypressCommandFilter.cs" />
     <Compile Include="Modules\MetricsService.cs" />
+    <Compile Include="Modules\ToolWindowDisplay.cs" />
     <Compile Include="Modules\ToolWindowThemeSupport.cs" />
     <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="Modules\SettingsManager.cs" />
+    <Compile Include="Modules\SettingsFileStore.cs" />
     <Compile Include="Modules\SQLBuilds.cs" />
     <Compile Include="Modules\SQLBuildsModels.cs" />
     <Compile Include="Modules\TsqlFormatter.cs" />
+    <Compile Include="Modules\SsmsFormatterReflection.cs" />
+    <Compile Include="Modules\SsmsFormatterHost.cs" />
+    <Compile Include="Modules\SsmsFormatterAssemblyLoader.cs" />
+    <Compile Include="Modules\TsqlSelectFieldIndentation.cs" />
     <Compile Include="Modules\WindowsCredentialHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AxialSqlToolsPackage.cs" />
@@ -257,6 +289,10 @@
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.CommandBars.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
+      <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\CommonExtensions\Platform\MefHosting\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Microsoft.VisualStudio.Imaging">
       <HintPath>C:\Program Files\Microsoft SQL Server Management Studio 22\Release\Common7\IDE\Microsoft.VisualStudio.Imaging.dll</HintPath>
       <Private>False</Private>
@@ -341,6 +377,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Data" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
@@ -369,7 +406,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="NLog">
-      <Version>6.2.0</Version>
+      <Version>6.2.1</Version>
     </PackageReference>
     <PackageReference Include="MySqlConnector">
       <Version>2.6.2</Version>
@@ -458,6 +495,10 @@
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="QuerySafety\FatalActionWarningDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Commands\Dialogs\FormatOptionsDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -497,6 +538,18 @@
     <Page Include="DataTransfer\DataTransferWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="DataCompare\DataCompareWindowControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="DataCompare\ComparisonEndpointControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="DataCompare\SqlConnectionDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="DataTransfer\SavedConnectionManagerWindow.xaml">
       <SubType>Designer</SubType>
@@ -549,8 +602,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup>
-    <PostBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -Command "&amp; { $manifest = '$(ProjectDir)source.extension.vsixmanifest'; [xml]$xml = Get-Content $manifest; $version = $xml.PackageManifest.Metadata.Identity.Version; $vsix = Join-Path '$(TargetDir)' 'AxialSqlTools.vsix'; $zipName = 'AxialSqlTools_SSMS22_' + $version + '.zip'; $dest = Join-Path $env:USERPROFILE ('Desktop\' + $zipName); Compress-Archive -Path $vsix -DestinationPath $dest -Force }"
-</PostBuildEvent>
+    <PostBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -Command "&amp; { $manifest = '$(ProjectDir)source.extension.vsixmanifest'; [xml]$xml = Get-Content $manifest; $version = $xml.PackageManifest.Metadata.Identity.Version; $vsix = Join-Path '$(TargetDir)' 'AxialSqlTools.vsix'; $desktop = [Environment]::GetFolderPath('Desktop'); $dest = Join-Path $desktop ('AxialSqlTools_SSMS22_' + $version + '.vsix'); Copy-Item -Path $vsix -Destination $dest -Force }"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

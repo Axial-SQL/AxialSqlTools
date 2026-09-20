@@ -1,11 +1,9 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -15,6 +13,89 @@ namespace AxialSqlTools
 
     public class SettingsManager
     {
+        public static string LastSaveError => SettingsFileStore.LastSaveError;
+
+        // One draft for every settings tab. Persist the file once so a failure cannot
+        // leave only some tabs saved or invalidate query approvals prematurely.
+        internal class WindowSettings
+        {
+            public GeneralSettings General;
+            public string TemplatesFolder;
+            public SnippetSettings Snippets;
+            public AsteriskExpansionSettings AsteriskExpansion;
+            public string QueryHistoryConnectionString;
+            public string QueryHistoryTableName;
+            public string QueryHistoryStorageMode;
+            public string MyEmail;
+            public SmtpSettings Smtp;
+            public TSqlCodeFormatSettings CodeFormat;
+            public ExcelExportSettings ExcelExport;
+            public GoogleSheetsSettings GoogleSheets;
+            public List<ConnectionColorRule> ConnectionColorRules;
+            public bool WarnWhenRunningFatalAction;
+            public bool EnableUpdateChecks;
+        }
+
+        internal static bool SaveWindowSettings(WindowSettings settings)
+        {
+            try
+            {
+                if (settings == null) throw new ArgumentNullException(nameof(settings));
+                var values = CreateSmtpValues(settings.Smtp);
+                byte[] connectionString = Protect(Encoding.UTF8.GetBytes(settings.QueryHistoryConnectionString ?? string.Empty));
+                if (connectionString == null) throw new CryptographicException();
+
+                values["GeneralSettings"] = settings.General ?? new GeneralSettings();
+                values["ScriptTemplatesFolder"] = settings.TemplatesFolder;
+                values["SnippetSettings"] = NormalizeSnippetSettings(settings.Snippets ?? new SnippetSettings());
+                values["AsteriskExpansionSettings"] = settings.AsteriskExpansion ?? new AsteriskExpansionSettings();
+                values["QueryHistoryConnectionString"] = Convert.ToBase64String(connectionString);
+                values["QueryHistoryTableName"] = settings.QueryHistoryTableName;
+                values["QueryHistoryStorageMode"] = string.IsNullOrWhiteSpace(settings.QueryHistoryStorageMode)
+                    ? "Database" : settings.QueryHistoryStorageMode;
+                values["MyEmail"] = settings.MyEmail;
+                values["TSqlCodeFormatSettings"] = settings.CodeFormat;
+                values["ExcelExportSettings"] = settings.ExcelExport;
+                values["GoogleSheetsSettings"] = CreateStoredGoogleSheetsSettings(settings.GoogleSheets);
+                values["ConnectionColorRules"] = settings.ConnectionColorRules ?? new List<ConnectionColorRule>();
+                values["WarnWhenRunningFatalAction"] = settings.WarnWhenRunningFatalAction;
+                values["EnableUpdateChecks"] = settings.EnableUpdateChecks;
+
+                if (!SettingsFileStore.SaveValues(values))
+                    return false;
+
+                QuerySafety.FatalActionGuard.ResetApprovals();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return SettingsFileStore.ReportSaveFailure(ex);
+            }
+        }
+
+        public class GeneralSettings
+        {
+            // Preserve existing behavior when the section or an individual setting is absent.
+            public bool useTransactionWarning = true;
+            public bool useAlwaysEncryptedWarning = true;
+            public bool usePreciseExecutionTime = true;
+            public bool alignNumericValuesToRight = true;
+        }
+
+        public static GeneralSettings GetGeneralSettings()
+        {
+            try
+            {
+                string json = SettingsFileStore.GetValue("GeneralSettings");
+                if (!string.IsNullOrEmpty(json))
+                    return JsonConvert.DeserializeObject<GeneralSettings>(json) ?? new GeneralSettings();
+            }
+            catch (JsonException)
+            {
+                // Use defaults if this section cannot be read.
+            }
+            return new GeneralSettings();
+        }
 
         public class HealthDashboardServerQueryTexts
         {
@@ -329,8 +410,33 @@ ORDER BY sd.[name];
             }
         }
 
+        private class StoredGoogleSheetsSettings
+        {
+            public bool includeSourceQuery;
+            public bool exportBoolsAsNumbers;
+            public string clientId;
+            public string clientSecretEncrypted;
+            public string refreshTokenEncrypted;
+            public string defaultSpreadsheetName = "DataExport_{yyyyMMdd_HHmmss}";
+        }
+
+        private static string EncryptGoogleSecret(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            var encrypted = ProtectedData.Protect(Encoding.UTF8.GetBytes(value), null, DataProtectionScope.CurrentUser);
+            return Convert.ToBase64String(encrypted);
+        }
+
+        private static string DecryptGoogleSecret(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            return Encoding.UTF8.GetString(ProtectedData.Unprotect(
+                Convert.FromBase64String(value), null, DataProtectionScope.CurrentUser));
+        }
+
         public class TSqlCodeFormatSettings
         {
+            public bool disregardSsmsFormatterSettings = false;
             public bool preserveComments = false;
             public bool removeNewLineAfterJoin = false;
             public bool addTabAfterJoinOn = false;
@@ -342,11 +448,12 @@ ORDER BY sd.[name];
             public bool unindentBeginEndBlocks = false;
             public bool breakVariableDefinitionsPerLine = false;
             public bool breakSprocDefinitionParametersPerLine = false;
+            // Retain the existing serialized name; this option now handles DISTINCT as well as TOP.
             public bool breakSelectFieldsAfterTopAndUnindent = false;
 
             public bool HasAnyFormattingEnabled()
             {
-                // preserveComments option is not included because it belongs to a separate code branch.
+                // Formatter selection and comment preservation are handled before post-processing.
                 return removeNewLineAfterJoin
                     || addTabAfterJoinOn
                     || moveCrossJoinToNewLine
@@ -460,55 +567,14 @@ ORDER BY sd.[name];
             }
         }
 
-        private static RegistryKey GetRoot()
-        {
-            var settingKeyRoot = Registry.CurrentUser.CreateSubKey(@"AxialSqlTools");
-            var settingsKey = settingKeyRoot.CreateSubKey("Settings");
-
-            return settingsKey;
-        }
-
-        private static string GetRegisterValue(string parameter)
-        {
-            try
-            {
-                using (var rootKey = GetRoot())
-                {
-                    var value = rootKey.GetValue(parameter);
-                    return value?.ToString() ?? string.Empty;
-                }
-            }
-            catch (Exception)
-            {
-                return string.Empty;
-            }
-        }
-
-        private static bool SaveRegisterValue(string parameterName, string parameterValue)
-        {
-            try
-            {
-                using (var rootKey = GetRoot())
-                {
-                    rootKey.SetValue(parameterName, parameterValue);
-                }
-
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
         // ----------------------------------------------------------------------
         public static string GetMyEmail()
         {
-            return GetRegisterValue("MyEmail");
+            return SettingsFileStore.GetValue("MyEmail");
         }
         public static bool SaveMyEmail(string myEmail)
         {
-            return SaveRegisterValue("MyEmail", myEmail);
+            return SettingsFileStore.SaveValue("MyEmail", myEmail);
         }
         // ----------------------------------------------------------------------
         public static SmtpSettings GetSmtpSettings()
@@ -517,7 +583,7 @@ ORDER BY sd.[name];
             string password = "";
             try
             {
-                string encPassword = GetRegisterValue("SMTP_Password");
+                string encPassword = SettingsFileStore.GetValue("SMTP_Password");
                 byte[] decryptedData = Unprotect(Convert.FromBase64String(encPassword));
                 password = Encoding.UTF8.GetString(decryptedData);
             } catch {
@@ -525,18 +591,18 @@ ORDER BY sd.[name];
 
             SmtpSettings smtpSettings = new SmtpSettings();            
             smtpSettings.hasBeenConfiguredAndTested = true; //TODO
-            smtpSettings.Username = GetRegisterValue("SMTP_Username");
+            smtpSettings.Username = SettingsFileStore.GetValue("SMTP_Username");
             smtpSettings.Password = password;
-            smtpSettings.ServerName = GetRegisterValue("SMTP_Server");
+            smtpSettings.ServerName = SettingsFileStore.GetValue("SMTP_Server");
 
             smtpSettings.Port = 587;
             int savedPort;
-            bool success = int.TryParse(GetRegisterValue("SMTP_Port"), out savedPort);
+            bool success = int.TryParse(SettingsFileStore.GetValue("SMTP_Port"), out savedPort);
             if (success) smtpSettings.Port = savedPort;
 
             smtpSettings.EnableSsl = true;
             bool enableSsl;
-            success = bool.TryParse(GetRegisterValue("SMTP_EnableSSL"), out enableSsl);
+            success = bool.TryParse(SettingsFileStore.GetValue("SMTP_EnableSSL"), out enableSsl);
             if (success) smtpSettings.EnableSsl = enableSsl;
 
             return smtpSettings;
@@ -544,46 +610,60 @@ ORDER BY sd.[name];
 
         public static bool SaveSmtpSettings(SmtpSettings smtpSettings)
         {
+            try
+            {
+                return SettingsFileStore.SaveValues(CreateSmtpValues(smtpSettings));
+            }
+            catch (Exception ex)
+            {
+                return SettingsFileStore.ReportSaveFailure(ex);
+            }
+        }
 
-            byte[] encPassword = Protect(Encoding.UTF8.GetBytes(smtpSettings.Password));
-
-            SaveRegisterValue("SMTP_Username", smtpSettings.Username);
-            SaveRegisterValue("SMTP_Password", Convert.ToBase64String(encPassword));
-            SaveRegisterValue("SMTP_Server", smtpSettings.ServerName);
-            SaveRegisterValue("SMTP_Port", smtpSettings.Port.ToString());
-            SaveRegisterValue("SMTP_EnableSSL", smtpSettings.EnableSsl.ToString());
-
-            return true;
-
+        private static Dictionary<string, object> CreateSmtpValues(SmtpSettings settings)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            byte[] password = Protect(Encoding.UTF8.GetBytes(settings.Password ?? string.Empty));
+            if (password == null) throw new CryptographicException();
+            return new Dictionary<string, object>
+            {
+                ["SMTP_Username"] = settings.Username,
+                ["SMTP_Password"] = Convert.ToBase64String(password),
+                ["SMTP_Server"] = settings.ServerName,
+                ["SMTP_Port"] = settings.Port,
+                ["SMTP_EnableSSL"] = settings.EnableSsl
+            };
         }
 
         public static string GetTemplatesFolder()
         {
-            var folder = GetRegisterValue("ScriptTemplatesFolder");
-
-            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
-            {
-                folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "AxialSqlToolsTemplates");
-
-                SaveTemplatesFolder(folder);
-
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-            }
-
-            return folder;
+            var folder = SettingsFileStore.GetValue("ScriptTemplatesFolder");
+            return string.IsNullOrWhiteSpace(folder)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "AxialSqlToolsTemplates")
+                : folder;
         }
 
         public static bool SaveTemplatesFolder(string folder)
         {
-            return SaveRegisterValue("ScriptTemplatesFolder", folder);
+            return SettingsFileStore.SaveValue("ScriptTemplatesFolder", folder);
+        }
+
+        public static bool GetWarnWhenRunningFatalAction()
+        {
+            string value = SettingsFileStore.GetValue("WarnWhenRunningFatalAction");
+            return !bool.TryParse(value, out bool enabled) || enabled;
+        }
+
+        public static bool SaveWarnWhenRunningFatalAction(bool enabled)
+        {
+            bool saved = SettingsFileStore.SaveValue("WarnWhenRunningFatalAction", enabled);
+            if (saved) QuerySafety.FatalActionGuard.ResetApprovals();
+            return saved;
         }
 
         public static bool GetEnableUpdateChecks()
         {
-            string value = GetRegisterValue("EnableUpdateChecks");
+            string value = SettingsFileStore.GetValue("EnableUpdateChecks");
             if (bool.TryParse(value, out bool enabled))
             {
                 return enabled;
@@ -594,7 +674,7 @@ ORDER BY sd.[name];
 
         public static bool SaveEnableUpdateChecks(bool enableUpdateChecks)
         {
-            return SaveRegisterValue("EnableUpdateChecks", enableUpdateChecks.ToString());
+            return SettingsFileStore.SaveValue("EnableUpdateChecks", enableUpdateChecks);
         }
 
         public static List<FrequentlyUsedEmail> GetFrequentlyUsedEmails()
@@ -603,7 +683,7 @@ ORDER BY sd.[name];
             try
             {
 
-                string JsonString = GetRegisterValue("FrequentlyUsedEmails");
+                string JsonString = SettingsFileStore.GetValue("FrequentlyUsedEmails");
                 var deserializedEmailList = JsonConvert.DeserializeObject<List<FrequentlyUsedEmail>>(JsonString);
 
                 if (deserializedEmailList == null)
@@ -641,39 +721,15 @@ ORDER BY sd.[name];
             if (existingEmails.Count > 30)
                 existingEmails = existingEmails.Take(30).ToList();
 
-            string json = JsonConvert.SerializeObject(existingEmails);
-
-            SaveRegisterValue("FrequentlyUsedEmails", json);
+            SettingsFileStore.SaveValue("FrequentlyUsedEmails", existingEmails);
 
         }
-
-        public static string GetOpenAiApiKey()
-        {
-            string key = "";
-            try
-            {
-                string encKey = GetRegisterValue("OpenAI_ApiKeyEnc");
-                byte[] decryptedData = Unprotect(Convert.FromBase64String(encKey));
-                key = Encoding.UTF8.GetString(decryptedData);
-            }
-            catch
-            {
-            }
-
-            return key;
-        }
-        public static bool SaveOpenAiApiKey(string ApiKey)
-        {
-            byte[] encKey = Protect(Encoding.UTF8.GetBytes(ApiKey));
-            return SaveRegisterValue("OpenAI_ApiKeyEnc", Convert.ToBase64String(encKey));
-        }
-
 
         public static SnippetSettings GetSnippetSettings()
         {
             try
             {
-                string json = GetRegisterValue("SnippetSettings");
+                string json = SettingsFileStore.GetValue("SnippetSettings");
                 if (!string.IsNullOrEmpty(json))
                 {
                     var settings = JsonConvert.DeserializeObject<SnippetSettings>(json);
@@ -695,12 +751,11 @@ ORDER BY sd.[name];
             try
             {
                 var normalized = NormalizeSnippetSettings(settings ?? new SnippetSettings());
-                string json = JsonConvert.SerializeObject(normalized);
-                return SaveRegisterValue("SnippetSettings", json);
+                return SettingsFileStore.SaveValue("SnippetSettings", normalized);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -743,7 +798,7 @@ ORDER BY sd.[name];
         {
             try
             {
-                string json = GetRegisterValue("AsteriskExpansionSettings");
+                string json = SettingsFileStore.GetValue("AsteriskExpansionSettings");
                 if (!string.IsNullOrEmpty(json))
                 {
                     var settings = JsonConvert.DeserializeObject<AsteriskExpansionSettings>(json);
@@ -764,12 +819,11 @@ ORDER BY sd.[name];
         {
             try
             {
-                string json = JsonConvert.SerializeObject(settings ?? new AsteriskExpansionSettings());
-                return SaveRegisterValue("AsteriskExpansionSettings", json);
+                return SettingsFileStore.SaveValue("AsteriskExpansionSettings", settings ?? new AsteriskExpansionSettings());
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -779,7 +833,7 @@ ORDER BY sd.[name];
             string key = "";
             try
             {
-                string encKey = GetRegisterValue("QueryHistoryConnectionString");
+                string encKey = SettingsFileStore.GetValue("QueryHistoryConnectionString");
                 byte[] decryptedData = Unprotect(Convert.FromBase64String(encKey));
                 key = Encoding.UTF8.GetString(decryptedData);
             }
@@ -791,13 +845,22 @@ ORDER BY sd.[name];
         }
         public static bool SaveQueryHistoryConnectionString(string connectionString)
         {
-            byte[] encKey = Protect(Encoding.UTF8.GetBytes(connectionString));
-            return SaveRegisterValue("QueryHistoryConnectionString", Convert.ToBase64String(encKey));
+            try
+            {
+                byte[] encKey = Protect(Encoding.UTF8.GetBytes(connectionString));
+                if (encKey == null)
+                    return SettingsFileStore.ReportSaveFailure(new CryptographicException());
+                return SettingsFileStore.SaveValue("QueryHistoryConnectionString", Convert.ToBase64String(encKey));
+            }
+            catch (Exception ex)
+            {
+                return SettingsFileStore.ReportSaveFailure(ex);
+            }
         }
 
         public static string GetQueryHistoryTableNameOrDefault()
         {
-            string qhTable = GetRegisterValue("QueryHistoryTableName");
+            string qhTable = SettingsFileStore.GetValue("QueryHistoryTableName");
 
             if (string.IsNullOrEmpty(qhTable))
             {
@@ -808,16 +871,16 @@ ORDER BY sd.[name];
 
         public static string GetQueryHistoryTableName()
         {
-            return GetRegisterValue("QueryHistoryTableName");
+            return SettingsFileStore.GetValue("QueryHistoryTableName");
         }
         public static bool SaveQueryHistoryTableName(string qhTableName)
         {
-            return SaveRegisterValue("QueryHistoryTableName", qhTableName);
+            return SettingsFileStore.SaveValue("QueryHistoryTableName", qhTableName);
         }
 
         public static string GetQueryHistoryStorageMode()
         {
-            string mode = GetRegisterValue("QueryHistoryStorageMode");
+            string mode = SettingsFileStore.GetValue("QueryHistoryStorageMode");
             return string.IsNullOrWhiteSpace(mode) ? "Database" : mode;
         }
 
@@ -828,7 +891,7 @@ ORDER BY sd.[name];
                 storageMode = "Database";
             }
 
-            return SaveRegisterValue("QueryHistoryStorageMode", storageMode);
+            return SettingsFileStore.SaveValue("QueryHistoryStorageMode", storageMode);
         }
 
         public static string GetQueryHistoryTextFileFolder()
@@ -858,9 +921,9 @@ ORDER BY sd.[name];
                 SavedConnectionStore.Save(connections ?? new List<DataTransferSavedConnection>());
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -869,7 +932,7 @@ ORDER BY sd.[name];
             try
             {
                 // read the JSON blob (or empty string)
-                string json = GetRegisterValue("ExcelExportSettings");
+                string json = SettingsFileStore.GetValue("ExcelExportSettings");
                 if (string.IsNullOrEmpty(json))
                     return new ExcelExportSettings();
 
@@ -887,13 +950,11 @@ ORDER BY sd.[name];
         {
             try
             {
-                // serialize to JSON and write to registry
-                string json = JsonConvert.SerializeObject(settings);
-                return SaveRegisterValue("ExcelExportSettings", json);
+                return SettingsFileStore.SaveValue("ExcelExportSettings", settings);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -901,14 +962,23 @@ ORDER BY sd.[name];
         {
             try
             {
-                string json = GetRegisterValue("GoogleSheetsSettings");
+                string json = SettingsFileStore.GetValue("GoogleSheetsSettings");
                 if (string.IsNullOrEmpty(json))
                 {
                     return new GoogleSheetsSettings();
                 }
 
-                var settings = JsonConvert.DeserializeObject<GoogleSheetsSettings>(json);
-                return settings ?? new GoogleSheetsSettings();
+                var stored = JsonConvert.DeserializeObject<StoredGoogleSheetsSettings>(json);
+                if (stored == null) return new GoogleSheetsSettings();
+                return new GoogleSheetsSettings
+                {
+                    includeSourceQuery = stored.includeSourceQuery,
+                    exportBoolsAsNumbers = stored.exportBoolsAsNumbers,
+                    clientId = stored.clientId ?? string.Empty,
+                    clientSecret = DecryptGoogleSecret(stored.clientSecretEncrypted),
+                    refreshToken = DecryptGoogleSecret(stored.refreshTokenEncrypted),
+                    defaultSpreadsheetName = stored.defaultSpreadsheetName
+                };
             }
             catch
             {
@@ -920,20 +990,33 @@ ORDER BY sd.[name];
         {
             try
             {
-                string json = JsonConvert.SerializeObject(settings);
-                return SaveRegisterValue("GoogleSheetsSettings", json);
+                return SettingsFileStore.SaveValue("GoogleSheetsSettings", CreateStoredGoogleSheetsSettings(settings));
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
+        }
+
+        private static StoredGoogleSheetsSettings CreateStoredGoogleSheetsSettings(GoogleSheetsSettings settings)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            return new StoredGoogleSheetsSettings
+            {
+                includeSourceQuery = settings.includeSourceQuery,
+                exportBoolsAsNumbers = settings.exportBoolsAsNumbers,
+                clientId = settings.clientId,
+                clientSecretEncrypted = EncryptGoogleSecret(settings.clientSecret),
+                refreshTokenEncrypted = EncryptGoogleSecret(settings.refreshToken),
+                defaultSpreadsheetName = settings.defaultSpreadsheetName
+            };
         }
 
         public static TSqlCodeFormatSettings GetTSqlCodeFormatSettings()
         {
             try
             {
-                string json = GetRegisterValue("TSqlCodeFormatSettings");
+                string json = SettingsFileStore.GetValue("TSqlCodeFormatSettings");
                 if (string.IsNullOrEmpty(json))
                     return new TSqlCodeFormatSettings();
 
@@ -950,12 +1033,11 @@ ORDER BY sd.[name];
         {
             try
             {
-                string json = JsonConvert.SerializeObject(settings);
-                return SaveRegisterValue("TSqlCodeFormatSettings", json);
+                return SettingsFileStore.SaveValue("TSqlCodeFormatSettings", settings);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 
@@ -973,7 +1055,7 @@ ORDER BY sd.[name];
         {
             try
             {
-                string json = GetRegisterValue("ConnectionColorRules");
+                string json = SettingsFileStore.GetValue("ConnectionColorRules");
                 if (!string.IsNullOrEmpty(json))
                 {
                     var rules = JsonConvert.DeserializeObject<List<ConnectionColorRule>>(json);
@@ -990,12 +1072,11 @@ ORDER BY sd.[name];
         {
             try
             {
-                string json = JsonConvert.SerializeObject(rules ?? new List<ConnectionColorRule>());
-                return SaveRegisterValue("ConnectionColorRules", json);
+                return SettingsFileStore.SaveValue("ConnectionColorRules", rules ?? new List<ConnectionColorRule>());
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return SettingsFileStore.ReportSaveFailure(ex);
             }
         }
 

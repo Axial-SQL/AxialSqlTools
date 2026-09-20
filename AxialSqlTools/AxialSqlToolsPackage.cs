@@ -53,18 +53,19 @@ namespace AxialSqlTools
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasMultipleProjects_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasSingleProject_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [ProvideToolWindow(typeof(SettingsWindow))]
-    [ProvideToolWindow(typeof(AboutWindow))]
-    [ProvideToolWindow(typeof(ToolWindowGridToEmail))]
-    [ProvideToolWindow(typeof(HealthDashboard_Server))]
-    [ProvideToolWindow(typeof(DataTransferWindow))]
-    [ProvideToolWindow(typeof(SqlServerBuildsWindow))]
-    [ProvideToolWindow(typeof(QueryHistoryWindow))]
+    [ProvideToolWindow(typeof(SettingsWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(AboutWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(ToolWindowGridToEmail), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(HealthDashboard_Server), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(DataCompare.DataCompareWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(DataTransferWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(SqlServerBuildsWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(QueryHistoryWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(StatisticsSummaryWindow))]
-    [ProvideToolWindow(typeof(DatabaseScripterToolWindow))]
-    [ProvideToolWindow(typeof(DataImportWindow))]
-    [ProvideToolWindow(typeof(QuickSearchWindow))]
-    [ProvideToolWindow(typeof(SnippetManagerWindow))]
+    [ProvideToolWindow(typeof(DatabaseScripterToolWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(DataImportWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(QuickSearchWindow), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(SnippetManagerWindow), Style = VsDockStyle.MDI)]
     public sealed partial class AxialSqlToolsPackage : AsyncPackage
     {
 
@@ -350,6 +351,7 @@ namespace AxialSqlTools
                 await ToolWindowGridToEmailCommand.InitializeAsync(this);
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
+                await DataCompare.DataCompareWindowCommand.InitializeAsync(this);
                 await DataImportWindowCommand.InitializeAsync(this);
                 await ResultGridCopyAsInsertCommand.InitializeAsync(this);
                 await SqlServerBuildsWindowCommand.InitializeAsync(this);
@@ -690,6 +692,7 @@ namespace AxialSqlTools
             // Re-color remaining tabs after a tab closes
             try
             {
+                QuerySafety.FatalActionGuard.ForgetDocument(Window?.Document);
                 GridAccess.ScheduleReapplyAllTabColors();
             }
             catch (Exception ex)
@@ -809,68 +812,73 @@ namespace AxialSqlTools
 
             ThreadHelper.ThrowIfNotOnUIThread();
 
+            var generalSettings = SettingsManager.GetGeneralSettings();
+
             try
             {
-                //1. Align numeric types to the right
-                CollectionBase gridContainers = GridAccess.GetGridContainers();
-
-                foreach (var gridContainer in gridContainers)
+                if (generalSettings.alignNumericValuesToRight)
                 {
-                    var grid = GridAccess.GetNonPublicField(gridContainer, "m_grid") as GridControl;
-                    var gridStorage = grid.GridStorage;
-                    var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
+                    //1. Align numeric types to the right
+                    CollectionBase gridContainers = GridAccess.GetGridContainers();
 
-                    var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
-                    if (gridColumns != null)
+                    foreach (var gridContainer in gridContainers)
                     {
-                        //Why no "flot"? Because it cannot be aligned "good" due to the varying number of digits in the decimal part.
-                        string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "smallmoney", "decimal", "numeric" };
+                        var grid = GridAccess.GetNonPublicField(gridContainer, "m_grid") as GridControl;
+                        var gridStorage = grid.GridStorage;
+                        var schemaTable = GridAccess.GetNonPublicField(gridStorage, "m_schemaTable") as DataTable;
 
-                        List<int> columnsToAlignRight = new List<int> { };
-
-                        for (int c = 0; c < schemaTable.Rows.Count; c++)
+                        var gridColumns = GridAccess.GetNonPublicField(grid, "m_Columns") as GridColumnCollection;
+                        if (gridColumns != null)
                         {
-                            int columnOrdinal = (int)schemaTable.Rows[c][1];
-                            var sqlDataTypeName = schemaTable.Rows[c][24];
+                            //Why no "flot"? Because it cannot be aligned "good" due to the varying number of digits in the decimal part.
+                            string[] typeToAlignRight = new string[] { "tinyint", "smallint", "int", "bigint", "money", "smallmoney", "decimal", "numeric" };
 
-                            if (typeToAlignRight.Contains(sqlDataTypeName))
+                            List<int> columnsToAlignRight = new List<int> { };
+
+                            for (int c = 0; c < schemaTable.Rows.Count; c++)
                             {
-                                columnsToAlignRight.Add(columnOrdinal);
-                            }
-                        }
+                                int columnOrdinal = (int)schemaTable.Rows[c][1];
+                                var sqlDataTypeName = schemaTable.Rows[c][24];
 
-                        foreach (Microsoft.SqlServer.Management.UI.Grid.GridColumn gridColumn in gridColumns)
-                        {
-
-                            if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
-                            {
-                                // not needed
-                                //var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
-                                //if (textAlignField != null)
-                                //{
-                                //    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                                //}
-
-                                // applies to the row number column 
-                                var textAlignField2 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_myAlign");
-                                if (textAlignField2 != null)
+                                if (typeToAlignRight.Contains(sqlDataTypeName))
                                 {
-                                    textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
-                                }
-
-                                var textAlignField3 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_textFormat");
-                                if (textAlignField3 != null)
-                                {
-                                    System.Windows.Forms.TextFormatFlags flags = (System.Windows.Forms.TextFormatFlags)GridAccess.GetNonPublicField(gridColumn, "m_textFormat");
-                                    textAlignField3.SetValue(gridColumn, flags | System.Windows.Forms.TextFormatFlags.Right);
+                                    columnsToAlignRight.Add(columnOrdinal);
                                 }
                             }
 
+                            foreach (Microsoft.SqlServer.Management.UI.Grid.GridColumn gridColumn in gridColumns)
+                            {
+
+                                if (columnsToAlignRight.Contains(gridColumn.ColumnIndex - 1) || gridColumn.ColumnIndex == 0)
+                                {
+                                    // not needed
+                                    //var textAlignField = GridAccess.GetNonPublicFieldInfo(gridColumn, "TextAlign");
+                                    //if (textAlignField != null)
+                                    //{
+                                    //    textAlignField.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                                    //}
+
+                                    // applies to the row number column 
+                                    var textAlignField2 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_myAlign");
+                                    if (textAlignField2 != null)
+                                    {
+                                        textAlignField2.SetValue(gridColumn, System.Windows.Forms.HorizontalAlignment.Right);
+                                    }
+
+                                    var textAlignField3 = GridAccess.GetNonPublicFieldInfo(gridColumn, "m_textFormat");
+                                    if (textAlignField3 != null)
+                                    {
+                                        System.Windows.Forms.TextFormatFlags flags = (System.Windows.Forms.TextFormatFlags)GridAccess.GetNonPublicField(gridColumn, "m_textFormat");
+                                        textAlignField3.SetValue(gridColumn, flags | System.Windows.Forms.TextFormatFlags.Right);
+                                    }
+                                }
+
+                            }
                         }
+
+                        grid.Refresh();
+
                     }
-
-                    grid.Refresh();
-
                 }
             }
             catch (Exception ex)
@@ -887,7 +895,7 @@ namespace AxialSqlTools
                 var m_SqlExec = GridAccess.GetNonPublicField(SQLResultsControl, "m_sqlExec");
 
                 Microsoft.Data.SqlClient.SqlConnection connection = GridAccess.GetNonPublicField(m_SqlExec, "m_conn") as Microsoft.Data.SqlClient.SqlConnection;
-                if (connection.State == ConnectionState.Open)
+                if (generalSettings.useTransactionWarning && connection != null && connection.State == ConnectionState.Open)
                 {
                     using (Microsoft.Data.SqlClient.SqlCommand command = new Microsoft.Data.SqlClient.SqlCommand("SELECT @@TRANCOUNT", connection))
                     {
@@ -896,13 +904,17 @@ namespace AxialSqlTools
                     }
                 }
 
-                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(connection.ConnectionString);
-                bool isColumnEncryptionSettingOn = builder.ColumnEncryptionSetting == SqlConnectionColumnEncryptionSetting.Enabled;
+                bool isColumnEncryptionSettingOn = generalSettings.useAlwaysEncryptedWarning && connection != null
+                    && new SqlConnectionStringBuilder(connection.ConnectionString).ColumnEncryptionSetting == SqlConnectionColumnEncryptionSetting.Enabled;
 
-                var editorProperties = GridAccess.GetNonPublicField(m_SqlExec, "editorProperties");
-                var editorProperties_ElapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
+                string elapsedTime = null;
+                if (generalSettings.usePreciseExecutionTime)
+                {
+                    var editorProperties = GridAccess.GetNonPublicField(m_SqlExec, "editorProperties");
+                    elapsedTime = (string)GridAccess.GetProperty(editorProperties, "ElapsedTime");
+                }
 
-                GridAccess.ChangeStatusBarContent(openTranCount, isColumnEncryptionSettingOn, editorProperties_ElapsedTime);
+                GridAccess.ChangeStatusBarContent(openTranCount, isColumnEncryptionSettingOn, elapsedTime, generalSettings);
 
                 // Re-apply connection color after status bar update
                 string dataSource = (string)GridAccess.GetProperty(connection, "DataSource");
@@ -1192,6 +1204,22 @@ namespace AxialSqlTools
 
             try
             {
+                if (CancelDefault) return;
+                try
+                {
+                    if (QuerySafety.FatalActionGuard.ShouldCancel(GetGlobalService(typeof(DTE)) as DTE))
+                    {
+                        CancelDefault = true;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CancelDefault = true;
+                    _logger?.Error(ex, "Fatal action check failed. Query execution cancelled.");
+                    return;
+                }
+
                 EnsureStatisticsExecutionHookForActiveWindow("query-execute-before");
 
                 if (!StatisticsSummaryStore.IsWindowOpen())
@@ -1235,11 +1263,16 @@ namespace AxialSqlTools
             Dictionary<string, string> fileNamesCache = new Dictionary<string, string>();
 
             string Folder = SettingsManager.GetTemplatesFolder();
+            if (!Directory.Exists(Folder))
+            {
+                _logger.Warn("The configured templates folder is unavailable: {0}", Folder);
+                return;
+            }
             int i = 2;
             CreateCommands(ref i, ref fileNamesCache, Folder, m_commandRegistry, m_commandBarQueryTemplates);
 
             UpdateRenamedTemplatesControls(m_commandBarQueryTemplates, fileNamesCache);
-
+            
         }
 
         private void UpdateRenamedTemplatesControls(CommandBar commandBarFolder, Dictionary<string, string> fileNamesCache)
