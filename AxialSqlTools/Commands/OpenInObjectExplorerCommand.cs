@@ -26,8 +26,11 @@ namespace AxialSqlTools
             command.BeforeQueryStatus += (sender, args) =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
-                var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
-                command.Enabled = !isRunning && dte?.ActiveDocument?.Selection is TextSelection;
+                // Menu status is queried while SSMS is changing focus. Do not use
+                // ActiveDocument.Selection here: a temporarily unavailable selection
+                // would disable the command before the user can invoke it.
+                // Validate the query window, selection and connection in ExecuteAsync.
+                command.Enabled = !isRunning;
             };
             commands.AddCommand(command);
         }

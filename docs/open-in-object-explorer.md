@@ -24,7 +24,7 @@ The checks cover multipart-name parsing, quoted/escaped names, caret boundaries,
 
 Build the extension on Windows with the repository's SSMS 22 and Visual Studio prerequisites. Load it in SSMS 22 and use an expendable test database to check:
 
-1. Both command placements exist and invoke the same handler. With no query window, the command is disabled.
+1. Both command placements exist and invoke the same handler. Open the Tools menu and the SQL editor context menu with a selected name, then with only the caret inside a name; the command must remain enabled in both cases. Also test an assigned keyboard shortcut. With no query window or connection, invoking the command shows an explanatory message. During navigation the command is disabled to prevent duplicate runs, and becomes available again after completion, cancellation, or failure.
 2. Select a table name and invoke the command with all Object Explorer folders collapsed. Repeat with only the caret inside the name. The correct node is selected and visible.
 3. Repeat for a view, stored procedure, each function kind, synonym, table type, index, PK/FK/check, table trigger, view trigger, and default constraint. For a default, confirm the owning column and status message.
 4. Test schema-qualified names, three-part names targeting a second database, spaces, escaped closing brackets, apostrophes, and non-ASCII names. Test two schemas with identically named objects and choose each picker result.
