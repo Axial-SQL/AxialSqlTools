@@ -315,8 +315,21 @@
             }
         }
 
+        private static string GetAttachmentName(string exportedFilename, string requestedName)
+        {
+            if (string.IsNullOrWhiteSpace(requestedName))
+                return Path.GetFileName(exportedFilename);
+
+            string name = requestedName.Trim();
+            if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name == "." || name == "..")
+                throw new ArgumentException("Please enter a valid attachment name without a folder path.");
+
+            string extension = Path.GetExtension(exportedFilename);
+            return name.EndsWith(extension, StringComparison.OrdinalIgnoreCase) ? name : name + extension;
+        }
+
         static bool SendEmailViaSmtp(MailConfigItem mailConfig, List<String> AllEmails, string ccEmail, string Subject, 
-                string Body, string exportedFilename)
+                string Body, string exportedFilename, string attachmentName)
         {
 
             try
@@ -324,7 +337,7 @@
 
                 SettingsManager.SmtpSettings smtpSettings = SettingsManager.GetSmtpSettings();
 
-                var smtp = new SmtpClient
+                using (var smtp = new SmtpClient
                 {
                     Host = smtpSettings.ServerName,
                     Port = smtpSettings.Port,
@@ -332,30 +345,31 @@
                     DeliveryMethod = SmtpDeliveryMethod.Network,
                     UseDefaultCredentials = false,
                     Timeout = 5000 // timeout in milliseconds (e.g., 5 sec)
-                };
-
-                if (!string.IsNullOrEmpty(smtpSettings.Username))
-                    smtp.Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password);
-
-
-                var emailMessage = new MailMessage()
+                })
+                using (var emailMessage = new MailMessage())
                 {
-                    Subject = Subject,
-                    Body = Body,
-                    IsBodyHtml = true
-                };
 
-                emailMessage.From = new MailAddress(SettingsManager.GetMyEmail());
+                    if (!string.IsNullOrEmpty(smtpSettings.Username))
+                        smtp.Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password);
 
-                foreach (var email in AllEmails)
-                    emailMessage.To.Add(email);
 
-                if (!string.IsNullOrEmpty(ccEmail))
-                    emailMessage.CC.Add(ccEmail);
+                    emailMessage.Subject = Subject;
+                    emailMessage.Body = Body;
+                    emailMessage.IsBodyHtml = true;
 
-                emailMessage.Attachments.Add(new Attachment(exportedFilename));
+                    emailMessage.From = new MailAddress(SettingsManager.GetMyEmail());
 
-                smtp.Send(emailMessage);
+                    foreach (var email in AllEmails)
+                        emailMessage.To.Add(email);
+
+                    if (!string.IsNullOrEmpty(ccEmail))
+                        emailMessage.CC.Add(ccEmail);
+
+                    // The email name is independent of the temporary file's name.
+                    emailMessage.Attachments.Add(new Attachment(exportedFilename) { Name = attachmentName });
+
+                    smtp.Send(emailMessage);
+                }
 
                 MessageBox.Show($"Email has been sent!", "Done");
 
@@ -382,7 +396,7 @@
         }
 
         static bool SendEmailViaDatabaseMail(ScriptFactoryAccess.ConnectionInfo connectionInfo, MailConfigItem mailConfig,
-            string AllEmails, string ccEmail, string Subject, string Body, string exportedFilename)
+            string AllEmails, string ccEmail, string Subject, string Body, string exportedFilename, string attachmentName)
         {
 
             try
@@ -436,7 +450,7 @@
                         command.Parameters.AddWithValue("Subject",      Subject);
                         command.Parameters.AddWithValue("Body",         Body);
                         command.Parameters.AddWithValue("FileSize",     fileInfo.Length);
-                        command.Parameters.AddWithValue("FileName",     fileInfo.Name);
+                        command.Parameters.AddWithValue("FileName",     attachmentName);
                         command.Parameters.AddWithValue("BinaryFile",   fileContents);
 
                         command.ExecuteNonQuery();
@@ -494,34 +508,24 @@
             if (CheckBox_CCMyself.IsChecked == true)
                 ccEmail = SettingsManager.GetMyEmail();
 
-            if (!string.IsNullOrEmpty(TextBoxNewFileName.Text))
+            string attachmentName;
+            try
             {
-                // rename the file
-                try
-                {
-                    string directory = Path.GetDirectoryName(exportedFilename); 
-                    string extension = Path.GetExtension(exportedFilename); 
-                    string newFileName = TextBoxNewFileName.Text + extension; 
-                    string newFilePath = Path.Combine(directory, newFileName); 
-
-                    // Rename the file
-                    File.Move(exportedFilename, newFilePath);
-
-                    exportedFilename = newFilePath;
-
-                    FullFileNameLabel.Content = exportedFilename;
-
-                }
-                catch {}
-            }            
+                attachmentName = GetAttachmentName(exportedFilename, TextBoxNewFileName.Text);
+            }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show(ex.Message, "Invalid Attachment Name");
+                return;
+            }
 
             bool success = false;
 
             if (mailConfig.isSMTP)
-                success = SendEmailViaSmtp(mailConfig, emailClean, ccEmail, EmailSubject.Text, EmailBodyContent, exportedFilename);
+                success = SendEmailViaSmtp(mailConfig, emailClean, ccEmail, EmailSubject.Text, EmailBodyContent, exportedFilename, attachmentName);
 
             else if (mailConfig.isDatabaseMail)
-                success = SendEmailViaDatabaseMail(connectionInfo, mailConfig, allEmailsConcatenated, ccEmail, EmailSubject.Text, EmailBodyContent, exportedFilename);
+                success = SendEmailViaDatabaseMail(connectionInfo, mailConfig, allEmailsConcatenated, ccEmail, EmailSubject.Text, EmailBodyContent, exportedFilename, attachmentName);
             
             else {
                 MessageBox.Show("Invalid mail config", "Error");
