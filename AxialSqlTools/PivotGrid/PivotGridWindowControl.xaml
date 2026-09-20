@@ -60,6 +60,8 @@
             <Button x:Name="CancelButton" Grid.Column="5" Content="Cancel" Click="CancelClicked" IsEnabled="False" Padding="14,5" />
         </Grid>
         <DataGrid x:Name="ResultGrid" Grid.Row="3" AutoGenerateColumns="False" IsReadOnly="True"
+                  Background="White" RowBackground="White" AlternatingRowBackground="White" Foreground="Black"
+                  HorizontalGridLinesBrush="LightGray" VerticalGridLinesBrush="LightGray"
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
                   EnableRowVirtualization="True" EnableColumnVirtualization="True"
                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
@@ -67,6 +69,9 @@
                   ClipboardCopyMode="IncludeHeader" HeadersVisibility="Column">
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                    <Setter Property="Background" Value="WhiteSmoke" />
+                    <Setter Property="Foreground" Value="Black" />
+                    <Setter Property="BorderBrush" Value="LightGray" />
                     <Setter Property="ToolTip" Value="{Binding Content, RelativeSource={RelativeSource Self}}" />
                 </Style>
             </DataGrid.ColumnHeaderStyle>
