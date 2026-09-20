@@ -326,7 +326,7 @@
         <CommandFlag>IconAndText</CommandFlag>
         <CommandFlag>DefaultDisabled</CommandFlag>
         <Strings>
-          <ButtonText>Sort Ascending (+Shift: Vertical)</ButtonText>
+          <ButtonText>Sort List Ascending (+Shift: Vertical)</ButtonText>
           <CanonicalName>AxialSqlTools.SortSelectedTextAscending</CanonicalName>
           <LocCanonicalName>AxialSqlTools.SortSelectedTextAscending</LocCanonicalName>
           <ToolTipText>Sort selected comma-separated text horizontally (hold Shift for a vertical list)</ToolTipText>
@@ -339,7 +339,7 @@
         <CommandFlag>IconAndText</CommandFlag>
         <CommandFlag>DefaultDisabled</CommandFlag>
         <Strings>
-          <ButtonText>Sort Descending (+Shift: Vertical)</ButtonText>
+          <ButtonText>Sort List Descending (+Shift: Vertical)</ButtonText>
           <CanonicalName>AxialSqlTools.SortSelectedTextDescending</CanonicalName>
           <LocCanonicalName>AxialSqlTools.SortSelectedTextDescending</LocCanonicalName>
           <ToolTipText>Sort selected comma-separated text horizontally (hold Shift for a vertical list)</ToolTipText>
