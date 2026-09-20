@@ -43,13 +43,101 @@ namespace AxialSqlTools.PivotGrid
         public bool NullTextIsNull { get; set; } = true;
         public int FilterField { get; set; } = -1;
         public string FilterText { get; set; } = "";
+
+        internal PivotRequest Copy() => new PivotRequest
+        {
+            Rows = (int[])Rows.Clone(), Columns = (int[])Columns.Clone(), Value = Value,
+            Aggregation = Aggregation, NullTextIsNull = NullTextIsNull,
+            FilterField = FilterField, FilterText = FilterText
+        };
     }
 
     internal sealed class PivotResult
     {
         public DataTable Table { get; }
         public int MatchedRows { get; }
-        public PivotResult(DataTable table, int matchedRows) { Table = table; MatchedRows = matchedRows; }
+        private readonly PivotSnapshot source;
+        private readonly PivotRequest request;
+        private readonly object[][] rowKeys, columnKeys;
+
+        public PivotResult(DataTable table, int matchedRows, PivotSnapshot source, PivotRequest request,
+            ValueKey[] rowKeys, ValueKey[] columnKeys)
+        {
+            Table = table; MatchedRows = matchedRows; this.source = source; this.request = request;
+            this.rowKeys = rowKeys.Select(k => (object[])k.DimKeys.Clone()).ToArray();
+            this.columnKeys = columnKeys.Select(k => (object[])k.DimKeys.Clone()).ToArray();
+        }
+
+        public bool CanDrillDown(int row, int column) => row >= 0 && row < Table.Rows.Count &&
+            column >= Math.Max(1, request.Rows.Length) && column < Table.Columns.Count;
+
+        public PivotDetails GetUnderlyingRows(int row, int column, CancellationToken cancellation)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (!CanDrillDown(row, column)) throw new ArgumentOutOfRangeException(nameof(column), "Select a value or total cell.");
+            var rowKey = row < rowKeys.Length ? rowKeys[row] : null;
+            int pivotColumn = column - Math.Max(1, request.Rows.Length);
+            var columnKey = pivotColumn < columnKeys.Length ? columnKeys[pivotColumn] : null;
+            var indexes = new List<int>();
+            bool Matches(string[] record, int[] fields, object[] key)
+            {
+                if (key == null) return true; // Totals remove the corresponding axis restriction.
+                for (int i = 0; i < fields.Length; i++)
+                    if (!Equals(PivotEngine.ReadValue(source, request, record, fields[i]), key[i])) return false;
+                return true;
+            }
+            for (int i = 0; i < source.Rows.Length; i++)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                var record = source.Rows[i];
+                if (PivotEngine.MatchesFilter(request, record) && Matches(record, request.Rows, rowKey) &&
+                    Matches(record, request.Columns, columnKey)) indexes.Add(i);
+            }
+            var labels = new List<string>();
+            void Describe(int[] fields, object[] key)
+            {
+                if (key == null) return;
+                for (int i = 0; i < fields.Length; i++)
+                    labels.Add(source.Fields[fields[i]].Label + " = " + PivotEngine.Label(key[i]));
+            }
+            Describe(request.Rows, rowKey);
+            Describe(request.Columns, columnKey);
+            if (labels.Count == 0) labels.Add("All groups");
+            if (request.FilterField >= 0)
+                labels.Add("Filter: " + source.Fields[request.FilterField].Label + " contains '" + request.FilterText + "'");
+            return new PivotDetails(source, indexes.ToArray(), string.Join(" | ", labels));
+        }
+    }
+
+    internal sealed class PivotDetails
+    {
+        private readonly PivotSnapshot source;
+        private readonly int[] indexes;
+        public string Description { get; }
+        public int Count => indexes.Length;
+        public int PageSize => Math.Max(1, Math.Min(200, 50000 / (source.Fields.Length + 1)));
+        public int PageCount => Math.Max(1, (Count + PageSize - 1) / PageSize);
+        public PivotDetails(PivotSnapshot source, int[] indexes, string description)
+        { this.source = source; this.indexes = indexes; Description = description; }
+
+        public DataTable GetPage(int page)
+        {
+            if (page < 0 || page >= PageCount) throw new ArgumentOutOfRangeException(nameof(page));
+            var table = new DataTable { Locale = CultureInfo.InvariantCulture };
+            table.Columns.Add(new DataColumn("sourceRow", typeof(int)) { Caption = "Source row" });
+            foreach (var field in source.Fields)
+                table.Columns.Add(new DataColumn(field.Key, typeof(string)) { Caption = field.Label });
+            int end = Math.Min(Count, (page + 1) * PageSize);
+            for (int i = page * PageSize; i < end; i++)
+            {
+                var record = table.NewRow();
+                record[0] = indexes[i] + 1;
+                for (int field = 0; field < source.Fields.Length; field++)
+                    record[field + 1] = (object)source.Rows[indexes[i]][field] ?? DBNull.Value;
+                table.Rows.Add(record);
+            }
+            return table;
+        }
     }
 
     internal static class PivotEngine
@@ -63,6 +151,8 @@ namespace AxialSqlTools.PivotGrid
         public static PivotResult Build(PivotSnapshot source, PivotRequest request, CancellationToken cancellation)
         {
             cancellation.ThrowIfCancellationRequested();
+            // Keep drill-down tied to the configuration that produced the displayed result.
+            request = request.Copy();
             var dimensions = request.Rows.Concat(request.Columns).ToArray();
             if (dimensions.Distinct().Count() != dimensions.Length)
                 throw new InvalidOperationException("Choose different fields for Rows and Columns.");
@@ -97,8 +187,7 @@ namespace AxialSqlTools.PivotGrid
                 foreach (var row in source.Rows)
                 {
                     cancellation.ThrowIfCancellationRequested();
-                    if (request.FilterField >= 0 && (row[request.FilterField] ?? "").IndexOf(
-                        request.FilterText ?? "", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    if (!MatchesFilter(request, row)) continue;
                     rowKeys.Add(new ValueKey(request.Rows.Select(i => ReadCell(row, i)).ToArray()));
                     columnKeys.Add(new ValueKey(request.Columns.Select(i => ReadCell(row, i)).ToArray()));
                     if (columnKeys.Count + 1 + Math.Max(1, request.Rows.Length) > MaxColumns ||
@@ -111,18 +200,7 @@ namespace AxialSqlTools.PivotGrid
                 }
             }
 
-            cube.ProcessData(ReadRows(), (record, key) =>
-            {
-                var cell = ReadCell((string[])record, fieldIndexes[key]);
-                if (key != valueKey || !RequiresNumber(request.Aggregation) || cell == DBNull.Value) return cell;
-                decimal number;
-                // Fail explicitly instead of letting NReco silently ignore values outside Decimal's range.
-                if (!decimal.TryParse((string)cell, NumberStyles.Float, CultureInfo.InvariantCulture, out number) ||
-                    number == decimal.MinValue)
-                    throw new InvalidOperationException("A value in " + source.Fields[request.Value].Label +
-                        " cannot be aggregated as a decimal. Cast or round this column in SQL first.");
-                return number;
-            });
+            cube.ProcessData(ReadRows(), (record, key) => ReadValue(source, request, (string[])record, fieldIndexes[key]));
             cancellation.ThrowIfCancellationRequested();
 
             var pivot = new PivotTable(request.Rows.Select(i => source.Fields[i].Key).ToArray(),
@@ -158,10 +236,26 @@ namespace AxialSqlTools.PivotGrid
             }
             for (int row = 0; row < pivot.RowKeys.Length; row++) AddRow(row);
             AddRow(null);
-            return new PivotResult(table, matchedRows);
+            return new PivotResult(table, matchedRows, source, request, pivot.RowKeys, pivot.ColumnKeys);
         }
 
-        private static string Label(object value) => value == null || value == DBNull.Value ? "(NULL)" :
+        internal static bool MatchesFilter(PivotRequest request, string[] row) => request.FilterField < 0 ||
+            (row[request.FilterField] ?? "").IndexOf(request.FilterText ?? "", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        internal static object ReadValue(PivotSnapshot source, PivotRequest request, string[] row, int index)
+        {
+            var text = row[index];
+            if (text == null || ((request.NullTextIsNull || source.Fields[index].IsNumeric) && text == "NULL")) return DBNull.Value;
+            if (index != request.Value || !RequiresNumber(request.Aggregation)) return text;
+            decimal number;
+            // Fail explicitly instead of letting NReco silently ignore unsupported numeric values.
+            if (!decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out number) || number == decimal.MinValue)
+                throw new InvalidOperationException("A value in " + source.Fields[index].Label +
+                    " cannot be aggregated as a decimal. Cast or round this column in SQL first.");
+            return number;
+        }
+
+        internal static string Label(object value) => value == null || value == DBNull.Value ? "(NULL)" :
             "'" + Convert.ToString(value, CultureInfo.InvariantCulture).Replace("'", "''") + "'";
 
         private static IAggregatorFactory CreateFactory(PivotAggregation aggregation, string field)

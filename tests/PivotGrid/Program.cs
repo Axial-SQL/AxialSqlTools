@@ -34,6 +34,54 @@ internal static class Program
         throw new Exception(label + ": expected " + typeof(T).Name);
     }
 
+    private static void DrillDownChecks()
+    {
+        var request = Request(PivotAggregation.Sum);
+        var result = PivotEngine.Build(Source, request, CancellationToken.None);
+        Equal(2, result.GetUnderlyingRows(0, 1, CancellationToken.None).Count, "East/A underlying rows");
+        Equal(3, result.GetUnderlyingRows(0, 3, CancellationToken.None).Count, "Row total includes every period");
+        Equal(3, result.GetUnderlyingRows(2, 1, CancellationToken.None).Count, "Column total includes every region");
+        Equal(5, result.GetUnderlyingRows(2, 3, CancellationToken.None).Count, "Grand total includes null measure rows");
+        Equal(1, result.GetUnderlyingRows(1, 2, CancellationToken.None).Count, "Null-valued group retains its source row");
+        Equal("NULL", result.GetUnderlyingRows(1, 2, CancellationToken.None).GetPage(0).Rows[0][3], "Original source text retained");
+        Equal(false, result.CanDrillDown(0, 0), "Grouping labels are not value cells");
+        Reject<ArgumentOutOfRangeException>(() => result.GetUnderlyingRows(0, 0, CancellationToken.None), "Reject grouping cell");
+        Reject<OperationCanceledException>(() => result.GetUnderlyingRows(0, 1, new CancellationToken(true)), "Drill cancellation");
+        request.Rows[0] = 3; request.FilterField = 0; request.FilterText = "West";
+        Equal(2, result.GetUnderlyingRows(0, 1, CancellationToken.None).Count, "Result retains applied request and axes");
+        var filtered = Request(PivotAggregation.DistinctCount); filtered.Value = 3; filtered.FilterField = 0; filtered.FilterText = "east";
+        var filteredResult = PivotEngine.Build(Source, filtered, CancellationToken.None);
+        Equal(3, filteredResult.GetUnderlyingRows(1, 3, CancellationToken.None).Count, "Distinct drill shows duplicates within applied filter");
+        var emptyIntersection = new PivotSnapshot(Fields, new[] { Source.Rows[0], Source.Rows[4] });
+        var sparse = PivotEngine.Build(emptyIntersection, Request(PivotAggregation.CountRows), CancellationToken.None);
+        Equal(0, sparse.GetUnderlyingRows(0, 2, CancellationToken.None).Count, "Empty intersection has no source rows");
+        var numericGroups = new PivotSnapshot(Fields, new[] { new[] { "E", "A", "10.0", "x" }, new[] { "E", "A", "10.00", "x" } });
+        var byMeasure = new PivotRequest { Rows = new[] { 2 }, Value = 2, Aggregation = PivotAggregation.Sum };
+        Equal(2, PivotEngine.Build(numericGroups, byMeasure, CancellationToken.None).GetUnderlyingRows(0, 1, CancellationToken.None).Count,
+            "Drill uses the same numeric key normalization as the cube");
+        var nullGroups = new PivotSnapshot(Fields, new[] { new[] { (string)null, "A", "1", "x" }, new[] { "NULL", "A", "1", "x" } });
+        var nullRequest = new PivotRequest { Rows = new[] { 0 } };
+        Equal(2, PivotEngine.Build(nullGroups, nullRequest, CancellationToken.None).GetUnderlyingRows(0, 1, CancellationToken.None).Count,
+            "Null keys use applied null handling");
+        nullRequest.NullTextIsNull = false;
+        Equal(1, PivotEngine.Build(nullGroups, nullRequest, CancellationToken.None).GetUnderlyingRows(0, 1, CancellationToken.None).Count,
+            "Literal NULL and actual null remain separate when requested");
+        var multi = Request(PivotAggregation.CountRows); multi.Rows = new[] { 0, 1 }; multi.Columns = new[] { 3 };
+        var multiResult = PivotEngine.Build(Source, multi, CancellationToken.None);
+        Equal(2, multiResult.GetUnderlyingRows(0, multiResult.Table.Columns.Count - 1, CancellationToken.None).Count,
+            "Multiple row dimensions restrict detail rows");
+        var scalar = PivotEngine.Build(Source, new PivotRequest(), CancellationToken.None);
+        Equal(5, scalar.GetUnderlyingRows(0, 1, CancellationToken.None).Count, "Scalar total drills into every source row");
+        var many = new PivotSnapshot(Fields, Enumerable.Range(0, 450).Select(i => new[] { "E", "A", i.ToString(), "x" }).ToArray());
+        var all = PivotEngine.Build(many, new PivotRequest(), CancellationToken.None).GetUnderlyingRows(0, 1, CancellationToken.None);
+        Equal(450, all.Count, "Details are not truncated to the first page");
+        Equal(3, all.PageCount, "Page count");
+        Equal(200, all.GetPage(0).Rows.Count, "Bounded first page");
+        Equal(201, all.GetPage(1).Rows[0][0], "Original source row number on next page");
+        Equal(50, all.GetPage(2).Rows.Count, "Last page");
+        Reject<ArgumentOutOfRangeException>(() => all.GetPage(3), "Reject invalid detail page");
+    }
+
     private static void Main()
     {
         var sum = Build(Request(PivotAggregation.Sum));
@@ -95,6 +143,7 @@ internal static class Program
             Equal(1.25m, Total(Build(Request(PivotAggregation.Sum), fractional)), "Invariant numeric parsing");
         }
         finally { CultureInfo.CurrentCulture = culture; }
+        DrillDownChecks();
         var many = new PivotSnapshot(Fields, Enumerable.Range(0, 100000).Select(i =>
             new[] { (i % 100).ToString(), ((i / 100) % 20).ToString(), "1", "n" }).ToArray());
         var timer = Stopwatch.StartNew();

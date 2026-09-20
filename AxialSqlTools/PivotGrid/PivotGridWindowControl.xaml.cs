@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace AxialSqlTools.PivotGrid
@@ -19,6 +20,9 @@ namespace AxialSqlTools.PivotGrid
     {
         private readonly ToolWindowThemeController theme;
         private PivotSnapshot snapshot;
+        private PivotResult displayedResult;
+        private PivotDetails details;
+        private int detailsPage;
         private CancellationTokenSource operation;
         private bool disposed;
 
@@ -106,6 +110,8 @@ namespace AxialSqlTools.PivotGrid
                 FilterText = FilterText.Text
             };
             var source = snapshot;
+            displayedResult = null;
+            ClearDetails();
             // Clear previous results so a failed/cancelled Apply cannot look like current statistics.
             ResultGrid.ItemsSource = null;
             ResultGrid.Columns.Clear();
@@ -114,12 +120,8 @@ namespace AxialSqlTools.PivotGrid
             var result = await Task.Run(() => PivotEngine.Build(source, request, token), token);
             token.ThrowIfCancellationRequested();
             if (disposed) return;
-            var textStyle = new Style(typeof(TextBlock), DataGridTextColumn.DefaultElementStyle);
-            textStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding("Foreground")
-                { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1) }));
-            var numericStyle = new Style(typeof(TextBlock), textStyle);
-            numericStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Right));
-            numericStyle.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch));
+            var textStyle = CreateTextStyle(false);
+            var numericStyle = CreateTextStyle(true);
             var view = result.Table.DefaultView;
             var totalRow = view[view.Count - 1];
             var valueCellStyle = CreateCellStyle(false, totalRow);
@@ -143,9 +145,23 @@ namespace AxialSqlTools.PivotGrid
                 ResultGrid.Columns.Add(gridColumn);
             }
             ResultGrid.FrozenColumnCount = rowColumnCount;
+            displayedResult = result;
             ResultGrid.ItemsSource = view;
-            Status.Text = string.Format("{0:N0} matching rows. {1:N0} pivot rows including grand total. Calculated in {2:N2}s. Select cells and press Ctrl+C to copy.",
+            Status.Text = string.Format("{0:N0} matching rows. {1:N0} pivot rows including grand total. Calculated in {2:N2}s. Double-click a value or total to see underlying rows. Ctrl+C copies selected cells.",
                 result.MatchedRows, result.Table.Rows.Count, elapsed.Elapsed.TotalSeconds);
+        }
+
+        private static Style CreateTextStyle(bool numeric)
+        {
+            var style = new Style(typeof(TextBlock), DataGridTextColumn.DefaultElementStyle);
+            style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding("Foreground")
+                { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1) }));
+            if (numeric)
+            {
+                style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Right));
+                style.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch));
+            }
+            return style;
         }
 
         private Style CreateCellStyle(bool grouping, DataRowView totalRow)
@@ -164,6 +180,147 @@ namespace AxialSqlTools.PivotGrid
             selected.Setters.Add(new Setter(Control.ForegroundProperty, SystemColors.HighlightTextBrush));
             style.Triggers.Add(selected);
             return style;
+        }
+
+        private bool TryGetDrillCell(out int row, out int column)
+        {
+            row = column = -1;
+            if (disposed || operation != null || displayedResult == null) return false;
+            var cell = ResultGrid.CurrentCell;
+            var item = cell.Item as DataRowView;
+            if (item == null || item.Row.Table != displayedResult.Table || cell.Column == null) return false;
+            row = displayedResult.Table.Rows.IndexOf(item.Row);
+            // Column collection order is stable even when the user changes DisplayIndex.
+            column = ResultGrid.Columns.IndexOf(cell.Column);
+            return displayedResult.CanDrillDown(row, column);
+        }
+
+        private static T FindAncestor<T>(DependencyObject source) where T : DependencyObject
+        {
+            while (source != null)
+            {
+                if (source is T found) return found;
+                source = source is Visual ? VisualTreeHelper.GetParent(source) : (source as FrameworkContentElement)?.Parent;
+            }
+            return null;
+        }
+
+        private bool SelectClickedCell(object originalSource)
+        {
+            var cell = FindAncestor<DataGridCell>(originalSource as DependencyObject);
+            if (cell == null || FindAncestor<DataGrid>(cell) != ResultGrid) return false;
+            ResultGrid.CurrentCell = new DataGridCellInfo(cell.DataContext, cell.Column);
+            return true;
+        }
+
+        private void ResultDoubleClicked(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left && SelectClickedCell(e.OriginalSource) && StartDrillDown()) e.Handled = true;
+        }
+
+        private void ResultRightClicked(object sender, MouseButtonEventArgs e)
+        {
+            // Do not let a click on a header/empty space reuse a previously selected value.
+            if (!SelectClickedCell(e.OriginalSource)) ResultGrid.CurrentCell = new DataGridCellInfo();
+        }
+
+        private void ResultKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None && StartDrillDown()) e.Handled = true;
+        }
+
+        private void ResultCurrentCellChanged(object sender, EventArgs e)
+        {
+            if (DrillButton != null) DrillButton.IsEnabled = TryGetDrillCell(out _, out _);
+        }
+
+        private void ResultContextMenuOpening(object sender, ContextMenuEventArgs e) =>
+            DrillMenuItem.IsEnabled = TryGetDrillCell(out _, out _);
+
+        private void DrillClicked(object sender, RoutedEventArgs e) => StartDrillDown();
+
+        private bool StartDrillDown()
+        {
+            if (!TryGetDrillCell(out int row, out int column)) return false;
+            var result = displayedResult;
+            AxialSqlToolsPackage.PackageInstance.JoinableTaskFactory.RunAsync(() => RunAsync(async token =>
+            {
+                ClearDetails();
+                Status.Text = "Finding underlying rows...";
+                var found = await Task.Run(() => result.GetUnderlyingRows(row, column, token), token);
+                token.ThrowIfCancellationRequested();
+                if (disposed) return;
+                details = found;
+                DetailsTitle.Text = details.Description;
+                DetailsPane.Visibility = DetailsSplitter.Visibility = Visibility.Visible;
+                DetailsRow.Height = new GridLength(1, GridUnitType.Star);
+                DetailsRow.MinHeight = 120;
+                ShowDetailsPage();
+                Status.Text = "Details show all source rows in this group, including duplicates and null values. The pivot's applied filter is preserved.";
+            })).FileAndForget("AxialSqlTools/PivotGrid/DrillDown");
+            return true;
+        }
+
+        private void ShowDetailsPage()
+        {
+            if (details == null || snapshot == null) return;
+            var page = details.GetPage(detailsPage);
+            if (DetailsGrid.Columns.Count == 0)
+            {
+                var textStyle = CreateTextStyle(false);
+                var numericStyle = CreateTextStyle(true);
+                var cellStyle = CreateCellStyle(false, null);
+                foreach (DataColumn column in page.Columns)
+                {
+                    bool numeric = column.Ordinal == 0 || snapshot.Fields[column.Ordinal - 1].IsNumeric;
+                    DetailsGrid.Columns.Add(new DataGridTextColumn
+                    {
+                        Header = column.Caption,
+                        Binding = new Binding("[" + column.ColumnName + "]")
+                            { Mode = BindingMode.OneWay, Converter = CellDisplay, ConverterParameter = numeric, TargetNullValue = "(NULL)" },
+                        ElementStyle = numeric ? numericStyle : textStyle,
+                        CellStyle = cellStyle,
+                        Width = new DataGridLength(150)
+                    });
+                }
+                DetailsGrid.FrozenColumnCount = 1;
+            }
+            DetailsGrid.ItemsSource = page.DefaultView;
+            int first = details.Count == 0 ? 0 : detailsPage * details.PageSize + 1;
+            int last = Math.Min(details.Count, (detailsPage + 1) * details.PageSize);
+            DetailsPageInfo.Text = string.Format("Rows {0:N0}-{1:N0} of {2:N0}. Page {3:N0}/{4:N0}. Ctrl+C copies selected cells on this page.",
+                first, last, details.Count, detailsPage + 1, details.PageCount);
+            UpdatePageButtons();
+        }
+
+        private void UpdatePageButtons()
+        {
+            PreviousPageButton.IsEnabled = operation == null && details != null && detailsPage > 0;
+            NextPageButton.IsEnabled = operation == null && details != null && detailsPage + 1 < details.PageCount;
+        }
+
+        private void PreviousPageClicked(object sender, RoutedEventArgs e)
+        {
+            if (operation == null && details != null && detailsPage > 0) { detailsPage--; ShowDetailsPage(); }
+        }
+
+        private void NextPageClicked(object sender, RoutedEventArgs e)
+        {
+            if (operation == null && details != null && detailsPage + 1 < details.PageCount) { detailsPage++; ShowDetailsPage(); }
+        }
+
+        private void CloseDetailsClicked(object sender, RoutedEventArgs e) => ClearDetails();
+
+        private void ClearDetails()
+        {
+            details = null;
+            detailsPage = 0;
+            DetailsGrid.ItemsSource = null;
+            DetailsGrid.Columns.Clear();
+            DetailsTitle.Text = DetailsPageInfo.Text = "";
+            DetailsPane.Visibility = DetailsSplitter.Visibility = Visibility.Collapsed;
+            DetailsRow.MinHeight = 0;
+            DetailsRow.Height = new GridLength(0);
         }
 
         private void AggregationChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateValueFields();
@@ -212,6 +369,9 @@ namespace AxialSqlTools.PivotGrid
         {
             Options.IsEnabled = FilterField.IsEnabled = FilterText.IsEnabled = ApplyButton.IsEnabled = !busy && snapshot != null;
             CancelButton.IsEnabled = busy;
+            DrillButton.IsEnabled = !busy && TryGetDrillCell(out _, out _);
+            DrillMenuItem.IsEnabled = DrillButton.IsEnabled;
+            UpdatePageButtons();
         }
 
         private void CancelClicked(object sender, RoutedEventArgs e) => operation?.Cancel();
@@ -222,6 +382,8 @@ namespace AxialSqlTools.PivotGrid
             disposed = true;
             operation?.Cancel();
             snapshot = null;
+            displayedResult = null;
+            ClearDetails();
             ResultGrid.ItemsSource = null;
             ResultGrid.Columns.Clear();
             RowFields.ItemsSource = ColumnFields.ItemsSource = FilterField.ItemsSource = ValueField.ItemsSource = null;
