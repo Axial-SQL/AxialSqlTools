@@ -40,6 +40,8 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
  
 - [**Script Object Definition**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Script-Object-Definition): Quickly generate scripts for the definition of selected objects directly from the selected query text.
   
+- **Sort Selected Text**: Select comma-separated fields or values (or a list of lines), then right-click and choose **Sort Selected Text Ascending** or **Sort Selected Text Descending**. Spacing, indentation, and line breaks are preserved. Numeric lists sort numerically; text sorts alphabetically without changing its case. Select only the list, without SQL comments or statement terminators. Available in the SQL editor context menu only.
+
 - [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics.
 
 - [**Table Data Compare**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Table-Data-Compare): Compare tables across SQL Server connections, inspect row and column differences, and generate or apply selected synchronization actions.

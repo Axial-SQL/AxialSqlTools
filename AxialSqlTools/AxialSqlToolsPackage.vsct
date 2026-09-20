@@ -69,6 +69,9 @@
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialQueryTemplatesSubMenu" />
       </Group>
 
+      <Group guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" priority="0x6000">
+        <Parent guid="guidSqlWorkbenchEditorGroup" id="IDM_SQLWB_SQLSCRIPT_CONTEXT" />
+      </Group>
     </Groups>
 
     <Menus>
@@ -317,6 +320,26 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSortSelectedTextAscending" priority="0x0200" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" />
+        <CommandFlag>DefaultDisabled</CommandFlag>
+        <Strings>
+          <ButtonText>Sort Selected Text Ascending</ButtonText>
+          <CanonicalName>AxialSqlTools.SortSelectedTextAscending</CanonicalName>
+          <LocCanonicalName>AxialSqlTools.SortSelectedTextAscending</LocCanonicalName>
+        </Strings>
+      </Button>
+
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSortSelectedTextDescending" priority="0x0210" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" />
+        <CommandFlag>DefaultDisabled</CommandFlag>
+        <Strings>
+          <ButtonText>Sort Selected Text Descending</ButtonText>
+          <CanonicalName>AxialSqlTools.SortSelectedTextDescending</CanonicalName>
+          <LocCanonicalName>AxialSqlTools.SortSelectedTextDescending</LocCanonicalName>
+        </Strings>
+      </Button>
+
     </Buttons>
 
 
@@ -361,6 +384,10 @@
   </KeyBindings>
 
   <Symbols>
+    <!-- SQLEditors.dll: SQLWorkbenchCommands.GUID_SQLEditorGroup / IDM_SQLWB_SQLSCRIPT_CONTEXT. -->
+    <GuidSymbol name="guidSqlWorkbenchEditorGroup" value="{33F13AC3-80BB-4ECB-85BC-225435603A5E}">
+      <IDSymbol name="IDM_SQLWB_SQLSCRIPT_CONTEXT" value="0x0050" />
+    </GuidSymbol>
     <!-- This is the package guid. -->
     <GuidSymbol name="guidAxialSqlToolsPackage" value="{82ff597d-c4bc-469f-b990-637219074984}" />
 
@@ -418,6 +445,8 @@
 
       <IDSymbol name="AxialSelectCurrentStatementCommand" value="4154" />
       <IDSymbol name="AxialToggleBlockCommentCommand" value="4155" />
+      <IDSymbol name="AxialSortSelectedTextAscending" value="4157" />
+      <IDSymbol name="AxialSortSelectedTextDescending" value="4158" />
 
       <IDSymbol name="AxialSnippetManagerCommand" value="4153" />
 
