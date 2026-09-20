@@ -3,6 +3,7 @@
   <PropertyGroup>
     <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <UseWinFormsOutOfProcDesigner>True</UseWinFormsOutOfProcDesigner>
@@ -27,7 +28,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AxialSqlTools</RootNamespace>
     <AssemblyName>AxialSqlTools</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <RuntimeIdentifier>win</RuntimeIdentifier>
     <RuntimeIdentifiers>win</RuntimeIdentifiers>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
