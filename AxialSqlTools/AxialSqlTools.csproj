@@ -65,6 +65,9 @@
     <UseWinFormsOutOfProcDesigner>True</UseWinFormsOutOfProcDesigner>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="PivotGrid\PivotDetailsWindow.xaml.cs">
+      <DependentUpon>PivotDetailsWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="PivotGrid\PivotEngine.cs" />
     <Compile Include="PivotGrid\PivotGridSnapshot.cs" />
     <Compile Include="PivotGrid\PivotGridCommand.cs" />
@@ -515,6 +518,10 @@
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="PivotGrid\PivotDetailsWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="PivotGrid\PivotGridWindowControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

@@ -13,13 +13,13 @@ Available calculations:
 
 ## Drill down into source rows
 
-Double-click a value or total cell to open a resizable detail pane below the pivot. You can also select the cell and press Enter, click **Show underlying rows**, or use the same command in its context menu. Grouping labels do not open details.
+Double-click a value or total cell to open a large, resizable modal window centered over SSMS. You can also select the cell and press Enter, click **Show underlying rows**, or use the same command in its context menu. Grouping labels do not open details.
 
-The pane shows all original columns and a one-based **Source row** number from the captured grid. Its heading identifies the selected group and applied filter. Row totals include all column groups; column totals include all row groups; the grand total includes every source row allowed by the applied filter. Details include duplicate records and rows with null measures, even when the aggregation ignores null values or counts distinct values.
+The window shows all original columns and a one-based **Source row** number from the captured grid. Its heading identifies the selected group and applied filter. Row totals include all column groups; column totals include all row groups; the grand total includes every source row allowed by the applied filter. Details include duplicate records and rows with null measures, even when the aggregation ignores null values or counts distinct values.
 
-Matching runs in the background and can be cancelled. Pages contain up to 200 rows (fewer for very wide grids), with Previous/Next controls and an exact matching-row count. No matching rows are silently dropped. Ctrl+C copies selected cells from the current page. Drag the divider to resize the pane or choose **Close details** to give the pivot the full area again.
+Matching runs in the background and can be cancelled. Pages contain up to 200 rows (fewer for very wide grids), with Previous/Next controls and an exact matching-row count. No matching rows are silently dropped. Ctrl+C copies selected cells from the current page. Numeric columns and the source row number are right-aligned with thousands separators. Resize or maximize the window for wide results; choose **Close** or press Escape to return to the pivot. The main pivot keeps its full display area.
 
-Details use the configuration that produced the displayed pivot. Editing a selector or filter does not change them until **Apply** rebuilds the pivot and clears the old details. All rows come from the captured snapshot; drill-down does not execute SQL.
+Details use the configuration that produced the displayed pivot. Editing a selector or filter does not change them until **Apply** rebuilds the pivot. All rows come from the captured snapshot; drill-down does not execute SQL.
 
 ## Displayed values and limits
 
@@ -63,7 +63,7 @@ SELECT N'Other grid' AS Region, 999 AS Amount;
 4. Open a separate pivot on the second grid. Its total should be 999. The first pivot should retain its original data after its query window closes.
 5. Check an empty grid, duplicate/unnamed column headers, SQL NULL versus literal `NULL`, and a wide/high-cardinality result. Errors should be readable and should not show partial statistics.
 6. Double-click East/A and verify the two source rows (10 and 30). Drill into East's total (3 rows), the A total (3 rows), and the grand total (5 rows, including the null measure). Try Enter and the context menu, reorder pivot columns, and verify that the selected cell still opens the correct group.
-7. Change a filter without applying it and verify that details still match the displayed pivot. Apply it and confirm that old details close. Test Previous/Next on a group with more than 200 source rows, an empty intersection, and closing/resizing the pane.
+7. Close details, change a filter without applying it, and reopen details to verify that they still match the displayed pivot. Close the modal, apply the new filter, and reopen details to confirm they use it. Test Previous/Next on a group with more than 200 source rows, an empty intersection, and resizing/maximizing the modal, right-aligned numeric columns, paging, Escape/Close, and SSMS ownership (the main window should be disabled while details are open).
 8. Cancel during a large capture and during aggregation; close a busy pivot tab. SSMS should remain usable. Verify light/dark themes, horizontal scrolling, and Ctrl+C from the output.
 
 SSMS hosting, COM menu events, actual grid extraction, theme rendering, XAML compilation, and VSIX packaging require this Windows smoke test; pure engine tests cannot validate them.

@@ -21,8 +21,7 @@ namespace AxialSqlTools.PivotGrid
         private readonly ToolWindowThemeController theme;
         private PivotSnapshot snapshot;
         private PivotResult displayedResult;
-        private PivotDetails details;
-        private int detailsPage;
+        private PivotDetailsWindow detailsWindow;
         private CancellationTokenSource operation;
         private bool disposed;
 
@@ -48,7 +47,7 @@ namespace AxialSqlTools.PivotGrid
             public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
         }
 
-        private static readonly IValueConverter CellDisplay = new CellDisplayConverter();
+        internal static readonly IValueConverter CellDisplay = new CellDisplayConverter();
 
         private sealed class AggregationChoice
         {
@@ -111,7 +110,6 @@ namespace AxialSqlTools.PivotGrid
             };
             var source = snapshot;
             displayedResult = null;
-            ClearDetails();
             // Clear previous results so a failed/cancelled Apply cannot look like current statistics.
             ResultGrid.ItemsSource = null;
             ResultGrid.Columns.Clear();
@@ -124,8 +122,8 @@ namespace AxialSqlTools.PivotGrid
             var numericStyle = CreateTextStyle(true);
             var view = result.Table.DefaultView;
             var totalRow = view[view.Count - 1];
-            var valueCellStyle = CreateCellStyle(false, totalRow);
-            var groupingCellStyle = CreateCellStyle(true, totalRow);
+            var valueCellStyle = CreateCellStyle(this, false, totalRow);
+            var groupingCellStyle = CreateCellStyle(this, true, totalRow);
             int rowColumnCount = Math.Max(1, request.Rows.Length);
             foreach (DataColumn column in result.Table.Columns)
             {
@@ -151,7 +149,7 @@ namespace AxialSqlTools.PivotGrid
                 result.MatchedRows, result.Table.Rows.Count, elapsed.Elapsed.TotalSeconds);
         }
 
-        private static Style CreateTextStyle(bool numeric)
+        internal static Style CreateTextStyle(bool numeric)
         {
             var style = new Style(typeof(TextBlock), DataGridTextColumn.DefaultElementStyle);
             style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding("Foreground")
@@ -164,9 +162,9 @@ namespace AxialSqlTools.PivotGrid
             return style;
         }
 
-        private Style CreateCellStyle(bool grouping, DataRowView totalRow)
+        internal static Style CreateCellStyle(FrameworkElement owner, bool grouping, DataRowView totalRow)
         {
-            var style = new Style(typeof(DataGridCell), (Style)FindResource(typeof(DataGridCell)));
+            var style = new Style(typeof(DataGridCell), (Style)owner.FindResource(typeof(DataGridCell)));
             style.Setters.Add(new Setter(Control.BackgroundProperty, grouping ? Brushes.WhiteSmoke : Brushes.White));
             style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.Black));
             style.Setters.Add(new Setter(Control.BorderBrushProperty, Brushes.LightGray));
@@ -245,82 +243,23 @@ namespace AxialSqlTools.PivotGrid
             var result = displayedResult;
             AxialSqlToolsPackage.PackageInstance.JoinableTaskFactory.RunAsync(() => RunAsync(async token =>
             {
-                ClearDetails();
                 Status.Text = "Finding underlying rows...";
                 var found = await Task.Run(() => result.GetUnderlyingRows(row, column, token), token);
                 token.ThrowIfCancellationRequested();
                 if (disposed) return;
-                details = found;
-                DetailsTitle.Text = details.Description;
-                DetailsPane.Visibility = DetailsSplitter.Visibility = Visibility.Visible;
-                DetailsRow.Height = new GridLength(1, GridUnitType.Star);
-                DetailsRow.MinHeight = 120;
-                ShowDetailsPage();
-                Status.Text = "Details show all source rows in this group, including duplicates and null values. The pivot's applied filter is preserved.";
+                using (var dialog = new PivotDetailsWindow(found, snapshot.Fields))
+                {
+                    detailsWindow = dialog;
+                    try
+                    {
+                        // The shell API sets the SSMS owner and enters proper modal state.
+                        dialog.ShowModal();
+                    }
+                    finally { detailsWindow = null; }
+                }
+                if (!disposed) Status.Text = "Details closed. Double-click another value or total to inspect its source rows.";
             })).FileAndForget("AxialSqlTools/PivotGrid/DrillDown");
             return true;
-        }
-
-        private void ShowDetailsPage()
-        {
-            if (details == null || snapshot == null) return;
-            var page = details.GetPage(detailsPage);
-            if (DetailsGrid.Columns.Count == 0)
-            {
-                var textStyle = CreateTextStyle(false);
-                var numericStyle = CreateTextStyle(true);
-                var cellStyle = CreateCellStyle(false, null);
-                foreach (DataColumn column in page.Columns)
-                {
-                    bool numeric = column.Ordinal == 0 || snapshot.Fields[column.Ordinal - 1].IsNumeric;
-                    DetailsGrid.Columns.Add(new DataGridTextColumn
-                    {
-                        Header = column.Caption,
-                        Binding = new Binding("[" + column.ColumnName + "]")
-                            { Mode = BindingMode.OneWay, Converter = CellDisplay, ConverterParameter = numeric, TargetNullValue = "(NULL)" },
-                        ElementStyle = numeric ? numericStyle : textStyle,
-                        CellStyle = cellStyle,
-                        Width = new DataGridLength(150)
-                    });
-                }
-                DetailsGrid.FrozenColumnCount = 1;
-            }
-            DetailsGrid.ItemsSource = page.DefaultView;
-            int first = details.Count == 0 ? 0 : detailsPage * details.PageSize + 1;
-            int last = Math.Min(details.Count, (detailsPage + 1) * details.PageSize);
-            DetailsPageInfo.Text = string.Format("Rows {0:N0}-{1:N0} of {2:N0}. Page {3:N0}/{4:N0}. Ctrl+C copies selected cells on this page.",
-                first, last, details.Count, detailsPage + 1, details.PageCount);
-            UpdatePageButtons();
-        }
-
-        private void UpdatePageButtons()
-        {
-            PreviousPageButton.IsEnabled = operation == null && details != null && detailsPage > 0;
-            NextPageButton.IsEnabled = operation == null && details != null && detailsPage + 1 < details.PageCount;
-        }
-
-        private void PreviousPageClicked(object sender, RoutedEventArgs e)
-        {
-            if (operation == null && details != null && detailsPage > 0) { detailsPage--; ShowDetailsPage(); }
-        }
-
-        private void NextPageClicked(object sender, RoutedEventArgs e)
-        {
-            if (operation == null && details != null && detailsPage + 1 < details.PageCount) { detailsPage++; ShowDetailsPage(); }
-        }
-
-        private void CloseDetailsClicked(object sender, RoutedEventArgs e) => ClearDetails();
-
-        private void ClearDetails()
-        {
-            details = null;
-            detailsPage = 0;
-            DetailsGrid.ItemsSource = null;
-            DetailsGrid.Columns.Clear();
-            DetailsTitle.Text = DetailsPageInfo.Text = "";
-            DetailsPane.Visibility = DetailsSplitter.Visibility = Visibility.Collapsed;
-            DetailsRow.MinHeight = 0;
-            DetailsRow.Height = new GridLength(0);
         }
 
         private void AggregationChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateValueFields();
@@ -371,7 +310,6 @@ namespace AxialSqlTools.PivotGrid
             CancelButton.IsEnabled = busy;
             DrillButton.IsEnabled = !busy && TryGetDrillCell(out _, out _);
             DrillMenuItem.IsEnabled = DrillButton.IsEnabled;
-            UpdatePageButtons();
         }
 
         private void CancelClicked(object sender, RoutedEventArgs e) => operation?.Cancel();
@@ -381,9 +319,9 @@ namespace AxialSqlTools.PivotGrid
             if (disposed) return;
             disposed = true;
             operation?.Cancel();
+            detailsWindow?.Close();
             snapshot = null;
             displayedResult = null;
-            ClearDetails();
             ResultGrid.ItemsSource = null;
             ResultGrid.Columns.Clear();
             RowFields.ItemsSource = ColumnFields.ItemsSource = FilterField.ItemsSource = ValueField.ItemsSource = null;
