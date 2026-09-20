@@ -14,12 +14,54 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Xml;
 using static AxialSqlTools.AxialSqlToolsPackage;
 
 namespace AxialSqlTools
 {
     public static class ExcelExport
     {
+        private static readonly Regex SpreadsheetEscape = new Regex("_(?=x[0-9A-Fa-f]{4}_)", RegexOptions.Compiled);
+
+        private static string EncodeCellText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
+            // Excel's limit applies to the text, before SpreadsheetML escaping.
+            if (text.Length > 32767)
+            {
+                int length = 32767;
+                if (char.IsHighSurrogate(text[length - 1]) && char.IsLowSurrogate(text[length]))
+                    length--;
+                text = text.Substring(0, length);
+            }
+
+            // Escape just the leading underscore, including sequences sharing an underscore.
+            text = SpreadsheetEscape.Replace(text, "_x005F_");
+            var encoded = new StringBuilder(text.Length);
+            for (int i = 0; i < text.Length; i++)
+            {
+                char character = text[i];
+                // Escape carriage returns too, to avoid XML newline normalization.
+                if (XmlConvert.IsXmlChar(character) && character != '\r')
+                {
+                    encoded.Append(character);
+                }
+                else if (char.IsHighSurrogate(character) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
+                {
+                    encoded.Append(character);
+                    encoded.Append(text[++i]);
+                }
+                else
+                {
+                    // Open XML SDK writes raw XML text; ST_Xstring escaping is our responsibility.
+                    encoded.Append("_x").Append(((int)character).ToString("X4", CultureInfo.InvariantCulture)).Append('_');
+                }
+            }
+
+            return encoded.ToString();
+        }
 
         #region Create Stylesheet
 
@@ -353,7 +395,7 @@ namespace AxialSqlTools
                         Cell cell = new Cell
                         {
                             DataType = CellValues.String,
-                            CellValue = new CellValue(columnName),
+                            CellValue = new CellValue(EncodeCellText(columnName)),
                             StyleIndex = 4  // bold, fill, borders, etc.
                         };
                         headerRow.AppendChild(cell);
@@ -403,11 +445,8 @@ namespace AxialSqlTools
                             }
                             else
                             {
-                                string text = value.ToString();
-                                if (text.Length > 32767)
-                                    text = text.Substring(0, 32767);
                                 cell.DataType = CellValues.String;
-                                cell.CellValue = new CellValue(text);
+                                cell.CellValue = new CellValue(EncodeCellText(value.ToString()));
                             }
 
                             newRow.AppendChild(cell);
@@ -499,7 +538,7 @@ namespace AxialSqlTools
                         };
 
                         InlineString inlineStr = new InlineString();
-                        Text t = new Text(line){ Space = SpaceProcessingModeValues.Preserve };
+                        Text t = new Text(EncodeCellText(line)){ Space = SpaceProcessingModeValues.Preserve };
 
                         inlineStr.AppendChild(t);
                         cell.AppendChild(inlineStr);
