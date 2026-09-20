@@ -111,7 +111,7 @@ namespace AxialSqlTools.PivotGrid
                 result.MatchedRows, result.Table.Rows.Count, elapsed.Elapsed.TotalSeconds);
         }
 
-        private void AggregationChanged(object sender, SelectionChangedEventArgs e) => UpdateValueFields();
+        private void AggregationChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateValueFields();
 
         private void UpdateValueFields()
         {
