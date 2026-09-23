@@ -1,6 +1,6 @@
 # Pivot Grid
 
-Right-click a completed query's **result grid** and choose **Pivot Grid**. A new SSMS tab captures all rows of that grid, independently of the current cell selection. Each invocation gets its own snapshot. Changing or closing the source query after capture does not change the pivot.
+Select a completed query's **result grid**, then choose **Tools > Export Grid to Pivot Table** on the **Axial SQL Tools** toolbar. A new SSMS tab captures all rows of that grid, independently of the current cell selection. Each invocation gets its own snapshot. Changing or closing the source query after capture does not change the pivot.
 
 Click fields under **Rows** and **Columns** to select or deselect them, choose an aggregation and a **Values** field, then **Apply**. Multiple grouping fields follow source column order. Leave Columns empty for a grouped summary, or clear both axes for a single total. The optional filter performs a case-insensitive “contains” search on one source column. Select output cells and use Ctrl+C to copy with headers.
 
