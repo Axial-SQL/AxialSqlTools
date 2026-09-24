@@ -34,8 +34,25 @@
     <SolidColorBrush x:Key="AxialThemeDiffModifiedBackgroundBrush" Color="#E6E6E6" />
     <SolidColorBrush x:Key="AxialThemeDiffModifiedForegroundBrush" Color="#000000" />
 
+    <SolidColorBrush x:Key="AxialThemeGridSelectionTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeDisabledForegroundBrush" Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeInputBackgroundBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeInputForegroundBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeButtonForegroundBrush" Color="{DynamicResource {x:Static SystemColors.ControlTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeButtonHoverTextBrush" Color="{DynamicResource {x:Static SystemColors.ControlTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeButtonPressedTextBrush" Color="{DynamicResource {x:Static SystemColors.ControlTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeTabHeaderTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeTabHeaderHoverTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeTabHeaderSelectedTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeToolTipBackgroundBrush" Color="{DynamicResource {x:Static SystemColors.InfoColorKey}}" />
+    <SolidColorBrush x:Key="AxialThemeToolTipForegroundBrush" Color="{DynamicResource {x:Static SystemColors.InfoTextColorKey}}" />
+
     <Style TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style TargetType="Label">
@@ -48,12 +65,37 @@
 
     <Style TargetType="CheckBox">
         <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                        <Border x:Name="CheckBorder" Width="13" Height="13" VerticalAlignment="Center"
+                                Background="{DynamicResource AxialThemeInputBackgroundBrush}"
+                                BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1">
+                            <Path x:Name="CheckMark" Data="M 1 5 L 4 8 L 10 1" StrokeThickness="2"
+                                  Stroke="{DynamicResource AxialThemeInputForegroundBrush}" Visibility="Collapsed" />
+                        </Border>
+                        <ContentPresenter Grid.Column="1" Margin="5,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True"><Setter TargetName="CheckMark" Property="Visibility" Value="Visible" /></Trigger>
+                        <Trigger Property="IsChecked" Value="{x:Null}">
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="CheckMark" Property="Data" Value="M 2 5 L 9 5" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" /></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
+                            <Setter TargetName="CheckMark" Property="Stroke" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
-    <Style TargetType="Expander">
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
-    </Style>
 
     <Style TargetType="GroupBox">
         <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
@@ -93,34 +135,52 @@
 
     <Style TargetType="TextBox">
         <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeInputBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeInputForegroundBrush}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
+        <Setter Property="SelectionTextBrush" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
         <Style.Triggers>
             <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
-                <Setter Property="Opacity" Value="0.72" />
+                <Setter Property="Background" Value="{DynamicResource AxialThemeInputBackgroundBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
 
     <Style TargetType="PasswordBox">
         <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeInputBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeInputForegroundBrush}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="InputBorder" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="2">
+                        <ScrollViewer x:Name="PART_ContentHost" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="InputBorder" Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
             <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
-                <Setter Property="Opacity" Value="0.72" />
+                <Setter Property="Background" Value="{DynamicResource AxialThemeInputBackgroundBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
 
     <Style TargetType="RichTextBox">
         <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeInputBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeInputForegroundBrush}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
+        <Setter Property="SelectionTextBrush" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
     </Style>
 
     <Style TargetType="FlowDocument">
@@ -129,7 +189,7 @@
     </Style>
 
     <Style TargetType="ComboBoxItem">
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonForegroundBrush}" />
         <Setter Property="Background" Value="{DynamicResource AxialThemeButtonBackgroundBrush}" />
         <Setter Property="Padding" Value="6,3" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -147,11 +207,11 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AxialThemeButtonHoverBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonHoverTextBrush}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AxialThemeTabHeaderSelectedBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeTabHeaderSelectedTextBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -169,7 +229,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
                     <Grid>
-                        <Border x:Name="ComboBorder"
+                        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions>
+                        <Border x:Name="ComboBorder" Grid.ColumnSpan="2"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1">
@@ -179,7 +240,7 @@
                                     <ColumnDefinition Width="24" />
                                 </Grid.ColumnDefinitions>
 
-                                <ContentPresenter Margin="6,0,0,0"
+                                <ContentPresenter x:Name="SelectionPresenter" Margin="6,0,0,0"
                                                   VerticalAlignment="Center"
                                                   HorizontalAlignment="Left"
                                                   IsHitTestVisible="False"
@@ -199,7 +260,7 @@
                             </Grid>
                         </Border>
 
-                        <ToggleButton Grid.ColumnSpan="2"
+                        <ToggleButton x:Name="DropDownToggle" Grid.ColumnSpan="2"
                                       Focusable="False"
                                       Background="Transparent"
                                       BorderThickness="0"
@@ -211,6 +272,10 @@
                             </ToggleButton.Template>
                         </ToggleButton>
 
+                        <TextBox x:Name="PART_EditableTextBox" Visibility="Collapsed" BorderThickness="0" Margin="3,1,1,1"
+                                 Background="{DynamicResource AxialThemeInputBackgroundBrush}"
+                                 Foreground="{DynamicResource AxialThemeInputForegroundBrush}"
+                                 IsReadOnly="{TemplateBinding IsReadOnly}" VerticalContentAlignment="Center" />
                         <Popup x:Name="PART_Popup"
                                Placement="Bottom"
                                PlacementTarget="{Binding ElementName=ComboBorder}"
@@ -229,11 +294,20 @@
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="SelectionPresenter" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="DropDownToggle" Property="Grid.Column" Value="1" />
+                            <Setter TargetName="DropDownToggle" Property="Grid.ColumnSpan" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" />
+                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ComboBorder" Property="Background" Value="{DynamicResource AxialThemeButtonHoverBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.6" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -241,20 +315,6 @@
         </Setter>
     </Style>
 
-    <Style TargetType="DatePicker">
-        <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
-        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
-        <Setter Property="Height" Value="27" />
-        <Setter Property="MinHeight" Value="27" />
-        <Style.Resources>
-            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                <Setter Property="Padding" Value="0" />
-                <Setter Property="MinHeight" Value="0" />
-                <Setter Property="MinWidth" Value="0" />
-            </Style>
-        </Style.Resources>
-    </Style>
 
     <Style TargetType="primitives:DatePickerTextBox">
         <Setter Property="BorderThickness" Value="0" />
@@ -262,12 +322,29 @@
         <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Padding" Value="2,0,0,0" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
+        <Setter Property="SelectionTextBrush" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="primitives:DatePickerTextBox">
+                    <Grid Background="{TemplateBinding Background}">
+                        <ScrollViewer x:Name="PART_ContentHost" />
+                        <ContentControl x:Name="PART_Watermark" Visibility="Collapsed" IsHitTestVisible="False" Focusable="False"
+                                        Foreground="{DynamicResource AxialThemeDisabledForegroundBrush}" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value=""><Setter TargetName="PART_Watermark" Property="Visibility" Value="Visible" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style TargetType="Button">
         <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
         <Setter Property="Background" Value="{DynamicResource AxialThemeButtonBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonForegroundBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Padding" Value="8,3" />
         <Setter Property="MinHeight" Value="24" />
@@ -287,14 +364,14 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AxialThemeButtonHoverBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonHoverTextBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AxialThemeButtonPressedBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonPressedTextBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.65" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -302,7 +379,7 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Opacity" Value="0.65" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -336,7 +413,7 @@
                             <Setter Property="Foreground" Value="{DynamicResource AxialThemePrimaryButtonForegroundBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.65" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -352,7 +429,7 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource AxialThemePrimaryButtonPressedBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Opacity" Value="0.65" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -386,7 +463,7 @@
                             <Setter Property="Foreground" Value="{DynamicResource AxialThemeDangerButtonForegroundBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.65" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -402,7 +479,7 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeDangerButtonPressedBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Opacity" Value="0.65" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -416,13 +493,23 @@
     <Style TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="2">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AxialThemeButtonHoverBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonHoverTextBrush}" />
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -441,7 +528,7 @@
 
     <Style TargetType="TabItem">
         <Setter Property="Background" Value="{DynamicResource AxialThemeTabHeaderBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeTabHeaderTextBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Padding" Value="12,4" />
@@ -462,7 +549,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource AxialThemeTabHeaderSelectedBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeTabHeaderSelectedTextBrush}" />
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
@@ -470,7 +557,7 @@
                                 <Condition Property="IsSelected" Value="False" />
                             </MultiTrigger.Conditions>
                             <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource AxialThemeTabHeaderHoverBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource AxialThemeTabHeaderHoverTextBrush}" />
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -496,15 +583,21 @@
         <Setter Property="Padding" Value="6,4" />
     </Style>
 
+    <Style TargetType="DataGridRowHeader">
+        <Setter Property="Background" Value="{DynamicResource AxialThemeGridHeaderBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
+    </Style>
+
     <Style TargetType="DataGridCell">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=DataGridRow}}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
         <Setter Property="BorderThickness" Value="0,0,1,0" />
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -514,10 +607,11 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AxialThemeButtonHoverBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonHoverTextBrush}" />
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -526,4 +620,226 @@
     <Style x:Key="AxialThemedDataGridColumnHeaderStyle" TargetType="{x:Type DataGridColumnHeader}" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}" />
     <Style x:Key="AxialThemedDataGridCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Type DataGridCell}}" />
     <Style x:Key="AxialThemedDataGridRowStyle" TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Type DataGridRow}}" />
+    <!-- Popups live in a separate visual tree. Give each popup surface its own
+         theme bindings instead of relying on the window's background. -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="{DynamicResource AxialThemeToolTipBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeToolTipForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
+    </Style>
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="2">
+                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style TargetType="GridSplitter">
+        <Setter Property="Background" Value="{DynamicResource AxialThemeBorderBrush}" />
+    </Style>
+    <Style TargetType="Expander">
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <StackPanel Background="{TemplateBinding Background}">
+                        <ToggleButton IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                      HorizontalContentAlignment="Left" Background="{TemplateBinding Background}"
+                                      Foreground="{TemplateBinding Foreground}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="0,0,0,1" Padding="3">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock x:Name="Arrow" Text="&#x25B6;" Margin="0,0,6,0" />
+                                            <ContentPresenter RecognizesAccessKey="True" />
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True"><Setter TargetName="Arrow" Property="Text" Value="&#x25BC;" /></Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                            <ContentPresenter ContentSource="Header" />
+                        </ToggleButton>
+                        <ContentPresenter x:Name="ExpandedContent" ContentSource="Content" Visibility="Collapsed" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True"><Setter TargetName="ExpandedContent" Property="Visibility" Value="Visible" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Calendar has no VS dialog style. Keep the WPF template parts and grids
+         so keyboard navigation, month/year selection and blackout dates work. -->
+    <Style x:Key="AxialCalendarDayStyle" TargetType="primitives:CalendarDayButton">
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="MinWidth" Value="28" />
+        <Setter Property="MinHeight" Value="25" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="primitives:CalendarDayButton">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsInactive" Value="True"><Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" /></Trigger>
+            <Trigger Property="IsToday" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" /></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" /></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" /></Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
+            </Trigger>
+            <Trigger Property="IsBlackedOut" Value="True"><Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" /></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" /></Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="AxialCalendarButtonStyle" TargetType="primitives:CalendarButton">
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="primitives:CalendarButton">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsInactive" Value="True"><Setter Property="Foreground" Value="{DynamicResource AxialThemeDisabledForegroundBrush}" /></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" /></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AxialThemeAccentBrush}" /></Trigger>
+            <Trigger Property="HasSelectedDays" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="AxialCalendarItemStyle" TargetType="primitives:CalendarItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="primitives:CalendarItem">
+                    <ControlTemplate.Resources>
+                        <DataTemplate x:Key="{x:Static primitives:CalendarItem.DayTitleTemplateResourceKey}">
+                            <TextBlock Text="{Binding}" HorizontalAlignment="Center" Foreground="{DynamicResource AxialThemeForegroundBrush}" />
+                        </DataTemplate>
+                    </ControlTemplate.Resources>
+                    <Border x:Name="PART_Root" Background="{DynamicResource AxialThemeBackgroundBrush}" BorderBrush="{DynamicResource AxialThemeBorderBrush}" BorderThickness="1" Padding="4">
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <Button x:Name="PART_PreviousButton" Content="&#x25C0;" Focusable="False" AutomationProperties.Name="Previous" />
+                                <Button x:Name="PART_HeaderButton" Grid.Column="1" Focusable="False" />
+                                <Button x:Name="PART_NextButton" Grid.Column="2" Content="&#x25B6;" Focusable="False" AutomationProperties.Name="Next" />
+                            </Grid>
+                            <Grid x:Name="PART_MonthView" Grid.Row="1">
+                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /></Grid.RowDefinitions>
+                            </Grid>
+                            <Grid x:Name="PART_YearView" Grid.Row="1" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition /><RowDefinition /><RowDefinition /></Grid.RowDefinitions>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding DisplayMode, RelativeSource={RelativeSource AncestorType=Calendar}}" Value="Year">
+                            <Setter TargetName="PART_MonthView" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="PART_YearView" Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding DisplayMode, RelativeSource={RelativeSource AncestorType=Calendar}}" Value="Decade">
+                            <Setter TargetName="PART_MonthView" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="PART_YearView" Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="AxialCalendarStyle" TargetType="Calendar">
+        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="CalendarItemStyle" Value="{StaticResource AxialCalendarItemStyle}" />
+        <Setter Property="CalendarDayButtonStyle" Value="{StaticResource AxialCalendarDayStyle}" />
+        <Setter Property="CalendarButtonStyle" Value="{StaticResource AxialCalendarButtonStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Calendar">
+                    <primitives:CalendarItem x:Name="PART_CalendarItem" Style="{TemplateBinding CalendarItemStyle}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="DatePicker">
+        <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+        <Setter Property="Height" Value="27" />
+        <Setter Property="MinHeight" Value="27" />
+        <Setter Property="CalendarStyle" Value="{StaticResource AxialCalendarStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePicker">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <primitives:DatePickerTextBox x:Name="PART_TextBox" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" />
+                            <Button x:Name="PART_Button" Grid.Column="1" Content="&#x25A6;" Padding="4,0" Focusable="False" AutomationProperties.Name="Open calendar" />
+                            <Popup x:Name="PART_Popup" Placement="Bottom" StaysOpen="False" AllowsTransparency="True" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Resources>
+            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="MinWidth" Value="0" />
+            </Style>
+        </Style.Resources>
+    </Style>
 </ResourceDictionary>

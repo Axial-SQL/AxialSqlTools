@@ -1,17 +1,18 @@
-<Window x:Class="AxialSqlTools.QuerySafety.FatalActionWarningDialog"
+<platform:DialogWindow x:Class="AxialSqlTools.QuerySafety.FatalActionWarningDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:platform="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
         Title="Confirm query execution" Width="710" MinWidth="570" Height="460" MinHeight="360"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{DynamicResource AxialThemeBackgroundBrush}"
         Foreground="{DynamicResource AxialThemeForegroundBrush}">
-    <Window.Resources>
+    <platform:DialogWindow.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-    </Window.Resources>
+    </platform:DialogWindow.Resources>
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
@@ -33,4 +34,4 @@
             <Button x:Name="CancelButton" Content="Cancel" MinWidth="85" Padding="10,6" IsCancel="True"/>
         </WrapPanel>
     </Grid>
-</Window>
+</platform:DialogWindow>

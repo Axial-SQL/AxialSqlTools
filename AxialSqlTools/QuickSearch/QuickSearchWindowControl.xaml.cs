@@ -34,26 +34,45 @@ namespace AxialSqlTools
         public QuickSearchWindowControl()
         {
             this.InitializeComponent();
-            themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
 
             CheckBox_WholeWord.IsChecked = true;
-
-            using (var stream = typeof(QuickSearchWindowControl).Assembly.GetManifestResourceStream("AxialSqlTools.QuickSearch.sql.xshd"))
-            using (var reader = new XmlTextReader(stream))
-            {
-                SqlEditor.SyntaxHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
-            }
 
             if (textMarkerService == null)
             {
                 textMarkerService = new TextMarkerService(SqlEditor);
             }
-
+            themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
         }
 
         private void ApplyThemeBrushResources()
         {
             ToolWindowThemeResources.ApplySharedTheme(this);
+            var background = VsThemeBrushResolver.GetBrushColor(
+                (System.Windows.Media.Brush)FindResource("AxialThemeBackgroundBrush"), SystemColors.WindowColor);
+            var foreground = VsThemeBrushResolver.GetBrushColor(
+                (System.Windows.Media.Brush)FindResource("AxialThemeForegroundBrush"), SystemColors.WindowTextColor);
+            // Start from the original definition on every change so repeated theme
+            // switches do not progressively alter the syntax colors.
+            using (var stream = typeof(QuickSearchWindowControl).Assembly.GetManifestResourceStream("AxialSqlTools.QuickSearch.sql.xshd"))
+            using (var reader = new XmlTextReader(stream))
+            {
+                var highlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
+                foreach (var color in highlighting.NamedHighlightingColors)
+                {
+                    var original = color.Foreground?.GetColor(null) ?? foreground;
+                    color.Foreground = new SimpleHighlightingBrush(SystemParameters.HighContrast ? foreground
+                        : VsThemeBrushResolver.EnsureTextContrast(original, background, foreground));
+                }
+                SqlEditor.SyntaxHighlighting = highlighting;
+            }
+            var selection = (System.Windows.Media.Brush)FindResource("AxialThemeGridSelectionBrush");
+            var selectionText = (System.Windows.Media.Brush)FindResource("AxialThemeGridSelectionTextBrush");
+            SqlEditor.TextArea.SelectionBrush = selection;
+            SqlEditor.TextArea.SelectionForeground = selectionText;
+            SqlEditor.TextArea.SelectionBorder = new System.Windows.Media.Pen(selection, 1);
+            SqlEditor.LineNumbersForeground = (System.Windows.Media.Brush)FindResource("AxialThemeForegroundBrush");
+            textMarkerService?.SetColors(VsThemeBrushResolver.GetBrushColor(selection, SystemColors.HighlightColor),
+                VsThemeBrushResolver.GetBrushColor(selectionText, SystemColors.HighlightTextColor));
         }
 
         private void WikiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
@@ -578,9 +597,7 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
 
                 foreach (Match match in regex.Matches(SqlEditor.Text))
                 {
-                    var marker = textMarkerService.Create(match.Index, match.Length);
-                    marker.BackgroundColor = System.Windows.Media.Colors.Yellow;
-                    marker.ForegroundColor = System.Windows.Media.Colors.Black;
+                    textMarkerService.Create(match.Index, match.Length);
                 }
 
             }

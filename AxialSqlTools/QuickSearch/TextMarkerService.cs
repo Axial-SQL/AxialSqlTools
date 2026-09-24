@@ -11,6 +11,8 @@ public class TextMarkerService : DocumentColorizingTransformer, IBackgroundRende
 {
     private readonly TextSegmentCollection<TextMarker> markers;
     private readonly TextEditor editor;
+    private Color backgroundColor = SystemColors.HighlightColor;
+    private Color foregroundColor = SystemColors.HighlightTextColor;
 
     public TextMarkerService(TextEditor editor)
     {
@@ -25,7 +27,11 @@ public class TextMarkerService : DocumentColorizingTransformer, IBackgroundRende
 
     public TextMarker Create(int startOffset, int length)
     {
-        var marker = new TextMarker(startOffset, length);
+        var marker = new TextMarker(startOffset, length)
+        {
+            BackgroundColor = backgroundColor,
+            ForegroundColor = foregroundColor
+        };
         markers.Add(marker);
         editor.TextArea.TextView.Redraw();
         return marker;
@@ -34,6 +40,18 @@ public class TextMarkerService : DocumentColorizingTransformer, IBackgroundRende
     public void RemoveAll()
     {
         markers.Clear();
+        editor.TextArea.TextView.Redraw();
+    }
+
+    public void SetColors(Color background, Color foreground)
+    {
+        backgroundColor = background;
+        foregroundColor = foreground;
+        foreach (var marker in markers)
+        {
+            marker.BackgroundColor = background;
+            marker.ForegroundColor = foreground;
+        }
         editor.TextArea.TextView.Redraw();
     }
 
@@ -76,7 +94,7 @@ public class TextMarkerService : DocumentColorizingTransformer, IBackgroundRende
             Length = length;
         }
 
-        public Color BackgroundColor { get; set; } = Colors.Yellow;
+        public Color BackgroundColor { get; set; } = SystemColors.HighlightColor;
         public Color? ForegroundColor { get; set; }
     }
 }

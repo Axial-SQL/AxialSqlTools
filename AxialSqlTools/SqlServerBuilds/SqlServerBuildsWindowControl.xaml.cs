@@ -115,7 +115,6 @@ namespace AxialSqlTools
             sqlVersionTreeView.Items.Clear(); // Clear previous items
             if (sqlVersions?.Builds == null) return;
 
-            Brush groupHeaderBrush = ResolveThemeBrush("AxialThemeAccentBrush", Brushes.DarkBlue);
             Brush headerBackgroundBrush = ResolveThemeBrush("AxialThemeGridHeaderBackgroundBrush", Brushes.LightGray);
             Brush foregroundBrush = ResolveThemeBrush("AxialThemeForegroundBrush", Brushes.Black);
             Brush linkBrush = ResolveThemeBrush("AxialThemeLinkBrush", Brushes.Blue);
@@ -127,7 +126,6 @@ namespace AxialSqlTools
                 {
                     Header = $"SQL Server {majorVersion.Key}",
                     FontWeight = FontWeights.Bold,
-                    Foreground = groupHeaderBrush,
                     IsExpanded = true
                 };
 
@@ -174,16 +172,19 @@ namespace AxialSqlTools
         // Helper to create text column
         private TextBlock CreateColumnText(string text, double width, Brush foregroundBrush, FontWeight fontWeight = default)
         {
-            return new TextBlock
+            var textBlock = new TextBlock
             {
                 Text = text ?? "",
                 ToolTip = text,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 Width = width,
-                Foreground = foregroundBrush,
                 FontWeight = fontWeight,
                 Margin = new Thickness(5, 2, 5, 2)
             };
+            // Normal rows inherit the selected/unselected TreeViewItem foreground.
+            // The non-selectable column heading keeps its explicit theme color.
+            if (fontWeight == FontWeights.Bold) textBlock.Foreground = foregroundBrush;
+            return textBlock;
         }
 
         // Helper to create hyperlink column
@@ -194,10 +195,26 @@ namespace AxialSqlTools
             {
                 Text = "More Info",
                 Width = width,
-                Foreground = foregroundBrush,
                 TextDecorations = TextDecorations.Underline,
                 Cursor = System.Windows.Input.Cursors.Hand
             };
+
+            var style = new Style(typeof(TextBlock), TryFindResource(typeof(TextBlock)) as Style);
+            style.Setters.Add(new Setter(TextBlock.ForegroundProperty, foregroundBrush));
+            var selected = new DataTrigger
+            {
+                Binding = new System.Windows.Data.Binding("IsSelected")
+                {
+                    RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(TreeViewItem), 1)
+                },
+                Value = true
+            };
+            selected.Setters.Add(new Setter(TextBlock.ForegroundProperty, new System.Windows.Data.Binding("Foreground")
+            {
+                RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(TreeViewItem), 1)
+            }));
+            style.Triggers.Add(selected);
+            link.Style = style;
 
             MenuItem copyUrlMenuItem = new MenuItem
             {

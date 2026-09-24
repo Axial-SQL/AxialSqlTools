@@ -9,13 +9,18 @@ namespace AxialSqlTools.DataCompare
 {
     public partial class ComparisonEndpointControl : UserControl, IDisposable
     {
+        private readonly ToolWindowThemeController themeController;
         private CancellationTokenSource loading;
         private bool disposed;
         public string ConnectionString { get; private set; }
         public TableSchema SelectedTable => TableBox.SelectedItem as TableSchema;
         public bool IsBusy => loading != null;
         public event EventHandler EndpointChanged;
-        public ComparisonEndpointControl() { InitializeComponent(); }
+        public ComparisonEndpointControl()
+        {
+            InitializeComponent();
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
+        }
 
         private void TableSelectionChanged(object sender, SelectionChangedEventArgs e) => EndpointChanged?.Invoke(this, EventArgs.Empty);
         private async void ObjectExplorerClick(object sender, RoutedEventArgs e) => await UseSsmsConnection(false);
@@ -69,6 +74,6 @@ namespace AxialSqlTools.DataCompare
             }
         }
 
-        public void Dispose() { disposed = true; loading?.Cancel(); ConnectionString = null; }
+        public void Dispose() { disposed = true; themeController.Dispose(); loading?.Cancel(); ConnectionString = null; }
     }
 }

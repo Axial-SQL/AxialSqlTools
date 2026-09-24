@@ -1,13 +1,15 @@
-<Window x:Class="AxialSqlTools.DataCompare.SqlConnectionDialog"
+<platform:DialogWindow x:Class="AxialSqlTools.DataCompare.SqlConnectionDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:platform="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
         Title="SQL Server connection" Width="490" SizeToContent="Height" ResizeMode="NoResize"
-        WindowStartupLocation="CenterOwner" Background="{DynamicResource AxialThemeBackgroundBrush}">
-    <Window.Resources>
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource AxialThemeBackgroundBrush}"
+             Foreground="{DynamicResource AxialThemeForegroundBrush}">
+    <platform:DialogWindow.Resources>
         <ResourceDictionary><ResourceDictionary.MergedDictionaries>
             <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml"/>
         </ResourceDictionary.MergedDictionaries></ResourceDictionary>
-    </Window.Resources>
+    </platform:DialogWindow.Resources>
     <Grid Margin="18">
         <Grid.ColumnDefinitions><ColumnDefinition Width="135"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
@@ -39,4 +41,4 @@
             <Button Content="Cancel" IsCancel="True" MinWidth="85" Margin="4,0"/>
         </StackPanel>
     </Grid>
-</Window>
+</platform:DialogWindow>

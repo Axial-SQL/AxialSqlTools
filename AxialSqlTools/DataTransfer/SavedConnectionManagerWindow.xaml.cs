@@ -5,13 +5,15 @@ using System.Windows;
 
 namespace AxialSqlTools
 {
-    public partial class SavedConnectionManagerWindow : Window
+    public partial class SavedConnectionManagerWindow : Microsoft.VisualStudio.PlatformUI.DialogWindow
     {
+        private readonly ToolWindowThemeController themeController;
         private readonly ObservableCollection<SettingsManager.DataTransferSavedConnection> _connections;
 
         public SavedConnectionManagerWindow()
         {
             InitializeComponent();
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
 
             ProviderComboBox.ItemsSource = Enum.GetValues(typeof(SettingsManager.DataTransferProvider));
 

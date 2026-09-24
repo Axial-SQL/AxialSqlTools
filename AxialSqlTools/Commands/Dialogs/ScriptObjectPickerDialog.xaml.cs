@@ -4,13 +4,15 @@ using System.Windows;
 
 namespace AxialSqlTools
 {
-    public partial class ScriptObjectPickerDialog : Window
+    public partial class ScriptObjectPickerDialog : Microsoft.VisualStudio.PlatformUI.DialogWindow
     {
+        private readonly ToolWindowThemeController themeController;
         public ScriptObjectSelectionItem SelectedObject { get; set; }
 
         public ScriptObjectPickerDialog(IEnumerable<ScriptObjectSelectionItem> matches)
         {
             InitializeComponent();
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
 
             HeaderTextBlock.Text = "Select the object to script.";
             ObjectsListBox.ItemsSource = matches.ToList();

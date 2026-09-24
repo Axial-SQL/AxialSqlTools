@@ -4,13 +4,15 @@ using System.Windows;
 
 namespace AxialSqlTools
 {
-    public partial class SavedConnectionPickerWindow : Window
+    public partial class SavedConnectionPickerWindow : Microsoft.VisualStudio.PlatformUI.DialogWindow
     {
+        private readonly ToolWindowThemeController themeController;
         public SettingsManager.DataTransferSavedConnection SelectedConnection { get; private set; }
 
         public SavedConnectionPickerWindow(IEnumerable<SettingsManager.DataTransferSavedConnection> connections, string title)
         {
             InitializeComponent();
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
 
             HeaderTextBlock.Text = title;
             ConnectionsListBox.ItemsSource = connections.ToList();

@@ -5,7 +5,8 @@
                        Title="SSMS formatter settings" Width="940" Height="620"
                        MinWidth="600" MinHeight="360" ResizeMode="CanResize"
                        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
-                       Background="{DynamicResource AxialThemeBackgroundBrush}">
+                       Background="{DynamicResource AxialThemeBackgroundBrush}"
+             Foreground="{DynamicResource AxialThemeForegroundBrush}">
     <platform:DialogWindow.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

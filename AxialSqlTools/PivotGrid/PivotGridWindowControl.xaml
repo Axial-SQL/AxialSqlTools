@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              MinWidth="700" MinHeight="420"
-             Background="{DynamicResource AxialThemeBackgroundBrush}">
+             Background="{DynamicResource AxialThemeBackgroundBrush}"
+             Foreground="{DynamicResource AxialThemeForegroundBrush}">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -79,8 +80,8 @@
                   MouseDoubleClick="ResultDoubleClicked" PreviewMouseRightButtonDown="ResultRightClicked"
                   PreviewKeyDown="ResultKeyDown" CurrentCellChanged="ResultCurrentCellChanged"
                   ContextMenuOpening="ResultContextMenuOpening" AutoGenerateColumns="False" IsReadOnly="True"
-                  Background="White" RowBackground="White" AlternatingRowBackground="White" Foreground="Black"
-                  HorizontalGridLinesBrush="LightGray" VerticalGridLinesBrush="LightGray"
+                  Background="{DynamicResource AxialThemeBackgroundBrush}" RowBackground="{DynamicResource AxialThemeBackgroundBrush}" AlternatingRowBackground="{DynamicResource AxialThemeBackgroundBrush}" Foreground="{DynamicResource AxialThemeForegroundBrush}"
+                  HorizontalGridLinesBrush="{DynamicResource AxialThemeBorderBrush}" VerticalGridLinesBrush="{DynamicResource AxialThemeBorderBrush}"
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
                   EnableRowVirtualization="True" EnableColumnVirtualization="True"
                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
@@ -93,9 +94,9 @@
             </DataGrid.ContextMenu>
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                    <Setter Property="Background" Value="WhiteSmoke" />
-                    <Setter Property="Foreground" Value="Black" />
-                    <Setter Property="BorderBrush" Value="LightGray" />
+                    <Setter Property="Background" Value="{DynamicResource AxialThemeGridHeaderBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
                     <Setter Property="ToolTip" Value="{Binding Content, RelativeSource={RelativeSource Self}}" />
                 </Style>
             </DataGrid.ColumnHeaderStyle>
@@ -111,8 +112,8 @@
                           HeadersVisibility="None" ClipboardCopyMode="IncludeHeader"
                           CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
                           CanUserReorderColumns="False" CanUserResizeColumns="False" CanUserResizeRows="False"
-                          Background="WhiteSmoke" RowBackground="WhiteSmoke" Foreground="Black"
-                          HorizontalGridLinesBrush="LightGray" VerticalGridLinesBrush="LightGray"
+                          Background="{DynamicResource AxialThemeGridHeaderBackgroundBrush}" RowBackground="{DynamicResource AxialThemeGridHeaderBackgroundBrush}" Foreground="{DynamicResource AxialThemeForegroundBrush}"
+                          HorizontalGridLinesBrush="{DynamicResource AxialThemeBorderBrush}" VerticalGridLinesBrush="{DynamicResource AxialThemeBorderBrush}"
                           EnableColumnVirtualization="True" ScrollViewer.CanContentScroll="True"
                           ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled"
                           ScrollViewer.ScrollChanged="ResultScrollChanged"

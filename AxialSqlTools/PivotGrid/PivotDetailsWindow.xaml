@@ -5,7 +5,8 @@
                        Title="Pivot Grid - Underlying rows" Width="1200" Height="760"
                        MinWidth="720" MinHeight="420" ResizeMode="CanResize"
                        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
-                       Background="{DynamicResource AxialThemeBackgroundBrush}">
+                       Background="{DynamicResource AxialThemeBackgroundBrush}"
+             Foreground="{DynamicResource AxialThemeForegroundBrush}">
     <platform:DialogWindow.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -27,8 +28,8 @@
                        TextWrapping="Wrap" Margin="0,4,0,0" />
         </StackPanel>
         <DataGrid x:Name="DetailsGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True"
-                  Background="White" RowBackground="White" AlternatingRowBackground="White" Foreground="Black"
-                  HorizontalGridLinesBrush="LightGray" VerticalGridLinesBrush="LightGray"
+                  Background="{DynamicResource AxialThemeBackgroundBrush}" RowBackground="{DynamicResource AxialThemeBackgroundBrush}" AlternatingRowBackground="{DynamicResource AxialThemeBackgroundBrush}" Foreground="{DynamicResource AxialThemeForegroundBrush}"
+                  HorizontalGridLinesBrush="{DynamicResource AxialThemeBorderBrush}" VerticalGridLinesBrush="{DynamicResource AxialThemeBorderBrush}"
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
                   EnableRowVirtualization="True" EnableColumnVirtualization="True"
                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
@@ -36,9 +37,9 @@
                   ClipboardCopyMode="IncludeHeader" HeadersVisibility="Column">
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                    <Setter Property="Background" Value="WhiteSmoke" />
-                    <Setter Property="Foreground" Value="Black" />
-                    <Setter Property="BorderBrush" Value="LightGray" />
+                    <Setter Property="Background" Value="{DynamicResource AxialThemeGridHeaderBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
                     <Setter Property="ToolTip" Value="{Binding Content, RelativeSource={RelativeSource Self}}" />
                 </Style>
             </DataGrid.ColumnHeaderStyle>

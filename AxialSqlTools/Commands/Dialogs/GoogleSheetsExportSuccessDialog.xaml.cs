@@ -5,13 +5,15 @@ using System.Windows.Navigation;
 
 namespace AxialSqlTools
 {
-    public partial class GoogleSheetsExportSuccessDialog : Window
+    public partial class GoogleSheetsExportSuccessDialog : Microsoft.VisualStudio.PlatformUI.DialogWindow
     {
+        private readonly ToolWindowThemeController themeController;
         private readonly string spreadsheetUrl;
 
         public GoogleSheetsExportSuccessDialog(string spreadsheetUrl, string spreadsheetTitle)
         {
             InitializeComponent();
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
 
             this.spreadsheetUrl = spreadsheetUrl ?? string.Empty;
             SpreadsheetLinkText.Text = string.IsNullOrWhiteSpace(spreadsheetTitle) ? spreadsheetUrl : spreadsheetTitle;

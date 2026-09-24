@@ -220,8 +220,10 @@ namespace AxialSqlTools.DataCompare
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
                 Grid.SetColumn(group, i); panel.Children.Add(group);
             }
-            var window = new Window { Title = column.Name, Owner = Window.GetWindow(this), Width = 1000, Height = 600, Content = panel,
+            var window = new Microsoft.VisualStudio.PlatformUI.DialogWindow { Title = column.Name, Owner = Window.GetWindow(this), Width = 1000, Height = 600, Content = panel,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            window.SetResourceReference(Control.BackgroundProperty, "AxialThemeBackgroundBrush");
+            window.SetResourceReference(Control.ForegroundProperty, "AxialThemeForegroundBrush");
             window.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml", UriKind.Relative) });
             using (var controller = new ToolWindowThemeController(window, () => ToolWindowThemeResources.ApplySharedTheme(window))) window.ShowDialog();
         }

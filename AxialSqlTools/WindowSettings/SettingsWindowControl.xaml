@@ -44,9 +44,11 @@
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource AxialThemeButtonHoverBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonHoverTextBrush}" />
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
                                     <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -77,10 +79,11 @@
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AxialThemeButtonHoverBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeButtonHoverTextBrush}" />
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AxialThemeGridSelectionBrush}" />
-                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeGridSelectionTextBrush}" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
