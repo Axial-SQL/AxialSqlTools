@@ -205,7 +205,7 @@ namespace AxialSqlTools.PivotGrid
                 TotalGrid.Columns[ResultGrid.Columns.IndexOf(column)].DisplayIndex = column.DisplayIndex;
         }
 
-        private void ValueSortChanged(object sender, SelectionChangedEventArgs e)
+        private void ValueSortChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (displayedResult != null) ApplyValueSort();
         }
