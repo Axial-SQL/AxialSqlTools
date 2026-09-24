@@ -11,7 +11,6 @@ using NLog.Targets;
 using System;
 using System.ComponentModel.Design;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -37,6 +36,7 @@ namespace AxialSqlTools
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
+    [ProvideBindingPath] // Resolve ScottPlot and its managed dependencies from the VSIX folder.
     [Guid(AxialSqlToolsPackage.PackageGuidString)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string, PackageAutoLoadFlags.BackgroundLoad)]
@@ -291,9 +291,6 @@ namespace AxialSqlTools
                 _logger.Error(ex, "An exception occurred");
             }
 
-            // needed for the OxyPlot library
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
-            
         }
 
         protected override void Dispose(bool disposing)
@@ -306,14 +303,5 @@ namespace AxialSqlTools
             base.Dispose(disposing);
         }
 
-        // I don't understand the purpose, but it works
-        private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            // add this into main module -> AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
-
-            if (args.Name.Contains("OxyPlot"))
-                return AppDomain.CurrentDomain.Load(args.Name);
-            else return null;
-        }
     }
 }
