@@ -198,7 +198,7 @@ namespace AxialSqlTools
             line.LegendText = label;
             line.LineWidth = 1.8f;
             line.MarkerSize = xs.Length == 1 ? 4 : 0;
-            line.LinePattern = colorIndex % 3 == 0 ? LinePattern.Solid : colorIndex % 3 == 1 ? LinePattern.Dashed : LinePattern.Dotted;
+            line.LinePattern = LinePattern.Solid;
             States.GetOrCreateValue(plot).ApplyColors.Add(theme => line.Color = theme.GetColor(colorIndex));
             return line;
         }
