@@ -22,6 +22,8 @@ namespace AxialSqlTools.PivotGrid
         private PivotSnapshot snapshot;
         private PivotResult displayedResult;
         private PivotDetailsWindow detailsWindow;
+        private DataGrid activeResultGrid;
+        private bool syncingScroll;
         private CancellationTokenSource operation;
         private bool disposed;
 
@@ -48,6 +50,17 @@ namespace AxialSqlTools.PivotGrid
         }
 
         internal static readonly IValueConverter CellDisplay = new CellDisplayConverter();
+
+        private sealed class ColumnWidthConverter : IValueConverter
+        {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+                value is double width && !double.IsNaN(width) && !double.IsInfinity(width)
+                    ? new DataGridLength(Math.Max(0, width)) : DataGridLength.Auto;
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+                Binding.DoNothing;
+        }
+
+        private static readonly IValueConverter ColumnWidth = new ColumnWidthConverter();
 
         private sealed class AggregationChoice
         {
@@ -111,8 +124,10 @@ namespace AxialSqlTools.PivotGrid
             var source = snapshot;
             displayedResult = null;
             // Clear previous results so a failed/cancelled Apply cannot look like current statistics.
-            ResultGrid.ItemsSource = null;
+            ResultGrid.ItemsSource = TotalGrid.ItemsSource = null;
             ResultGrid.Columns.Clear();
+            TotalGrid.Columns.Clear();
+            activeResultGrid = null;
             Status.Text = "Calculating pivot...";
             var elapsed = Stopwatch.StartNew();
             var result = await Task.Run(() => PivotEngine.Build(source, request, token), token);
@@ -141,12 +156,73 @@ namespace AxialSqlTools.PivotGrid
                     Width = new DataGridLength(150)
                 };
                 ResultGrid.Columns.Add(gridColumn);
+                var totalColumn = new DataGridTextColumn
+                {
+                    Header = gridColumn.Header,
+                    Binding = gridColumn.Binding,
+                    ElementStyle = gridColumn.ElementStyle,
+                    CellStyle = groupingCellStyle
+                };
+                // Follow rendered widths, including drag resizing and automatic sizing.
+                BindingOperations.SetBinding(totalColumn, DataGridColumn.WidthProperty,
+                    new Binding(nameof(DataGridColumn.ActualWidth))
+                        { Source = gridColumn, Mode = BindingMode.OneWay, Converter = ColumnWidth });
+                TotalGrid.Columns.Add(totalColumn);
             }
-            ResultGrid.FrozenColumnCount = rowColumnCount;
+            ResultGrid.FrozenColumnCount = TotalGrid.FrozenColumnCount = rowColumnCount;
+            TotalGrid.ItemsSource = new[] { totalRow };
             displayedResult = result;
-            ResultGrid.ItemsSource = view;
+            ApplyValueSort();
             Status.Text = string.Format("{0:N0} matching rows. {1:N0} pivot rows including grand total. Calculated in {2:N2}s. Double-click a value or total to see underlying rows. Ctrl+C copies selected cells.",
                 result.MatchedRows, result.Table.Rows.Count, elapsed.Elapsed.TotalSeconds);
+        }
+
+        private static ScrollViewer GetScrollViewer(DataGrid grid)
+        {
+            grid.ApplyTemplate();
+            return grid.Template?.FindName("DG_ScrollViewer", grid) as ScrollViewer;
+        }
+
+        private void ResultScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (syncingScroll || disposed || ResultGrid == null || TotalGrid == null) return;
+            var sourceGrid = sender as DataGrid;
+            if (sourceGrid == null) return;
+            var source = GetScrollViewer(sourceGrid);
+            // Ignore scroll events from child controls.
+            if (source == null || e.OriginalSource != source) return;
+            var target = GetScrollViewer(sourceGrid == ResultGrid ? TotalGrid : ResultGrid);
+            if (target == null) return;
+            syncingScroll = true;
+            try { target.ScrollToHorizontalOffset(source.HorizontalOffset); }
+            finally { syncingScroll = false; }
+        }
+
+        private void ResultColumnReordered(object sender, DataGridColumnEventArgs e)
+        {
+            if (TotalGrid.Columns.Count != ResultGrid.Columns.Count) return;
+            foreach (var column in ResultGrid.Columns.OrderBy(c => c.DisplayIndex))
+                TotalGrid.Columns[ResultGrid.Columns.IndexOf(column)].DisplayIndex = column.DisplayIndex;
+        }
+
+        private void ValueSortChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (displayedResult != null) ApplyValueSort();
+        }
+
+        private void ApplyValueSort()
+        {
+            if (displayedResult == null) return;
+            // Reorder only the presentation. Keep DataRows and engine row-key indexes intact
+            // so drill-down still resolves the selected group after sorting.
+            var view = displayedResult.Table.DefaultView;
+            int valueColumn = displayedResult.Table.Columns.Count - 1;
+            var rows = view.Cast<DataRowView>().Take(view.Count - 1);
+            Func<DataRowView, decimal?> value = row => row[valueColumn] == DBNull.Value
+                ? (decimal?)null : Convert.ToDecimal(row[valueColumn], CultureInfo.InvariantCulture);
+            if (ValueSort.SelectedIndex == 1) rows = rows.OrderBy(value);
+            else if (ValueSort.SelectedIndex == 2) rows = rows.OrderByDescending(value);
+            ResultGrid.ItemsSource = rows.ToArray();
         }
 
         internal static Style CreateTextStyle(bool numeric)
@@ -184,12 +260,13 @@ namespace AxialSqlTools.PivotGrid
         {
             row = column = -1;
             if (disposed || operation != null || displayedResult == null) return false;
-            var cell = ResultGrid.CurrentCell;
+            var grid = activeResultGrid ?? ResultGrid;
+            var cell = grid.CurrentCell;
             var item = cell.Item as DataRowView;
             if (item == null || item.Row.Table != displayedResult.Table || cell.Column == null) return false;
             row = displayedResult.Table.Rows.IndexOf(item.Row);
             // Column collection order is stable even when the user changes DisplayIndex.
-            column = ResultGrid.Columns.IndexOf(cell.Column);
+            column = grid.Columns.IndexOf(cell.Column);
             return displayedResult.CanDrillDown(row, column);
         }
 
@@ -206,8 +283,10 @@ namespace AxialSqlTools.PivotGrid
         private bool SelectClickedCell(object originalSource)
         {
             var cell = FindAncestor<DataGridCell>(originalSource as DependencyObject);
-            if (cell == null || FindAncestor<DataGrid>(cell) != ResultGrid) return false;
-            ResultGrid.CurrentCell = new DataGridCellInfo(cell.DataContext, cell.Column);
+            var grid = FindAncestor<DataGrid>(cell);
+            if (cell == null || (grid != ResultGrid && grid != TotalGrid)) return false;
+            activeResultGrid = grid;
+            grid.CurrentCell = new DataGridCellInfo(cell.DataContext, cell.Column);
             return true;
         }
 
@@ -219,21 +298,27 @@ namespace AxialSqlTools.PivotGrid
         private void ResultRightClicked(object sender, MouseButtonEventArgs e)
         {
             // Do not let a click on a header/empty space reuse a previously selected value.
-            if (!SelectClickedCell(e.OriginalSource)) ResultGrid.CurrentCell = new DataGridCellInfo();
+            activeResultGrid = (DataGrid)sender;
+            if (!SelectClickedCell(e.OriginalSource)) activeResultGrid.CurrentCell = new DataGridCellInfo();
         }
 
         private void ResultKeyDown(object sender, KeyEventArgs e)
         {
+            activeResultGrid = (DataGrid)sender;
             if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None && StartDrillDown()) e.Handled = true;
         }
 
         private void ResultCurrentCellChanged(object sender, EventArgs e)
         {
+            activeResultGrid = (DataGrid)sender;
             if (DrillButton != null) DrillButton.IsEnabled = TryGetDrillCell(out _, out _);
         }
 
-        private void ResultContextMenuOpening(object sender, ContextMenuEventArgs e) =>
-            DrillMenuItem.IsEnabled = TryGetDrillCell(out _, out _);
+        private void ResultContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            activeResultGrid = (DataGrid)sender;
+            DrillMenuItem.IsEnabled = TotalDrillMenuItem.IsEnabled = TryGetDrillCell(out _, out _);
+        }
 
         private void DrillClicked(object sender, RoutedEventArgs e) => StartDrillDown();
 
@@ -309,7 +394,7 @@ namespace AxialSqlTools.PivotGrid
             Options.IsEnabled = FilterField.IsEnabled = FilterText.IsEnabled = ApplyButton.IsEnabled = !busy && snapshot != null;
             CancelButton.IsEnabled = busy;
             DrillButton.IsEnabled = !busy && TryGetDrillCell(out _, out _);
-            DrillMenuItem.IsEnabled = DrillButton.IsEnabled;
+            DrillMenuItem.IsEnabled = TotalDrillMenuItem.IsEnabled = DrillButton.IsEnabled;
         }
 
         private void CancelClicked(object sender, RoutedEventArgs e) => operation?.Cancel();
@@ -322,8 +407,10 @@ namespace AxialSqlTools.PivotGrid
             detailsWindow?.Close();
             snapshot = null;
             displayedResult = null;
-            ResultGrid.ItemsSource = null;
+            ResultGrid.ItemsSource = TotalGrid.ItemsSource = null;
             ResultGrid.Columns.Clear();
+            TotalGrid.Columns.Clear();
+            activeResultGrid = null;
             RowFields.ItemsSource = ColumnFields.ItemsSource = FilterField.ItemsSource = ValueField.ItemsSource = null;
             theme.Dispose();
         }
