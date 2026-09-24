@@ -130,7 +130,7 @@
       <!-- TOOLS Submenu buttons -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" priority="0x0100" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
-        <Icon guid="guidExportData" id="bmpExportData" />
+        <Icon guid="guidExcel" id="bmpExcel" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Export Grid to Excel</ButtonText>
@@ -253,7 +253,7 @@
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidServerHealth" id="bmpServerHealth" />
         <Strings>
-          <ButtonText>Health Dashboard - Server</ButtonText>
+          <ButtonText>Server Health Dashboard</ButtonText>
         </Strings>
       </Button>
 
@@ -389,6 +389,7 @@
       <Bitmap guid="guidSortAscending" href="Resources\sort-ascending.png" usedList="bmpSortAscending" />
       <Bitmap guid="guidSortDescending" href="Resources\sort-descending.png" usedList="bmpSortDescending" />
       <Bitmap guid="guidPivotTable" href="Resources\pivot-table.png" usedList="bmpPivotTable" />
+      <Bitmap guid="guidExcel" href="Resources\excel.png" usedList="bmpExcel" />
     </Bitmaps>    
   </Commands>
 
@@ -539,6 +540,9 @@
     </GuidSymbol>
 	<GuidSymbol name="guidPivotTable" value="{c032f833-8bc7-4c8d-8b89-0df7fbd89b1a}">
 		<IDSymbol name="bmpPivotTable" value="1" />
+	</GuidSymbol>
+	<GuidSymbol name="guidExcel" value="{c032f833-8bc7-4c8d-8b89-0df7fbd89b1b}">
+		<IDSymbol name="bmpExcel" value="1" />
 	</GuidSymbol>
 	  
   </Symbols>
