@@ -222,15 +222,6 @@
                         <plot:WpfPlot x:Name="PerfChart_UserConnections" MinWidth="0" MinHeight="0" />
                     </Border>
                     <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
-                        <plot:WpfPlot x:Name="PerfChart_TotalServerMemory" MinWidth="0" MinHeight="0" />
-                    </Border>
-                    <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
-                        <plot:WpfPlot x:Name="PerfChart_PageLifeExpectancy" MinWidth="0" MinHeight="0" />
-                    </Border>
-                    <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
-                        <plot:WpfPlot x:Name="PerfChart_PageReads" MinWidth="0" MinHeight="0" />
-                    </Border>
-                    <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
                         <plot:WpfPlot x:Name="PerfChart_Transactions" MinWidth="0" MinHeight="0" />
                     </Border>
                     <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
@@ -238,6 +229,15 @@
                     </Border>
                     <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
                         <plot:WpfPlot x:Name="PerfChart_MemoryGrantsPending" MinWidth="0" MinHeight="0" />
+                    </Border>
+                    <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
+                        <plot:WpfPlot x:Name="PerfChart_PageReads" MinWidth="0" MinHeight="0" />
+                    </Border>
+                    <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
+                        <plot:WpfPlot x:Name="PerfChart_TotalServerMemory" MinWidth="0" MinHeight="0" />
+                    </Border>
+                    <Border Margin="3" BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}">
+                        <plot:WpfPlot x:Name="PerfChart_PageLifeExpectancy" MinWidth="0" MinHeight="0" />
                     </Border>
                 </UniformGrid>
             </TabItem>

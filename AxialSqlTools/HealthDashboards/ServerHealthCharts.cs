@@ -242,31 +242,38 @@ namespace AxialSqlTools
             var plot = Create("Real-time waits · 1-minute buckets", "Wait seconds");
             TimeAxis(plot);
             // Rank by recent deltas, not lifetime totals. Retain every remaining wait in Other.
-            var names = minutes.SelectMany(x => x.Value).GroupBy(x => x.Key)
+            var ranked = minutes.SelectMany(x => x.Value).GroupBy(x => x.Key)
                 .Select(g => new { Name = g.Key, Total = g.Sum(x => x.Value) })
                 .Where(x => x.Total > 0).OrderByDescending(x => x.Total).ThenBy(x => x.Name, StringComparer.Ordinal)
-                .Select(x => x.Name).ToArray();
-            string[] top = names.Take(6).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+                .ToArray();
+            string[] top = ranked.Take(6).Select(x => x.Name).ToArray();
             foreach (string old in colors.Keys.Except(top).ToArray()) colors.Remove(old);
             foreach (string name in top.Where(name => !colors.ContainsKey(name)))
                 colors[name] = Enumerable.Range(0, 6).First(index => !colors.Values.Contains(index));
-            var groups = top.Select(name => new[] { name }).ToList();
-            if (names.Length > top.Length) groups.Add(names.Except(top).ToArray());
-            var bases = new double[minutes.Length];
-            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
+            var groups = ranked.Take(6).Select(x => new
             {
-                string[] group = groups[groupIndex];
-                string label = groupIndex < top.Length ? group[0] : "Other waits";
+                Label = x.Name, Names = new[] { x.Name }, x.Total, ColorIndex = colors[x.Name]
+            }).ToList();
+            if (ranked.Length > top.Length) groups.Add(new
+            {
+                Label = "Other waits", Names = ranked.Skip(6).Select(x => x.Name).ToArray(),
+                Total = ranked.Skip(6).Sum(x => x.Total), ColorIndex = 6
+            });
+            // Keep stack and legend order aligned by total seconds, including the combined Other group.
+            groups = groups.OrderByDescending(x => x.Total).ThenBy(x => x.Label, StringComparer.Ordinal).ToList();
+            var bases = new double[minutes.Length];
+            foreach (var group in groups)
+            {
                 var bars = new List<Bar>();
                 for (int i = 0; i < minutes.Length; i++)
                 {
-                    double value = (double)group.Sum(name => minutes[i].Value.TryGetValue(name, out decimal wait) ? wait : 0);
+                    double value = (double)group.Names.Sum(name => minutes[i].Value.TryGetValue(name, out decimal wait) ? wait : 0);
                     bars.Add(new Bar { Position = minutes[i].Key.AddSeconds(30).ToOADate(), Size = 50.0 / 86400,
                         ValueBase = bases[i], Value = bases[i] + value, LineWidth = 0.5f });
                     bases[i] += value;
                 }
                 // Keep each visible wait's color when rankings change; assign new waits unused colors.
-                Bars(plot, bars, label, groupIndex < top.Length ? colors[label] : 6);
+                Bars(plot, bars, group.Label, group.ColorIndex);
             }
             if (groups.Count > 0) LegendBelow(plot);
             else EmptyMessage(plot, minutes.Length == 0 ? "Collecting wait samples..." : "No non-idle waits recorded");
@@ -278,11 +285,13 @@ namespace AxialSqlTools
             {
                 var bucket = minutes.FirstOrDefault(x => point.X >= x.Key.ToOADate() && point.X < x.Key.AddMinutes(1).ToOADate());
                 if (bucket.Value == null) return "Collecting wait samples...";
-                var visible = groups.Select((group, index) => new { Group = group, Label = index < top.Length ? group[0] : "Other waits" })
-                    .Where(x => IsSeriesVisible(plot, x.Label)).ToArray();
+                var visible = groups.Where(x => IsSeriesVisible(plot, x.Label)).Select(group => new
+                {
+                    group.Label, Seconds = group.Names.Sum(name => bucket.Value.TryGetValue(name, out decimal value) ? value : 0)
+                }).OrderByDescending(x => x.Seconds).ThenBy(x => x.Label, StringComparer.Ordinal).ToArray();
                 if (visible.Length == 0) return null;
                 return bucket.Key.ToString("HH:mm") + " · wait seconds\n" + string.Join("\n", visible.Select(x =>
-                    x.Label + ": " + x.Group.Sum(name => bucket.Value.TryGetValue(name, out decimal value) ? value : 0).ToString("N2")));
+                    x.Label + ": " + x.Seconds.ToString("N2")));
             });
             return plot;
         }
