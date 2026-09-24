@@ -458,11 +458,20 @@
                     <TextBlock Grid.Row="2" Margin="10,0,10,8" TextWrapping="Wrap"
                                Text="Format starts with built-in SSMS Formatter settings, then applies the Axial options above."/>
 
-                    <CheckBox x:Name="DisregardSsmsFormatterSettings" Grid.Row="3" Margin="10,0,10,8"
-                              Content="Disregard built-in SSMS Formatter settings"
-                              ToolTip="Use fresh instances of the parser and generator types selected by SSMS, then use the original Axial code generation, alignment, and comment handling. Axial formatting options still apply afterward."
-                              Checked="formatSetting_Checked"
-                              Unchecked="formatSetting_Unchecked"/>
+                    <WrapPanel Grid.Row="3" Margin="10,0,10,8">
+                        <CheckBox x:Name="DisregardSsmsFormatterSettings" Margin="0,0,20,0"
+                                  VerticalAlignment="Center"
+                                  Content="Disregard built-in SSMS Formatter settings"
+                                  ToolTip="Use fresh instances of the parser and generator types selected by SSMS, then use the original Axial code generation, alignment, and comment handling. Axial formatting options still apply afterward."
+                                  Checked="formatSetting_Checked"
+                                  Unchecked="formatSetting_Unchecked"/>
+                        <TextBlock VerticalAlignment="Center">
+                            <Hyperlink Click="SsmsFormatterSettings_Click"
+                                       ToolTip="View the current built-in SSMS formatter settings for troubleshooting.">
+                                <Run Text="SSMS formatter settings"/>
+                            </Hyperlink>
+                        </TextBlock>
+                    </WrapPanel>
 
                     <!-- all checkboxes in a 3-column UniformGrid -->
                     <UniformGrid Grid.Row="1"
