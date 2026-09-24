@@ -1,18 +1,15 @@
-﻿using ICSharpCode.AvalonEdit.Highlighting;
-using ICSharpCode.AvalonEdit.Highlighting.Xshd;
-using Microsoft.SqlServer.Management.UI.VSIntegration;
+﻿using Microsoft.SqlServer.Management.UI.VSIntegration;
 using Microsoft.SqlServer.Management.UI.VSIntegration.Editors;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using Microsoft.Data.SqlClient;
-using System.Xml;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.UI.Design;
+using Microsoft.SqlServer.Management.UI.VSIntegration.ObjectExplorer;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -28,6 +25,8 @@ namespace AxialSqlTools
         private string selectedDatabase;
         private string selectedServer;
         private CancellationTokenSource searchCancellationTokenSource;
+        private CancellationTokenSource navigationCancellationTokenSource;
+        private string resultConnectionString;
 
         private TextMarkerService textMarkerService;
 
@@ -35,6 +34,11 @@ namespace AxialSqlTools
         {
             this.InitializeComponent();
 
+            Unloaded += (sender, args) =>
+            {
+                searchCancellationTokenSource?.Cancel();
+                navigationCancellationTokenSource?.Cancel();
+            };
             CheckBox_WholeWord.IsChecked = true;
 
             if (textMarkerService == null)
@@ -47,30 +51,9 @@ namespace AxialSqlTools
         private void ApplyThemeBrushResources()
         {
             ToolWindowThemeResources.ApplySharedTheme(this);
-            var background = VsThemeBrushResolver.GetBrushColor(
-                (System.Windows.Media.Brush)FindResource("AxialThemeBackgroundBrush"), SystemColors.WindowColor);
-            var foreground = VsThemeBrushResolver.GetBrushColor(
-                (System.Windows.Media.Brush)FindResource("AxialThemeForegroundBrush"), SystemColors.WindowTextColor);
-            // Start from the original definition on every change so repeated theme
-            // switches do not progressively alter the syntax colors.
-            using (var stream = typeof(QuickSearchWindowControl).Assembly.GetManifestResourceStream("AxialSqlTools.QuickSearch.sql.xshd"))
-            using (var reader = new XmlTextReader(stream))
-            {
-                var highlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
-                foreach (var color in highlighting.NamedHighlightingColors)
-                {
-                    var original = color.Foreground?.GetColor(null) ?? foreground;
-                    color.Foreground = new SimpleHighlightingBrush(SystemParameters.HighContrast ? foreground
-                        : VsThemeBrushResolver.EnsureTextContrast(original, background, foreground));
-                }
-                SqlEditor.SyntaxHighlighting = highlighting;
-            }
+            SqlEditorSupport.ApplyTheme(SqlEditor, this);
             var selection = (System.Windows.Media.Brush)FindResource("AxialThemeGridSelectionBrush");
             var selectionText = (System.Windows.Media.Brush)FindResource("AxialThemeGridSelectionTextBrush");
-            SqlEditor.TextArea.SelectionBrush = selection;
-            SqlEditor.TextArea.SelectionForeground = selectionText;
-            SqlEditor.TextArea.SelectionBorder = new System.Windows.Media.Pen(selection, 1);
-            SqlEditor.LineNumbersForeground = (System.Windows.Media.Brush)FindResource("AxialThemeForegroundBrush");
             textMarkerService?.SetColors(VsThemeBrushResolver.GetBrushColor(selection, SystemColors.HighlightColor),
                 VsThemeBrushResolver.GetBrushColor(selectionText, SystemColors.HighlightTextColor));
         }
@@ -82,6 +65,7 @@ namespace AxialSqlTools
 
         private void Button_SelectConnection_Click(object sender, RoutedEventArgs e)
         {
+            if (searchCancellationTokenSource != null || navigationCancellationTokenSource != null) return;
             var ci = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer();
             if (ci == null)
             {
@@ -89,6 +73,11 @@ namespace AxialSqlTools
                 return;
             }
 
+            DataGrid_SearchResults.ItemsSource = null;
+            SqlEditor.Text = string.Empty;
+            resultConnectionString = null;
+            TextBlock_ResultCount.Text = string.Empty;
+            TextBlock_NavigationStatus.Text = string.Empty;
             selectedConnectionString = ci.FullConnectionString;
             selectedDatabase = ci.Database;
             selectedServer = ci.ServerName;
@@ -103,6 +92,7 @@ namespace AxialSqlTools
 
         private async Task RunSearchAsync()
         {
+            if (navigationCancellationTokenSource != null) return;
             if (searchCancellationTokenSource != null)
             {
                 searchCancellationTokenSource.Cancel();
@@ -133,6 +123,11 @@ namespace AxialSqlTools
             try
             {
                 Button_Search.Content = "Cancel";
+                Button_SelectConnection.IsEnabled = false;
+                resultConnectionString = null;
+                TextBlock_NavigationStatus.Text = string.Empty;
+                string searchConnectionString = selectedConnectionString;
+                string searchDatabase = selectedDatabase;
                 DataGrid_SearchResults.ItemsSource = null;
                 SqlEditor.Text = string.Empty;
                 TextBlock_ResultCount.Text = "Searching...";
@@ -152,7 +147,9 @@ namespace AxialSqlTools
                     TextBlock_ResultCount.Text = $"Searching [{databaseName}]...";
                 });
 
-                DataTable results = await Task.Run(() => ExecuteSearchAsync(searchText, allDatabases, wholeWord, useWildcards, includeProcs, includeViews, includeFunctions, includeTables, includeAgentJobSteps, progress, cancellationToken), cancellationToken);
+                DataTable results = await Task.Run(() => ExecuteSearchAsync(searchConnectionString, searchDatabase, searchText, allDatabases, wholeWord, useWildcards, includeProcs, includeViews, includeFunctions, includeTables, includeAgentJobSteps, progress, cancellationToken), cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                resultConnectionString = searchConnectionString;
                 DataGrid_SearchResults.ItemsSource = results.DefaultView;
                 TextBlock_ResultCount.Text = $"{results.Rows.Count} result(s)";
             }
@@ -177,6 +174,7 @@ namespace AxialSqlTools
                 searchCancellationTokenSource?.Dispose();
                 searchCancellationTokenSource = null;
                 Button_Search.Content = "Search";
+                Button_SelectConnection.IsEnabled = true;
             }
         }
 
@@ -191,9 +189,9 @@ namespace AxialSqlTools
             await RunSearchAsync();
         }
 
-        private async Task<DataTable> ExecuteSearchAsync(string searchText, bool allDatabases, bool wholeWord, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, IProgress<string> progress, CancellationToken cancellationToken)
+        private async Task<DataTable> ExecuteSearchAsync(string connectionString, string databaseName, string searchText, bool allDatabases, bool wholeWord, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, IProgress<string> progress, CancellationToken cancellationToken)
         {
-            List<string> databases = GetDatabasesToSearch(allDatabases);
+            List<string> databases = GetDatabasesToSearch(connectionString, databaseName, allDatabases);
             DataTable allResults = BuildResultTable();
 
             foreach (string dbName in databases)
@@ -206,6 +204,7 @@ namespace AxialSqlTools
                 try
                 {
                     rows = await SearchDatabaseAsync(
+                        connectionString,
                         dbName,
                         searchText,
                         useWildcards,
@@ -238,18 +237,19 @@ namespace AxialSqlTools
                         row["ScriptDatabaseName"],
                         row["ScriptSchemaName"],
                         row["ScriptObjectName"],
-                        sourceText);
+                        sourceText,
+                        row["NavigationTypeDesc"]);
                 }
             }           
 
             return allResults;
         }
 
-        private List<string> GetDatabasesToSearch(bool allDatabases)
+        private List<string> GetDatabasesToSearch(string connectionString, string databaseName, bool allDatabases)
         {
             var list = new List<string>();
 
-            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(selectedConnectionString)
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(connectionString)
             {
                 InitialCatalog = "master"
             };
@@ -283,14 +283,14 @@ namespace AxialSqlTools
                 }
                 else
                 {
-                    list.Add(selectedDatabase);
+                    list.Add(databaseName);
                 }
             }
 
             return list;
         }
 
-        private async Task<DataTable> SearchDatabaseAsync(string databaseName, string searchText, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, CancellationToken cancellationToken)
+        private async Task<DataTable> SearchDatabaseAsync(string connectionString, string databaseName, string searchText, bool useWildcards, bool includeProcs, bool includeViews, bool includeFunctions, bool includeTables, bool includeAgentJobSteps, CancellationToken cancellationToken)
         {
 
             DataTable result = BuildResultTable();
@@ -309,7 +309,8 @@ SELECT
     m.[definition] AS SourceText,
     DB_NAME() AS ScriptDatabaseName,
     s.[name] AS ScriptSchemaName,
-    o.[name] AS ScriptObjectName
+    o.[name] AS ScriptObjectName,
+    o.type_desc AS NavigationTypeDesc
 FROM sys.objects o
 INNER JOIN sys.schemas s ON s.schema_id = o.schema_id
 INNER JOIN sys.sql_modules m ON m.object_id = o.object_id
@@ -332,7 +333,8 @@ SELECT
     t.[name] AS SourceText,
     DB_NAME() AS ScriptDatabaseName,
     s.[name] AS ScriptSchemaName,
-    t.[name] AS ScriptObjectName
+    t.[name] AS ScriptObjectName,
+    t.type_desc AS NavigationTypeDesc
 FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 WHERE @includeTables = 1
@@ -348,7 +350,8 @@ SELECT
     c.[name] AS SourceText,
     DB_NAME() AS ScriptDatabaseName,
     s.[name] AS ScriptSchemaName,
-    t.[name] AS ScriptObjectName
+    t.[name] AS ScriptObjectName,
+    t.type_desc AS NavigationTypeDesc
 FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 INNER JOIN sys.columns c ON c.object_id = t.object_id
@@ -369,7 +372,8 @@ SELECT
     p.[name] AS SourceText,
     DB_NAME() AS ScriptDatabaseName,
     s.[name] AS ScriptSchemaName,
-    o.[name] AS ScriptObjectName
+    o.[name] AS ScriptObjectName,
+    o.type_desc AS NavigationTypeDesc
 FROM sys.parameters p
 INNER JOIN sys.objects o ON o.object_id = p.object_id
 INNER JOIN sys.schemas s ON s.schema_id = o.schema_id
@@ -391,7 +395,8 @@ SELECT
     js.[command] AS SourceText,
     N'msdb' AS ScriptDatabaseName,
     N'dbo' AS ScriptSchemaName,
-    j.[name] AS ScriptObjectName
+    j.[name] AS ScriptObjectName,
+    N'SQL_AGENT_JOB' AS NavigationTypeDesc
 FROM dbo.sysjobs j
 INNER JOIN dbo.sysjobsteps js ON js.job_id = j.job_id
 WHERE js.[command] LIKE @pattern ESCAPE '!'
@@ -400,7 +405,7 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
 
             string pattern = BuildPattern(searchText, useWildcards);
 
-            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(selectedConnectionString)
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(connectionString)
             {
                 InitialCatalog = databaseName
             };
@@ -519,6 +524,59 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
                 || CheckBox_AgentJobSteps.IsChecked == true;
         }
 
+        private async void Button_OpenInObjectExplorer_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (navigationCancellationTokenSource != null || searchCancellationTokenSource != null
+                || !(sender is Button button) || !(button.DataContext is DataRowView row)
+                || string.IsNullOrEmpty(resultConnectionString)) return;
+
+            // Capture the result and its connection before changing SSMS focus.
+            string connectionString = resultConnectionString;
+            var package = AxialSqlToolsPackage.PackageInstance;
+            using (var cancellation = CancellationTokenSource.CreateLinkedTokenSource(package.DisposalToken))
+            using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token))
+            {
+                navigationCancellationTokenSource = cancellation;
+                timeout.CancelAfter(TimeSpan.FromSeconds(30));
+                DataGrid_SearchResults.IsEnabled = false;
+                SearchInputsGrid.IsEnabled = false;
+                Button_SelectConnection.IsEnabled = false;
+                TextBlock_NavigationStatus.Text = "Opening in Object Explorer...";
+                try
+                {
+                    var target = QuickSearchNavigationTarget.FromResult(row.Row);
+                    var dte = Package.GetGlobalService(typeof(EnvDTE.DTE)) as EnvDTE.DTE;
+                    dte?.ExecuteCommand("View.ObjectExplorer");
+                    var explorer = ServiceCache.ServiceProvider.GetService(typeof(IObjectExplorerService)) as IObjectExplorerService;
+                    if (explorer == null)
+                        throw new InvalidOperationException("Object Explorer is unavailable. Open it from the View menu and try again.");
+                    var host = new SsmsObjectExplorerNavigationHost(explorer, connectionString);
+                    await ObjectExplorerNavigation.NavigateAsync(host, target, timeout.Token);
+                    TextBlock_NavigationStatus.Text = "Selected " + target.ObjectName + " in Object Explorer.";
+                }
+                catch (OperationCanceledException)
+                {
+                    TextBlock_NavigationStatus.Text = cancellation.IsCancellationRequested
+                        ? "Navigation canceled."
+                        : "Object Explorer timed out. Refresh the object's folder and try again.";
+                }
+                catch (Exception ex)
+                {
+                    TextBlock_NavigationStatus.Text = "Navigation failed.";
+                    if (!cancellation.IsCancellationRequested)
+                        MessageBox.Show(ex.Message, "Open in Object Explorer");
+                }
+                finally
+                {
+                    navigationCancellationTokenSource = null;
+                    DataGrid_SearchResults.IsEnabled = true;
+                    SearchInputsGrid.IsEnabled = true;
+                    Button_SelectConnection.IsEnabled = true;
+                }
+            }
+        }
+
         private void Button_ScriptResult_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -620,6 +678,7 @@ WHERE js.[command] LIKE @pattern ESCAPE '!'
             table.Columns.Add("ScriptSchemaName", typeof(string));
             table.Columns.Add("ScriptObjectName", typeof(string));
             table.Columns.Add("SourceText", typeof(string));
+            table.Columns.Add("NavigationTypeDesc", typeof(string));
             return table;
         }
     }

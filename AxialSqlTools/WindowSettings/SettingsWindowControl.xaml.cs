@@ -112,6 +112,9 @@ as select 1;
         private void ApplyThemeBrushResources()
         {
             ToolWindowThemeResources.ApplySharedTheme(this);
+            SqlEditorSupport.ApplyTheme(SourceQueryPreview, this);
+            SqlEditorSupport.ApplyTheme(FormattedQueryPreview, this);
+            SqlEditorSupport.ApplyTheme(QueryHistoryCreateScript, this);
 
             ApplyGoogleSheetsAuthorizationBrush();
         }

@@ -48,7 +48,7 @@
         
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,4,0,8">
             
-                <Button Height="30"
+                <Button x:Name="Button_SelectConnection" Height="30"
                         Width="220"
                         Content="Select Target from Object Explorer"
                         FontWeight="Bold"
@@ -97,6 +97,15 @@
                     <DataGridTextColumn Header="Object" Binding="{Binding ObjectName}" Width="200"/>
                     <DataGridTextColumn Header="Location" Binding="{Binding MatchLocation}" Width="120"/>
                     <DataGridTextColumn Header="Match Preview" Binding="{Binding MatchPreview}" Width="*" FontFamily="Cascadia Mono"/>
+                    <DataGridTemplateColumn Header="Object Explorer" Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Open in Object Explorer"
+                                        Click="Button_OpenInObjectExplorer_Click" Padding="8,2"
+                                        ToolTip="Select this object in Object Explorer. Column, parameter, and job step matches open their owning object."/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Script" Width="90">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -121,6 +130,9 @@
                        Foreground="{DynamicResource AxialThemeForegroundBrush}">
                 <StatusBarItem>
                     <TextBlock x:Name="TextBlock_ResultCount" FontWeight="Bold"/>
+                </StatusBarItem>
+                <StatusBarItem>
+                    <TextBlock x:Name="TextBlock_NavigationStatus"/>
                 </StatusBarItem>
             </StatusBar>
         </Grid>

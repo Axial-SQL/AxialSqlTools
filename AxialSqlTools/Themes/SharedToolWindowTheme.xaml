@@ -1,5 +1,6 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
                     xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework">
     <SolidColorBrush x:Key="AxialThemeBackgroundBrush" Color="White" />
     <SolidColorBrush x:Key="AxialThemeForegroundBrush" Color="Black" />
@@ -129,6 +130,39 @@
                                           ContentSource="Content" />
                     </Grid>
                 </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AxialSqlEditorStyle" TargetType="avalonedit:TextEditor">
+        <Setter Property="Background" Value="{DynamicResource AxialThemeInputBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AxialThemeInputForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontFamily" Value="Consolas" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="ShowLineNumbers" Value="True" />
+        <Setter Property="Padding" Value="3" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+        <Setter Property="ContextMenu">
+            <Setter.Value>
+                <ContextMenu>
+                    <MenuItem Header="Undo" Command="ApplicationCommands.Undo"
+                              CommandTarget="{Binding PlacementTarget.TextArea, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Redo" Command="ApplicationCommands.Redo"
+                              CommandTarget="{Binding PlacementTarget.TextArea, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <Separator />
+                    <MenuItem Header="Cut" Command="ApplicationCommands.Cut"
+                              CommandTarget="{Binding PlacementTarget.TextArea, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Copy" Command="ApplicationCommands.Copy"
+                              CommandTarget="{Binding PlacementTarget.TextArea, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Paste" Command="ApplicationCommands.Paste"
+                              CommandTarget="{Binding PlacementTarget.TextArea, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <Separator />
+                    <MenuItem Header="Select all" Command="ApplicationCommands.SelectAll"
+                              CommandTarget="{Binding PlacementTarget.TextArea, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                </ContextMenu>
             </Setter.Value>
         </Setter>
     </Style>

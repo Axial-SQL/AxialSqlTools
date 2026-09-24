@@ -108,6 +108,7 @@
       <DependentUpon>QuickSearchWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="QuickSearch\TextMarkerService.cs" />
+    <Compile Include="QuickSearch\QuickSearchNavigationTarget.cs" />
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindow.cs" />
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindowCommand.cs" />
     <Compile Include="SyncToGitHub\DatabaseScripterToolWindowControl.xaml.cs">
@@ -205,6 +206,7 @@
     <Compile Include="Modules\MetricsService.cs" />
     <Compile Include="Modules\ToolWindowDisplay.cs" />
     <Compile Include="Modules\ToolWindowThemeSupport.cs" />
+    <Compile Include="Modules\SqlEditorSupport.cs" />
     <Compile Include="Modules\ScriptFactoryAccess.cs" />
     <Compile Include="Modules\SettingsManager.cs" />
     <Compile Include="Modules\SettingsFileStore.cs" />
