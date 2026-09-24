@@ -542,6 +542,7 @@
                             <avalonedit:TextEditor x:Name="SourceQueryPreview"
                                  Style="{StaticResource AxialSqlEditorStyle}"
                                  WordWrap="True"
+                                 IsReadOnly="True"
                                  AutomationProperties.Name="Source SQL example"/>
                         </GroupBox>
 
