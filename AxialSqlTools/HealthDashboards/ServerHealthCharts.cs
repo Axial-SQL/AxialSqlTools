@@ -237,12 +237,12 @@ namespace AxialSqlTools
             }
         }
 
-        internal static Plot Waits(KeyValuePair<DateTime, Dictionary<string, decimal>>[] minutes, DateTime now, Dictionary<string, int> colors)
+        internal static Plot Waits(KeyValuePair<DateTime, Dictionary<string, decimal>>[] buckets, DateTime now, Dictionary<string, int> colors)
         {
-            var plot = Create("Real-time waits · 1-minute buckets", "Wait seconds");
-            TimeAxis(plot);
+            var plot = Create("Real-time waits · " + ServerHealthWaitHistory.BucketSeconds + "-second buckets", "Wait seconds");
+            TimeAxis(plot, "HH:mm:ss");
             // Rank by recent deltas, not lifetime totals. Retain every remaining wait in Other.
-            var ranked = minutes.SelectMany(x => x.Value).GroupBy(x => x.Key)
+            var ranked = buckets.SelectMany(x => x.Value).GroupBy(x => x.Key)
                 .Select(g => new { Name = g.Key, Total = g.Sum(x => x.Value) })
                 .Where(x => x.Total > 0).OrderByDescending(x => x.Total).ThenBy(x => x.Name, StringComparer.Ordinal)
                 .ToArray();
@@ -261,14 +261,15 @@ namespace AxialSqlTools
             });
             // Keep stack and legend order aligned by total seconds, including the combined Other group.
             groups = groups.OrderByDescending(x => x.Total).ThenBy(x => x.Label, StringComparer.Ordinal).ToList();
-            var bases = new double[minutes.Length];
+            var bases = new double[buckets.Length];
             foreach (var group in groups)
             {
                 var bars = new List<Bar>();
-                for (int i = 0; i < minutes.Length; i++)
+                for (int i = 0; i < buckets.Length; i++)
                 {
-                    double value = (double)group.Names.Sum(name => minutes[i].Value.TryGetValue(name, out decimal wait) ? wait : 0);
-                    bars.Add(new Bar { Position = minutes[i].Key.AddSeconds(30).ToOADate(), Size = 50.0 / 86400,
+                    double value = (double)group.Names.Sum(name => buckets[i].Value.TryGetValue(name, out decimal wait) ? wait : 0);
+                    bars.Add(new Bar { Position = buckets[i].Key.AddSeconds(ServerHealthWaitHistory.BucketSeconds / 2.0).ToOADate(),
+                        Size = ServerHealthWaitHistory.BucketSeconds * (5.0 / 6) / 86400,
                         ValueBase = bases[i], Value = bases[i] + value, LineWidth = 0.5f });
                     bases[i] += value;
                 }
@@ -276,21 +277,23 @@ namespace AxialSqlTools
                 Bars(plot, bars, group.Label, group.ColorIndex);
             }
             if (groups.Count > 0) LegendBelow(plot);
-            else EmptyMessage(plot, minutes.Length == 0 ? "Collecting wait samples..." : "No non-idle waits recorded");
-            DateTime currentMinute = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
-            plot.Axes.SetLimitsX(currentMinute.AddMinutes(-14).ToOADate(), currentMinute.AddMinutes(1).ToOADate());
+            else EmptyMessage(plot, buckets.Length == 0 ? "Collecting wait samples..." : "No non-idle waits recorded");
+            plot.Axes.SetLimitsX(ServerHealthWaitHistory.WindowStart(now).ToOADate(),
+                ServerHealthWaitHistory.BucketStart(now).AddSeconds(ServerHealthWaitHistory.BucketSeconds).ToOADate());
             plot.Axes.SetLimitsY(0, Math.Max(1, bases.DefaultIfEmpty(0).Max() * 1.1));
             EnableStackToggling(plot);
             SetHover(plot, point =>
             {
-                var bucket = minutes.FirstOrDefault(x => point.X >= x.Key.ToOADate() && point.X < x.Key.AddMinutes(1).ToOADate());
+                var bucket = buckets.FirstOrDefault(x => point.X >= x.Key.ToOADate()
+                    && point.X < x.Key.AddSeconds(ServerHealthWaitHistory.BucketSeconds).ToOADate());
                 if (bucket.Value == null) return "Collecting wait samples...";
                 var visible = groups.Where(x => IsSeriesVisible(plot, x.Label)).Select(group => new
                 {
                     group.Label, Seconds = group.Names.Sum(name => bucket.Value.TryGetValue(name, out decimal value) ? value : 0)
                 }).OrderByDescending(x => x.Seconds).ThenBy(x => x.Label, StringComparer.Ordinal).ToArray();
                 if (visible.Length == 0) return null;
-                return bucket.Key.ToString("HH:mm") + " · wait seconds\n" + string.Join("\n", visible.Select(x =>
+                return bucket.Key.ToString("HH:mm:ss") + " - " + bucket.Key.AddSeconds(ServerHealthWaitHistory.BucketSeconds).ToString("HH:mm:ss")
+                    + " · wait seconds\n" + string.Join("\n", visible.Select(x =>
                     x.Label + ": " + x.Seconds.ToString("N2")));
             });
             return plot;
