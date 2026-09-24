@@ -17,6 +17,7 @@
     using OxyPlot.Axes;
     using OxyPlot.Series;
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
     using System.Windows.Input;
     using OxyPlot.Legends;
     using System.Linq;
@@ -35,6 +36,7 @@
     public partial class HealthDashboard_ServerControl : UserControl
     {
         private readonly ToolWindowThemeController _themeController;
+        private readonly ConditionalWeakTable<PlotModel, List<Action>> plotColorRefreshes = new ConditionalWeakTable<PlotModel, List<Action>>();
         private Brush _statusDefaultBrush;
         private Brush _statusErrorBrush;
         private Brush _statusSuccessBrush;
@@ -223,6 +225,13 @@
             _plotErrorColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(_statusErrorBrush, System.Windows.Media.Color.FromRgb(0xA1, 0x26, 0x0D)));
             _plotNeutralColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(GetThemeBrush("AxialThemeDiffModifiedBackgroundBrush", Brushes.Gray), System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80)));
             _plotSecondaryColor = ToOxyColor(VsThemeBrushResolver.GetBrushColor(GetThemeBrush("AxialThemeLinkBrush", Brushes.DodgerBlue), System.Windows.Media.Colors.DodgerBlue));
+
+            foreach (var view in new[] { DiskInfoModel, WaitStatsModel, PerfChart_CpuUtilization, PerfChart_UserConnections, PerfChart_BatchRequests, PerfChart_SqlCompilations, PerfChart_PageLifeExpectancy, PerfChart_PageReads, PerfChart_PageWrites, PerfChart_LogFlushes, PerfChart_Transactions, PerfChart_LockWaits, PerfChart_MemoryGrantsPending, PerfChart_TotalServerMemory, BackupTimelineModel, BackupSizeModel, AgentJobsTimelineModel })
+            {
+                if (view.Model == null) continue;
+                ApplyPlotTheme(view.Model);
+                view.InvalidatePlot(false);
+            }
         }
 
         public void StartMonitoring()
@@ -297,7 +306,7 @@
                 if (metrics.HasException)
                 {
                     LabelInternalException.Content = metrics.ExecutionException;
-                    LabelInternalException.Foreground = _statusErrorBrush;
+                    LabelInternalException.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                     LabelInternalException.FontWeight = System.Windows.FontWeights.Bold;
 
                     return;
@@ -355,30 +364,30 @@
 
             if (metrics.BlockedRequestsCount > 0)
             {
-                Label_BlockedRequestCount.Foreground = _statusErrorBrush;
+                Label_BlockedRequestCount.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                 Label_BlockedRequestCount.Content = metrics.BlockedRequestsCount.ToString();
 
                 ServerHasIssues = true;
 
             }
             else {
-                Label_BlockedRequestCount.Foreground = _statusDefaultBrush;
+                Label_BlockedRequestCount.SetResourceReference(Control.ForegroundProperty, "AxialThemeForegroundBrush");
                 Label_BlockedRequestCount.Content = "-";
             }
 
             if (metrics.BlockingTotalWaitTime > 0)
             {
-                Label_BlockedTotalWaitTime.Foreground = _statusErrorBrush;
+                Label_BlockedTotalWaitTime.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                 Label_BlockedTotalWaitTime.Content = metrics.BlockingTotalWaitTime.ToString();
             }
             else
             {
-                Label_BlockedTotalWaitTime.Foreground = _statusDefaultBrush;
+                Label_BlockedTotalWaitTime.SetResourceReference(Control.ForegroundProperty, "AxialThemeForegroundBrush");
                 Label_BlockedTotalWaitTime.Content = "-";
             }
 
             //-------------------------------------------------
-            Label_DatabaseStatus.Foreground = _statusDefaultBrush;
+            Label_DatabaseStatus.SetResourceReference(Control.ForegroundProperty, "AxialThemeForegroundBrush");
             if (metrics.CountUserDatabasesTotal == 0)
                 Label_DatabaseStatus.Content = "no user databases";
             else if (metrics.CountUserDatabasesTotal == metrics.CountUserDatabasesOkay)
@@ -386,7 +395,7 @@
                 Label_DatabaseStatus.Content = $"OK - {metrics.CountUserDatabasesTotal} database(s)";
             } else
             {
-                Label_DatabaseStatus.Foreground = _statusErrorBrush;
+                Label_DatabaseStatus.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                 Label_DatabaseStatus.Content = $"{metrics.CountUserDatabasesOkay} out of {metrics.CountUserDatabasesTotal} available";
                 ServerHasIssues = true;
             }
@@ -403,10 +412,10 @@
                 string agStatus = "HEALTHY";
                 if (metrics.AlwaysOn_Health == 2)
                 {
-                    Label_AlwaysOnHealth.Foreground = _statusSuccessBrush;
+                    Label_AlwaysOnHealth.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusSuccessBrush");
                 } else
                 {
-                    Label_AlwaysOnHealth.Foreground = _statusErrorBrush;
+                    Label_AlwaysOnHealth.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                     if (metrics.AlwaysOn_Health == 1)
                         agStatus = "PARTIALLY HEALTHY";
                     else agStatus = "NOT HEALTHY";
@@ -1283,16 +1292,83 @@
             model.TextColor = _plotTextColor;
             model.TitleColor = _plotTextColor;
             model.PlotAreaBorderColor = _plotBorderColor;
-            model.PlotAreaBackground = OxyColor.FromAColor(32, _plotBackgroundColor);
+            model.PlotAreaBackground = _plotBackgroundColor;
+
+            foreach (var legend in model.Legends)
+            {
+                legend.TextColor = _plotTextColor;
+                legend.LegendTitleColor = _plotTextColor;
+                legend.LegendBackground = _plotBackgroundColor;
+                legend.LegendBorder = _plotBorderColor;
+            }
+            foreach (var refreshColor in plotColorRefreshes.GetValue(model, CapturePlotColors)) refreshColor();
+            foreach (var series in model.Series)
+            {
+                if (series is BarSeries bars) bars.StrokeColor = _plotBorderColor;
+                if (series is PieSeries pie) { pie.TextColor = _plotTextColor; pie.Stroke = _plotBorderColor; }
+            }
 
             foreach (var axis in model.Axes)
             {
                 axis.TextColor = _plotTextColor;
                 axis.TitleColor = _plotTextColor;
                 axis.TicklineColor = _plotBorderColor;
-                axis.MajorGridlineColor = OxyColor.FromAColor(130, _plotGridlineColor);
-                axis.MinorGridlineColor = OxyColor.FromAColor(80, _plotGridlineColor);
+                axis.MajorGridlineColor = SystemParameters.HighContrast ? _plotGridlineColor : OxyColor.FromAColor(130, _plotGridlineColor);
+                axis.MinorGridlineColor = SystemParameters.HighContrast ? _plotGridlineColor : OxyColor.FromAColor(80, _plotGridlineColor);
             }
+        }
+
+        private List<Action> CapturePlotColors(PlotModel model)
+        {
+            // Always adapt the original colors. Repeated light/dark switches must
+            // not progressively bleach the palette. Weak keys release old models.
+            var refreshes = new List<Action>();
+            for (int i = 0; i < model.DefaultColors.Count; i++)
+            {
+                int index = i;
+                OxyColor original = model.DefaultColors[i];
+                refreshes.Add(() => model.DefaultColors[index] = ReadablePlotColor(original));
+            }
+            foreach (var series in model.Series)
+            {
+                if (series is LineSeries line)
+                {
+                    OxyColor original = line.Color;
+                    refreshes.Add(() => line.Color = ReadablePlotColor(original));
+                }
+                if (series is ScatterSeries scatter)
+                {
+                    OxyColor original = scatter.MarkerFill;
+                    refreshes.Add(() => scatter.MarkerFill = ReadablePlotColor(original));
+                }
+                if (series is BarSeries bars)
+                {
+                    OxyColor original = bars.FillColor;
+                    refreshes.Add(() => bars.FillColor = ReadablePlotColor(original));
+                    foreach (var item in bars.Items)
+                    {
+                        OxyColor itemColor = item.Color;
+                        refreshes.Add(() => item.Color = ReadablePlotColor(itemColor));
+                    }
+                }
+                if (series is PieSeries pie)
+                    foreach (var slice in pie.Slices)
+                    {
+                        OxyColor original = slice.Fill;
+                        refreshes.Add(() => slice.Fill = ReadablePlotColor(original));
+                    }
+            }
+            return refreshes;
+        }
+
+        private OxyColor ReadablePlotColor(OxyColor color)
+        {
+            if (color.IsAutomatic() || color.IsUndefined()) return color;
+            var background = System.Windows.Media.Color.FromRgb(_plotBackgroundColor.R, _plotBackgroundColor.G, _plotBackgroundColor.B);
+            var foreground = System.Windows.Media.Color.FromRgb(_plotTextColor.R, _plotTextColor.G, _plotTextColor.B);
+            var original = System.Windows.Media.Color.FromRgb(color.R, color.G, color.B);
+            return ToOxyColor(SystemParameters.HighContrast ? foreground
+                : VsThemeBrushResolver.EnsureTextContrast(original, background, foreground));
         }
 
         private static OxyColor ToOxyColor(System.Windows.Media.Color color)

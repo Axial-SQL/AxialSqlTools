@@ -3,13 +3,15 @@ using static AxialSqlTools.SettingsManager;
 
 namespace AxialSqlTools
 {
-    public partial class FormatOptionsDialog : Window
+    public partial class FormatOptionsDialog : Microsoft.VisualStudio.PlatformUI.DialogWindow
     {
+        private readonly ToolWindowThemeController themeController;
         public TSqlCodeFormatSettings Settings { get; }
 
         public FormatOptionsDialog(TSqlCodeFormatSettings initial = null)
         {
             InitializeComponent();
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
             Settings = initial ?? new TSqlCodeFormatSettings();
             ApplySettingsToUi();
         }

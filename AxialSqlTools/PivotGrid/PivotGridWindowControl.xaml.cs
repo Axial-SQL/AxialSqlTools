@@ -241,17 +241,17 @@ namespace AxialSqlTools.PivotGrid
         internal static Style CreateCellStyle(FrameworkElement owner, bool grouping, DataRowView totalRow)
         {
             var style = new Style(typeof(DataGridCell), (Style)owner.FindResource(typeof(DataGridCell)));
-            style.Setters.Add(new Setter(Control.BackgroundProperty, grouping ? Brushes.WhiteSmoke : Brushes.White));
-            style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.Black));
-            style.Setters.Add(new Setter(Control.BorderBrushProperty, Brushes.LightGray));
+            style.Setters.Add(new Setter(Control.BackgroundProperty, new DynamicResourceExtension(grouping ? "AxialThemeGridHeaderBackgroundBrush" : "AxialThemeBackgroundBrush")));
+            style.Setters.Add(new Setter(Control.ForegroundProperty, new DynamicResourceExtension("AxialThemeForegroundBrush")));
+            style.Setters.Add(new Setter(Control.BorderBrushProperty, new DynamicResourceExtension("AxialThemeBorderBrush")));
             // Compare the row object, not its label: a source value can also be 'Grand total'.
             var total = new DataTrigger { Binding = new Binding(), Value = totalRow };
-            total.Setters.Add(new Setter(Control.BackgroundProperty, Brushes.WhiteSmoke));
+            total.Setters.Add(new Setter(Control.BackgroundProperty, new DynamicResourceExtension("AxialThemeGridHeaderBackgroundBrush")));
             style.Triggers.Add(total);
-            // Keep selected cells distinguishable on both the white and gray backgrounds.
+            // Keep selected cells distinguishable on data, grouping and total backgrounds.
             var selected = new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true };
-            selected.Setters.Add(new Setter(Control.BackgroundProperty, SystemColors.HighlightBrush));
-            selected.Setters.Add(new Setter(Control.ForegroundProperty, SystemColors.HighlightTextBrush));
+            selected.Setters.Add(new Setter(Control.BackgroundProperty, new DynamicResourceExtension("AxialThemeGridSelectionBrush")));
+            selected.Setters.Add(new Setter(Control.ForegroundProperty, new DynamicResourceExtension("AxialThemeGridSelectionTextBrush")));
             style.Triggers.Add(selected);
             return style;
         }

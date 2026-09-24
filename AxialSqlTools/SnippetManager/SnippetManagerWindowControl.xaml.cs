@@ -6,9 +6,11 @@ namespace AxialSqlTools
 {
     public partial class SnippetManagerWindowControl : UserControl
     {
+        private readonly ToolWindowThemeController themeController;
         public SnippetManagerWindowControl()
         {
             InitializeComponent();
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
             var vm = new SnippetManagerViewModel();
             DataContext = vm;
 

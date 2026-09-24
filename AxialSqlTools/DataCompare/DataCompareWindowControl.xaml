@@ -2,7 +2,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:AxialSqlTools.DataCompare"
-    MinWidth="680" MinHeight="480" Background="{DynamicResource AxialThemeBackgroundBrush}">
+    MinWidth="680" MinHeight="480" Background="{DynamicResource AxialThemeBackgroundBrush}"
+             Foreground="{DynamicResource AxialThemeForegroundBrush}">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -96,7 +97,7 @@
                     <GridSplitter Grid.Row="3" HorizontalAlignment="Stretch" Height="5" ResizeDirection="Rows"/>
                     <DataGrid x:Name="DetailsGrid" Grid.Row="4" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
                               EnableRowVirtualization="True" MouseDoubleClick="DetailDoubleClick" HeadersVisibility="Column">
-                        <DataGrid.RowStyle><Style TargetType="DataGridRow">
+                        <DataGrid.RowStyle><Style TargetType="DataGridRow" BasedOn="{StaticResource AxialThemedDataGridRowStyle}">
                             <Style.Triggers><DataTrigger Binding="{Binding Changed}" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource AxialThemeDiffModifiedBackgroundBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource AxialThemeDiffModifiedForegroundBrush}"/>

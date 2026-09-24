@@ -1,8 +1,18 @@
-﻿<Window x:Class="AxialSqlTools.FormatOptionsDialog"
+﻿<platform:DialogWindow x:Class="AxialSqlTools.FormatOptionsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:platform="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
         Title="Query Format Options" SizeToContent="WidthAndHeight"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{DynamicResource AxialThemeBackgroundBrush}"
+        Foreground="{DynamicResource AxialThemeForegroundBrush}">
+    <platform:DialogWindow.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </platform:DialogWindow.Resources>
     <DockPanel Margin="12" MinWidth="520">
 
         <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
@@ -88,4 +98,4 @@
             <Button Width="90" IsCancel="True" Content="Cancel"/>
         </StackPanel>
     </DockPanel>
-</Window>
+</platform:DialogWindow>
