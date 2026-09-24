@@ -306,7 +306,7 @@
                 if (metrics.HasException)
                 {
                     LabelInternalException.Content = metrics.ExecutionException;
-                    LabelInternalException.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
+                    LabelInternalException.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                     LabelInternalException.FontWeight = System.Windows.FontWeights.Bold;
 
                     return;
@@ -364,30 +364,30 @@
 
             if (metrics.BlockedRequestsCount > 0)
             {
-                Label_BlockedRequestCount.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
+                Label_BlockedRequestCount.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                 Label_BlockedRequestCount.Content = metrics.BlockedRequestsCount.ToString();
 
                 ServerHasIssues = true;
 
             }
             else {
-                Label_BlockedRequestCount.SetResourceReference(Control.ForegroundProperty, "AxialThemeForegroundBrush");
+                Label_BlockedRequestCount.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeForegroundBrush");
                 Label_BlockedRequestCount.Content = "-";
             }
 
             if (metrics.BlockingTotalWaitTime > 0)
             {
-                Label_BlockedTotalWaitTime.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
+                Label_BlockedTotalWaitTime.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                 Label_BlockedTotalWaitTime.Content = metrics.BlockingTotalWaitTime.ToString();
             }
             else
             {
-                Label_BlockedTotalWaitTime.SetResourceReference(Control.ForegroundProperty, "AxialThemeForegroundBrush");
+                Label_BlockedTotalWaitTime.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeForegroundBrush");
                 Label_BlockedTotalWaitTime.Content = "-";
             }
 
             //-------------------------------------------------
-            Label_DatabaseStatus.SetResourceReference(Control.ForegroundProperty, "AxialThemeForegroundBrush");
+            Label_DatabaseStatus.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeForegroundBrush");
             if (metrics.CountUserDatabasesTotal == 0)
                 Label_DatabaseStatus.Content = "no user databases";
             else if (metrics.CountUserDatabasesTotal == metrics.CountUserDatabasesOkay)
@@ -395,7 +395,7 @@
                 Label_DatabaseStatus.Content = $"OK - {metrics.CountUserDatabasesTotal} database(s)";
             } else
             {
-                Label_DatabaseStatus.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
+                Label_DatabaseStatus.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                 Label_DatabaseStatus.Content = $"{metrics.CountUserDatabasesOkay} out of {metrics.CountUserDatabasesTotal} available";
                 ServerHasIssues = true;
             }
@@ -412,10 +412,10 @@
                 string agStatus = "HEALTHY";
                 if (metrics.AlwaysOn_Health == 2)
                 {
-                    Label_AlwaysOnHealth.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusSuccessBrush");
+                    Label_AlwaysOnHealth.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeStatusSuccessBrush");
                 } else
                 {
-                    Label_AlwaysOnHealth.SetResourceReference(Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
+                    Label_AlwaysOnHealth.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeStatusErrorBrush");
                     if (metrics.AlwaysOn_Health == 1)
                         agStatus = "PARTIALLY HEALTHY";
                     else agStatus = "NOT HEALTHY";
