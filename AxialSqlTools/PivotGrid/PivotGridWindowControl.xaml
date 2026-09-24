@@ -68,7 +68,14 @@
             <Button x:Name="ApplyButton" Grid.Column="4" Content="_Apply" Click="ApplyClicked" IsEnabled="False" Padding="14,5" Margin="0,0,6,0" />
             <Button x:Name="CancelButton" Grid.Column="5" Content="Cancel" Click="CancelClicked" IsEnabled="False" Padding="14,5" />
         </Grid>
-        <DataGrid x:Name="ResultGrid" Grid.Row="3"
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+        <DataGrid x:Name="ResultGrid" Grid.Row="0"
+                  ScrollViewer.VerticalScrollBarVisibility="Visible"
+                  ScrollViewer.ScrollChanged="ResultScrollChanged" ColumnReordered="ResultColumnReordered"
                   MouseDoubleClick="ResultDoubleClicked" PreviewMouseRightButtonDown="ResultRightClicked"
                   PreviewKeyDown="ResultKeyDown" CurrentCellChanged="ResultCurrentCellChanged"
                   ContextMenuOpening="ResultContextMenuOpening" AutoGenerateColumns="False" IsReadOnly="True"
@@ -93,6 +100,34 @@
                 </Style>
             </DataGrid.ColumnHeaderStyle>
         </DataGrid>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <!-- Match the results grid's reserved vertical scrollbar gutter. -->
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="1" Width="{x:Static SystemParameters.VerticalScrollBarWidth}" />
+                <DataGrid x:Name="TotalGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                          HeadersVisibility="None" ClipboardCopyMode="IncludeHeader"
+                          CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
+                          CanUserReorderColumns="False" CanUserResizeColumns="False" CanUserResizeRows="False"
+                          Background="WhiteSmoke" RowBackground="WhiteSmoke" Foreground="Black"
+                          HorizontalGridLinesBrush="LightGray" VerticalGridLinesBrush="LightGray"
+                          EnableColumnVirtualization="True" ScrollViewer.CanContentScroll="True"
+                          ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                          ScrollViewer.ScrollChanged="ResultScrollChanged"
+                          SelectionUnit="CellOrRowHeader"
+                          MouseDoubleClick="ResultDoubleClicked" PreviewMouseRightButtonDown="ResultRightClicked"
+                          PreviewKeyDown="ResultKeyDown" CurrentCellChanged="ResultCurrentCellChanged"
+                          ContextMenuOpening="ResultContextMenuOpening">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem x:Name="TotalDrillMenuItem" Header="Show underlying rows" Click="DrillClicked" />
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                </DataGrid>
+            </Grid>
+        </Grid>
         <StackPanel Grid.Row="4" Margin="0,8,0,0">
             <DockPanel>
                 <Button x:Name="DrillButton" DockPanel.Dock="Right" Content="Show underlying rows" IsEnabled="False"

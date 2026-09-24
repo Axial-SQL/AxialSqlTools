@@ -70,7 +70,7 @@ SSMS hosting, COM menu events, actual grid extraction, theme rendering, XAML com
 
 ## Value sorting
 
-Choose **None**, **Ascending**, or **Descending** in **Sort values**. Sorting applies immediately to the displayed results and remains selected after Apply. Grouped summaries sort by **Value**; cross-tab pivots sort by the row **Grand total** using the selected aggregation. Values sort numerically, with nulls first in ascending order and last in descending order; equal values retain their original order. The grand-total row always stays at the bottom. **None** restores the original pivot order. Drill-down continues to use the selected group after sorting.
+Choose **None**, **Ascending**, or **Descending** in **Sort values**. Sorting applies immediately to the displayed results and remains selected after Apply. Grouped summaries sort by **Value**; cross-tab pivots sort by the row **Grand total** using the selected aggregation. Values sort numerically, with nulls first in ascending order and last in descending order; equal values retain their original order. The grand-total row is pinned below the scrollable results and remains visible while scrolling vertically. Its columns follow horizontal scrolling, resizing, and reordering in the results grid. Double-click a total to drill into its underlying rows. **None** restores the original pivot order. Drill-down continues to use the selected group after sorting.
 
 ## Source selection
 
