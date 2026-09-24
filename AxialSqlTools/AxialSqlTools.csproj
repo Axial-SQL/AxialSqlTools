@@ -480,6 +480,7 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\pivot-table.png" />
     <Content Include="ThirdPartyNotices\NReco.PivotData-LICENSE.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
