@@ -1,6 +1,6 @@
 # Pivot Grid
 
-Select a completed query's **result grid**, then choose **Tools > Export Grid to Pivot Table** on the **Axial SQL Tools** toolbar. A new SSMS tab captures all rows of that grid, independently of the current cell selection. Each invocation gets its own snapshot. Changing or closing the source query after capture does not change the pivot.
+Activate a completed query's window, then choose **Tools > Export Grid to Pivot Table** on the **Axial SQL Tools** toolbar. A new SSMS tab captures all rows of that grid, independently of the current cell selection. Each invocation gets its own snapshot. The tab includes the source session ID when available, for example **Pivot Grid (97)**. This ID is captured before opening the pivot; no additional query or connection is used. Changing or closing the source query after capture does not change the pivot.
 
 Click fields under **Rows** and **Columns** to select or deselect them, choose an aggregation and a **Values** field, then **Apply**. Multiple grouping fields follow source column order. Leave Columns empty for a grouped summary, or clear both axes for a single total. The optional filter performs a case-insensitive “contains” search on one source column. Select output cells and use Ctrl+C to copy with headers.
 
@@ -67,3 +67,11 @@ SELECT N'Other grid' AS Region, 999 AS Amount;
 8. Cancel during a large capture and during aggregation; close a busy pivot tab. SSMS should remain usable. Verify light/dark themes, horizontal scrolling, and Ctrl+C from the output.
 
 SSMS hosting, COM menu events, actual grid extraction, theme rendering, XAML compilation, and VSIX packaging require this Windows smoke test; pure engine tests cannot validate them.
+
+## Value sorting
+
+Choose **None**, **Ascending**, or **Descending** in **Sort values**. Sorting applies immediately to the displayed results and remains selected after Apply. Grouped summaries sort by **Value**; cross-tab pivots sort by the row **Grand total** using the selected aggregation. Values sort numerically, with nulls first in ascending order and last in descending order; equal values retain their original order. The grand-total row always stays at the bottom. **None** restores the original pivot order. Drill-down continues to use the selected group after sorting.
+
+## Source selection
+
+The result grid does not need keyboard focus: you can invoke the command while editing SQL. If a result grid has focus, that grid is used; otherwise the first populated result grid in the active query window is used. Focus a specific grid when a query returns several result sets and you want a different one. With no active query window or no populated grid, an informational message explains what to do.

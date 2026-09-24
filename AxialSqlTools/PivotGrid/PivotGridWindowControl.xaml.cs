@@ -144,9 +144,29 @@ namespace AxialSqlTools.PivotGrid
             }
             ResultGrid.FrozenColumnCount = rowColumnCount;
             displayedResult = result;
-            ResultGrid.ItemsSource = view;
+            ApplyValueSort();
             Status.Text = string.Format("{0:N0} matching rows. {1:N0} pivot rows including grand total. Calculated in {2:N2}s. Double-click a value or total to see underlying rows. Ctrl+C copies selected cells.",
                 result.MatchedRows, result.Table.Rows.Count, elapsed.Elapsed.TotalSeconds);
+        }
+
+        private void ValueSortChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (displayedResult != null) ApplyValueSort();
+        }
+
+        private void ApplyValueSort()
+        {
+            if (displayedResult == null) return;
+            // Reorder only the presentation. Keep DataRows and engine row-key indexes intact
+            // so drill-down still resolves the selected group after sorting.
+            var view = displayedResult.Table.DefaultView;
+            int valueColumn = displayedResult.Table.Columns.Count - 1;
+            var rows = view.Cast<DataRowView>().Take(view.Count - 1);
+            Func<DataRowView, decimal?> value = row => row[valueColumn] == DBNull.Value
+                ? (decimal?)null : Convert.ToDecimal(row[valueColumn], CultureInfo.InvariantCulture);
+            if (ValueSort.SelectedIndex == 1) rows = rows.OrderBy(value);
+            else if (ValueSort.SelectedIndex == 2) rows = rows.OrderByDescending(value);
+            ResultGrid.ItemsSource = rows.Concat(new[] { view[view.Count - 1] }).ToArray();
         }
 
         internal static Style CreateTextStyle(bool numeric)
