@@ -1,9 +1,12 @@
 namespace AxialSqlTools
 {
     using System;
+    using System.ComponentModel;
     using System.Diagnostics;
     using System.Reflection;
     using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Controls.Primitives;
     using System.Windows.Media;
     using System.Windows.Navigation;
     using Microsoft.VisualStudio.PlatformUI;
@@ -65,6 +68,21 @@ namespace AxialSqlTools
             byte b = (byte)Math.Round((baseColor.B * (1.0 - blendAmount)) + (blendColor.B * blendAmount));
             return Color.FromRgb(r, g, b);
         }
+
+        // Preserve a semantic color where possible, including on custom themes.
+        public static Color EnsureTextContrast(Color color, Color background, Color fallback)
+        {
+            double backgroundLuminance = GetRelativeLuminance(background);
+            for (int step = 0; step <= 20; step++)
+            {
+                Color candidate = BlendColors(color, fallback, step / 20.0);
+                double luminance = GetRelativeLuminance(candidate);
+                double contrast = (Math.Max(luminance, backgroundLuminance) + 0.05)
+                    / (Math.Min(luminance, backgroundLuminance) + 0.05);
+                if (contrast >= 4.5) return candidate;
+            }
+            return fallback;
+        }
     }
 
     internal static class ToolWindowThemeResources
@@ -89,6 +107,11 @@ namespace AxialSqlTools
 
             Color bgColor = VsThemeBrushResolver.GetBrushColor(bg, Colors.White);
             Color fgColor = VsThemeBrushResolver.GetBrushColor(fg, Colors.Black);
+            success = new SolidColorBrush(VsThemeBrushResolver.EnsureTextContrast(
+                VsThemeBrushResolver.GetBrushColor(success, fgColor), bgColor, fgColor));
+            error = VsThemeBrushResolver.ResolveBrush(control, EnvironmentColors.ToolWindowValidationErrorTextBrushKey)
+                ?? new SolidColorBrush(VsThemeBrushResolver.EnsureTextContrast(
+                    VsThemeBrushResolver.GetBrushColor(error, fgColor), bgColor, fgColor));
             Color accentColor = VsThemeBrushResolver.GetBrushColor(accent, Color.FromRgb(0x00, 0x7A, 0xCC));
             Color successColor = VsThemeBrushResolver.GetBrushColor(success, Color.FromRgb(0x10, 0x7C, 0x10));
             Color errorColor = VsThemeBrushResolver.GetBrushColor(error, Color.FromRgb(0xA1, 0x26, 0x0D));
@@ -97,24 +120,6 @@ namespace AxialSqlTools
             Color headerColor = isLightTheme
                 ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.04)
                 : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.04);
-            Color tabHeaderColor = isLightTheme
-                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.05)
-                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.06);
-            Color tabHoverColor = isLightTheme
-                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.10)
-                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.12);
-            Color tabSelectedColor = isLightTheme
-                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.16)
-                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.18);
-            Color buttonBackgroundColor = isLightTheme
-                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.06)
-                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.08);
-            Color buttonHoverColor = isLightTheme
-                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.14)
-                : VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.10);
-            Color buttonPressedColor = isLightTheme
-                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.22)
-                : VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.18);
             Color subtleBorderColor = isLightTheme
                 ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.16)
                 : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.14);
@@ -124,7 +129,7 @@ namespace AxialSqlTools
             Color primaryPressedColor = isLightTheme
                 ? VsThemeBrushResolver.BlendColors(accentColor, Colors.Black, 0.12)
                 : VsThemeBrushResolver.BlendColors(accentColor, Colors.Black, 0.16);
-            Color primaryForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(accentColor) > 0.55
+            Color primaryForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(accentColor) > 0.179
                 ? Colors.Black
                 : Colors.White;
             Color dangerHoverColor = isLightTheme
@@ -133,7 +138,7 @@ namespace AxialSqlTools
             Color dangerPressedColor = isLightTheme
                 ? VsThemeBrushResolver.BlendColors(errorColor, Colors.Black, 0.12)
                 : VsThemeBrushResolver.BlendColors(errorColor, Colors.Black, 0.16);
-            Color dangerForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(errorColor) > 0.55
+            Color dangerForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(errorColor) > 0.179
                 ? Colors.Black
                 : Colors.White;
             Color gridHeaderColor = isLightTheme
@@ -142,9 +147,6 @@ namespace AxialSqlTools
             Color gridAlternateRowColor = isLightTheme
                 ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.02)
                 : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.04);
-            Color gridSelectionColor = isLightTheme
-                ? VsThemeBrushResolver.BlendColors(bgColor, Colors.Black, 0.12)
-                : VsThemeBrushResolver.BlendColors(bgColor, Colors.White, 0.14);
             Color diffInsertedBackgroundColor = isLightTheme
                 ? VsThemeBrushResolver.BlendColors(bgColor, successColor, 0.20)
                 : VsThemeBrushResolver.BlendColors(bgColor, successColor, 0.36);
@@ -154,13 +156,13 @@ namespace AxialSqlTools
             Color diffModifiedBackgroundColor = isLightTheme
                 ? VsThemeBrushResolver.BlendColors(bgColor, fgColor, 0.10)
                 : VsThemeBrushResolver.BlendColors(bgColor, fgColor, 0.20);
-            Color diffInsertedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffInsertedBackgroundColor) > 0.52
+            Color diffInsertedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffInsertedBackgroundColor) > 0.179
                 ? Colors.Black
                 : Colors.White;
-            Color diffDeletedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffDeletedBackgroundColor) > 0.52
+            Color diffDeletedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffDeletedBackgroundColor) > 0.179
                 ? Colors.Black
                 : Colors.White;
-            Color diffModifiedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffModifiedBackgroundColor) > 0.52
+            Color diffModifiedForegroundColor = VsThemeBrushResolver.GetRelativeLuminance(diffModifiedBackgroundColor) > 0.179
                 ? Colors.Black
                 : Colors.White;
 
@@ -173,12 +175,6 @@ namespace AxialSqlTools
             control.Resources["AxialThemeAccentBrush"] = new SolidColorBrush(accentColor);
             control.Resources["AxialThemeStatusErrorBrush"] = error;
             control.Resources["AxialThemeStatusSuccessBrush"] = success;
-            control.Resources["AxialThemeTabHeaderBackgroundBrush"] = new SolidColorBrush(tabHeaderColor);
-            control.Resources["AxialThemeTabHeaderHoverBrush"] = new SolidColorBrush(tabHoverColor);
-            control.Resources["AxialThemeTabHeaderSelectedBrush"] = new SolidColorBrush(tabSelectedColor);
-            control.Resources["AxialThemeButtonBackgroundBrush"] = new SolidColorBrush(buttonBackgroundColor);
-            control.Resources["AxialThemeButtonHoverBrush"] = new SolidColorBrush(buttonHoverColor);
-            control.Resources["AxialThemeButtonPressedBrush"] = new SolidColorBrush(buttonPressedColor);
             control.Resources["AxialThemePrimaryButtonBackgroundBrush"] = new SolidColorBrush(accentColor);
             control.Resources["AxialThemePrimaryButtonHoverBrush"] = new SolidColorBrush(primaryHoverColor);
             control.Resources["AxialThemePrimaryButtonPressedBrush"] = new SolidColorBrush(primaryPressedColor);
@@ -189,13 +185,93 @@ namespace AxialSqlTools
             control.Resources["AxialThemeDangerButtonForegroundBrush"] = new SolidColorBrush(dangerForegroundColor);
             control.Resources["AxialThemeGridHeaderBackgroundBrush"] = new SolidColorBrush(gridHeaderColor);
             control.Resources["AxialThemeGridAlternateRowBrush"] = new SolidColorBrush(gridAlternateRowColor);
-            control.Resources["AxialThemeGridSelectionBrush"] = new SolidColorBrush(gridSelectionColor);
             control.Resources["AxialThemeDiffInsertedBackgroundBrush"] = new SolidColorBrush(diffInsertedBackgroundColor);
             control.Resources["AxialThemeDiffInsertedForegroundBrush"] = new SolidColorBrush(diffInsertedForegroundColor);
             control.Resources["AxialThemeDiffDeletedBackgroundBrush"] = new SolidColorBrush(diffDeletedBackgroundColor);
             control.Resources["AxialThemeDiffDeletedForegroundBrush"] = new SolidColorBrush(diffDeletedForegroundColor);
             control.Resources["AxialThemeDiffModifiedBackgroundBrush"] = new SolidColorBrush(diffModifiedBackgroundColor);
             control.Resources["AxialThemeDiffModifiedForegroundBrush"] = new SolidColorBrush(diffModifiedForegroundColor);
+
+            // Keep foreground/background pairs from the host together. In particular,
+            // selected text must not inherit the ordinary tool-window foreground.
+            SetBrush(control, "AxialThemeGridSelectionBrush", EnvironmentColors.SystemHighlightBrushKey, SystemColors.HighlightBrush);
+            SetBrush(control, "AxialThemeGridSelectionTextBrush", EnvironmentColors.SystemHighlightTextBrushKey, SystemColors.HighlightTextBrush);
+            SetBrush(control, "AxialThemeDisabledForegroundBrush", EnvironmentColors.SystemGrayTextBrushKey, SystemColors.GrayTextBrush);
+            SetBrush(control, "AxialThemeInputBackgroundBrush", CommonControlsColors.TextBoxBackgroundBrushKey, bg);
+            SetBrush(control, "AxialThemeInputForegroundBrush", CommonControlsColors.TextBoxTextBrushKey, fg);
+            SetBrush(control, "AxialThemeButtonBackgroundBrush", CommonControlsColors.ButtonBrushKey, bg);
+            SetBrush(control, "AxialThemeButtonForegroundBrush", CommonControlsColors.ButtonTextBrushKey, fg);
+            SetBrush(control, "AxialThemeButtonHoverBrush", CommonControlsColors.ButtonHoverBrushKey, bg);
+            SetBrush(control, "AxialThemeButtonHoverTextBrush", CommonControlsColors.ButtonHoverTextBrushKey, fg);
+            SetBrush(control, "AxialThemeButtonPressedBrush", CommonControlsColors.ButtonPressedBrushKey, bg);
+            SetBrush(control, "AxialThemeButtonPressedTextBrush", CommonControlsColors.ButtonPressedTextBrushKey, fg);
+            SetBrush(control, "AxialThemeTabHeaderBackgroundBrush", CommonControlsColors.InnerTabInactiveBackgroundBrushKey, bg);
+            SetBrush(control, "AxialThemeTabHeaderTextBrush", CommonControlsColors.InnerTabInactiveTextBrushKey, fg);
+            SetBrush(control, "AxialThemeTabHeaderHoverBrush", CommonControlsColors.InnerTabInactiveHoverBackgroundBrushKey, bg);
+            SetBrush(control, "AxialThemeTabHeaderHoverTextBrush", CommonControlsColors.InnerTabInactiveHoverTextBrushKey, fg);
+            SetBrush(control, "AxialThemeTabHeaderSelectedBrush", CommonControlsColors.InnerTabActiveBackgroundBrushKey, bg);
+            SetBrush(control, "AxialThemeTabHeaderSelectedTextBrush", CommonControlsColors.InnerTabActiveTextBrushKey, fg);
+            SetBrush(control, "AxialThemeToolTipBackgroundBrush", EnvironmentColors.ToolTipBrushKey, bg);
+            SetBrush(control, "AxialThemeToolTipForegroundBrush", EnvironmentColors.ToolTipTextBrushKey, fg);
+
+            if (SystemParameters.HighContrast) ApplyHighContrast(control);
+            ApplyHostControlStyles(control);
+        }
+
+        private static void SetBrush(FrameworkElement scope, string name, object hostKey, Brush fallback)
+        {
+            scope.Resources[name] = VsThemeBrushResolver.ResolveBrush(scope, hostKey) ?? fallback;
+        }
+
+        private static void ApplyHighContrast(FrameworkElement scope)
+        {
+            // Do not blend, dim or invent semantic colors in a high-contrast theme.
+            foreach (string name in new[] { "Background", "HeaderBackground", "InputBackground", "GridHeaderBackground",
+                "GridAlternateRow", "TabHeaderBackground", "TabHeaderHover", "ButtonBackground", "ButtonHover", "ButtonPressed",
+                "DiffInsertedBackground", "DiffDeletedBackground", "DiffModifiedBackground", "ToolTipBackground" })
+                scope.Resources["AxialTheme" + name + "Brush"] = SystemColors.WindowBrush;
+            foreach (string name in new[] { "Foreground", "InputForeground", "ButtonForeground", "ButtonHoverText", "ButtonPressedText",
+                "TabHeaderText", "TabHeaderHoverText", "Border", "SubtleBorder", "Accent", "StatusError", "StatusSuccess",
+                "DiffInsertedForeground", "DiffDeletedForeground", "DiffModifiedForeground", "ToolTipForeground" })
+                scope.Resources["AxialTheme" + name + "Brush"] = SystemColors.WindowTextBrush;
+            foreach (string name in new[] { "GridSelection", "TabHeaderSelected", "PrimaryButtonBackground", "PrimaryButtonHover",
+                "PrimaryButtonPressed", "DangerButtonBackground", "DangerButtonHover", "DangerButtonPressed" })
+                scope.Resources["AxialTheme" + name + "Brush"] = SystemColors.HighlightBrush;
+            foreach (string name in new[] { "GridSelectionText", "TabHeaderSelectedText", "PrimaryButtonForeground", "DangerButtonForeground" })
+                scope.Resources["AxialTheme" + name + "Brush"] = SystemColors.HighlightTextBrush;
+            scope.Resources["AxialThemeLinkBrush"] = SystemColors.HotTrackBrush;
+            scope.Resources["AxialThemeDisabledForegroundBrush"] = SystemColors.GrayTextBrush;
+        }
+
+        private static void ApplyHostControlStyles(FrameworkElement scope)
+        {
+            // The shell templates cover focus, disabled, hover, popup and editable
+            // states that cannot be themed by setting Background/Foreground alone.
+            // Keep shared XAML styles as a fallback for hosts missing a resource.
+            UseHostStyle(scope, typeof(Button), VsResourceKeys.ThemedDialogButtonStyleKey);
+            UseHostStyle(scope, typeof(CheckBox), VsResourceKeys.ThemedDialogCheckBoxStyleKey);
+            UseHostStyle(scope, typeof(RadioButton), VsResourceKeys.ThemedDialogRadioButtonStyleKey);
+            UseHostStyle(scope, typeof(ToggleButton), VsResourceKeys.ThemedDialogToggleButtonStyleKey);
+            UseHostStyle(scope, typeof(TextBox), VsResourceKeys.ThemedDialogTextBoxStyleKey);
+            UseHostStyle(scope, typeof(ComboBox), VsResourceKeys.ThemedDialogComboBoxStyleKey);
+            UseHostStyle(scope, typeof(ComboBoxItem), VsResourceKeys.ComboBoxItemStyleKey);
+            UseHostStyle(scope, typeof(ListBox), VsResourceKeys.ThemedDialogListBoxStyleKey);
+            UseHostStyle(scope, typeof(ListView), VsResourceKeys.ThemedDialogListViewStyleKey);
+            UseHostStyle(scope, typeof(ListViewItem), VsResourceKeys.ThemedDialogListViewItemStyleKey);
+            UseHostStyle(scope, typeof(GridViewColumnHeader), VsResourceKeys.ThemedDialogGridViewColumnHeaderStyleKey);
+            UseHostStyle(scope, typeof(TreeView), VsResourceKeys.ThemedDialogTreeViewStyleKey);
+            UseHostStyle(scope, typeof(TreeViewItem), VsResourceKeys.ThemedDialogTreeViewItemStyleKey);
+            UseHostStyle(scope, typeof(ScrollBar), VsResourceKeys.ScrollBarStyleKey);
+            UseHostStyle(scope, typeof(ScrollViewer), VsResourceKeys.ScrollViewerStyleKey);
+            UseHostStyle(scope, typeof(ProgressBar), VsResourceKeys.ProgressBarStyleKey);
+        }
+
+        private static void UseHostStyle(FrameworkElement scope, Type targetType, object key)
+        {
+            var defaults = scope.TryFindResource(VsResourceKeys.ThemedDialogDefaultStylesKey) as ResourceDictionary;
+            var style = scope.TryFindResource(key) as Style ?? defaults?[targetType] as Style;
+            if (style != null && style.TargetType.IsAssignableFrom(targetType) && !ReferenceEquals(scope.Resources[targetType], style))
+                scope.Resources[targetType] = style;
         }
     }
 
@@ -204,6 +280,7 @@ namespace AxialSqlTools
         private readonly FrameworkElement control;
         private readonly Action applyTheme;
         private bool isThemeSubscribed;
+        private bool disposed;
 
         public ToolWindowThemeController(FrameworkElement control, Action applyTheme)
         {
@@ -213,6 +290,7 @@ namespace AxialSqlTools
             this.control.Loaded += OnLoaded;
             this.control.Unloaded += OnUnloaded;
             this.control.IsVisibleChanged += OnIsVisibleChanged;
+            if (control is Window window) window.Closed += OnClosed;
 
             this.applyTheme();
         }
@@ -221,6 +299,7 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
+            if (disposed) return;
             applyTheme();
             SubscribeToThemeChanges();
         }
@@ -234,7 +313,7 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            if (control.IsVisible)
+            if (!disposed && control.IsVisible)
             {
                 applyTheme();
             }
@@ -248,6 +327,7 @@ namespace AxialSqlTools
             }
 
             VSColorTheme.ThemeChanged += OnVsThemeChanged;
+            SystemParameters.StaticPropertyChanged += OnSystemParametersChanged;
             isThemeSubscribed = true;
         }
 
@@ -259,25 +339,41 @@ namespace AxialSqlTools
             }
 
             VSColorTheme.ThemeChanged -= OnVsThemeChanged;
+            SystemParameters.StaticPropertyChanged -= OnSystemParametersChanged;
             isThemeSubscribed = false;
         }
 
         private void OnVsThemeChanged(ThemeChangedEventArgs e)
         {
-            if (!control.Dispatcher.CheckAccess())
-            {
-                control.Dispatcher.BeginInvoke(new Action(applyTheme));
-                return;
-            }
-
-            applyTheme();
+            QueueThemeRefresh();
         }
+
+        private void OnSystemParametersChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(SystemParameters.HighContrast)) QueueThemeRefresh();
+        }
+
+        private void QueueThemeRefresh()
+        {
+            if (disposed || control.Dispatcher.HasShutdownStarted) return;
+            // Wait until the shell has replaced its WPF resources. Ignore queued
+            // work after unloading or closing the window.
+            _ = control.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!disposed && isThemeSubscribed) applyTheme();
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void OnClosed(object sender, EventArgs e) => Dispose();
 
         public void Dispose()
         {
+            if (disposed) return;
+            disposed = true;
             control.Loaded -= OnLoaded;
             control.Unloaded -= OnUnloaded;
             control.IsVisibleChanged -= OnIsVisibleChanged;
+            if (control is Window window) window.Closed -= OnClosed;
             UnsubscribeFromThemeChanges();
         }
     }

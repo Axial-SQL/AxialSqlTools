@@ -130,7 +130,7 @@
       <!-- TOOLS Submenu buttons -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportButtonGridToExcel" priority="0x0100" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
-        <Icon guid="guidExportData" id="bmpExportData" />
+        <Icon guid="guidExcel" id="bmpExcel" />
         <CommandFlag>IconAndText</CommandFlag>
         <Strings>
           <ButtonText>Export Grid to Excel</ButtonText>
@@ -167,6 +167,17 @@
         </Strings>
       </Button>
       
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialExportGridToPivotTable" priority="0x0120" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" />
+        <Icon guid="guidPivotTable" id="bmpPivotTable" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Export Grid to Pivot Table</ButtonText>
+          <LocCanonicalName>AxialSqlTools.ExportGridToPivotTable</LocCanonicalName>
+          <ToolTipText>Summarize the active result grid in a new pivot window</ToolTipText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialScriptCurrentObject" priority="0x0200" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Script" />
         <Icon guid="guidImagesTemplate" id="bmpTemplate" />
@@ -254,7 +265,7 @@
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidServerHealth" id="bmpServerHealth" />
         <Strings>
-          <ButtonText>Health Dashboard - Server</ButtonText>
+          <ButtonText>Server Health Dashboard</ButtonText>
         </Strings>
       </Button>
 
@@ -332,6 +343,32 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSortSelectedTextAscending" priority="0x0200" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" />
+        <Icon guid="guidSortAscending" id="bmpSortAscending" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <CommandFlag>DefaultDisabled</CommandFlag>
+        <Strings>
+          <ButtonText>Sort List Ascending (+Shift: Vertical)</ButtonText>
+          <CanonicalName>AxialSqlTools.SortSelectedTextAscending</CanonicalName>
+          <LocCanonicalName>AxialSqlTools.SortSelectedTextAscending</LocCanonicalName>
+          <ToolTipText>Sort selected comma-separated text horizontally (hold Shift for a vertical list)</ToolTipText>
+        </Strings>
+      </Button>
+
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSortSelectedTextDescending" priority="0x0210" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" />
+        <Icon guid="guidSortDescending" id="bmpSortDescending" />
+        <CommandFlag>IconAndText</CommandFlag>
+        <CommandFlag>DefaultDisabled</CommandFlag>
+        <Strings>
+          <ButtonText>Sort List Descending (+Shift: Vertical)</ButtonText>
+          <CanonicalName>AxialSqlTools.SortSelectedTextDescending</CanonicalName>
+          <LocCanonicalName>AxialSqlTools.SortSelectedTextDescending</LocCanonicalName>
+          <ToolTipText>Sort selected comma-separated text horizontally (hold Shift for a vertical list)</ToolTipText>
+        </Strings>
+      </Button>
+
     </Buttons>
 
 
@@ -361,6 +398,10 @@
       <Bitmap guid="guidSelect" href="Resources\select.png" usedList="bmpSelect" />
       <Bitmap guid="guidSnippet" href="Resources\snippet.png" usedList="bmpSnippet" />
       <Bitmap guid="guidToggleBlockComment" href="Resources\toggle-comment.png" usedList="bmpToggleBlockComment" />
+      <Bitmap guid="guidSortAscending" href="Resources\sort-ascending.png" usedList="bmpSortAscending" />
+      <Bitmap guid="guidSortDescending" href="Resources\sort-descending.png" usedList="bmpSortDescending" />
+      <Bitmap guid="guidPivotTable" href="Resources\pivot-table.png" usedList="bmpPivotTable" />
+      <Bitmap guid="guidExcel" href="Resources\excel.png" usedList="bmpExcel" />
     </Bitmaps>    
   </Commands>
 
@@ -425,6 +466,7 @@
       <IDSymbol name="AxialScriptResultIntoNewWindow" value="4136" />
       <IDSymbol name="AxialExportGridToGoogleSheet" value="4137" />
       <IDSymbol name="AxialExportGridAsInserts" value="4138" />
+      <IDSymbol name="AxialExportGridToPivotTable" value="4159" />
 
       <IDSymbol name="AxialHealthDashboardServerCommand" value="4140" />
       <IDSymbol name="AxialHealthDashboardServersCommand" value="4142" />
@@ -445,6 +487,8 @@
 
       <IDSymbol name="AxialSelectCurrentStatementCommand" value="4154" />
       <IDSymbol name="AxialToggleBlockCommentCommand" value="4155" />
+      <IDSymbol name="AxialSortSelectedTextAscending" value="4157" />
+      <IDSymbol name="AxialSortSelectedTextDescending" value="4158" />
 
       <IDSymbol name="AxialSnippetManagerCommand" value="4153" />
 
@@ -508,6 +552,18 @@
       <IDSymbol name="bmpToggleBlockComment" value="1" />
     </GuidSymbol>
 
-
+    <GuidSymbol name="guidSortAscending" value="{b9a510f9-e552-4641-a0c5-07b1ae8a407f}">
+      <IDSymbol name="bmpSortAscending" value="1" />
+    </GuidSymbol>
+    <GuidSymbol name="guidSortDescending" value="{c032f833-8bc7-4c8d-8b89-0df7fbd89b19}">
+      <IDSymbol name="bmpSortDescending" value="1" />
+    </GuidSymbol>
+	<GuidSymbol name="guidPivotTable" value="{c032f833-8bc7-4c8d-8b89-0df7fbd89b1a}">
+		<IDSymbol name="bmpPivotTable" value="1" />
+	</GuidSymbol>
+	<GuidSymbol name="guidExcel" value="{c032f833-8bc7-4c8d-8b89-0df7fbd89b1b}">
+		<IDSymbol name="bmpExcel" value="1" />
+	</GuidSymbol>
+	  
   </Symbols>
 </CommandTable>

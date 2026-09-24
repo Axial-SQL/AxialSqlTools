@@ -1,10 +1,20 @@
-<Window x:Class="AxialSqlTools.ScriptObjectPickerDialog"
+<platform:DialogWindow x:Class="AxialSqlTools.ScriptObjectPickerDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:platform="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
         Title="Select Object"
         Height="320"
         Width="800"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AxialThemeBackgroundBrush}"
+        Foreground="{DynamicResource AxialThemeForegroundBrush}">
+    <platform:DialogWindow.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </platform:DialogWindow.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -21,4 +31,4 @@
             <Button Content="Cancel" Width="90" IsCancel="True" Margin="8,0,0,0" Click="CancelButton_Click" />
         </StackPanel>
     </Grid>
-</Window>
+</platform:DialogWindow>

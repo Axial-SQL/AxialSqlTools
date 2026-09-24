@@ -5,7 +5,7 @@ using System.Windows;
 
 namespace AxialSqlTools
 {
-    public partial class ExcelExportSuccessDialog : Window
+    public partial class ExcelExportSuccessDialog : Microsoft.VisualStudio.PlatformUI.DialogWindow
     {
         private readonly ToolWindowThemeController _themeController;
         private readonly string filePath;

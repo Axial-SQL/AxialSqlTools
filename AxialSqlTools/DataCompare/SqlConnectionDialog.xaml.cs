@@ -5,7 +5,7 @@ using System.Windows.Controls;
 
 namespace AxialSqlTools.DataCompare
 {
-    public partial class SqlConnectionDialog : Window
+    public partial class SqlConnectionDialog : Microsoft.VisualStudio.PlatformUI.DialogWindow
     {
         private readonly ToolWindowThemeController theme;
         public string ConnectionString { get; private set; }

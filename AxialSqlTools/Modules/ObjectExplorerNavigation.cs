@@ -5,24 +5,33 @@ using System.Threading.Tasks;
 
 namespace AxialSqlTools
 {
+    internal interface IObjectExplorerTreeNode
+    {
+        string Name { get; }
+        string InvariantName { get; }
+        string UniqueName { get; }
+        string UrnPath { get; }
+        string NavigationContext { get; }
+        bool IsFolder { get; }
+        IList<IObjectExplorerTreeNode> LoadChildren();
+    }
+
     internal interface IObjectExplorerNavigationHost
     {
-        string FindServerContext();
+        IObjectExplorerTreeNode FindServer();
         void Connect();
-        bool TryExpand(string urn);
-        bool TrySelect(string urn);
+        void Select(IObjectExplorerTreeNode node);
     }
 
     internal static class ObjectExplorerNavigation
     {
-        public static async Task NavigateAsync(IObjectExplorerNavigationHost host, IList<string> relativeSteps,
+        public static async Task NavigateAsync(IObjectExplorerNavigationHost host, ScriptObjectSelectionItem item,
             CancellationToken cancellationToken, Func<CancellationToken, Task> wait = null)
         {
-            if (relativeSteps == null || relativeSteps.Count == 0)
-                throw new ArgumentException("An object path is required.", nameof(relativeSteps));
-            if (wait == null) wait = token => Task.Delay(200, token);
+            var steps = ObjectExplorerPath.GetTreeSteps(item);
+            if (wait == null) wait = token => Task.Delay(50, token);
             cancellationToken.ThrowIfCancellationRequested();
-            string server = host.FindServerContext();
+            var server = host.FindServer();
             if (server == null)
             {
                 host.Connect();
@@ -30,40 +39,59 @@ namespace AxialSqlTools
                 {
                     await wait(cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
-                    server = host.FindServerContext();
+                    server = host.FindServer();
                 }
             }
 
-            // Expand one level at a time and yield to SSMS's asynchronous metadata loader.
-            // Never repeatedly restart expansion or jump straight into a cold deep path.
-            await ExpandAsync(host, server, wait, cancellationToken);
-            foreach (string step in relativeSteps)
+            var current = server;
+            // Cache each branch for this invocation. EnumerateChildren(false) loads it before
+            // traversal; repeatedly refreshing an excluded/missing object would just hang SSMS.
+            var children = new Dictionary<IObjectExplorerTreeNode, IList<IObjectExplorerTreeNode>>();
+            foreach (var step in steps)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                string urn = server + step;
-                if (step == relativeSteps[relativeSteps.Count - 1])
-                {
-                    while (!host.TrySelect(urn))
-                    {
-                        await wait(cancellationToken);
-                        cancellationToken.ThrowIfCancellationRequested();
-                    }
-                }
-                else
-                    await ExpandAsync(host, urn, wait, cancellationToken);
+                var found = await FindAsync(current, step, children, false, 0, wait, cancellationToken);
+                if (found == null)
+                    throw new InvalidOperationException("Object Explorer could not find " + step.DisplayName
+                        + ". Refresh its parent folder, check Object Explorer filters and permissions, and try again.");
+                current = found;
             }
+            cancellationToken.ThrowIfCancellationRequested();
+            host.Select(current);
         }
 
-        private static async Task ExpandAsync(IObjectExplorerNavigationHost host, string urn,
-            Func<CancellationToken, Task> wait, CancellationToken cancellationToken)
+        private static async Task<IObjectExplorerTreeNode> FindAsync(IObjectExplorerTreeNode parent,
+            ObjectExplorerTreeStep step, Dictionary<IObjectExplorerTreeNode, IList<IObjectExplorerTreeNode>> cache,
+            bool withinSchema, int depth, Func<CancellationToken, Task> wait, CancellationToken token)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            while (!host.TryExpand(urn))
+            token.ThrowIfCancellationRequested();
+            if (depth > 8) return null;
+            if (!cache.TryGetValue(parent, out var children))
             {
-                await wait(cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
+                // Resume on the SSMS UI thread. Only SSMS may enumerate its own tree nodes.
+                await wait(token);
+                token.ThrowIfCancellationRequested();
+                children = parent.LoadChildren();
+                token.ThrowIfCancellationRequested();
+                cache.Add(parent, children);
             }
-            await wait(cancellationToken);
+
+            foreach (var child in children)
+            {
+                token.ThrowIfCancellationRequested();
+                if (step.Matches(child, withinSchema)) return child;
+            }
+            foreach (var child in children)
+            {
+                token.ThrowIfCancellationRequested();
+                // Walk only the requested hierarchy, including its optional schema/system
+                // folders. Never expand unrelated databases, tables or logins.
+                bool schemaFolder = step.IsSchemaFolder(child);
+                if (!schemaFolder && !step.IsContainer(child)) continue;
+                var found = await FindAsync(child, step, cache, withinSchema || schemaFolder,
+                    depth + 1, wait, token);
+                if (found != null) return found;
+            }
+            return null;
         }
     }
 }

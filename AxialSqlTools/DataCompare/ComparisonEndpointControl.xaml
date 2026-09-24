@@ -1,6 +1,15 @@
 <UserControl x:Class="AxialSqlTools.DataCompare.ComparisonEndpointControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Background="{DynamicResource AxialThemeBackgroundBrush}"
+        Foreground="{DynamicResource AxialThemeForegroundBrush}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
     <StackPanel>
         <WrapPanel x:Name="ConnectionButtons">
             <Button Content="Object Explorer" ToolTip="Use the database selected in Object Explorer" Click="ObjectExplorerClick" Margin="0,0,6,6"/>

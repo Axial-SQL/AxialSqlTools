@@ -4,14 +4,16 @@ using System.Windows;
 
 namespace AxialSqlTools.QuerySafety
 {
-    public partial class FatalActionWarningDialog : Window
+    public partial class FatalActionWarningDialog : Microsoft.VisualStudio.PlatformUI.DialogWindow
     {
+        private readonly ToolWindowThemeController themeController;
+
         internal bool AllowRepeats { get; private set; }
 
         internal FatalActionWarningDialog(FatalActionAnalysis analysis, string context, bool canRemember)
         {
             InitializeComponent();
-            ToolWindowThemeResources.ApplySharedTheme(this);
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
             ContextText.Text = context;
             ActionText.Text = string.Join(Environment.NewLine, analysis.Actions.Select(a =>
                 "Line " + a.Line + ": " + a.Operation + " - " + a.Target));

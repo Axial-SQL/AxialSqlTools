@@ -5,7 +5,6 @@ using Microsoft.SqlServer.Management.UI.VSIntegration.ObjectExplorer;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Windows.Forms;
 
 namespace AxialSqlTools
@@ -15,45 +14,34 @@ namespace AxialSqlTools
         private readonly IObjectExplorerService explorer;
         private readonly UIConnectionInfo connection;
         private readonly SqlConnectionStringBuilder sqlConnection;
-        private readonly HashSet<TreeNode> expansionRequested = new HashSet<TreeNode>();
+        private readonly TreeView tree;
+        private readonly Dictionary<TreeNode, Node> nodes = new Dictionary<TreeNode, Node>();
+        private TreeNode serverRoot;
 
         public SsmsObjectExplorerNavigationHost(IObjectExplorerService explorer, UIConnectionInfo connection, string connectionString)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             this.explorer = explorer ?? throw new ArgumentNullException(nameof(explorer));
             this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
             sqlConnection = new SqlConnectionStringBuilder(connectionString);
+            tree = ObjectExplorerReflection.Read(explorer, "Tree") as TreeView;
+            if (tree == null)
+                throw new NotSupportedException("This SSMS version does not expose the Object Explorer tree. Open Object Explorer and try again.");
         }
 
-        public string FindServerContext()
+        public IObjectExplorerTreeNode FindServer()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            explorer.GetSelectedNodes(out int count, out INodeInformation[] selected);
-            if (selected != null)
+            // Keep the actual root, not a server URN shared by several login connections.
+            foreach (TreeNode root in tree.Nodes)
             {
-                foreach (var node in selected)
-                {
-                    var root = node;
-                    while (root?.Parent != null) root = root.Parent;
-                    if (MatchesConnection(root)) return root.Context;
-                }
-            }
-
-            // Inspect only connected roots. Do not enumerate other servers or shorten a
-            // hostname/remove a port to find a 'close enough' connection.
-            var tree = ReadProperty(explorer, "Tree") as TreeView;
-            if (tree != null)
-            {
-                foreach (TreeNode treeNode in tree.Nodes)
-                {
-                    var root = GetNodeInformation(treeNode);
-                    if (MatchesConnection(root)) return root.Context;
-                }
-            }
-
-            foreach (string name in new[] { connection.ServerName, connection.ServerName.ToUpperInvariant(), connection.ServerName.ToLowerInvariant() })
-            {
-                var root = explorer.FindNode(ObjectExplorerPath.ServerUrn(name));
-                if (MatchesConnection(root)) return root.Context;
+                var info = GetNodeInformation(root);
+                if (!(info?.Connection is SqlConnectionInfo actual)) continue;
+                if (!ObjectExplorerPath.SameConnection(connection.ServerName, connection.UserName,
+                    sqlConnection.IntegratedSecurity, actual.ServerName, actual.UserName, actual.UseIntegratedSecurity)) continue;
+                if (!ObjectExplorerPath.SameAuthentication(sqlConnection.Authentication.ToString(), actual.Authentication.ToString())) continue;
+                serverRoot = root;
+                return Wrap(root);
             }
             return null;
         }
@@ -61,79 +49,74 @@ namespace AxialSqlTools
         public void Connect()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            // Retain SSMS authentication, encryption, and other advanced options, including
-            // options that would be lost by reconstructing a server-only connection.
             explorer.ConnectToServer(connection);
         }
 
-        public bool TryExpand(string urn)
+        public void Select(IObjectExplorerTreeNode node)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var node = FindNode(urn);
-            if (node == null) return false;
-            var treeNode = GetTreeNode(node);
-            if (treeNode == null)
-                throw new NotSupportedException("This SSMS version does not expose the Object Explorer tree needed to expand the object. Open the database in Object Explorer and try again.");
-            if (!treeNode.IsExpanded && expansionRequested.Add(treeNode))
-                treeNode.Expand();
-            return treeNode.IsExpanded;
+            var target = ((Node)node).TreeNode;
+            var root = target;
+            while (root.Parent != null) root = root.Parent;
+            if (target.TreeView != tree || root != serverRoot)
+                throw new InvalidOperationException("The Object Explorer connection changed during navigation. Try again.");
+            // Select the attached node directly. FindNode can return a detached NodeContext,
+            // and SynchronizeTree may reconnect rather than reuse this authenticated root.
+            tree.SelectedNode = target;
+            target.EnsureVisible();
+            if (!ObjectExplorerReflection.TryShow(explorer)) tree.Focus();
         }
 
-        public bool TrySelect(string urn)
+        private Node Wrap(TreeNode node)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var node = FindNode(urn);
-            if (node == null) return false;
-            explorer.SynchronizeTree(node);
-            var treeNode = GetTreeNode(node);
-            if (treeNode?.TreeView != null)
+            if (!nodes.TryGetValue(node, out var wrapper))
             {
-                treeNode.TreeView.SelectedNode = treeNode;
-                treeNode.EnsureVisible();
-                treeNode.TreeView.Focus();
+                wrapper = new Node(this, node);
+                nodes.Add(node, wrapper);
             }
-            return true;
-        }
-
-        private INodeInformation FindNode(string urn)
-        {
-            var node = explorer.FindNode(urn);
-            // FindNode takes a URN, not a connection ID. When a server has several OE
-            // connections, never silently use a node belonging to a different login.
-            return MatchesConnection(node) ? node : null;
-        }
-
-        private bool MatchesConnection(INodeInformation node)
-        {
-            if (node?.Connection == null || string.IsNullOrEmpty(node.Context)) return false;
-            var actual = node.Connection as SqlConnectionInfo;
-            if (actual == null) return false;
-            return ObjectExplorerPath.SameConnection(connection.ServerName, connection.UserName,
-                sqlConnection.IntegratedSecurity, actual.ServerName, actual.UserName, actual.UseIntegratedSecurity);
+            return wrapper;
         }
 
         private static INodeInformation GetNodeInformation(TreeNode node)
         {
             return (node as IServiceProvider)?.GetService(typeof(INodeInformation)) as INodeInformation
-                ?? node.Tag as INodeInformation;
+                ?? node.Tag as INodeInformation
+                ?? ObjectExplorerReflection.Read(ObjectExplorerReflection.Read(node, "containedItem"), "context") as INodeInformation;
         }
 
-        private static TreeNode GetTreeNode(INodeInformation node)
+        private sealed class Node : IObjectExplorerTreeNode
         {
-            // SSMS 22 returns a NodeContext wrapper; older hosts expose the TreeNode itself.
-            // Keep this host-specific access isolated from lookup and navigation sequencing.
-            return node as TreeNode ?? ReadProperty(node, "TreeNode") as TreeNode;
-        }
+            private readonly SsmsObjectExplorerNavigationHost host;
+            private readonly INodeInformation info;
+            private readonly object item;
 
-        private static object ReadProperty(object instance, string name)
-        {
-            for (Type type = instance.GetType(); type != null; type = type.BaseType)
+            public Node(SsmsObjectExplorerNavigationHost host, TreeNode node)
             {
-                var property = type.GetProperty(name, BindingFlags.Instance | BindingFlags.Public
-                    | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-                if (property != null) return property.GetValue(instance);
+                this.host = host;
+                TreeNode = node;
+                info = GetNodeInformation(node);
+                item = ObjectExplorerReflection.Read(node, "containedItem");
             }
-            return null;
+
+            public TreeNode TreeNode { get; }
+            public string Name => ObjectExplorerReflection.Read(item, "Name") as string ?? info?.Name ?? TreeNode.Text;
+            public string InvariantName => info?.InvariantName;
+            public string UrnPath => info?.UrnPath;
+            public string NavigationContext => info?.NavigationContext;
+            public string UniqueName => ObjectExplorerReflection.UniqueName(TreeNode) ?? info?["UniqueName"] as string;
+            public bool IsFolder => ObjectExplorerReflection.Read(item, "IsFolder") as bool? ?? false;
+
+            public IList<IObjectExplorerTreeNode> LoadChildren()
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (TreeNode.TreeView != host.tree)
+                    throw new InvalidOperationException("The Object Explorer connection was closed. Reconnect and try again.");
+                ObjectExplorerReflection.EnumerateChildren(TreeNode);
+                TreeNode.Expand();
+                var children = new List<IObjectExplorerTreeNode>();
+                foreach (TreeNode child in TreeNode.Nodes) children.Add(host.Wrap(child));
+                return children;
+            }
         }
     }
 }

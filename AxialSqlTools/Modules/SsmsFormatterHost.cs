@@ -31,9 +31,7 @@ namespace AxialSqlTools
             {
                 // The formatter lives outside the normal CLR probing path. Resolve it from
                 // this SSMS process, not the version/path used to build the extension.
-                System.Reflection.Assembly assembly;
-                using (var process = Process.GetCurrentProcess())
-                    assembly = SsmsFormatterAssemblyLoader.Load(Path.GetDirectoryName(process.MainModule.FileName));
+                var assembly = LoadFormatterAssembly();
                 return await SsmsFormatterReflection.CreateAsync(assembly, textBuffer, cancellationToken, disregardSsmsSettings,
                     ResolveExtensibilityServiceAsync);
             }
@@ -44,6 +42,23 @@ namespace AxialSqlTools
                 AxialSqlToolsPackage._logger.Warn("Unable to initialize the SSMS formatter ({0}).", ex.GetType().Name);
                 throw new InvalidOperationException("Unable to use the SSMS SQL Formatter. " + ex.Message, ex);
             }
+        }
+
+        internal static async Task<SsmsFormatterSettingsSnapshot> ReadSettingsAsync(CancellationToken cancellationToken)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+            var assembly = LoadFormatterAssembly();
+            // No document buffer: report SSMS's global options, independently of the active
+            // editor, .editorconfig overrides, and Axial's Disregard checkbox.
+            var settings = await SsmsFormatterReflection.LoadSettingsAsync(assembly, null,
+                cancellationToken, ResolveExtensibilityServiceAsync);
+            return SsmsFormatterSettingsSnapshot.Capture(settings, assembly);
+        }
+
+        private static System.Reflection.Assembly LoadFormatterAssembly()
+        {
+            using (var process = Process.GetCurrentProcess())
+                return SsmsFormatterAssemblyLoader.Load(Path.GetDirectoryName(process.MainModule.FileName));
         }
 
         private static async Task<object> ResolveExtensibilityServiceAsync(Type serviceType, CancellationToken cancellationToken)

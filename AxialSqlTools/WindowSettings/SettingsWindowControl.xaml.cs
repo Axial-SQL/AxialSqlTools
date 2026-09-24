@@ -751,6 +751,16 @@ as select 1;
 
         }
 
+        private void SsmsFormatterSettings_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new SsmsFormatterSettingsDialog(
+                DisregardSsmsFormatterSettings.IsChecked == true))
+            {
+                // The shell supplies the SSMS owner and the correct modal state.
+                dialog.ShowModal();
+            }
+        }
+
         private int _formatterPreviewRequest;
         private bool _formatterPreviewDisregardSsmsSettings;
         private System.Threading.Tasks.Task<SsmsFormatterContext> _formatterPreviewContextTask;

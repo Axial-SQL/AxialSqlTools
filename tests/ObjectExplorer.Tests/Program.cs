@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-internal static class Program
+internal static partial class Program
 {
     private static int passed;
     private static int failed;
@@ -55,98 +55,29 @@ internal static class Program
         Caret("keyword", "SEL|ECT * FROM dbo.Orders;", null);
         Caret("whitespace", "SELECT * FROM  | dbo.Orders;", null);
 
-        Path("table", Item("USER_TABLE"), "/Database[@Name='Sales']/Table[@Name='Orders' and @Schema='dbo']");
-        Path("view", Item("VIEW"), "/Database[@Name='Sales']/View[@Name='Orders' and @Schema='dbo']");
-        foreach (string type in new[] { "SQL_SCALAR_FUNCTION", "SQL_INLINE_TABLE_VALUED_FUNCTION", "SQL_TABLE_VALUED_FUNCTION", "CLR_SCALAR_FUNCTION" })
-            Path(type, Item(type), "/Database[@Name='Sales']/UserDefinedFunction[@Name='Orders' and @Schema='dbo']");
-        Path("procedure", Item("SQL_STORED_PROCEDURE"), "/Database[@Name='Sales']/StoredProcedure[@Name='Orders' and @Schema='dbo']");
-        Path("synonym", Item("SYNONYM"), "/Database[@Name='Sales']/Synonym[@Name='Orders' and @Schema='dbo']");
-        Path("table type", Item("TYPE_TABLE"), "/Database[@Name='Sales']/UserDefinedTableType[@Name='Orders' and @Schema='dbo']");
-        Path("index on view", Item("INDEX", "VIEW", "IX_Orders"), "/Database[@Name='Sales']/View[@Name='Orders' and @Schema='dbo']/Index[@Name='IX_Orders']");
-        Path("trigger on view", Item("SQL_TRIGGER", "VIEW", "TR_Orders"), "/Database[@Name='Sales']/View[@Name='Orders' and @Schema='dbo']/Trigger[@Name='TR_Orders']");
-        foreach (string type in new[] { "INDEX", "PRIMARY_KEY_CONSTRAINT", "UNIQUE_CONSTRAINT" })
-            Path(type, Item(type, "USER_TABLE", "IX_Orders"), "/Database[@Name='Sales']/Table[@Name='Orders' and @Schema='dbo']/Index[@Name='IX_Orders']");
-        Path("foreign key", Item("FOREIGN_KEY_CONSTRAINT", "USER_TABLE", "FK_Orders"), "/Database[@Name='Sales']/Table[@Name='Orders' and @Schema='dbo']/ForeignKey[@Name='FK_Orders']");
-        Path("check", Item("CHECK_CONSTRAINT", "USER_TABLE", "CK_Orders"), "/Database[@Name='Sales']/Table[@Name='Orders' and @Schema='dbo']/Check[@Name='CK_Orders']");
-        Path("default selects owning column", Item("DEFAULT_CONSTRAINT", "USER_TABLE", "DF_Orders"), "/Database[@Name='Sales']/Table[@Name='Orders' and @Schema='dbo']/Column[@Name='Status']");
-        Path("escape URN names", new ScriptObjectSelectionItem("USER_TABLE", "s'c", "t'/x", 1, "db'o", 0, null),
-            "/Database[@Name='db''o']/Table[@Name='t''/x' and @Schema='s''c']");
-        Check("unsupported object fails clearly", () => Throws<NotSupportedException>(() => ObjectExplorerPath.GetRelativeSteps(Item("INTERNAL_TABLE"))));
-        Check("missing parent fails clearly", () => Throws<InvalidOperationException>(() => ObjectExplorerPath.GetRelativeSteps(Item("INDEX"))));
+        Check("unsupported object fails clearly", () => Throws<NotSupportedException>(() => ObjectExplorerPath.GetTreeSteps(Item("INTERNAL_TABLE"))));
+        Check("missing parent fails clearly", () => Throws<InvalidOperationException>(() => ObjectExplorerPath.GetTreeSteps(Item("INDEX"))));
         Check("database quoting", () => Equal("[db]]; DROP DATABASE x;--]", SqlObjectName.Quote("db]; DROP DATABASE x;--")));
         Check("same endpoint with comma spaces", () => True(Same("HOST, 1178", "host,1178")));
         Check("different ports stay different", () => True(!Same("HOST,1178", "HOST,1433")));
-        Check("named instances stay different", () => True(!Same("HOST\\ONE", "HOST\\TWO")));
+        Check("named instances stay different", () => True(!Same(@"HOST\ONE", @"HOST\TWO")));
         Check("DNS names are not shortened", () => True(!Same("HOST.one.example", "HOST.two.example")));
         Check("different SQL logins stay different", () => True(!ObjectExplorerPath.SameConnection("HOST", "alice", false, "HOST", "bob", false)));
         Check("SQL and Windows auth stay different", () => True(!ObjectExplorerPath.SameConnection("HOST", "", true, "HOST", "", false)));
-
-        Check("navigate existing connection", () =>
-        {
-            var host = new FakeHost { Connected = true };
-            Navigate(host);
-            Equal(0, host.ConnectCalls);
-            Equal("Server[@Name='HOST']/Database[@Name='Sales']/Table[@Name='Orders' and @Schema='dbo']", host.Selected);
-            True(host.Expanded[0] == "Server[@Name='HOST']");
-        });
-        Check("connect once then navigate after delayed registration", () =>
-        {
-            var host = new FakeHost { RegistrationDelay = 3 };
-            Navigate(host);
-            Equal(1, host.ConnectCalls);
-            True(host.Selected != null);
-        });
-        Check("wait for lazy folders and target", () =>
-        {
-            var host = new FakeHost { Connected = true, LoadDelay = 2, SelectDelay = 3 };
-            Navigate(host);
-            True(host.Selected != null);
-            Equal(4, host.SelectCalls);
-        });
-        Check("connection failure propagates", () =>
-        {
-            var host = new FakeHost { FailConnect = true };
-            Throws<InvalidOperationException>(() => Navigate(host));
-            Equal(1, host.ConnectCalls);
-            Equal(null, host.Selected);
-        });
-        Check("cancellation before navigation does not connect", () =>
-        {
-            var host = new FakeHost();
-            var token = new CancellationToken(true);
-            Throws<OperationCanceledException>(() => ObjectExplorerNavigation.NavigateAsync(host,
-                ObjectExplorerPath.GetRelativeSteps(Item("USER_TABLE")), token).GetAwaiter().GetResult());
-            Equal(0, host.ConnectCalls);
-        });
-        Check("missing target can time out", () =>
-        {
-            var host = new FakeHost { Connected = true, SelectDelay = int.MaxValue };
-            using (var cancellation = new CancellationTokenSource())
-            {
-                int waits = 0;
-                Throws<OperationCanceledException>(() => ObjectExplorerNavigation.NavigateAsync(host,
-                    ObjectExplorerPath.GetRelativeSteps(Item("USER_TABLE")), cancellation.Token, token =>
-                    {
-                        if (++waits == 12) cancellation.Cancel();
-                        token.ThrowIfCancellationRequested();
-                        return Task.CompletedTask;
-                    }).GetAwaiter().GetResult());
-                Equal(null, host.Selected);
-            }
-        });
+        TreeTests();
+        HostTests();
         Console.WriteLine($"{passed} passed; {failed} failed.");
         return failed == 0 ? 0 : 1;
     }
 
-    private static void Navigate(FakeHost host) => ObjectExplorerNavigation.NavigateAsync(host,
-        ObjectExplorerPath.GetRelativeSteps(Item("USER_TABLE")), CancellationToken.None,
+    private static void Navigate(FakeHost host, ScriptObjectSelectionItem item = null) => ObjectExplorerNavigation.NavigateAsync(host,
+        item ?? Item("USER_TABLE"), CancellationToken.None,
         token => Task.CompletedTask).GetAwaiter().GetResult();
 
     private static bool Same(string requested, string actual) => ObjectExplorerPath.SameConnection(requested, "", true, actual, "", true);
     private static ScriptObjectSelectionItem Item(string type, string parentType = null, string name = "Orders") =>
         new ScriptObjectSelectionItem(type, "dbo", name, 1, "Sales", parentType == null ? 0 : 2,
             parentType == null ? null : "Orders", parentType, "Status");
-    private static void Path(string title, ScriptObjectSelectionItem item, string expected) => Check(title, () => Equal(expected, ObjectExplorerPath.GetRelativeSteps(item).Last()));
     private static void Name(string title, string input, string db, string schema, string name) => Check(title, () =>
     {
         var result = SqlObjectName.Parse(input);
@@ -176,38 +107,39 @@ internal static class Program
 
     private sealed class FakeHost : IObjectExplorerNavigationHost
     {
-        public bool Connected;
+        public bool Connected = true;
         public bool FailConnect;
         public int RegistrationDelay;
-        public int LoadDelay;
-        public int SelectDelay;
         public int ConnectCalls;
-        public int SelectCalls;
-        public string Selected;
-        public List<string> Expanded = new List<string>();
-        private readonly Dictionary<string, int> attempts = new Dictionary<string, int>();
+        public IObjectExplorerTreeNode Selected;
+        public FakeNode Root;
 
-        public string FindServerContext() => Connected && RegistrationDelay-- <= 0 ? "Server[@Name='HOST']" : null;
+        public IObjectExplorerTreeNode FindServer() => Connected && RegistrationDelay-- <= 0 ? Root : null;
         public void Connect()
         {
             ConnectCalls++;
             if (FailConnect) throw new InvalidOperationException("Connection failed.");
             Connected = true;
         }
-        public bool TryExpand(string urn)
+        public void Select(IObjectExplorerTreeNode node) => Selected = node;
+    }
+
+    private sealed class FakeNode : IObjectExplorerTreeNode
+    {
+        public string Name { get; set; }
+        public string InvariantName { get; set; }
+        public string UniqueName { get; set; }
+        public string UrnPath { get; set; }
+        public string NavigationContext { get; set; }
+        public bool IsFolder { get; set; }
+        public int Loads;
+        public Action OnLoad;
+        public List<IObjectExplorerTreeNode> Children = new List<IObjectExplorerTreeNode>();
+        public IList<IObjectExplorerTreeNode> LoadChildren()
         {
-            attempts.TryGetValue(urn, out int count);
-            attempts[urn] = count + 1;
-            if (count < LoadDelay) return false;
-            Expanded.Add(urn);
-            return true;
-        }
-        public bool TrySelect(string urn)
-        {
-            SelectCalls++;
-            if (SelectCalls <= SelectDelay) return false;
-            Selected = urn;
-            return true;
+            Loads++;
+            OnLoad?.Invoke();
+            return Children;
         }
     }
 }

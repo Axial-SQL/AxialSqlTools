@@ -25,7 +25,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-before.png?raw=true"/> -> <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-after.png?raw=true"/>
 
 - [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Validate and format your TSQL code with Microsoft TSQL parser, making it more readable and maintainable.
-  
+
 - [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access a saved collection of query templates for common tasks, reducing the time and effort required for routine work.
 
 - [**Export Grid to Google Sheets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Google-Sheets-Export): Quickly export results from the grid view directly into Google Sheets.
@@ -42,6 +42,8 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 
 - [**Open in Object Explorer**](docs/open-in-object-explorer.md): Select an object name or place the cursor inside it, then locate its branch in Object Explorer from the query editor's right-click menu or the Axial Tools menu. Reuses the scripting lookup and connects Object Explorer when needed.
   
+- **Sort Selected Text**: Sort comma-separated text. The result is horizontal by default. Hold Shift for a vertical list.
+
 - [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics.
 
 - [**Table Data Compare**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Table-Data-Compare): Compare tables across SQL Server connections, inspect row and column differences, and generate or apply selected synchronization actions.
@@ -51,6 +53,8 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Query History**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-History): A detailed log of executed queries, enabling auditing, tracking, and easy retrieval of past executions.
 
 - [**Sync to GitHub**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Sync-to-GitHub): Rudimentary, low effort, manually triggered source control.
+
+- [**Export Grid to Pivot Table**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Pivot-Grid): A basic Pitot Table functionality to alculate statistics, and explore totals in a separate SSMS tab using the free NReco.PivotData engine.
 
 - [**Copy Column Names from Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Column-Names-from-Grid): Quickly copy the column names from the results grid to the clipboard.
   

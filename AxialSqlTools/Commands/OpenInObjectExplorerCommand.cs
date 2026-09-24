@@ -92,7 +92,6 @@ namespace AxialSqlTools
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
                 var selected = SqlObjectResolver.SelectObject(matches, "open in Object Explorer");
                 if (selected == null) return;
-                var steps = ObjectExplorerPath.GetRelativeSteps(selected);
 
                 dte.ExecuteCommand("View.ObjectExplorer");
                 var explorer = ServiceCache.ServiceProvider.GetService(typeof(IObjectExplorerService)) as IObjectExplorerService;
@@ -105,7 +104,7 @@ namespace AxialSqlTools
                     try
                     {
                         var host = new SsmsObjectExplorerNavigationHost(explorer, explorerConnection, connection.FullConnectionString);
-                        await ObjectExplorerNavigation.NavigateAsync(host, steps, timeout.Token);
+                        await ObjectExplorerNavigation.NavigateAsync(host, selected, timeout.Token);
                         if (selected.TypeDesc == "DEFAULT_CONSTRAINT")
                             dte.StatusBar.Text = "Selected column " + selected.ColumnName + " owning default constraint " + selected.ObjectName + ".";
                     }

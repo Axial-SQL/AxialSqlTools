@@ -17,6 +17,7 @@
     /// </summary>
     public partial class DataImportWindowControl : UserControl
     {
+        private readonly ToolWindowThemeController themeController;
         private ScriptFactoryAccess.ConnectionInfo targetConnection;
         private string selectedExcelPath;
         private bool isImporting;
@@ -24,6 +25,7 @@
         public DataImportWindowControl()
         {
             InitializeComponent();
+            themeController = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
             UpdateStatus("Choose an Excel file to get started.");
         }
 

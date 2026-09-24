@@ -47,14 +47,6 @@
                   Background="{DynamicResource AxialThemeBackgroundBrush}"
                   Foreground="{DynamicResource AxialThemeForegroundBrush}"
                   BorderBrush="{DynamicResource AxialThemeBorderBrush}">
-            <TreeView.Resources>
-                <!-- Style for Grid-like Row -->
-                <Style TargetType="TreeViewItem">
-                    <Setter Property="Margin" Value="0"/>
-                    <Setter Property="Background" Value="{DynamicResource AxialThemeBackgroundBrush}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource AxialThemeForegroundBrush}"/>
-                </Style>
-            </TreeView.Resources>
         </TreeView>
     </Grid>
 </UserControl>

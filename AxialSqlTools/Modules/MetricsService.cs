@@ -84,20 +84,20 @@ namespace AxialSqlTools
 
         public DateTime PerfCounter_RefreshDateTime { get; set; }
         public long PerfCounter_BatchRequestsSec_Total { get; set; }
-        public long PerfCounter_BatchRequestsSec { get; set; }
+        public double PerfCounter_BatchRequestsSec { get; set; } = double.NaN;
         public long PerfCounter_SQLCompilationsSec_Total { get; set; }
-        public long PerfCounter_SQLCompilationsSec { get; set; }
+        public double PerfCounter_SQLCompilationsSec { get; set; } = double.NaN;
 
         public long PerfCounter_PageReadsSec_Total { get; set; }
-        public long PerfCounter_PageReadsSec { get; set; }
+        public double PerfCounter_PageReadsSec { get; set; } = double.NaN;
         public long PerfCounter_PageWritesSec_Total { get; set; }
-        public long PerfCounter_PageWritesSec { get; set; }
+        public double PerfCounter_PageWritesSec { get; set; } = double.NaN;
         public long PerfCounter_LogFlushesSec_Total { get; set; }
-        public long PerfCounter_LogFlushesSec { get; set; }
+        public double PerfCounter_LogFlushesSec { get; set; } = double.NaN;
         public long PerfCounter_TransactionsSec_Total { get; set; }
-        public long PerfCounter_TransactionsSec { get; set; }
+        public double PerfCounter_TransactionsSec { get; set; } = double.NaN;
         public long PerfCounter_LockWaitsSec_Total { get; set; }
-        public long PerfCounter_LockWaitsSec { get; set; }
+        public double PerfCounter_LockWaitsSec { get; set; } = double.NaN;
         public long PerfCounter_MemoryGrantsPending { get; set; }
 
         public long PerfCounter_PLE { get; set; }
@@ -219,8 +219,8 @@ namespace AxialSqlTools
                     }
 
                     string queryText_3 = @"
-                    SELECT
-                        AVG(SQLProcessUtilization)
+                    SELECT TOP (1)
+                        SQLProcessUtilization
                     FROM (
                         SELECT 
                             record.value('(./Record/@id)[1]', 'int') AS record_id,
@@ -235,7 +235,8 @@ namespace AxialSqlTools
                             WHERE ring_buffer_type = N'RING_BUFFER_SCHEDULER_MONITOR' 
                             AND record LIKE '%<SystemHealth>%'
                         ) AS x
-                    ) AS y;
+                    ) AS y
+                    ORDER BY timestamp DESC;
                     ";
 
                     using (SqlCommand command = new SqlCommand(queryText_3, connection))
@@ -362,66 +363,23 @@ namespace AxialSqlTools
                         }
                     }
 
-                    string queryText_5b = $@"                
-                    SELECT 
-                        [object_name], 
-                        [counter_name], 
-                        [cntr_value], 
-                        ([cntr_value] - @Prev_BatchRequestsSec) / (DATEDIFF(second, @LastRefresh, GETDATE())), 
-                        GETDATE()
+                    string queryText_5b = $@"
+                    SELECT [counter_name], [cntr_value], GETDATE()
                     FROM sys.dm_os_performance_counters
                     WHERE [object_name] = '{perfCounterObjectName}:SQL Statistics'
-                          AND [counter_name] = 'Batch Requests/sec'
-                          AND [instance_name] = ''
-                    UNION ALL
-
-                    SELECT 
-                        [object_name], 
-                        [counter_name], 
-                        [cntr_value], 
-                        ([cntr_value] - @Prev_SQLCompilationsSec) / (DATEDIFF(second, @LastRefresh, GETDATE())), 
-                        GETDATE()
-                    FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = '{perfCounterObjectName}:SQL Statistics'
-                          AND [counter_name] = 'SQL Compilations/sec'
-                          AND [instance_name] = ''
-
-                    ";
+                          AND [counter_name] IN ('Batch Requests/sec', 'SQL Compilations/sec')
+                          AND [instance_name] = ''";
 
                     using (SqlCommand command = new SqlCommand(queryText_5b, connection))
+                    using (SqlDataReader reader = await command.ExecuteReaderAsync())
                     {
-                        command.Parameters.AddWithValue("@LastRefresh", prev_metrics.PerfCounter_RefreshDateTime);
-                        command.Parameters.AddWithValue("@Prev_BatchRequestsSec", prev_metrics.PerfCounter_BatchRequestsSec_Total);
-                        command.Parameters.AddWithValue("@Prev_SQLCompilationsSec", prev_metrics.PerfCounter_SQLCompilationsSec_Total);
-
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        while (await reader.ReadAsync())
                         {
-                            if (reader.HasRows)
-                            {
-                                while (await reader.ReadAsync())
-                                {
-
-                                    string CounterGroup = reader.GetString(0).Trim();
-                                    string CounterName = reader.GetString(1).Trim();
-                                    long CounterValueTotal = reader.GetInt64(2);
-                                    long CounterValue = reader.GetInt64(3);
-
-                                    metrics.PerfCounter_RefreshDateTime = reader.GetDateTime(4);
-                       
-                                    if (CounterGroup.EndsWith("SQL Statistics"))
-                                        if (CounterName == "Batch Requests/sec")
-                                        {
-                                            metrics.PerfCounter_BatchRequestsSec_Total = CounterValueTotal;
-                                            metrics.PerfCounter_BatchRequestsSec = CounterValue;
-                                        }
-                                        else if (CounterName == "SQL Compilations/sec")
-                                        {
-                                            metrics.PerfCounter_SQLCompilationsSec_Total = CounterValueTotal;
-                                            metrics.PerfCounter_SQLCompilationsSec = CounterValue;
-                                        }
-
-                                }
-                            }
+                            string name = reader.GetString(0).Trim();
+                            long total = reader.GetInt64(1);
+                            metrics.PerfCounter_RefreshDateTime = reader.GetDateTime(2);
+                            if (name == "Batch Requests/sec") metrics.PerfCounter_BatchRequestsSec_Total = total;
+                            else if (name == "SQL Compilations/sec") metrics.PerfCounter_SQLCompilationsSec_Total = total;
                         }
                     }
 
@@ -439,8 +397,9 @@ namespace AxialSqlTools
                     UNION ALL
                     SELECT [counter_name], [cntr_value]
                     FROM sys.dm_os_performance_counters
-                    WHERE [object_name] = '{perfCounterObjectName}:General Statistics'
-                          AND [counter_name] = 'Transactions'
+                    WHERE [object_name] = '{perfCounterObjectName}:Databases'
+                          AND [counter_name] = 'Transactions/sec'
+                          AND [instance_name] = '_Total'
                     UNION ALL
                     SELECT [counter_name], [cntr_value]
                     FROM sys.dm_os_performance_counters
@@ -476,7 +435,6 @@ namespace AxialSqlTools
                                         case "Log Flushes/sec":
                                             metrics.PerfCounter_LogFlushesSec_Total = counterValue;
                                             break;
-                                        case "Transactions":
                                         case "Transactions/sec":
                                             metrics.PerfCounter_TransactionsSec_Total = counterValue;
                                             break;
@@ -493,16 +451,16 @@ namespace AxialSqlTools
                     }
 
                     double elapsedSeconds = (metrics.PerfCounter_RefreshDateTime - prev_metrics.PerfCounter_RefreshDateTime).TotalSeconds;
-                    if (elapsedSeconds <= 0)
-                    {
-                        elapsedSeconds = 1;
-                    }
-
-                    metrics.PerfCounter_PageReadsSec = (long)((metrics.PerfCounter_PageReadsSec_Total - prev_metrics.PerfCounter_PageReadsSec_Total) / elapsedSeconds);
-                    metrics.PerfCounter_PageWritesSec = (long)((metrics.PerfCounter_PageWritesSec_Total - prev_metrics.PerfCounter_PageWritesSec_Total) / elapsedSeconds);
-                    metrics.PerfCounter_LogFlushesSec = (long)((metrics.PerfCounter_LogFlushesSec_Total - prev_metrics.PerfCounter_LogFlushesSec_Total) / elapsedSeconds);
-                    metrics.PerfCounter_TransactionsSec = (long)((metrics.PerfCounter_TransactionsSec_Total - prev_metrics.PerfCounter_TransactionsSec_Total) / elapsedSeconds);
-                    metrics.PerfCounter_LockWaitsSec = (long)((metrics.PerfCounter_LockWaitsSec_Total - prev_metrics.PerfCounter_LockWaitsSec_Total) / elapsedSeconds);
+                    bool validBaseline = prev_metrics.Completed && !prev_metrics.HasException
+                        && prev_metrics.UtcStartTime == metrics.UtcStartTime && elapsedSeconds <= 60;
+                    // Preserve fractional rates. First/reset samples are gaps, not false zeros or lifetime spikes.
+                    metrics.PerfCounter_BatchRequestsSec = ServerHealthCounterMath.Rate(metrics.PerfCounter_BatchRequestsSec_Total, prev_metrics.PerfCounter_BatchRequestsSec_Total, elapsedSeconds, validBaseline);
+                    metrics.PerfCounter_SQLCompilationsSec = ServerHealthCounterMath.Rate(metrics.PerfCounter_SQLCompilationsSec_Total, prev_metrics.PerfCounter_SQLCompilationsSec_Total, elapsedSeconds, validBaseline);
+                    metrics.PerfCounter_PageReadsSec = ServerHealthCounterMath.Rate(metrics.PerfCounter_PageReadsSec_Total, prev_metrics.PerfCounter_PageReadsSec_Total, elapsedSeconds, validBaseline);
+                    metrics.PerfCounter_PageWritesSec = ServerHealthCounterMath.Rate(metrics.PerfCounter_PageWritesSec_Total, prev_metrics.PerfCounter_PageWritesSec_Total, elapsedSeconds, validBaseline);
+                    metrics.PerfCounter_LogFlushesSec = ServerHealthCounterMath.Rate(metrics.PerfCounter_LogFlushesSec_Total, prev_metrics.PerfCounter_LogFlushesSec_Total, elapsedSeconds, validBaseline);
+                    metrics.PerfCounter_TransactionsSec = ServerHealthCounterMath.Rate(metrics.PerfCounter_TransactionsSec_Total, prev_metrics.PerfCounter_TransactionsSec_Total, elapsedSeconds, validBaseline);
+                    metrics.PerfCounter_LockWaitsSec = ServerHealthCounterMath.Rate(metrics.PerfCounter_LockWaitsSec_Total, prev_metrics.PerfCounter_LockWaitsSec_Total, elapsedSeconds, validBaseline);
 
                     string queryText_6 = @"                
                     SELECT CAST(ISNULL(MIN(synchronization_health), 0) AS INT),
@@ -554,10 +512,9 @@ namespace AxialSqlTools
 
 
                     string queryText_71 = @"
-                    SELECT TOP 20 
+                    SELECT 
 	                    wait_type,
 	                    wait_time_ms / 1000.0 AS [WaitS]
-	                    --ROW_NUMBER() OVER (ORDER BY wait_time_ms DESC) AS [RowNum]
                     FROM sys.dm_os_wait_stats WITH (NOLOCK)
                     WHERE [wait_type] NOT IN (N'BROKER_EVENTHANDLER', N'BROKER_RECEIVE_WAITFOR', N'BROKER_TASK_STOP', N'BROKER_TO_FLUSH', N'BROKER_TRANSMITTER',
                                             N'CHECKPOINT_QUEUE', N'CHKPT', N'CLR_AUTO_EVENT', N'CLR_MANUAL_EVENT', N'CLR_SEMAPHORE', N'CXCONSUMER', N'DBMIRROR_DBM_EVENT', 
