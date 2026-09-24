@@ -87,7 +87,11 @@
                 if (disposing)
                 {
                     _themeController.Dispose();
-                    foreach (var chart in ChartViews) chart.Plot.Dispose();
+                    foreach (var chart in ChartViews)
+                    {
+                        ((ToolTip)chart.ToolTip).IsOpen = false;
+                        chart.Plot.Dispose();
+                    }
                 }
 
                 // TODO: Free unmanaged resources (unmanaged objects) and override finalizer
@@ -121,11 +125,20 @@
                 chart.Menu = null;
                 chart.MouseMove += Chart_MouseMove;
                 chart.MouseLeave += Chart_MouseLeave;
-                var tooltip = new ToolTip();
+                chart.PreviewMouseLeftButtonDown += Chart_MouseLeftButtonDown;
+                chart.Unloaded += Chart_Unloaded;
+                var tooltip = new ToolTip
+                {
+                    PlacementTarget = chart,
+                    Placement = System.Windows.Controls.Primitives.PlacementMode.Relative,
+                    IsHitTestVisible = false
+                };
                 tooltip.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "AxialThemeBackgroundBrush");
                 tooltip.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "AxialThemeForegroundBrush");
                 tooltip.SetResourceReference(System.Windows.Controls.Control.BorderBrushProperty, "AxialThemeBorderBrush");
                 chart.ToolTip = tooltip;
+                // Hover is controlled below so values open immediately and keep updating.
+                ToolTipService.SetIsEnabled(chart, false);
             }
             _themeController = new ToolWindowThemeController(this, ApplyThemeBrushResources);
             UpdatePerformanceCharts();
@@ -168,7 +181,13 @@
 
         private void ShowPlot(WpfPlot view, Plot plot)
         {
+            ((ToolTip)view.ToolTip).IsOpen = false;
+            ServerHealthCharts.CopyVisibility(view.Plot, plot);
             ServerHealthCharts.ApplyTheme(plot, _chartTheme);
+            plot.RenderManager.RenderFinished += (sender, args) =>
+            {
+                if (view.IsMouseOver) UpdateChartHover(view, view.GetCurrentPlotPixelPosition(), Mouse.GetPosition(view));
+            };
             view.Reset(plot); // Reset also disposes the previous plot.
             view.Refresh();
         }
@@ -176,16 +195,42 @@
         private void Chart_MouseMove(object sender, MouseEventArgs e)
         {
             var view = (WpfPlot)sender;
+            UpdateChartHover(view, view.GetPlotPixelPosition(e), e.GetPosition(view));
+        }
+
+        private static void UpdateChartHover(WpfPlot view, ScottPlot.Pixel pixel, Point position)
+        {
             var tooltip = (ToolTip)view.ToolTip;
-            var point = view.Plot.GetCoordinates(view.GetPlotPixelPosition(e));
-            string text = ServerHealthCharts.HoverText(view.Plot, point);
+            var item = ServerHealthCharts.LegendItemAt(view.Plot, pixel);
+            view.Cursor = item == null ? Cursors.Arrow : Cursors.Hand;
+            string text = item != null ? "Click to " + (item.Plottable.IsVisible ? "hide " : "show ") + item.LabelText
+                : ServerHealthCharts.IsOverData(view.Plot, pixel)
+                    ? ServerHealthCharts.HoverText(view.Plot, view.Plot.GetCoordinates(pixel)) : null;
             tooltip.Content = text;
-            if (string.IsNullOrEmpty(text)) tooltip.IsOpen = false;
+            tooltip.HorizontalOffset = position.X + 12;
+            tooltip.VerticalOffset = position.Y + 16;
+            tooltip.IsOpen = !string.IsNullOrEmpty(text);
+        }
+
+        private void Chart_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var view = (WpfPlot)sender;
+            if (!ServerHealthCharts.ToggleLegendAt(view.Plot, view.GetPlotPixelPosition(e))) return;
+            e.Handled = true;
+            view.Refresh();
         }
 
         private void Chart_MouseLeave(object sender, MouseEventArgs e)
         {
-            ((ToolTip)((WpfPlot)sender).ToolTip).IsOpen = false;
+            CloseChartHover((WpfPlot)sender);
+        }
+
+        private void Chart_Unloaded(object sender, RoutedEventArgs e) => CloseChartHover((WpfPlot)sender);
+
+        private static void CloseChartHover(WpfPlot view)
+        {
+            ((ToolTip)view.ToolTip).IsOpen = false;
+            view.Cursor = Cursors.Arrow;
         }
 
         public void StartMonitoring()
@@ -527,11 +572,14 @@
             plot.Axes.Left.SetTicks(Enumerable.Range(0, disks.Count).Select(x => (double)x).ToArray(), disks.Select(x => x.VolumeDescription).ToArray());
             plot.Axes.SetLimitsX(0, Math.Max(1, disks.Select(x => (double)x.TotalCapacityGb).DefaultIfEmpty(0).Max() * 1.05));
             plot.Axes.SetLimitsY(-0.5, Math.Max(0.5, disks.Count - 0.5));
+            ServerHealthCharts.EnableStackToggling(plot, horizontal: true, headroom: 1.05);
             ServerHealthCharts.SetHover(plot, point =>
             {
                 int index = (int)Math.Round(point.Y);
-                return index >= 0 && index < disks.Count ? disks[index].VolumeDescription
-                    + $"\nUsed: {disks[index].UsedSpaceGb:N0} GB\nFree: {disks[index].FreeSpaceGb:N0} GB" : null;
+                if (index < 0 || index >= disks.Count) return null;
+                string usedText = ServerHealthCharts.IsSeriesVisible(plot, "Used") ? $"\nUsed: {disks[index].UsedSpaceGb:N0} GB" : "";
+                string freeText = ServerHealthCharts.IsSeriesVisible(plot, "Free") ? $"\nFree: {disks[index].FreeSpaceGb:N0} GB" : "";
+                return usedText.Length + freeText.Length == 0 ? null : disks[index].VolumeDescription + usedText + freeText;
             });
             ShowPlot(DiskInfoModel, plot);
         }

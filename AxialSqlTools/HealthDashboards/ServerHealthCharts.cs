@@ -22,9 +22,36 @@ namespace AxialSqlTools
         {
             internal readonly List<Action<ServerHealthChartTheme>> ApplyColors = new List<Action<ServerHealthChartTheme>>();
             internal Func<Coordinates, string> Hover;
+            internal readonly HashSet<string> HiddenSeries = new HashSet<string>(StringComparer.Ordinal);
+            internal Action VisibilityChanged;
+            internal ScottPlot.Panels.LegendPanel LegendPanel;
+            internal int LegendRender = -1;
+            internal readonly List<Tuple<PixelRect, LegendItem>> LegendHits = new List<Tuple<PixelRect, LegendItem>>();
         }
 
         private static readonly ConditionalWeakTable<Plot, ChartState> States = new ConditionalWeakTable<Plot, ChartState>();
+
+        private sealed class LegendAwareLayout : ILayoutEngine
+        {
+            private readonly ScottPlot.Panels.LegendPanel _panel;
+            private readonly ScottPlot.LayoutEngines.Automatic _automatic = new ScottPlot.LayoutEngines.Automatic();
+
+            internal LegendAwareLayout(ScottPlot.Panels.LegendPanel panel) => _panel = panel;
+
+            public Layout GetLayout(PixelRect figureRect, Plot plot, Paint paint)
+            {
+                // The default panel measures the previous legend height. Measure all wrapped
+                // rows at this render's available width so entries cannot be clipped on resize.
+                _panel.MinimumSize = _panel.MaximumSize = 0;
+                var initial = _automatic.GetLayout(figureRect, plot, paint);
+                if (plot.Legend.GetItems().Length > 0)
+                {
+                    var legend = plot.Legend.GetLayout(new PixelSize(Math.Max(1, initial.DataRect.Width), float.PositiveInfinity), paint);
+                    _panel.MinimumSize = _panel.MaximumSize = legend.LegendRect.Height + _panel.Padding.Vertical;
+                }
+                return _automatic.GetLayout(figureRect, plot, paint);
+            }
+        }
 
         internal static Plot Create(string title, string units = null)
         {
@@ -44,6 +71,8 @@ namespace AxialSqlTools
             plot.Legend.InterItemPadding = new PixelPadding(4, 2);
             plot.Legend.ShadowColor = Colors.Transparent;
             plot.Legend.TightHorizontalWrapping = true;
+            plot.Legend.ShowItemsFromHiddenPlottables = true;
+            plot.Legend.HiddenItemOpacity = 0.45;
             return plot;
         }
 
@@ -64,9 +93,93 @@ namespace AxialSqlTools
         internal static void SetHover(Plot plot, Func<Coordinates, string> hover) => States.GetOrCreateValue(plot).Hover = hover;
         internal static string HoverText(Plot plot, Coordinates point) => States.GetOrCreateValue(plot).Hover?.Invoke(point);
 
+        internal static bool IsSeriesVisible(Plot plot, string label) => !States.GetOrCreateValue(plot).HiddenSeries.Contains(label);
+
+        internal static void CopyVisibility(Plot previous, Plot replacement)
+        {
+            var state = States.GetOrCreateValue(replacement);
+            state.HiddenSeries.UnionWith(States.GetOrCreateValue(previous).HiddenSeries);
+            foreach (var item in replacement.Legend.GetItems())
+                if (item.Plottable != null) item.Plottable.IsVisible = !state.HiddenSeries.Contains(item.LabelText);
+            state.VisibilityChanged?.Invoke();
+        }
+
+        internal static bool IsOverData(Plot plot, Pixel pixel) => plot.RenderManager.LastRender.Count > 0
+            && plot.RenderManager.LastRender.DataRect.Contains(pixel.Divide((float)plot.ScaleFactor));
+
+        internal static LegendItem LegendItemAt(Plot plot, Pixel pixel)
+        {
+            var state = States.GetOrCreateValue(plot);
+            var render = plot.RenderManager.LastRender;
+            var panel = state.LegendPanel;
+            if (panel == null || !panel.IsVisible || render.Count == 0) return null;
+            // Use the rendered panel's size and alignment, including wrapped labels and DPI scaling.
+            if (state.LegendRender != render.Count)
+            {
+                state.LegendHits.Clear();
+                state.LegendRender = render.Count;
+                if (!render.Layout.PanelSizes.TryGetValue(panel, out float size)
+                    || !render.Layout.PanelOffsets.TryGetValue(panel, out float offset)) return null;
+                using (var paint = Paint.NewDisposablePaint())
+                {
+                    var rect = panel.GetPanelRect(render.DataRect, size, offset, paint);
+                    var layout = plot.Legend.GetLayout(rect.Size, paint);
+                    var aligned = layout.LegendRect.AlignedInside(rect, panel.Alignment);
+                    var shift = new PixelOffset(aligned.Left, aligned.Top);
+                    for (int i = 0; i < layout.LegendItems.Length; i++)
+                    {
+                        var item = layout.LegendItems[i];
+                        if (item.Plottable == null) continue;
+                        var hit = new PixelRect(layout.SymbolRects[i].TopLeft, layout.LabelRects[i].BottomRight).WithOffset(shift);
+                        state.LegendHits.Add(Tuple.Create(hit, item));
+                    }
+                }
+            }
+            var point = pixel.Divide((float)plot.ScaleFactor);
+            return state.LegendHits.FirstOrDefault(x => x.Item1.Contains(point))?.Item2;
+        }
+
+        internal static bool ToggleLegendAt(Plot plot, Pixel pixel)
+        {
+            var item = LegendItemAt(plot, pixel);
+            if (item == null) return false;
+            var state = States.GetOrCreateValue(plot);
+            item.Plottable.IsVisible = !item.Plottable.IsVisible;
+            if (item.Plottable.IsVisible) state.HiddenSeries.Remove(item.LabelText);
+            else state.HiddenSeries.Add(item.LabelText);
+            state.VisibilityChanged?.Invoke();
+            return true;
+        }
+
+        internal static void EnableStackToggling(Plot plot, bool horizontal = false, double headroom = 1.1)
+        {
+            var series = plot.GetPlottables<BarPlot>().ToArray();
+            var bars = series.Select(x => x.Bars.ToArray()).ToArray();
+            var values = bars.Select(group => group.Select(bar => bar.Value - bar.ValueBase).ToArray()).ToArray();
+            States.GetOrCreateValue(plot).VisibilityChanged = () =>
+            {
+                var totals = new Dictionary<double, double>();
+                for (int s = 0; s < series.Length; s++)
+                    for (int b = 0; b < bars[s].Length; b++)
+                    {
+                        var bar = bars[s][b];
+                        totals.TryGetValue(bar.Position, out double baseline);
+                        bar.ValueBase = baseline;
+                        bar.Value = baseline + values[s][b];
+                        if (series[s].IsVisible) totals[bar.Position] = bar.Value;
+                    }
+                double maximum = Math.Max(1, totals.Values.DefaultIfEmpty(0).Max() * headroom);
+                if (horizontal) plot.Axes.SetLimitsX(0, maximum);
+                else plot.Axes.SetLimitsY(0, maximum);
+            };
+        }
+
         internal static void LegendBelow(Plot plot)
         {
-            plot.ShowLegend(Edge.Bottom).Padding = new PixelPadding(0, 2);
+            var panel = plot.ShowLegend(Edge.Bottom);
+            panel.Padding = new PixelPadding(0, 2);
+            States.GetOrCreateValue(plot).LegendPanel = panel;
+            plot.Layout.LayoutEngine = new LegendAwareLayout(panel);
         }
 
         internal static void TimeAxis(Plot plot, string format = "HH:mm")
@@ -95,7 +208,7 @@ namespace AxialSqlTools
             var series = plot.Add.Bars(bars);
             // Manual legend uses the same fill style so high-contrast hatching remains identifiable.
             if (!string.IsNullOrEmpty(label) && bars.Count > 0)
-                plot.Legend.ManualItems.Add(new LegendItem { LabelText = label, FillStyle = bars[0].FillStyle });
+                plot.Legend.ManualItems.Add(new LegendItem { LabelText = label, FillStyle = bars[0].FillStyle, Plottable = series });
             States.GetOrCreateValue(plot).ApplyColors.Add(theme =>
             {
                 series.ValueLabelStyle.ForeColor = theme.HighContrast ? theme.Foreground : theme.Background;
@@ -160,12 +273,16 @@ namespace AxialSqlTools
             DateTime currentMinute = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
             plot.Axes.SetLimitsX(currentMinute.AddMinutes(-14).ToOADate(), currentMinute.AddMinutes(1).ToOADate());
             plot.Axes.SetLimitsY(0, Math.Max(1, bases.DefaultIfEmpty(0).Max() * 1.1));
+            EnableStackToggling(plot);
             SetHover(plot, point =>
             {
                 var bucket = minutes.FirstOrDefault(x => point.X >= x.Key.ToOADate() && point.X < x.Key.AddMinutes(1).ToOADate());
                 if (bucket.Value == null) return "Collecting wait samples...";
-                return bucket.Key.ToString("HH:mm") + " · wait seconds\n" + string.Join("\n", groups.Select((group, index) =>
-                    (index < top.Length ? group[0] : "Other waits") + ": " + group.Sum(name => bucket.Value.TryGetValue(name, out decimal value) ? value : 0).ToString("N2")));
+                var visible = groups.Select((group, index) => new { Group = group, Label = index < top.Length ? group[0] : "Other waits" })
+                    .Where(x => IsSeriesVisible(plot, x.Label)).ToArray();
+                if (visible.Length == 0) return null;
+                return bucket.Key.ToString("HH:mm") + " · wait seconds\n" + string.Join("\n", visible.Select(x =>
+                    x.Label + ": " + x.Group.Sum(name => bucket.Value.TryGetValue(name, out decimal value) ? value : 0).ToString("N2")));
             });
             return plot;
         }
@@ -178,19 +295,27 @@ namespace AxialSqlTools
             for (int i = 0; i < values.Length; i++)
                 if (xs.Length > 0) Line(plot, xs, values[i], labels[i], i);
             if (values.Length > 1 && xs.Length > 0) LegendBelow(plot);
-            double maximum = values.SelectMany(x => x).Where(x => !double.IsNaN(x)).DefaultIfEmpty(0).Max();
             plot.Axes.SetLimitsX(now.AddMinutes(-15).ToOADate(), now.ToOADate());
-            plot.Axes.SetLimitsY(0, percent ? 100 : Math.Max(1, maximum * 1.1));
+            Action scaleVisible = () =>
+            {
+                double maximum = values.Where((ys, i) => IsSeriesVisible(plot, labels[i])).SelectMany(x => x)
+                    .Where(x => !double.IsNaN(x) && !double.IsInfinity(x)).DefaultIfEmpty(0).Max();
+                plot.Axes.SetLimitsY(0, percent ? 100 : Math.Max(1, maximum * 1.1));
+            };
+            States.GetOrCreateValue(plot).VisibilityChanged = scaleVisible;
+            scaleVisible();
             if (xs.Length == 0) EmptyMessage(plot, "Collecting samples...");
             SetHover(plot, point =>
             {
                 if (xs.Length == 0) return "Collecting samples...";
-                if (point.X < xs[0] || point.X > xs[xs.Length - 1]) return null;
+                // Clamp to the nearest recorded sample, including a chart's first single sample.
                 int index = Array.BinarySearch(xs, point.X);
                 if (index < 0) index = Math.Min(~index, xs.Length - 1);
                 if (index > 0 && Math.Abs(xs[index - 1] - point.X) < Math.Abs(xs[index] - point.X)) index--;
-                return DateTime.FromOADate(xs[index]).ToString("HH:mm:ss") + "\n" + string.Join("\n", values.Select((ys, i) =>
-                    labels[i] + ": " + (double.IsNaN(ys[index]) ? "Collecting..." : ys[index].ToString("N1") + " " + units)));
+                var visible = Enumerable.Range(0, values.Length).Where(i => IsSeriesVisible(plot, labels[i])).ToArray();
+                if (visible.Length == 0) return null;
+                return DateTime.FromOADate(xs[index]).ToString("HH:mm:ss") + "\n" + string.Join("\n", visible.Select(i =>
+                    labels[i] + ": " + (double.IsNaN(values[i][index]) ? "Collecting..." : values[i][index].ToString("N1") + " " + units)));
             });
             return plot;
         }
