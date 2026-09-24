@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
@@ -85,6 +85,14 @@
     </Compile>
     <Compile Include="Modules\ExcelImport.cs" />
     <Compile Include="Modules\ScriptObjectDefinition.cs" />
+    <Compile Include="Commands\OpenInObjectExplorerCommand.cs" />
+    <Compile Include="Modules\SqlObjectName.cs" />
+    <Compile Include="Modules\ScriptObjectSelectionItem.cs" />
+    <Compile Include="Modules\SqlObjectResolver.cs" />
+    <Compile Include="Modules\ObjectExplorerPath.cs" />
+    <Compile Include="Modules\ObjectExplorerReflection.cs" />
+    <Compile Include="Modules\ObjectExplorerNavigation.cs" />
+    <Compile Include="Modules\SsmsObjectExplorerNavigationHost.cs" />
     <Compile Include="Modules\SelectedTextSorter.cs" />
     <Compile Include="Commands\SortSelectedTextCommand.cs" />
     <Compile Include="Modules\TsqlFormatterCommentInterleaver.cs" />

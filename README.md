@@ -39,6 +39,8 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 - [**Quick Search**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Quick-Search): Quick Search helps you find SQL text quickly across one database or across all accessible databases on a server.
  
 - [**Script Object Definition**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Script-Object-Definition): Quickly generate scripts for the definition of selected objects directly from the selected query text.
+
+- [**Open in Object Explorer**](docs/open-in-object-explorer.md): Select an object name or place the cursor inside it, then locate its branch in the Object Explorer.
   
 - **Sort Selected Text**: Sort comma-separated text. The result is horizontal by default. Hold Shift for a vertical list.
 

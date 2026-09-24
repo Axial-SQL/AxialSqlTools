@@ -120,6 +120,8 @@ namespace AxialSqlTools
                     }
 
                     string fullScriptResult = ScriptObjectDefinition.GetText(package, selectedObjectName);
+                    if (string.IsNullOrEmpty(fullScriptResult))
+                        return;
 
                     var connectionInfo = ScriptFactoryAccess.GetCurrentConnectionInfo();
 
