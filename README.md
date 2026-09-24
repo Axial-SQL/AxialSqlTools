@@ -40,7 +40,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
  
 - [**Script Object Definition**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Script-Object-Definition): Quickly generate scripts for the definition of selected objects directly from the selected query text.
 
-- [**Open in Object Explorer**](docs/open-in-object-explorer.md): Select an object name or place the cursor inside it, then locate its branch in Object Explorer from the query editor's right-click menu or the Axial Tools menu. Reuses the scripting lookup and connects Object Explorer when needed.
+- [**Open in Object Explorer**](docs/open-in-object-explorer.md): Select an object name or place the cursor inside it, then locate its branch in the Object Explorer.
   
 - **Sort Selected Text**: Sort comma-separated text. The result is horizontal by default. Hold Shift for a vertical list.
 
