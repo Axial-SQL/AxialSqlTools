@@ -1,333 +1,132 @@
 ﻿<?xml version="1.0"?>
-<!-- Shades of Red-Brown: #a31515, #cf4315, #ffb96e, #ffdc95 -->
-<!-- Shades of Bright-Blue: #0077dc #008fe4 #8dbbdc #8de8ff -->
 <SyntaxDefinition name="SQL" extensions=".sql"
                   xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- Light-theme SSMS defaults. SqlEditorSupport adapts these for dark/high contrast themes.
+       https://learn.microsoft.com/en-us/ssms/scripting/color-coding-in-query-editors -->
+  <Color name="Keyword" foreground="#0000FF" fontWeight="normal" />
+  <Color name="Comment" foreground="#008000" fontWeight="normal" />
+  <Color name="String" foreground="#FF0000" fontWeight="normal" />
+  <Color name="SystemFunction" foreground="#FF00FF" fontWeight="normal" />
+  <Color name="SystemObject" foreground="#008000" fontWeight="normal" />
+  <Color name="SystemProcedure" foreground="#800000" fontWeight="normal" />
+  <Color name="Operator" foreground="#808080" fontWeight="normal" />
+  <!-- Identifiers, local variables and numbers inherit the editor's plain text color. -->
+  <Color name="Identifier" fontWeight="normal" />
 
-  <!-- T-SQL Reference: http://msdn.microsoft.com/de-de/library/ms189826%28v=sql.90%29.aspx -->
-  <Color name="Digits"     foreground="DarkBlue" exampleText="3.1415f"/>
-  <Color name="Comment" foreground="Green" exampleText="string text = &quot;Hello, World!&quot;"/>
-  <Color name="Punctuation" foreground="Red" exampleText="string text = &quot;Hello, World!&quot;"/>
-
-  <Color name="String" foreground="Olive" exampleText="string text = &quot;Hello, World!&quot;"/>
-  <Color name="String2" foreground="#993" exampleText="string text = &quot;Hello, World!&quot;"/>
-
-  <Color name="Keyword" fontWeight="bold" foreground="Blue" exampleText="SELECT"/>
-  <Color name="Keyword1" fontWeight="normal" foreground="Blue" exampleText="NOCOUNT"/>
-  <Color name="GoKeyword" fontWeight="bold" foreground="Red" exampleText="GO"/>
-  
-  <Color name="MethodCall" foreground="MidnightBlue" fontWeight="bold" />
-
-  <Color name="Variable" foreground="Red"  exampleText="@Variable" />
-  <Color name="Variable1" foreground="Red" exampleText="@@Variable" />
-
-  <Color name="ObjectReference" foreground="Teal" exampleText="Customer.Name" />
-  <Color name="ObjectReference1" foreground="Teal" exampleText="dbo.Customer.Name" />
-
-  <Color name="ObjectReferenceInBrackets" foreground="Teal" exampleText="[Customer].[Name]" />
-  <Color name="ObjectReferenceInBrackets1" foreground="Teal" exampleText="[dbo].[Customer].[Name]" />
-
-  <Color name="CommentMarkerSetTodo"       foreground="Red"     fontWeight="bold" />
-  <Color name="CommentMarkerSetHackUndone" foreground="#E0E000" fontWeight="bold" />
-
-  <RuleSet name="CommentMarkerSet">
-    <Keywords color="CommentMarkerSetTodo">
-      <Word>TODO</Word>
-      <Word>FIXME</Word>
-    </Keywords>
-    <Keywords color="CommentMarkerSetHackUndone">
-      <Word>HACK</Word>
-      <Word>UNDONE</Word>
-    </Keywords>
+  <RuleSet name="BlockComment">
+    <Span color="Comment" begin="/\*" end="\*/" multiline="true" ruleSet="BlockComment" />
   </RuleSet>
 
-  <RuleSet  ignoreCase="true">
-    <Span color="String" multiline="true" >
-      <Begin>'</Begin>
-      <End>'</End>
+  <RuleSet ignoreCase="true">
+    <Span color="Comment" begin="--" />
+    <Span color="Comment" begin="/\*" end="\*/" multiline="true" ruleSet="BlockComment" />
+    <Span color="String" begin="(?&lt;![\w@#$])N?'" end="'" multiline="true">
+      <RuleSet><Span begin="''" end="" /></RuleSet>
+    </Span>
+    <!-- Delimited identifiers may contain keywords, quotes, dots or comment markers. -->
+    <Span color="Identifier" begin="\[" end="\]" multiline="true">
+      <RuleSet><Span begin="\]\]" end="" /></RuleSet>
+    </Span>
+    <Span color="Identifier" begin="&quot;" end="&quot;" multiline="true">
+      <RuleSet><Span begin="&quot;&quot;" end="" /></RuleSet>
     </Span>
 
-    <Span color="String2" multiline="true"  >
-      <Begin>"</Begin>
-      <End>"</End>
-    </Span>
+    <Rule color="SystemFunction">@@[\w$#]+</Rule>
+    <Rule color="Identifier">@[\w$#]+</Rule>
+    <!-- A qualified name is a user identifier even when its last part is a built-in name. -->
+    <Rule color="Identifier">(?&lt;=\.)\s*[\p{L}_#][\w$#@]*</Rule>
+    <Rule color="SystemObject">\b(?:sys|INFORMATION_SCHEMA)\s*\.\s*[\p{L}_][\w$#@]*</Rule>
+    <!-- Only known built-ins followed by '(' are functions; dbo.func(...) stays plain. -->
+    <Rule color="SystemFunction">
+      \b(?:
+        ABS|ACOS|APPLOCK_MODE|APPLOCK_TEST|APP_NAME|ASCII|ASIN|ATAN|ATN2|AVG
+        |BINARY_CHECKSUM|CAST|CEILING|CHARINDEX|CHECKSUM|CHECKSUM_AGG|CHOOSE|COALESCE|COLUMNPROPERTY
+        |COL_LENGTH|COL_NAME|CONCAT|CONCAT_WS|CONNECTIONPROPERTY|CONTEXT_INFO|CONVERT|COS|COT|COUNT
+        |COUNT_BIG|CUME_DIST|CURRENT_REQUEST_ID|CURRENT_TRANSACTION_ID|DATABASEPROPERTYEX|DATABASE_PRINCIPAL_ID|DATALENGTH|DATEADD|DATEDIFF|DATEDIFF_BIG
+        |DATEFROMPARTS|DATENAME|DATEPART|DATETIME2FROMPARTS|DATETIMEFROMPARTS|DATETIMEOFFSETFROMPARTS|DATETRUNC|DAY|DB_ID|DB_NAME
+        |DEGREES|DENSE_RANK|DIFFERENCE|EOMONTH|ERROR_LINE|ERROR_MESSAGE|ERROR_NUMBER|ERROR_PROCEDURE|ERROR_SEVERITY|ERROR_STATE
+        |EXP|FILEGROUPPROPERTY|FILEGROUP_ID|FILEGROUP_NAME|FILEPROPERTY|FILE_ID|FILE_IDEX|FILE_NAME|FIRST_VALUE|FLOOR
+        |FORMAT|FORMATMESSAGE|GETANSINULL|GETDATE|GETUTCDATE|GROUPING|GROUPING_ID|HASHBYTES|HOST_ID|HOST_NAME
+        |IIF|IDENT_CURRENT|IDENT_INCR|IDENT_SEED|INDEXKEY_PROPERTY|INDEXPROPERTY|INDEX_COL|ISDATE|ISJSON|ISNULL|ISNUMERIC
+        |IS_MEMBER|IS_ROLEMEMBER|IS_SRVROLEMEMBER|JSON_ARRAY|JSON_MODIFY|JSON_OBJECT|JSON_PATH_EXISTS|JSON_QUERY|JSON_VALUE|LAG
+        |LAST_VALUE|LEAD|LEFT|LEN|LOG|LOG10|LOWER|LTRIM|MAX|MIN
+        |MONTH|NEWID|NEWSEQUENTIALID|NTILE|NULLIF|OBJECTPROPERTY|OBJECTPROPERTYEX|OBJECT_DEFINITION|OBJECT_ID
+        |OBJECT_NAME|OBJECT_SCHEMA_NAME|ORIGINAL_LOGIN|PARSENAME|PATINDEX|PERCENTILE_CONT|PERCENTILE_DISC|PERCENT_RANK|PI|POWER
+        |QUOTENAME|RADIANS|RAND|RANK|REPLACE|REPLICATE|REVERSE|RIGHT|ROUND|ROW_NUMBER
+        |RTRIM|SCHEMA_ID|SCHEMA_NAME|SCOPE_IDENTITY|SERVERPROPERTY|SESSIONPROPERTY|SESSION_CONTEXT|SESSION_ID|SIGN|SIN
+        |SMALLDATETIMEFROMPARTS|SOUNDEX|SPACE|SQL_VARIANT_PROPERTY|SQRT|SQUARE|STATS_DATE|STDEV|STDEVP|STRING_AGG
+        |STRING_ESCAPE|STUFF|SUBSTRING|SUM|SUSER_ID|SUSER_NAME|SUSER_SID|SUSER_SNAME|SWITCHOFFSET|SYSDATETIME
+        |SYSDATETIMEOFFSET|SYSUTCDATETIME|TAN|TIMEFROMPARTS|TODATETIMEOFFSET|TRANSLATE|TRIM|TRY_CAST|TRY_CONVERT|TRY_PARSE
+        |TYPEPROPERTY|TYPE_ID|TYPE_NAME|UNICODE|UPPER|USER_ID|USER_NAME|VAR|VARP|XACT_STATE
+        |YEAR
+      )\b(?=\s*\()
+    </Rule>
 
-    <!-- span for escape sequences -->
-    <Span  color="Comment" begin="--" end="\n" ruleSet="CommentMarkerSet"/>
-    <Span color="Comment"  multiline="true" ruleSet="CommentMarkerSet">
-      <Begin>/\*</Begin>
-      <End>\*/</End>
-    </Span>
-
-    <Keywords color="Keyword" >
-      <Word>ABORT</Word>
-      <Word>BETWEEN</Word>
-      <Word>CRASH</Word>
-      <Word>DIGITS</Word>
-      <Word>ACCEPT</Word>
-      <Word>BINARY_INTEGER</Word>
-      <Word>CREATE</Word>
-      <Word>DISPOSE</Word>
-      <Word>ACCESS</Word>
-      <Word>BODY</Word>
-      <Word>CURRENT</Word>
-      <Word>DISTINCT</Word>
-      <Word>ADD</Word>
-      <Word>BOOLEAN</Word>
-      <Word>CURRVAL</Word>
-      <Word>DO</Word>
-      <Word>ALL</Word>
-      <Word>BY</Word>
-      <Word>CURSOR</Word>
-      <Word>DROP</Word>
-      <Word>ALTER</Word>
-      <Word>CASE</Word>
-      <Word>DATABASE</Word>
-      <Word>ELSE</Word>
-      <Word>AND</Word>
-      <Word>CHAR</Word>
-      <Word>DATA_BASE</Word>
-      <Word>ELSIF</Word>
-      <Word>ANY</Word>
-      <Word>CHAR_BASE</Word>
-      <Word>DATE</Word>
-      <Word>END</Word>
-      <Word>ARRAY</Word>
-      <Word>CHECK</Word>
-      <Word>DBA</Word>
-      <Word>ENTRY</Word>
-      <Word>ARRAYLEN</Word>
-      <Word>CLOSE</Word>
-      <Word>DEBUGOFF</Word>
-      <Word>EXCEPTION</Word>
-      <Word>AS</Word>
-      <Word>CLUSTER</Word>
-      <Word>DEBUGON</Word>
-      <Word>EXCEPTION_INIT</Word>
-      <Word>ASC</Word>
-      <Word>CLUSTERS</Word>
-      <Word>DECLARE</Word>
-      <Word>EXISTS</Word>
-      <Word>ASSERT</Word>
-      <Word>COLAUTH</Word>
-      <Word>DECIMAL</Word>
-      <Word>EXIT</Word>
-      <Word>ASSIGN</Word>
-      <Word>COLUMNS</Word>
-      <Word>DEFAULT</Word>
-      <Word>FALSE</Word>
-      <Word>AT</Word>
-      <Word>COMMIT</Word>
-      <Word>DEFINITION</Word>
-      <Word>FETCH</Word>
-      <Word>AUTHORIZATION</Word>
-      <Word>COMPRESS</Word>
-      <Word>DELAY</Word>
-      <Word>FLOAT</Word>
-      <Word>AVG</Word>
-      <Word>CONNECT</Word>
-      <Word>DELETE</Word>
-      <Word>FOR</Word>
-      <Word>BASE_TABLE</Word>
-      <Word>CONSTANT</Word>
-      <Word>DELTA</Word>
-      <Word>FORM</Word>
-      <Word>BEGIN</Word>
-      <Word>COUNT</Word>
-      <Word>DESC</Word>
-      <Word>FROM</Word>
-      <Word>FUNCTION</Word>
-      <Word>NEW</Word>
-      <Word>RELEASE</Word>
-      <Word>SUM</Word>
-      <Word>GENERIC</Word>
-      <Word>NEXTVAL</Word>
-      <Word>REMR</Word>
-      <Word>TABAUTH</Word>
-      <Word>GOTO</Word>
-      <Word>NOCOMPRESS</Word>
-      <Word>RENAME</Word>
-      <Word>TABLE</Word>
-      <Word>GRANT</Word>
-      <Word>NOT</Word>
-      <Word>RESOURCE</Word>
-      <Word>TABLES</Word>
-      <Word>GROUP</Word>
-      <Word>NULL</Word>
-      <Word>RETURN</Word>
-      <Word>TASK</Word>
-      <Word>HAVING</Word>
-      <Word>NUMBER</Word>
-      <Word>REVERSE</Word>
-      <Word>TERMINATE</Word>
-      <Word>IDENTIFIED</Word>
-      <Word>NUMBER_BASE</Word>
-      <Word>REVOKE</Word>
-      <Word>THEN</Word>
-      <Word>IF</Word>
-      <Word>OF</Word>
-      <Word>ROLLBACK</Word>
-      <Word>TO</Word>
-      <Word>IN</Word>
-      <Word>ON</Word>
-      <Word>ROWID</Word>
-      <Word>TRUE</Word>
-      <Word>INDEX</Word>
-      <Word>OPEN</Word>
-      <Word>ROWLABEL</Word>
-      <Word>TYPE</Word>
-      <Word>INDEXES</Word>
-      <Word>OPTION</Word>
-      <Word>ROWNUM</Word>
-      <Word>UNION</Word>
-      <Word>INDICATOR</Word>
-      <Word>OR</Word>
-      <Word>ROWTYPE</Word>
-      <Word>UNIQUE</Word>
-      <Word>INSERT</Word>
-      <Word>ORDER</Word>
-      <Word>RUN</Word>
-      <Word>UPDATE</Word>
-      <Word>INTEGER</Word>
-      <Word>OTHERS</Word>
-      <Word>SAVEPOINT</Word>
-      <Word>USE</Word>
-      <Word>INTERSECT</Word>
-      <Word>OUT</Word>
-      <Word>SCHEMA</Word>
-      <Word>VALUES</Word>
-      <Word>INTO</Word>
-      <Word>PACKAGE</Word>
-      <Word>SELECT</Word>
-      <Word>VARCHAR</Word>
-      <Word>IS</Word>
-      <Word>PARTITION</Word>
-      <Word>SEPARATE</Word>
-      <Word>VARCHAR2</Word>
-      <Word>LEVEL</Word>
-      <Word>PCTFREE</Word>
-      <Word>SET</Word>
-      <Word>VARIANCE</Word>
-      <Word>LIKE</Word>
-      <Word>POSITIVE</Word>
-      <Word>SIZE</Word>
-      <Word>VIEW</Word>
-      <Word>LIMITED</Word>
-      <Word>PRAGMA</Word>
-      <Word>SMALLINT</Word>
-      <Word>VIEWS</Word>
-      <Word>LOOP</Word>
-      <Word>PRIOR</Word>
-      <Word>SPACE</Word>
-      <Word>WHEN</Word>
-      <Word>MAX</Word>
-      <Word>PRIVATE</Word>
-      <Word>SQL</Word>
-      <Word>WHERE</Word>
-      <Word>MIN</Word>
-      <Word>PROCEDURE</Word>
-      <Word>SQLCODE</Word>
-      <Word>WHILE</Word>
-      <Word>MINUS</Word>
-      <Word>PUBLIC</Word>
-      <Word>SQLERRM</Word>
-      <Word>WITH</Word>
-      <Word>MLSLABEL</Word>
-      <Word>RAISE</Word>
-      <Word>START</Word>
-      <Word>WORK</Word>
-      <Word>MOD</Word>
-      <Word>RANGE</Word>
-      <Word>STATEMENT</Word>
-      <Word>XOR</Word>
-      <Word>MODE</Word>
-      <Word>REAL</Word>
-      <Word>STDDEV</Word>
-      <Word>NATURAL</Word>
-      <Word>RECORD</Word>
-      <Word>SUBTYPE</Word>
-      <Word>TRUNCATE</Word>
+    <Keywords color="SystemProcedure">
+      <Word>sp_describe_first_result_set</Word><Word>sp_describe_undeclared_parameters</Word><Word>sp_executesql</Word><Word>sp_help</Word><Word>sp_helpdb</Word>
+      <Word>sp_helpindex</Word><Word>sp_helptext</Word><Word>sp_server_info</Word><Word>sp_set_session_context</Word><Word>sp_spaceused</Word>
+      <Word>sp_who</Word><Word>sp_who2</Word>
     </Keywords>
 
+    <Keywords color="Operator">
+      <Word>AND</Word><Word>ANY</Word><Word>APPLY</Word><Word>BETWEEN</Word><Word>CROSS</Word>
+      <Word>EXISTS</Word><Word>FULL</Word><Word>IN</Word><Word>INNER</Word><Word>IS</Word>
+      <Word>JOIN</Word><Word>LEFT</Word><Word>LIKE</Word><Word>NOT</Word><Word>OR</Word>
+      <Word>OUTER</Word><Word>PIVOT</Word><Word>RIGHT</Word><Word>SOME</Word><Word>UNPIVOT</Word>
+    </Keywords>
 
-    <!-- Additional T-SQL keywords used by history scripts and formatter examples. -->
     <Keywords color="Keyword">
-      <Word>APPLY</Word>
-      <Word>BIGINT</Word>
-      <Word>BIT</Word>
-      <Word>BREAK</Word>
-      <Word>CATCH</Word>
-      <Word>CONTINUE</Word>
-      <Word>CROSS</Word>
-      <Word>DATETIME</Word>
-      <Word>DATETIME2</Word>
-      <Word>DATETIMEOFFSET</Word>
-      <Word>DENY</Word>
-      <Word>EXEC</Word>
-      <Word>EXECUTE</Word>
-      <Word>FULL</Word>
-      <Word>IDENTITY</Word>
-      <Word>INNER</Word>
-      <Word>JOIN</Word>
-      <Word>LEFT</Word>
-      <Word>MERGE</Word>
-      <Word>NCHAR</Word>
-      <Word>NVARCHAR</Word>
-      <Word>OFFSET</Word>
-      <Word>OUTER</Word>
-      <Word>OUTPUT</Word>
-      <Word>OVER</Word>
-      <Word>PIVOT</Word>
-      <Word>RAISERROR</Word>
-      <Word>RECOMPILE</Word>
-      <Word>RIGHT</Word>
-      <Word>ROWCOUNT</Word>
-      <Word>ROWVERSION</Word>
-      <Word>SMALLDATETIME</Word>
-      <Word>SYSNAME</Word>
-      <Word>THROW</Word>
-      <Word>TOP</Word>
-      <Word>TRAN</Word>
-      <Word>TRANSACTION</Word>
-      <Word>TRY</Word>
-      <Word>UNPIVOT</Word>
-      <Word>VARBINARY</Word>
-      <Word>XML</Word>
+      <Word>ADD</Word><Word>ALL</Word><Word>ALTER</Word><Word>AS</Word><Word>ASC</Word>
+      <Word>AUTHORIZATION</Word><Word>BACKUP</Word><Word>BEGIN</Word><Word>BIGINT</Word><Word>BINARY</Word>
+      <Word>BIT</Word><Word>BREAK</Word><Word>BROWSE</Word><Word>BULK</Word><Word>BY</Word>
+      <Word>CASCADE</Word><Word>CASE</Word><Word>CATCH</Word><Word>CHAR</Word><Word>CHECK</Word>
+      <Word>CHECKPOINT</Word><Word>CLOSE</Word><Word>CLUSTERED</Word><Word>COLLATE</Word><Word>COLUMN</Word>
+      <Word>COMMIT</Word><Word>COMPUTE</Word><Word>CONSTRAINT</Word><Word>CONTAINS</Word><Word>CONTAINSTABLE</Word>
+      <Word>CONTINUE</Word><Word>CREATE</Word><Word>CURRENT</Word><Word>CURRENT_DATE</Word><Word>CURRENT_TIME</Word>
+      <Word>CURRENT_TIMESTAMP</Word><Word>CURRENT_USER</Word><Word>CURSOR</Word><Word>DATABASE</Word><Word>DATE</Word>
+      <Word>DATETIME</Word><Word>DATETIME2</Word><Word>DATETIMEOFFSET</Word><Word>DBCC</Word><Word>DEALLOCATE</Word>
+      <Word>DEC</Word><Word>DECIMAL</Word><Word>DECLARE</Word><Word>DEFAULT</Word><Word>DELETE</Word>
+      <Word>DENY</Word><Word>DESC</Word><Word>DISABLE</Word><Word>DISTINCT</Word><Word>DISTRIBUTED</Word>
+      <Word>DOUBLE</Word><Word>DROP</Word><Word>DUMP</Word><Word>ELSE</Word><Word>ENABLE</Word>
+      <Word>END</Word><Word>ERRLVL</Word><Word>ESCAPE</Word><Word>EXCEPT</Word><Word>EXEC</Word>
+      <Word>EXECUTE</Word><Word>EXIT</Word><Word>EXTERNAL</Word><Word>FETCH</Word><Word>FILE</Word>
+      <Word>FILLFACTOR</Word><Word>FLOAT</Word><Word>FOR</Word><Word>FOREIGN</Word><Word>FREETEXT</Word>
+      <Word>FREETEXTTABLE</Word><Word>FROM</Word><Word>FUNCTION</Word><Word>GO</Word><Word>GOTO</Word>
+      <Word>GRANT</Word><Word>GROUP</Word><Word>HAVING</Word><Word>HOLDLOCK</Word><Word>IDENTITY</Word>
+      <Word>IDENTITY_INSERT</Word><Word>IF</Word><Word>IMAGE</Word><Word>INDEX</Word><Word>INSERT</Word>
+      <Word>INT</Word><Word>INTEGER</Word><Word>INTERSECT</Word><Word>INTO</Word><Word>KEY</Word>
+      <Word>KILL</Word><Word>LINENO</Word><Word>LOAD</Word><Word>MERGE</Word><Word>MONEY</Word>
+      <Word>NATIONAL</Word><Word>NCHAR</Word><Word>NEXT</Word><Word>NOCHECK</Word><Word>NOCOUNT</Word>
+      <Word>NOLOCK</Word><Word>NONCLUSTERED</Word><Word>NULL</Word><Word>NUMERIC</Word><Word>NVARCHAR</Word>
+      <Word>OF</Word><Word>OFF</Word><Word>OFFSET</Word><Word>OFFSETS</Word><Word>ON</Word><Word>ONLY</Word>
+      <Word>OPEN</Word><Word>OPENDATASOURCE</Word><Word>OPENQUERY</Word><Word>OPENROWSET</Word><Word>OPENXML</Word>
+      <Word>OPTION</Word><Word>ORDER</Word><Word>OUTPUT</Word><Word>OVER</Word><Word>PARTITION</Word>
+      <Word>PERCENT</Word><Word>PLAN</Word><Word>PRECISION</Word><Word>PRIMARY</Word><Word>PRINT</Word>
+      <Word>PROC</Word><Word>PROCEDURE</Word><Word>PUBLIC</Word><Word>RAISERROR</Word><Word>READ</Word>
+      <Word>READCOMMITTED</Word><Word>READPAST</Word><Word>READTEXT</Word><Word>READUNCOMMITTED</Word><Word>REAL</Word>
+      <Word>RECOMPILE</Word><Word>REFERENCES</Word><Word>REPLICATION</Word><Word>RESTORE</Word><Word>RESTRICT</Word>
+      <Word>RETURN</Word><Word>RETURNS</Word><Word>REVERT</Word><Word>REVOKE</Word><Word>ROLLBACK</Word>
+      <Word>ROW</Word><Word>ROWCOUNT</Word><Word>ROWGUIDCOL</Word><Word>ROWS</Word><Word>ROWVERSION</Word>
+      <Word>RULE</Word><Word>SAVE</Word><Word>SCHEMA</Word><Word>SECURITYAUDIT</Word><Word>SELECT</Word>
+      <Word>SEMANTICKEYPHRASETABLE</Word><Word>SEMANTICSIMILARITYDETAILSTABLE</Word><Word>SEMANTICSIMILARITYTABLE</Word><Word>SEQUENCE</Word><Word>SERIALIZABLE</Word>
+      <Word>SESSION_USER</Word><Word>SET</Word><Word>SETUSER</Word><Word>SHUTDOWN</Word><Word>SMALLDATETIME</Word>
+      <Word>SMALLINT</Word><Word>SMALLMONEY</Word><Word>SNAPSHOT</Word><Word>SQL_VARIANT</Word><Word>STATISTICS</Word>
+      <Word>SYSNAME</Word><Word>SYSTEM_USER</Word><Word>TABLE</Word><Word>TABLESAMPLE</Word><Word>TEXT</Word>
+      <Word>TEXTSIZE</Word><Word>THEN</Word><Word>THROW</Word><Word>TIME</Word><Word>TIMESTAMP</Word>
+      <Word>TINYINT</Word><Word>TO</Word><Word>TOP</Word><Word>TRAN</Word><Word>TRANSACTION</Word>
+      <Word>TRIGGER</Word><Word>TRUNCATE</Word><Word>TRY</Word><Word>TSEQUAL</Word><Word>TYPE</Word>
+      <Word>UNION</Word><Word>UNIQUE</Word><Word>UNIQUEIDENTIFIER</Word><Word>UPDATE</Word><Word>UPDATETEXT</Word><Word>USE</Word>
+      <Word>USER</Word><Word>VALUES</Word><Word>VARBINARY</Word><Word>VARCHAR</Word><Word>VARYING</Word>
+      <Word>VIEW</Word><Word>WAITFOR</Word><Word>WHEN</Word><Word>WHERE</Word><Word>WHILE</Word>
+      <Word>WITH</Word><Word>WITHIN</Word><Word>WRITETEXT</Word><Word>XML</Word>
     </Keywords>
 
-    <Keywords color="Keyword1">
-      <Word>NOCOUNT</Word>
-    </Keywords>
-
-    <Keywords color="GoKeyword" >
-      <Word>GO</Word>
-    </Keywords>
-
-    <Rule color="ObjectReference1">([\d\w]+)\.([\d\w]+)\.([\d\w]+)</Rule>
-    <Rule color="ObjectReference">([\d\w]+)\.([\d\w]+)</Rule>
-
-    <Rule color="ObjectReferenceInBrackets1">([\d\w]+)\.([\d\w]+)\.([\d\w]+)</Rule>
-    <Rule color="ObjectReferenceInBrackets">\[([\d\w]+)\]\.\[([\d\w]+)\]\.\[([\d\w]+)\]</Rule>
-    <Rule color="ObjectReferenceInBrackets">\[([\d\w]+)\]\.\[([\d\w]+)\]</Rule>
-
-    <Rule color="Punctuation">
-      [?,.;()\[\]{}+\-/%*&lt;&gt;^+~!|&amp;]+
+    <Rule color="Identifier">
+      \b0[xX][0-9a-fA-F]+
+      | (?:\b[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?
     </Rule>
-
-    <Rule color="MethodCall">[\d\w_]+(?=(\s*\())</Rule>
-    <Rule color="Variable1">@@([\w]+)</Rule>
-    <Rule color="Variable">@([\w]+)</Rule>
-
-    <!-- Digits -->
-    <Rule color="Digits">
-      \b0[xX][0-9a-fA-F]+  # hex number
-      |
-      (	\b\d+(\.[0-9]+)?   #number with optional floating point
-      |	\.[0-9]+           #or just starting with floating point
-      )
-      ([eE][+-]?[0-9]+)? # optional exponent
-    </Rule>
-
+    <Rule color="Operator">[.,;(){}+\-/%*&lt;&gt;=^~!|&amp;?:]+</Rule>
+    <!-- Consume the entire name, including #temp names and Unicode identifiers. -->
+    <Rule color="Identifier">[\p{L}_#][\w$#@]*</Rule>
   </RuleSet>
-
 </SyntaxDefinition>

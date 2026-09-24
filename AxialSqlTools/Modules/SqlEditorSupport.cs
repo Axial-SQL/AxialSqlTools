@@ -33,6 +33,7 @@ namespace AxialSqlTools
             if (editor == null) return;
             var background = VsThemeBrushResolver.GetBrushColor(editor.Background, SystemColors.WindowColor);
             var foreground = VsThemeBrushResolver.GetBrushColor(editor.Foreground, SystemColors.WindowTextColor);
+            bool isLightTheme = VsThemeBrushResolver.GetRelativeLuminance(background) > 0.6;
             // Load a fresh definition so theme changes never mutate a shared definition or
             // progressively wash out its colors. Existing text, selection and undo stay intact.
             using (var stream = typeof(SqlEditorSupport).Assembly.GetManifestResourceStream("AxialSqlTools.QuickSearch.sql.xshd"))
@@ -44,7 +45,10 @@ namespace AxialSqlTools
                     foreach (var color in highlighting.NamedHighlightingColors)
                     {
                         var original = color.Foreground?.GetColor(null) ?? foreground;
+                        // Keep SSMS's red strings and magenta functions on light backgrounds.
+                        // A contrast correction there would change their standard hues.
                         color.Foreground = new SimpleHighlightingBrush(SystemParameters.HighContrast ? foreground
+                            : isLightTheme ? original
                             : VsThemeBrushResolver.EnsureTextContrast(original, background, foreground));
                     }
                     editor.SyntaxHighlighting = highlighting;
@@ -56,7 +60,8 @@ namespace AxialSqlTools
             editor.TextArea.SelectionForeground = scope.TryFindResource("AxialThemeGridSelectionTextBrush") as Brush ?? SystemColors.HighlightTextBrush;
             editor.TextArea.SelectionBorder = new Pen(selection, 1);
             editor.TextArea.SelectionCornerRadius = 0;
-            editor.LineNumbersForeground = editor.Foreground;
+            var lineNumbers = editor.SyntaxHighlighting.GetNamedColor("Operator").Foreground;
+            editor.LineNumbersForeground = new SolidColorBrush(lineNumbers.GetColor(null) ?? foreground);
             editor.Options.EnableHyperlinks = false;
             editor.Options.EnableEmailHyperlinks = false;
         }
