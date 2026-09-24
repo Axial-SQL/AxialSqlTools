@@ -25,8 +25,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-before.png?raw=true"/> -> <img src="https://github.com/Axial-SQL/AxialSqlTools/blob/main/pics/right-align-after.png?raw=true"/>
 
 - [**Format Any TSQL Code**](https://github.com/Axial-SQL/AxialSqlTools/wiki/TSQL-Code-Formatting-with-Microsoft-ScriptDOM-library): Validate and format your TSQL code with Microsoft TSQL parser, making it more readable and maintainable.
-  - For troubleshooting, open **Settings > Code Format > SSMS formatter settings**. This read-only popup shows the current global SSMS formatter options and SSMS/formatter/extension versions, with **Refresh** and **Copy all**. It works without an open query and still shows the SSMS values when **Disregard built-in SSMS Formatter settings** is enabled. Document `.editorconfig` overrides are not included.
-  
+
 - [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access a saved collection of query templates for common tasks, reducing the time and effort required for routine work.
 
 - [**Export Grid to Google Sheets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Google-Sheets-Export): Quickly export results from the grid view directly into Google Sheets.
