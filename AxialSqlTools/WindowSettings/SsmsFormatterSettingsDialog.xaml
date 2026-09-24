@@ -1,0 +1,61 @@
+<platform:DialogWindow x:Class="AxialSqlTools.SsmsFormatterSettingsDialog"
+                       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                       xmlns:platform="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+                       Title="SSMS formatter settings" Width="940" Height="620"
+                       MinWidth="600" MinHeight="360" ResizeMode="CanResize"
+                       ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+                       Background="{DynamicResource AxialThemeBackgroundBrush}">
+    <platform:DialogWindow.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <DataTemplate x:Key="SettingTemplate">
+                <Border BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="0,0,0,1" Padding="4,3">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" Margin="0,0,8,0" />
+                        <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </platform:DialogWindow.Resources>
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,10">
+            <TextBlock Text="SSMS formatter settings" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock x:Name="VersionInfo" TextWrapping="Wrap" Margin="0,4,0,0" />
+            <TextBlock x:Name="ScopeInfo" TextWrapping="Wrap" Margin="0,4,0,0" />
+            <TextBlock x:Name="ModeInfo" TextWrapping="Wrap" Margin="0,4,0,0" />
+        </StackPanel>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ItemsControl x:Name="LeftSettings" ItemTemplate="{StaticResource SettingTemplate}" />
+                <ItemsControl x:Name="RightSettings" Grid.Column="2" ItemTemplate="{StaticResource SettingTemplate}" />
+            </Grid>
+        </ScrollViewer>
+        <DockPanel Grid.Row="2" Margin="0,10,0,0" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
+                <Button x:Name="RefreshButton" Content="Refresh" Click="Refresh_Click" Padding="12,5" Margin="0,0,6,0" />
+                <Button x:Name="CopyButton" Content="Copy all" Click="Copy_Click" IsEnabled="False" Padding="12,5" Margin="0,0,6,0" />
+                <Button Content="Close" Click="Close_Click" IsDefault="True" IsCancel="True" Padding="16,5" />
+            </StackPanel>
+            <TextBlock x:Name="Status" Text="Loading current SSMS settings..." TextWrapping="Wrap"
+                       VerticalAlignment="Center" Margin="0,0,12,0" />
+        </DockPanel>
+    </Grid>
+</platform:DialogWindow>

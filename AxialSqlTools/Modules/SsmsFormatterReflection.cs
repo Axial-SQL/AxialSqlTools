@@ -29,6 +29,32 @@ namespace AxialSqlTools
             Assembly assembly, object textBuffer, CancellationToken cancellationToken, bool disregardSsmsSettings = false,
             Func<Type, CancellationToken, Task<object>> resolveExtensibilityService = null)
         {
+            var settings = await LoadSettingsAsync(assembly, textBuffer, cancellationToken, resolveExtensibilityService);
+
+            var helper = RequiredType(assembly, "SqlFormatHelper");
+            // Always let SSMS apply its settings and choose the actual implementation types first.
+            var sharedOptions = Invoke(RequiredMethod(helper, "ToScriptGeneratorOptions", 1), settings) as SqlScriptGeneratorOptions;
+            if (sharedOptions == null)
+                throw Incompatible("SSMS and Axial SQL Tools are using incompatible ScriptDOM assemblies.");
+            var parser = Invoke(RequiredMethod(helper, "CreateParser", 2),
+                sharedOptions.SqlVersion, sharedOptions.SqlEngineType) as TSqlParser;
+            var generator = Invoke(RequiredMethod(helper, "CreateScriptGenerator", 1), sharedOptions) as SqlScriptGenerator;
+            if (parser == null || generator == null)
+                throw Incompatible("The parser or generator has an incompatible ScriptDOM type.");
+            if (disregardSsmsSettings)
+            {
+                // Equivalent to new TSql170Parser(false) / new Sql170ScriptGenerator(),
+                // using whichever concrete versions SSMS actually returned. Do not copy options.
+                parser = (TSqlParser)Activator.CreateInstance(parser.GetType(), new object[] { false });
+                generator = (SqlScriptGenerator)Activator.CreateInstance(generator.GetType());
+            }
+            return new SsmsFormatterContext(parser, generator);
+        }
+
+        internal static async Task<object> LoadSettingsAsync(
+            Assembly assembly, object textBuffer, CancellationToken cancellationToken,
+            Func<Type, CancellationToken, Task<object>> resolveExtensibilityService = null)
+        {
             cancellationToken.ThrowIfCancellationRequested();
             var extension = RequiredType(assembly, "SqlFormatterExtension");
             var extensibilityProperty = extension.GetProperty("ExtensibilityInstance", StaticMembers)
@@ -63,24 +89,7 @@ namespace AxialSqlTools
             if (configSource != "UnifiedSettings" && configSource != "Mixed")
                 throw new InvalidOperationException("SSMS could not load its SQL Formatter settings. Check the SSMS SQL Formatter options and try again.");
 
-            var helper = RequiredType(assembly, "SqlFormatHelper");
-            // Always let SSMS apply its settings and choose the actual implementation types first.
-            var sharedOptions = Invoke(RequiredMethod(helper, "ToScriptGeneratorOptions", 1), settings) as SqlScriptGeneratorOptions;
-            if (sharedOptions == null)
-                throw Incompatible("SSMS and Axial SQL Tools are using incompatible ScriptDOM assemblies.");
-            var parser = Invoke(RequiredMethod(helper, "CreateParser", 2),
-                sharedOptions.SqlVersion, sharedOptions.SqlEngineType) as TSqlParser;
-            var generator = Invoke(RequiredMethod(helper, "CreateScriptGenerator", 1), sharedOptions) as SqlScriptGenerator;
-            if (parser == null || generator == null)
-                throw Incompatible("The parser or generator has an incompatible ScriptDOM type.");
-            if (disregardSsmsSettings)
-            {
-                // Equivalent to new TSql170Parser(false) / new Sql170ScriptGenerator(),
-                // using whichever concrete versions SSMS actually returned. Do not copy options.
-                parser = (TSqlParser)Activator.CreateInstance(parser.GetType(), new object[] { false });
-                generator = (SqlScriptGenerator)Activator.CreateInstance(generator.GetType());
-            }
-            return new SsmsFormatterContext(parser, generator);
+            return settings;
         }
 
         private static Type RequiredType(Assembly assembly, string name)

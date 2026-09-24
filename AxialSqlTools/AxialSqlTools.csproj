@@ -199,6 +199,7 @@
     <Compile Include="Modules\SQLBuildsModels.cs" />
     <Compile Include="Modules\TsqlFormatter.cs" />
     <Compile Include="Modules\SsmsFormatterReflection.cs" />
+    <Compile Include="Modules\SsmsFormatterSettingsSnapshot.cs" />
     <Compile Include="Modules\SsmsFormatterHost.cs" />
     <Compile Include="Modules\SsmsFormatterAssemblyLoader.cs" />
     <Compile Include="Modules\TsqlSelectFieldIndentation.cs" />
@@ -248,6 +249,9 @@
     <Compile Include="WindowAbout\AboutWindowCommand.cs" />
     <Compile Include="WindowAbout\AboutWindowControl.xaml.cs">
       <DependentUpon>AboutWindowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="WindowSettings\SsmsFormatterSettingsDialog.xaml.cs">
+      <DependentUpon>SsmsFormatterSettingsDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="WindowSettings\SettingsWindow.cs" />
     <Compile Include="WindowSettings\SettingsWindowCommand.cs" />
@@ -611,6 +615,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="WindowAbout\AboutWindowControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="WindowSettings\SsmsFormatterSettingsDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
