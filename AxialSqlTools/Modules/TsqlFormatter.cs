@@ -316,29 +316,24 @@ namespace AxialSqlTools
                 throw new Exception($"TSqlParser unable to load selected T-SQL due to a syntax error:{Environment.NewLine}{errorStr}");
             }
 
-            var preserveComments = gen.Options.GetType().GetProperty("PreserveComments");
-            if (useLegacyGeneration)
+            var preserveOption = gen.Options.GetType().GetProperty("PreserveComments");
+            var savedPreserveOption = preserveOption?.GetValue(gen.Options);
+            bool preserveComments = formatSettings.preserveComments
+                || (!useLegacyGeneration && savedPreserveOption is bool nativePreserve && nativePreserve);
+            if (useLegacyGeneration) gen.Options.AlignClauseBodies = false;
+
+            // Format code first, then restore source comments after every whitespace transform.
+            // Otherwise JOIN/CASE/list formatting can remove the newline ending a '--' comment.
+            // Read the native preference above, but disable native emission to avoid duplicates
+            // and keep comment placement consistent in both formatter modes.
+            try
             {
-                // Match the pre-SSMS formatter: disable clause alignment and let Axial's
-                // interleaver handle comments. Keep the fresh generator's own SQL version.
-                gen.Options.AlignClauseBodies = false;
-                if (preserveComments?.CanWrite == true)
-                    preserveComments.SetValue(gen.Options, false);
-                if (formatSettings.preserveComments)
-                    resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
-                else
-                    gen.GenerateScript(result, out resultCode);
+                if (preserveOption?.CanWrite == true) preserveOption.SetValue(gen.Options, false);
+                gen.GenerateScript(result, out resultCode);
             }
-            else
+            finally
             {
-                // SSMS mode keeps native comment handling, avoiding duplicate comments.
-                if (formatSettings.preserveComments && preserveComments?.CanWrite == true)
-                    preserveComments.SetValue(gen.Options, true);
-                bool nativeComments = preserveComments?.GetValue(gen.Options) is bool value && value;
-                if (formatSettings.preserveComments && !nativeComments)
-                    resultCode = TsqlFormatterCommentInterleaver.GenerateWithComments(result, gen, sqlParser);
-                else
-                    gen.GenerateScript(result, out resultCode);
+                if (preserveOption?.CanWrite == true) preserveOption.SetValue(gen.Options, savedPreserveOption);
             }
 
             if (formatSettings.HasAnyFormattingEnabled())
@@ -353,7 +348,9 @@ namespace AxialSqlTools
                 }
             }
 
-            return resultCode;
+            return preserveComments
+                ? TsqlFormatterCommentInterleaver.RestoreComments(result, resultCode, sqlParser)
+                : resultCode;
 
         }
 

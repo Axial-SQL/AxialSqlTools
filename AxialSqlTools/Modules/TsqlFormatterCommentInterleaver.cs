@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,215 +7,218 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 public static class TsqlFormatterCommentInterleaver
 {
-    /// <summary>
-    /// Formats the original SQL with the given ScriptDom generator, then re-inserts comments
-    /// from the original text into the formatted SQL using LCS alignment on non-comment tokens.
-    /// </summary>
     public static string GenerateWithComments(TSqlFragment sqlFragment, SqlScriptGenerator generator, TSqlParser parser = null)
     {
         if (sqlFragment == null) throw new ArgumentNullException(nameof(sqlFragment));
         if (generator == null) throw new ArgumentNullException(nameof(generator));
-
-        if (parser is null)
-            parser = new TSql170Parser(initialQuotedIdentifiers: true);
-
-        generator.GenerateScript(sqlFragment, out var formattedSql);
-
-        // Re-parse formatted output
-        var fmtFrag = Parse(parser, formattedSql, out _);
-
-        return InterleaveComments(sqlFragment, fmtFrag);
+        if (parser == null) parser = new TSql170Parser(initialQuotedIdentifiers: true);
+        var option = generator.Options.GetType().GetProperty("PreserveComments");
+        var saved = option?.GetValue(generator.Options);
+        string formatted;
+        try
+        {
+            if (option?.CanWrite == true) option.SetValue(generator.Options, false);
+            generator.GenerateScript(sqlFragment, out formatted);
+        }
+        finally
+        {
+            if (option?.CanWrite == true) option.SetValue(generator.Options, saved);
+        }
+        return RestoreComments(sqlFragment, formatted, parser);
     }
 
-    /// <summary>
-    /// Re-inserts comments from orig into fmt (both already parsed).
-    /// </summary>
+    internal static string RestoreComments(TSqlFragment original, string formatted, TSqlParser parser)
+    {
+        var target = Parse(parser, formatted);
+        string restored = InterleaveComments(original, target);
+        var verified = Parse(parser, restored);
+        // Parsing alone is insufficient: '--' can hide an entire valid statement. Require
+        // every generated code token to survive comment insertion, with its exact text.
+        var expected = target.ScriptTokenStream.Where(IsCodeToken).Select(t => (t.TokenType, t.Text));
+        var actual = verified.ScriptTokenStream.Where(IsCodeToken).Select(t => (t.TokenType, t.Text));
+        if (!expected.SequenceEqual(actual))
+            throw new InvalidOperationException("Unable to preserve comments without changing SQL tokens. The query has not been formatted.");
+        var originalComments = original.ScriptTokenStream.Where(IsCommentToken).Select(t => (t.TokenType, t.Text));
+        var restoredComments = verified.ScriptTokenStream.Where(IsCommentToken).Select(t => (t.TokenType, t.Text));
+        if (!originalComments.SequenceEqual(restoredComments))
+            throw new InvalidOperationException("Unable to preserve every comment exactly. The query has not been formatted.");
+        return restored;
+    }
+
     public static string InterleaveComments(TSqlFragment originalFragment, TSqlFragment formattedFragment)
     {
         var orig = originalFragment.ScriptTokenStream ?? throw new InvalidOperationException("Original fragment has no ScriptTokenStream.");
         var fmt = formattedFragment.ScriptTokenStream ?? throw new InvalidOperationException("Formatted fragment has no ScriptTokenStream.");
+        if (fmt.Any(IsCommentToken))
+            throw new InvalidOperationException("Comment insertion requires formatted SQL without comments.");
+        if (!orig.Any(IsCommentToken)) return string.Concat(fmt.Select(t => t.Text));
 
-        // Build lists of indices for code (non-comment, non-whitespace) tokens
-        var origCodeIdx = IndicesWhere(orig, IsCodeToken);
-        var fmtCodeIdx = IndicesWhere(fmt, IsCodeToken);
+        var originalCode = Enumerable.Range(0, orig.Count).Where(i => IsCodeToken(orig[i])).ToArray();
+        var formattedCode = Enumerable.Range(0, fmt.Count).Where(i => IsCodeToken(fmt[i])).ToArray();
+        var pairs = LongestCommonSubsequence(originalCode.Select(i => TokenKey(orig[i])).ToArray(),
+            formattedCode.Select(i => TokenKey(fmt[i])).ToArray());
+        var map = pairs.ToDictionary(pair => pair.iA, pair => pair.iB);
+        var gaps = new Dictionary<int, List<Comment>>();
+        int lastGap = 0;
 
-        // Build normalized keys for LCS (TokenType + normalized text)
-        var origKeys = origCodeIdx.Select(i => TokenKey(orig[i])).ToList();
-        var fmtKeys = fmtCodeIdx.Select(i => TokenKey(fmt[i])).ToList();
-
-        // LCS between origKeys and fmtKeys
-        var pairs = LongestCommonSubsequence(origKeys, fmtKeys);
-
-        // Map: original code token index -> formatted code token index
-        var mapOrigToFmt = new Dictionary<int, int>();
-        foreach (var (iOrigKey, iFmtKey) in pairs)
+        // Each group lives between two source code tokens. Preserve its own inline/standalone
+        // layout, but never copy source indentation into the generated SQL.
+        for (int code = 0; code <= originalCode.Length; code++)
         {
-            mapOrigToFmt[origCodeIdx[iOrigKey]] = fmtCodeIdx[iFmtKey];
-        }
-
-        // Collect comments from original and schedule injection BEFORE a formatted code token.
-        var injectBeforeFmtIndex = new Dictionary<int, List<CommentCluster>>();
-        var eofComments = new List<CommentCluster>();
-
-        // Helper to add a comment to a bucket
-        void Schedule(int fmtIndex, CommentCluster cluster)
-        {
-            if (!injectBeforeFmtIndex.TryGetValue(fmtIndex, out var list))
-                injectBeforeFmtIndex[fmtIndex] = list = new List<CommentCluster>();
-            list.Add(cluster);
-        }
-
-        for (int i = 0; i < orig.Count; i++)
-        {
-            if (!IsCommentToken(orig[i])) continue;
-
-            bool startsNewLine = StartsOnNewLine(orig, i);
-            int blankLinesBefore = startsNewLine ? CountBlankLinesBefore(orig, i) : 0;
-
-            var chunk = new StringBuilder();
-            chunk.Append(orig[i].Text);
-            int k = i + 1;
-            while (k < orig.Count && IsWsOrComment(orig[k]))
+            int start = code == 0 ? 0 : originalCode[code - 1] + 1;
+            int end = code == originalCode.Length ? orig.Count : originalCode[code];
+            var comments = new List<Comment>();
+            int previous = start - 1;
+            for (int i = start; i < end; i++)
             {
-                chunk.Append(orig[k].Text);
-                k++;
+                if (!IsCommentToken(orig[i])) continue;
+                int breaks = CountNewlines(TokenText(orig, previous + 1, i));
+                comments.Add(new Comment(orig[i], previous >= 0 && breaks == 0, Math.Max(0, breaks - 1)));
+                previous = i;
             }
-            i = k - 1;
+            if (comments.Count == 0) continue;
 
-            // Anchor to the *next statement header* if the immediate next code token is ';'
-            int anchorOrig = FindAnchorAfterComments(orig, k);
+            int before = code - 1;
+            while (before >= 0 && !map.ContainsKey(before)) before--;
+            int after = code;
+            while (after < originalCode.Length && !map.ContainsKey(after)) after++;
+            int gap = comments[0].Inline && before >= 0 ? map[before] + 1
+                : after < originalCode.Length ? map[after] : formattedCode.Length;
+            // Put a trailing '--' after its delimiter, so an inserted semicolon or a list
+            // comma cannot be swallowed by the comment or stranded on its own line.
+            if (comments[0].Inline && comments[0].Token.TokenType == TSqlTokenType.SingleLineComment
+                && gap < formattedCode.Length
+                && (fmt[formattedCode[gap]].TokenType == TSqlTokenType.Semicolon
+                    || fmt[formattedCode[gap]].TokenType == TSqlTokenType.Comma))
+                gap++;
+            // Adjacent source gaps may collapse when the generator removes optional tokens.
+            gap = Math.Max(lastGap, gap);
+            lastGap = gap;
+            if (!gaps.TryGetValue(gap, out var list)) gaps[gap] = list = new List<Comment>();
+            list.AddRange(comments);
+        }
 
-            var cluster = new CommentCluster(chunk.ToString(), startsNewLine, blankLinesBefore);
-
-            if (anchorOrig >= 0 && mapOrigToFmt.TryGetValue(anchorOrig, out int fmtIndex))
-                Schedule(fmtIndex, cluster);
+        string newline = fmt.Any(t => (t.Text ?? "").Contains("\r\n")) ? "\r\n" : "\n";
+        var output = new StringBuilder();
+        for (int gap = 0; gap <= formattedCode.Length; gap++)
+        {
+            int start = gap == 0 ? 0 : formattedCode[gap - 1] + 1;
+            int end = gap == formattedCode.Length ? fmt.Count : formattedCode[gap];
+            string whitespace = TokenText(fmt, start, end);
+            bool hasNext = gap < formattedCode.Length;
+            string indentation = hasNext ? IndentationBefore(fmt, formattedCode[gap], whitespace) : "";
+            if (gaps.TryGetValue(gap, out var comments))
+                EmitComments(output, whitespace, indentation, comments, hasNext, newline);
             else
-                eofComments.Add(cluster);
+                output.Append(whitespace);
+            if (hasNext) output.Append(fmt[formattedCode[gap]].Text);
         }
+        return output.ToString();
+    }
 
-        // Emit the formatted stream and inject comments at anchors (before the code token)
-        var sb = new StringBuilder();
-        int cur = 0;
-
-        foreach (var jCode in fmtCodeIdx)
+    private static void EmitComments(StringBuilder output, string whitespace, string indentation,
+        List<Comment> comments, bool hasNext, string newline)
+    {
+        bool inline = comments[0].Inline && output.Length > 0;
+        for (int i = 0; i < comments.Count; i++)
         {
-            while (cur < jCode)
+            var comment = comments[i];
+            bool followsLineComment = i > 0 && comments[i - 1].Token.TokenType == TSqlTokenType.SingleLineComment;
+            if ((i == 0 ? inline : comment.Inline) && !followsLineComment && output.Length > 0)
+                output.Append(' ');
+            else
             {
-                sb.Append(fmt[cur].Text);
-                cur++;
+                int breaks = output.Length == 0 ? 0 : 1 + comment.BlankLinesBefore;
+                if (i == 0) breaks = Math.Max(breaks, CountNewlines(whitespace));
+                for (int n = 0; n < breaks; n++) output.Append(newline);
+                output.Append(indentation);
             }
+            output.Append(comment.Token.Text);
+        }
 
-            if (injectBeforeFmtIndex.TryGetValue(jCode, out var toInject))
+        if (inline)
+        {
+            // The generator's gap belongs AFTER an inline comment. In particular, keep its
+            // indentation for the next statement, and always terminate a '--' comment.
+            if (CountNewlines(whitespace) > 0)
             {
-                foreach (var c in toInject)
-                {
-                    if (c.StartsNewLine)
-                    {
-                        // We want: at least (1 + blankLinesBefore) newlines before the comment.
-                        int required = 1 + c.BlankLinesBefore;
-                        int have = TrailingNewlines(sb);
-                        for (int add = have; add < required; add++)
-                            sb.Append(Environment.NewLine);
-                    }
-                    sb.Append(c.Text);
-                }
+                // Spaces before the newline would become part of the '--' token itself.
+                // Keep the original comment text exact, even when a list transform emitted " \r\n".
+                if (comments[comments.Count - 1].Token.TokenType == TSqlTokenType.SingleLineComment)
+                    whitespace = whitespace.TrimStart(' ', '\t');
+                output.Append(whitespace);
             }
-
-            sb.Append(fmt[jCode].Text);
-            cur++;
+            else if (hasNext && comments[comments.Count - 1].Token.TokenType == TSqlTokenType.SingleLineComment)
+                output.Append(newline).Append(indentation);
+            else if (hasNext) output.Append(' ');
         }
+        else if (hasNext)
+            output.Append(newline).Append(indentation);
+    }
 
-        while (cur < fmt.Count) { sb.Append(fmt[cur].Text); cur++; }
+    private static string TokenText(IList<TSqlParserToken> tokens, int start, int end)
+    {
+        var text = new StringBuilder();
+        for (int i = start; i < end; i++) text.Append(tokens[i].Text);
+        return text.ToString();
+    }
 
-        foreach (var c in eofComments)
+    private static string IndentationBefore(IList<TSqlParserToken> tokens, int index, string whitespace)
+    {
+        int newline = Math.Max(whitespace.LastIndexOf('\n'), whitespace.LastIndexOf('\r'));
+        if (newline >= 0) return whitespace.Substring(newline + 1);
+        // A line comment can introduce a line break where the generator used a space.
+        // Align the following token to the column the generator chose for it.
+        return new string(' ', Math.Max(0, tokens[index].Column - 1));
+    }
+
+    private static TSqlFragment Parse(TSqlParser parser, string sql)
+    {
+        using (var reader = new StringReader(sql))
         {
-            if (c.StartsNewLine && !EndsWithNewline(sb))
-                sb.Append(Environment.NewLine);
-            sb.Append(c.Text);
+            var fragment = parser.Parse(reader, out var errors);
+            if (errors.Count != 0)
+                throw new InvalidOperationException("Comment-preserving formatting produced invalid SQL. The query has not been formatted.");
+            return fragment;
         }
-
-        return sb.ToString();
     }
 
-    // ----------------- Helpers -----------------
+    private static bool IsCommentToken(TSqlParserToken token) =>
+        token.TokenType == TSqlTokenType.SingleLineComment || token.TokenType == TSqlTokenType.MultilineComment;
 
-    private static TSqlFragment Parse(TSqlParser parser, string sql, out IList<ParseError> errors)
+    private static bool IsCodeToken(TSqlParserToken token) =>
+        !IsCommentToken(token) && token.TokenType != TSqlTokenType.WhiteSpace && token.TokenType != TSqlTokenType.EndOfFile;
+
+    private static int CountNewlines(string text)
     {
-        using (var sr = new StringReader(sql))
+        int count = 0;
+        for (int i = 0; i < text.Length; i++)
+            if (text[i] == '\n' || (text[i] == '\r' && (i + 1 == text.Length || text[i + 1] != '\n'))) count++;
+        return count;
+    }
+
+    private sealed class Comment
+    {
+        internal readonly TSqlParserToken Token;
+        internal readonly bool Inline;
+        internal readonly int BlankLinesBefore;
+        internal Comment(TSqlParserToken token, bool inline, int blankLinesBefore)
         {
-            var frag = parser.Parse(sr, out errors);
-            return frag;
+            Token = token;
+            Inline = inline;
+            BlankLinesBefore = blankLinesBefore;
         }
     }
 
-    private static List<int> IndicesWhere(IList<TSqlParserToken> tokens, Func<TSqlParserToken, bool> pred)
-    {
-        var list = new List<int>(tokens.Count);
-        for (int i = 0; i < tokens.Count; i++)
-            if (pred(tokens[i])) list.Add(i);
-        return list;
-    }
-
-    private static int NextIndex(IList<TSqlParserToken> tokens, int start, Func<TSqlParserToken, bool> pred)
-    {
-        for (int i = start; i < tokens.Count; i++)
-            if (pred(tokens[i])) return i;
-        return -1;
-    }
-
-    private static bool IsCommentToken(TSqlParserToken t) =>
-        t.TokenType == TSqlTokenType.SingleLineComment ||
-        t.TokenType == TSqlTokenType.MultilineComment;
-
-    private static bool IsWhitespaceToken(TSqlParserToken t) =>
-        t.TokenType == TSqlTokenType.WhiteSpace;
-
-    private static bool IsCodeToken(TSqlParserToken t) =>
-        !IsCommentToken(t) && !IsWhitespaceToken(t);
-
-    private static bool HasNewline(string s) =>
-        s.IndexOf('\n') >= 0 || s.IndexOf('\r') >= 0;
-
-    private static bool StartsOnNewLine(IList<TSqlParserToken> tokens, int commentIndex)
-    {
-        // If the comment is the first token, it's at line start.
-        if (commentIndex <= 0) return true;
-
-        // Walk left across whitespace; if any contains a newline, the comment starts on a new line.
-        int k = commentIndex - 1;
-        //bool sawWs = false;
-        while (k >= 0 && IsWhitespaceToken(tokens[k]))
-        {
-            //sawWs = true;
-            if (HasNewline(tokens[k].Text)) return true;
-            k--;
-        }
-
-        // If there was no whitespace, it's immediately after another token on the same line.
-        // If there was whitespace but no newline, also same line.
-        return false;
-    }
-
-    private static bool EndsWithNewline(StringBuilder sb)
-    {
-        if (sb.Length == 0) return false;
-        char last = sb[sb.Length - 1];
-        return last == '\n' || last == '\r';
-    }
-
-    private static bool IsWsOrComment(TSqlParserToken t) =>
-        t.TokenType == TSqlTokenType.WhiteSpace ||
-        t.TokenType == TSqlTokenType.SingleLineComment ||
-        t.TokenType == TSqlTokenType.MultilineComment;
-
-
-    // Normalized comparison key for LCS: (TokenType, normalized text).
-    // For identifiers/keywords, T-SQL is generally case-insensitive; normalize to upper.
     private static (TSqlTokenType type, string norm) TokenKey(TSqlParserToken t)
     {
         // Preserve exact text for string/number literals; uppercase for everything else.
         switch (t.TokenType)
         {
+            case TSqlTokenType.Execute:
+                return (t.TokenType, "EXECUTE");
+            case TSqlTokenType.Procedure:
+                return (t.TokenType, "PROCEDURE");
             case TSqlTokenType.AsciiStringLiteral:
             case TSqlTokenType.UnicodeStringLiteral:
             case TSqlTokenType.Integer:
@@ -230,135 +233,94 @@ public static class TsqlFormatterCommentInterleaver
         }
     }
 
-    private static bool IsSemicolonToken(TSqlParserToken t) =>
-        t.TokenType == TSqlTokenType.Semicolon || t.Text == ";";
-
-    private static bool IsStmtHeaderToken(TSqlParserToken t)
-    {
-        // Use text so it works across ScriptDom versions.
-        var k = t.Text.ToUpperInvariant();
-        switch (k)
-        {
-            case "WITH":
-            case "SELECT":
-            case "INSERT":
-            case "UPDATE":
-            case "DELETE":
-            case "MERGE":
-            case "CREATE":
-            case "ALTER":
-            case "DROP":
-            case "EXEC":
-            case "EXECUTE":
-            case "DECLARE":
-            case "BEGIN":
-            case "IF":
-            case "WHILE":
-            case "RETURN":
-            case "TRUNCATE":
-            case "USE":
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static int CountNewlines(string s)
-    {
-        int c = 0;
-        for (int i = 0; i < s.Length; i++)
-            if (s[i] == '\n') c++;
-        return c;
-    }
-
-    private static int CountBlankLinesBefore(IList<TSqlParserToken> tokens, int commentIndex)
-    {
-        // Count newlines in whitespace between the previous CODE token and the comment.
-        int prevCode = -1;
-        for (int i = commentIndex - 1; i >= 0; i--)
-        {
-            if (IsCodeToken(tokens[i])) { prevCode = i; break; }
-            if (!IsWhitespaceToken(tokens[i]) && !IsCommentToken(tokens[i])) break;
-        }
-
-        int newlines = 0;
-        for (int i = prevCode + 1; i < commentIndex; i++)
-            if (IsWhitespaceToken(tokens[i])) newlines += CountNewlines(tokens[i].Text);
-
-        // One newline ends the previous line; extras are blank lines.
-        return Math.Max(0, newlines - 1);
-    }
-
-    private static int FindAnchorAfterComments(IList<TSqlParserToken> tokens, int start)
-    {
-        // First non-comment, non-whitespace after the cluster
-        int idx = NextIndex(tokens, start, IsCodeToken);
-        if (idx < 0) return -1;
-
-        // If it's a semicolon, prefer the *next* statement header if available.
-        if (IsSemicolonToken(tokens[idx]))
-        {
-            int next = NextIndex(tokens, idx + 1, IsCodeToken);
-            if (next >= 0 && IsStmtHeaderToken(tokens[next]))
-                return next; // anchor to WITH / SELECT / etc.
-        }
-
-        return idx;
-    }
-
-    private static int TrailingNewlines(StringBuilder sb)
-    {
-        int c = 0;
-        for (int i = sb.Length - 1; i >= 0; i--)
-        {
-            char ch = sb[i];
-            if (ch == '\n') c++;
-            else if (ch == '\r') continue;
-            else break;
-        }
-        return c;
-    }
-
-    private sealed class CommentCluster
-    {
-        public string Text { get; }
-        public bool StartsNewLine { get; }
-        public int BlankLinesBefore { get; }
-        public CommentCluster(string text, bool startsNewLine, int blankLinesBefore)
-        {
-            Text = text;
-            StartsNewLine = startsNewLine;
-            BlankLinesBefore = blankLinesBefore;
-        }
-    }
-
-    /// <summary>
-    /// Classic LCS over two sequences of keys. Returns list of matched index pairs (iA, iB) in order.
-    /// </summary>
+    // Myers' bidirectional alignment uses linear working memory, unlike the old N*M
+    // table. Prefix/suffix runs also make already-formatted scripts a linear-time case.
     private static List<(int iA, int iB)> LongestCommonSubsequence<T>(IList<T> a, IList<T> b)
         where T : IEquatable<T>
     {
-        int n = a.Count, m = b.Count;
-        var dp = new int[n + 1, m + 1];
-
-        for (int i = n - 1; i >= 0; i--)
-            for (int j = m - 1; j >= 0; j--)
-                dp[i, j] = a[i].Equals(b[j]) ? dp[i + 1, j + 1] + 1 : Math.Max(dp[i + 1, j], dp[i, j + 1]);
-
         var result = new List<(int, int)>();
-        int x = 0, y = 0;
-        while (x < n && y < m)
-        {
-            if (a[x].Equals(b[y]))
-            {
-                result.Add((x, y));
-                x++; y++;
-            }
-            else if (dp[x + 1, y] >= dp[x, y + 1])
-                x++;
-            else
-                y++;
-        }
+        MatchRange(a, 0, a.Count, b, 0, b.Count, result);
         return result;
+    }
+
+    private static void MatchRange<T>(IList<T> a, int aStart, int aEnd, IList<T> b, int bStart, int bEnd,
+        List<(int, int)> result) where T : IEquatable<T>
+    {
+        while (aStart < aEnd && bStart < bEnd && a[aStart].Equals(b[bStart]))
+            result.Add((aStart++, bStart++));
+        int suffix = 0;
+        while (aStart < aEnd && bStart < bEnd && a[aEnd - 1].Equals(b[bEnd - 1]))
+        {
+            aEnd--; bEnd--; suffix++;
+        }
+        if (aStart < aEnd && bStart < bEnd)
+        {
+            if (aEnd - aStart == 1)
+            {
+                for (int j = bStart; j < bEnd; j++)
+                    if (a[aStart].Equals(b[j])) { result.Add((aStart, j)); break; }
+            }
+            else if (bEnd - bStart == 1)
+            {
+                for (int i = aStart; i < aEnd; i++)
+                    if (a[i].Equals(b[bStart])) { result.Add((i, bStart)); break; }
+            }
+            else
+            {
+                var split = FindSplit(a, aStart, aEnd, b, bStart, bEnd);
+                if (split.iA >= 0 && (split.iA > aStart || split.iB > bStart)
+                    && (split.iA < aEnd || split.iB < bEnd))
+                {
+                    MatchRange(a, aStart, split.iA, b, bStart, split.iB, result);
+                    MatchRange(a, split.iA, aEnd, b, split.iB, bEnd, result);
+                }
+            }
+        }
+        for (int i = 0; i < suffix; i++) result.Add((aEnd + i, bEnd + i));
+    }
+
+    private static (int iA, int iB) FindSplit<T>(IList<T> a, int aStart, int aEnd, IList<T> b, int bStart, int bEnd)
+        where T : IEquatable<T>
+    {
+        int n = aEnd - aStart, m = bEnd - bStart;
+        int maxDistance = (n + m + 1) / 2, offset = maxDistance + 1;
+        var forward = Enumerable.Repeat(-1, 2 * maxDistance + 3).ToArray();
+        var reverse = Enumerable.Repeat(-1, forward.Length).ToArray();
+        forward[offset + 1] = reverse[offset + 1] = 0;
+        int delta = n - m;
+        bool odd = delta % 2 != 0;
+        for (int distance = 0; distance <= maxDistance; distance++)
+        {
+            for (int k = -distance; k <= distance; k += 2)
+            {
+                int slot = offset + k;
+                int x = k == -distance || (k != distance && forward[slot - 1] < forward[slot + 1])
+                    ? forward[slot + 1] : forward[slot - 1] + 1;
+                int y = x - k;
+                while (x < n && y < m && a[aStart + x].Equals(b[bStart + y])) { x++; y++; }
+                forward[slot] = x;
+                int reverseK = delta - k;
+                if (odd && reverseK >= -(distance - 1) && reverseK <= distance - 1
+                    && reverse[offset + reverseK] >= 0 && x >= n - reverse[offset + reverseK])
+                    return (aStart + x, bStart + y);
+            }
+            for (int k = -distance; k <= distance; k += 2)
+            {
+                int slot = offset + k;
+                int x = k == -distance || (k != distance && reverse[slot - 1] < reverse[slot + 1])
+                    ? reverse[slot + 1] : reverse[slot - 1] + 1;
+                int y = x - k;
+                while (x < n && y < m && a[aEnd - x - 1].Equals(b[bEnd - y - 1])) { x++; y++; }
+                reverse[slot] = x;
+                int forwardK = delta - k;
+                if (!odd && forwardK >= -distance && forwardK <= distance
+                    && forward[offset + forwardK] >= 0 && forward[offset + forwardK] >= n - x)
+                {
+                    int splitX = forward[offset + forwardK];
+                    return (aStart + splitX, bStart + splitX - forwardK);
+                }
+            }
+        }
+        return (-1, -1);
     }
 }
