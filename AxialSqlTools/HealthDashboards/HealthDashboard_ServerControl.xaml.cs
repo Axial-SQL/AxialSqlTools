@@ -19,6 +19,8 @@
     using Plot = ScottPlot.Plot;
     using static HealthDashboardServerMetric;
     using System.Diagnostics;
+    using System.IO;
+    using System.Reflection;
     using System.Windows.Navigation;
     using static AxialSqlTools.AxialSqlToolsPackage;
 
@@ -106,6 +108,12 @@
         /// </summary>
         public HealthDashboard_ServerControl()
         {
+            // ScottPlot's BAML requests SkiaSharp.Views.WPF without a version. In SSMS,
+            // that bind can miss the extension's probing path. Load the packaged assembly
+            // before WPF reads the template; do not resolve it relative to the host executable.
+            Assembly.LoadFrom(Path.Combine(
+                Path.GetDirectoryName(typeof(HealthDashboard_ServerControl).Assembly.Location),
+                "SkiaSharp.Views.WPF.dll"));
             this.InitializeComponent();
             foreach (var chart in ChartViews)
             {

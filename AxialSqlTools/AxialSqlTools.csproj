@@ -453,6 +453,11 @@
     <PackageReference Include="ScottPlot.WPF">
       <Version>5.1.59</Version>
     </PackageReference>
+    <!-- ScottPlot's WPF template loads this assembly by name at runtime. -->
+    <PackageReference Include="SkiaSharp.Views.WPF">
+      <Version>3.119.0</Version>
+      <ForceIncludeInVSIX>true</ForceIncludeInVSIX>
+    </PackageReference>
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces">
       <Version>10.0.12</Version>
     </PackageReference>
