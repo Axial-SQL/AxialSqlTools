@@ -20,6 +20,7 @@ namespace AxialSqlTools
         private void ApplyThemeBrushResources()
         {
             ToolWindowThemeResources.ApplySharedTheme(this);
+            SqlEditorSupport.ApplyTheme(QueryTextPreview, this);
         }
 
         private void WikiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)

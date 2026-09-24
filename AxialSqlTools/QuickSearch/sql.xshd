@@ -249,6 +249,52 @@
       <Word>TRUNCATE</Word>
     </Keywords>
 
+
+    <!-- Additional T-SQL keywords used by history scripts and formatter examples. -->
+    <Keywords color="Keyword">
+      <Word>APPLY</Word>
+      <Word>BIGINT</Word>
+      <Word>BIT</Word>
+      <Word>BREAK</Word>
+      <Word>CATCH</Word>
+      <Word>CONTINUE</Word>
+      <Word>CROSS</Word>
+      <Word>DATETIME</Word>
+      <Word>DATETIME2</Word>
+      <Word>DATETIMEOFFSET</Word>
+      <Word>DENY</Word>
+      <Word>EXEC</Word>
+      <Word>EXECUTE</Word>
+      <Word>FULL</Word>
+      <Word>IDENTITY</Word>
+      <Word>INNER</Word>
+      <Word>JOIN</Word>
+      <Word>LEFT</Word>
+      <Word>MERGE</Word>
+      <Word>NCHAR</Word>
+      <Word>NVARCHAR</Word>
+      <Word>OFFSET</Word>
+      <Word>OUTER</Word>
+      <Word>OUTPUT</Word>
+      <Word>OVER</Word>
+      <Word>PIVOT</Word>
+      <Word>RAISERROR</Word>
+      <Word>RECOMPILE</Word>
+      <Word>RIGHT</Word>
+      <Word>ROWCOUNT</Word>
+      <Word>ROWVERSION</Word>
+      <Word>SMALLDATETIME</Word>
+      <Word>SYSNAME</Word>
+      <Word>THROW</Word>
+      <Word>TOP</Word>
+      <Word>TRAN</Word>
+      <Word>TRANSACTION</Word>
+      <Word>TRY</Word>
+      <Word>UNPIVOT</Word>
+      <Word>VARBINARY</Word>
+      <Word>XML</Word>
+    </Keywords>
+
     <Keywords color="Keyword1">
       <Word>NOCOUNT</Word>
     </Keywords>

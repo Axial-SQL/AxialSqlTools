@@ -86,6 +86,9 @@ namespace AxialSqlTools
         public static IList<ObjectExplorerTreeStep> GetTreeSteps(ScriptObjectSelectionItem item)
         {
             if (item == null) throw new ArgumentNullException(nameof(item));
+            if (item.TypeDesc == "SQL_AGENT_JOB")
+                return new[] { new ObjectExplorerTreeStep("Job", item.ObjectName, null,
+                    "SQLServerAgent", "SQL Server Agent", "JobServer", "Jobs") };
             var steps = new List<ObjectExplorerTreeStep>
             {
                 new ObjectExplorerTreeStep("Database", item.DatabaseName, null,

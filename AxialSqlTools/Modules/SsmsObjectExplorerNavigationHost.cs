@@ -19,10 +19,17 @@ namespace AxialSqlTools
         private TreeNode serverRoot;
 
         public SsmsObjectExplorerNavigationHost(IObjectExplorerService explorer, UIConnectionInfo connection, string connectionString)
+            : this(explorer, connectionString)
+        {
+            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+        }
+
+        // Quick Search starts from an existing Object Explorer connection. Reuse that
+        // authenticated root without reconstructing credentials or opening a query tab.
+        public SsmsObjectExplorerNavigationHost(IObjectExplorerService explorer, string connectionString)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             this.explorer = explorer ?? throw new ArgumentNullException(nameof(explorer));
-            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
             sqlConnection = new SqlConnectionStringBuilder(connectionString);
             tree = ObjectExplorerReflection.Read(explorer, "Tree") as TreeView;
             if (tree == null)
@@ -37,7 +44,8 @@ namespace AxialSqlTools
             {
                 var info = GetNodeInformation(root);
                 if (!(info?.Connection is SqlConnectionInfo actual)) continue;
-                if (!ObjectExplorerPath.SameConnection(connection.ServerName, connection.UserName,
+                if (!ObjectExplorerPath.SameConnection(connection?.ServerName ?? sqlConnection.DataSource,
+                    connection?.UserName ?? sqlConnection.UserID,
                     sqlConnection.IntegratedSecurity, actual.ServerName, actual.UserName, actual.UseIntegratedSecurity)) continue;
                 if (!ObjectExplorerPath.SameAuthentication(sqlConnection.Authentication.ToString(), actual.Authentication.ToString())) continue;
                 serverRoot = root;
@@ -49,6 +57,8 @@ namespace AxialSqlTools
         public void Connect()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            if (connection == null)
+                throw new InvalidOperationException("The search server is no longer connected in Object Explorer. Reconnect it and try again.");
             explorer.ConnectToServer(connection);
         }
 
