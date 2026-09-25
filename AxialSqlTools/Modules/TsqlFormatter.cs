@@ -365,34 +365,10 @@ namespace AxialSqlTools
 
             // special case #1 - remove new line after JOIN
             if (formatSettings.removeNewLineAfterJoin)
-                foreach (QualifiedJoin QJoin in visitor.QualifiedJoins)
-                {
-
-                    int NextTokenNumber = QJoin.SecondTableReference.FirstTokenIndex;
-
-                    while (true)
-                    {
-
-                        TSqlParserToken NextToken = sqlFragment.ScriptTokenStream[NextTokenNumber - 1];
-
-                        if (NextToken.TokenType == TSqlTokenType.WhiteSpace)
-                            if (NextToken.Text.Contains("\n"))
-                                NextToken.Text = " ";
-                            else if (NextToken.Text.Trim() == "")
-                                NextToken.Text = "";
-
-                        if (NextToken.TokenType == TSqlTokenType.Join)
-                            break;
-
-                        NextTokenNumber -= 1;
-
-                        //just in case
-                        if (NextTokenNumber < 0)
-                            break;
-
-                    }
-
-                }
+            {
+                foreach (QualifiedJoin qJoin in visitor.QualifiedJoins)
+                    CollapseNewLineAfterJoin(sqlFragment, qJoin);
+            }
 
             //special case #2 - JOIN .. ON -> add a tab before ON
             if (formatSettings.addTabAfterJoinOn)
@@ -845,6 +821,49 @@ namespace AxialSqlTools
             return formatSettings.breakSelectFieldsAfterTopAndUnindent
                 ? TsqlSelectFieldIndentation.Format(formatted, sqlParser, indentSize)
                 : formatted;
+        }
+
+        private static void CollapseNewLineAfterJoin(TSqlFragment sqlFragment, QualifiedJoin qJoin)
+        {
+            var tokens = sqlFragment.ScriptTokenStream;
+            int secondTableIndex = qJoin.SecondTableReference.FirstTokenIndex;
+            int joinTokenIndex = -1;
+
+            // Find the JOIN token that belongs to this qualified join.
+            for (int i = secondTableIndex - 1; i >= qJoin.FirstTokenIndex && i >= 0; i--)
+            {
+                if (tokens[i].TokenType == TSqlTokenType.Join)
+                {
+                    joinTokenIndex = i;
+                    break;
+                }
+            }
+
+            if (joinTokenIndex < 0 || joinTokenIndex + 1 >= secondTableIndex)
+                return;
+
+            // Only collapse a pure whitespace gap. If a comment or any other token is
+            // between JOIN and the table reference, leave it untouched.
+            bool hasNewLine = false;
+            for (int i = joinTokenIndex + 1; i < secondTableIndex; i++)
+            {
+                var token = tokens[i];
+                if (token.TokenType != TSqlTokenType.WhiteSpace)
+                    return;
+
+                if (token.Text.IndexOf('\r') >= 0 || token.Text.IndexOf('\n') >= 0)
+                    hasNewLine = true;
+            }
+
+            // SSMS may already format JOIN and the table reference on the same line.
+            // In that case there is nothing to remove and the existing space must remain.
+            if (!hasNewLine)
+                return;
+
+            // Collapse the whitespace span to exactly one space.
+            tokens[joinTokenIndex + 1].Text = " ";
+            for (int i = joinTokenIndex + 2; i < secondTableIndex; i++)
+                tokens[i].Text = string.Empty;
         }
 
         // Helper: for a whitespace token that looks like "\r\n    …",
