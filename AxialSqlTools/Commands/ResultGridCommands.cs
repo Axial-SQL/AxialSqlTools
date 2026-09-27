@@ -33,6 +33,53 @@ namespace AxialSqlTools
         }
     }
 
+    internal sealed class ResultGridExportCommands : ResultGridCommandBase
+    {
+        private const string ExportControlTagPrefix = "AxialSqlTools.ResultGridExport.";
+
+        public static async Task InitializeAsync(AxialSqlToolsPackage package)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
+
+            var dte = Package.GetGlobalService(typeof(DTE)) as DTE2
+                ?? throw new InvalidOperationException("The Visual Studio automation service is unavailable.");
+
+            // AddControl persists its placement. Rebuild only our entries so restarts
+            // and repeated initialization cannot duplicate them or change their order.
+            for (int index = GridCommandBar.Controls.Count; index >= 1; index--)
+            {
+                var control = GridCommandBar.Controls[index];
+                if (control.Tag?.StartsWith(ExportControlTagPrefix, StringComparison.Ordinal) == true)
+                {
+                    control.Delete();
+                }
+            }
+
+            AddExportCommand(dte, ExportGridToGoogleSheetCommand.CommandSet, ExportGridToGoogleSheetCommand.CommandId, beginGroup: true);
+            AddExportCommand(dte, ExportGridToExcelCommand.CommandSet, ExportGridToExcelCommand.CommandId);
+            AddExportCommand(dte, ToolWindowGridToEmailCommand.CommandSet, ToolWindowGridToEmailCommand.CommandId);
+            AddExportCommand(dte, ExportGridToAsInsertsCommand.CommandSet, ExportGridToAsInsertsCommand.CommandId);
+            AddExportCommand(dte, PivotGrid.PivotGridCommand.CommandSet, PivotGrid.PivotGridCommand.CommandId);
+        }
+
+        private static void AddExportCommand(DTE2 dte, Guid commandSet, int commandId, bool beginGroup = false)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            // Attach the existing command, preserving its caption, icon, shortcuts
+            // and execution behavior instead of introducing a second click handler.
+            var command = dte.Commands.Item(commandSet.ToString("B"), commandId);
+            var control = (CommandBarControl)command.AddControl(GridCommandBar, GridCommandBar.Controls.Count + 1);
+            control.Tag = ExportControlTagPrefix + commandId;
+            control.BeginGroup = beginGroup;
+
+            if (control is CommandBarButton button)
+            {
+                button.Style = MsoButtonStyle.msoButtonIconAndCaption;
+            }
+        }
+    }
+
     internal sealed class ResultGridCopyAsInsertCommand : ResultGridCommandBase
     {
 

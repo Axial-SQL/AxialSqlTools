@@ -210,6 +210,9 @@ namespace AxialSqlTools
                 await ToggleBlockCommentCommand.InitializeAsync(this);
                 await SortSelectedTextCommand.InitializeAsync(this);
 
+                // Mirror exports after all five command handlers and the grid copy menu are registered.
+                await ResultGridExportCommands.InitializeAsync(this);
+
                 UpdateChecker.ScheduleCheck(this, SettingsManager.GetEnableUpdateChecks());
 
             }
