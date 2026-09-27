@@ -28,8 +28,6 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 
 - [**Query Templates and Snippets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Query-Templates-and-Snippets): Quickly access a saved collection of query templates for common tasks, reducing the time and effort required for routine work.
 
-- **Grid Export Context Menu**: Right-click a query results grid to access all five Export Grid commands: Google Sheet, Excel, Email, Temp Table, and Pivot Table. These commands are also available from the toolbar's Tools menu.
-
 - [**Export Grid to Google Sheets**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Google-Sheets-Export): Quickly export results from the grid view directly into Google Sheets.
   
 - [**Export Grid to Excel**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-Grid-To-Excel): Quickly export results from the grid view directly into Excel file.
