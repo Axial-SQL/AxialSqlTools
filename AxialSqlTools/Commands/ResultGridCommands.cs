@@ -1,6 +1,4 @@
-﻿using DocumentFormat.OpenXml.Office2013.Drawing.ChartStyle;
-using DocumentFormat.OpenXml.Spreadsheet;
-using EnvDTE;
+﻿using EnvDTE;
 using EnvDTE80;
 using Microsoft.SqlServer.Management.UI.Grid;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
@@ -9,7 +7,6 @@ using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -114,22 +111,6 @@ namespace AxialSqlTools
             btnControlSelectedInClauseList.Caption = "Values as IN (...) - hold Shift for compact list";
             btnControlSelectedInClauseList.Click += OnClick_CopySelectedAsInClauseList;
 
-            // Mirrors the Export group under the Axial toolbar's Tools menu by invoking the same registered commands
-            CommandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-
-            var exportPopup = (CommandBarPopup)GridCommandBar.Controls.Add(MsoControlType.msoControlPopup, Type.Missing, Type.Missing, Type.Missing, true);
-            exportPopup.Visible = true;
-            exportPopup.Caption = "Export To ...";
-
-            foreach (var (caption, commandId) in ExportCommands)
-            {
-                var btnControlExport = (CommandBarButton)exportPopup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
-                btnControlExport.Visible = true;
-                btnControlExport.Caption = caption;
-                btnControlExport.Tag = ExportTagPrefix + commandId;
-                btnControlExport.Click += OnClick_Export;
-            }
-
             var btnControlCCN = (CommandBarButton)GridCommandBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, Type.Missing, true);
             btnControlCCN.Visible = true;
             btnControlCCN.Caption = "Copy Selected Column Names";
@@ -140,30 +121,6 @@ namespace AxialSqlTools
             btnControlCCNA.Caption = "Copy All Column Names";
             btnControlCCNA.Click += OnClick_CopyAllColumnNames ;
 
-        }
-
-        private const string ExportTagPrefix = "AxialGridExport_";
-        private static OleMenuCommandService CommandService;
-
-        // Keep in sync with AxialToolsSubMenuGroup_Export in AxialSqlToolsPackage.vsct
-        private static readonly (string Caption, int CommandId)[] ExportCommands =
-        {
-            ("Google Sheet", ExportGridToGoogleSheetCommand.CommandId),
-            ("Excel", ExportGridToExcelCommand.CommandId),
-            ("Email", ToolWindowGridToEmailCommand.CommandId),
-            ("Temp Table", ExportGridToAsInsertsCommand.CommandId),
-            ("Pivot Table", PivotGrid.PivotGridCommand.CommandId),
-        };
-
-        private static void OnClick_Export(CommandBarButton Ctrl, ref bool CancelDefault)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            if (CommandService == null || Ctrl.Tag == null || !Ctrl.Tag.StartsWith(ExportTagPrefix)
-                || !int.TryParse(Ctrl.Tag.Substring(ExportTagPrefix.Length), out int commandId))
-                return;
-
-            CommandService.GlobalInvoke(new CommandID(ExportGridToExcelCommand.CommandSet, commandId));
         }
 
         private static void OnClick_CopyAllAsInsert(CommandBarButton Ctrl, ref bool CancelDefault) => CopyValues(CopyScope.All, CopyFormat.Insert);

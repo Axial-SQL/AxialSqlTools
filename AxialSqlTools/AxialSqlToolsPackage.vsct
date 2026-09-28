@@ -407,6 +407,10 @@
 
 
   <CommandPlacements>
+	<!-- Mirror the entire export group, including future commands, into the results grid menu. -->
+	<CommandPlacement guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Export" priority="0x6000">
+	  <Parent guid="guidSqlWorkbenchEditorGroup" id="IDM_SQLWB_SQLRESGRID_CONTEXT" />
+	</CommandPlacement>
     <CommandPlacement guid="guidAxialSqlToolsPackageCmdSet" id="AxialFindObjectInObjectExplorer" priority="0x0100">
       <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlEditorContextMenuGroup" />
     </CommandPlacement>
@@ -425,9 +429,10 @@
 
 
   <Symbols>
-    <!-- SQLEditors.dll: SQLWorkbenchCommands.GUID_SQLEditorGroup / IDM_SQLWB_SQLSCRIPT_CONTEXT. -->
+    <!-- SQLEditors.dll: SQLWorkbenchCommands.GUID_SQLEditorGroup and its context menu IDs. -->
     <GuidSymbol name="guidSqlWorkbenchEditorGroup" value="{33F13AC3-80BB-4ECB-85BC-225435603A5E}">
       <IDSymbol name="IDM_SQLWB_SQLSCRIPT_CONTEXT" value="0x0050" />
+	  <IDSymbol name="IDM_SQLWB_SQLRESGRID_CONTEXT" value="0x0070" />
     </GuidSymbol>
     <!-- This is the package guid. -->
     <GuidSymbol name="guidAxialSqlToolsPackage" value="{82ff597d-c4bc-469f-b990-637219074984}" />
