@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
   id-token: write
 
 jobs:
@@ -13,6 +14,16 @@ jobs:
     environment: vsix-signing
 
     steps:
+      - name: Enable immutable GitHub OIDC subject
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method PUT -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2026-03-10" "/repos/${{ github.repository }}/actions/oidc/customization/sub" -F use_default=true -F use_immutable_subject=true
+
+          Write-Host "Current OIDC subject configuration:"
+          gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2026-03-10" "/repos/${{ github.repository }}/actions/oidc/customization/sub"
+
       - name: Login to Azure using GitHub OIDC
         uses: azure/login@v3
         with:
