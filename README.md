@@ -1,5 +1,9 @@
 # Axial SQL Tools | SQL Server Management Studio 22 Productivity Add-in
 
+[![Signed VSIX on GitHub](https://img.shields.io/github/v/release/Axial-SQL/AxialSqlTools?include_prereleases&label=Signed%20VSIX&logo=github&style=flat-square&color=2ea44f)](https://github.com/Axial-SQL/AxialSqlTools/releases)
+[![Download from Open VSIX Gallery](https://img.shields.io/badge/Open%20VSIX%20Gallery-download-0078D4?style=flat-square)](https://www.vsixgallery.com/extension/AxialSqlTools)
+[![Download from SSMS Gallery](https://img.shields.io/badge/SSMS%20Gallery-download-5C2D91?style=flat-square)](https://ssmsgallery.azurewebsites.net/extension/AxialSqlTools)
+
 Axial SQL Tools is an open-source productivity extension for SQL Server Management Studio (SSMS) 22. The project began in 2016 as a practical response to everyday SQL Server workflow friction and has grown into a community-supported tool maintained by contributors who use SSMS in real production environments.
 
 The goal is straightforward: make common SSMS tasks faster, clearer, and less repetitive. Axial SQL Tools focuses on small, useful improvements such as clearer query status indicators, richer grid export options, query templates, formatting helpers, quick search, schema comparison, and other utilities that help database engineers stay in flow.
