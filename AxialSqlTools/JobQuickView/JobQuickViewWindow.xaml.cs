@@ -1,5 +1,8 @@
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Search;
+using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -15,7 +18,7 @@ using System.Windows.Threading;
 
 namespace AxialSqlTools.JobQuickView
 {
-    public partial class JobQuickViewWindow : Window
+    public partial class JobQuickViewWindow : UserControl, IDisposable
     {
         private readonly JobQuickViewService service;
         private readonly string serverName;
@@ -36,6 +39,17 @@ namespace AxialSqlTools.JobQuickView
         private bool applyingSnapshot;
         private bool stateUpdatePending;
 
+        internal string Caption { get; private set; }
+        internal string JobName => snapshot?.Name ?? requestedJobName;
+        internal event EventHandler CaptionChanged;
+
+        private void SetCaption(string value)
+        {
+            if (Caption == value) return;
+            Caption = value;
+            CaptionChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         internal JobQuickViewWindow(JobQuickViewService service, string serverName, string jobName)
         {
             this.service = service ?? throw new ArgumentNullException(nameof(service));
@@ -45,7 +59,7 @@ namespace AxialSqlTools.JobQuickView
             InitializeComponent();
             JobNameText.Text = requestedJobName;
             ServerText.Text = this.serverName;
-            Title = requestedJobName + " - Quick Manage";
+            SetCaption(requestedJobName + " - Quick Manage");
             StepsList.ItemsSource = drafts;
             CommandEditor.Options.ConvertTabsToSpaces = false;
             CommandEditor.Options.IndentationSize = 4;
@@ -58,7 +72,7 @@ namespace AxialSqlTools.JobQuickView
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if (loaded) return;
+            if (loaded || closed) return;
             loaded = true;
             await RefreshAsync();
         }
@@ -273,7 +287,7 @@ namespace AxialSqlTools.JobQuickView
             // Child buttons bind to StepDraft.CanSave/IsDirty. Do not overwrite those bindings.
             EditorActions.IsEnabled = canAct;
             int dirtyCount = drafts.Count(d => d.IsDirty);
-            Title = (dirtyCount == 0 ? string.Empty : "* ") + (snapshot?.Name ?? requestedJobName) + " - Quick Manage";
+            SetCaption((dirtyCount == 0 ? string.Empty : "* ") + JobName + " - Quick Manage");
             Caret_PositionChanged(null, EventArgs.Empty);
         }
 
@@ -289,9 +303,9 @@ namespace AxialSqlTools.JobQuickView
         private async void Start_Click(object sender, RoutedEventArgs e)
         {
             if (snapshot == null) return;
-            if (drafts.Any(d => d.IsDirty) && MessageBox.Show(this,
+            if (drafts.Any(d => d.IsDirty) && !Confirm(
                 "There are unsaved step changes. Start the job using its currently saved commands?",
-                "Start job", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+                "Start job")) return;
             await RunActionAsync(() => service.StartAsync(snapshot.JobId, token), "Start requested. SQL Server Agent will update the running status.");
         }
 
@@ -353,8 +367,7 @@ namespace AxialSqlTools.JobQuickView
         {
             if (busy || selectedDraft == null || !selectedDraft.IsDirty) return;
             var draft = selectedDraft;
-            if (MessageBox.Show(this, "Discard unsaved changes to step '" + draft.Latest.Name + "'?",
-                "Discard step changes", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            if (!Confirm("Discard unsaved changes to step '" + draft.Latest.Name + "'?", "Discard step changes")) return;
             if (draft.IsRemoved)
             {
                 draft.PropertyChanged -= Draft_Changed;
@@ -513,22 +526,40 @@ namespace AxialSqlTools.JobQuickView
             MessageBanner.Visibility = Visibility.Visible;
         }
 
-        private void Window_Closing(object sender, CancelEventArgs e)
+        private static bool Confirm(string message, string title, bool warning = false)
         {
-            if (saving || mutating)
-            {
-                e.Cancel = true;
-                ShowMessage("A job action is in progress. Wait for it to finish before closing this window.", false);
-                return;
-            }
-            int count = drafts.Count(d => d.IsDirty);
-            if (count > 0 && MessageBox.Show(this,
-                "There are unsaved commands in " + count + " step(s). Close and discard those changes?",
-                "Unsaved step changes", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) e.Cancel = true;
+            // The pane is hosted by SSMS, not by a standalone WPF Window.
+            return VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider, message, title,
+                warning ? OLEMSGICON.OLEMSGICON_WARNING : OLEMSGICON.OLEMSGICON_QUERY,
+                OLEMSGBUTTON.OLEMSGBUTTON_YESNO, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_SECOND) == (int)System.Windows.Forms.DialogResult.Yes;
         }
 
-        private void Window_Closed(object sender, EventArgs e)
+        private void DocumentLayout_LayoutUpdated(object sender, EventArgs e)
         {
+            if (closed || DocumentScroll.ViewportHeight <= 0 || DocumentScroll.ViewportWidth <= 0) return;
+            // Keep AvalonEdit's measure finite; narrow/split document groups scroll the shell content.
+            double width = Math.Max(860, DocumentScroll.ViewportWidth);
+            double height = Math.Max(600, DocumentScroll.ViewportHeight);
+            if (!double.IsInfinity(width) && Math.Abs(DocumentLayout.Width - width) > 0.5) DocumentLayout.Width = width;
+            if (!double.IsInfinity(height) && Math.Abs(DocumentLayout.Height - height) > 0.5) DocumentLayout.Height = height;
+        }
+
+        internal bool CanClose()
+        {
+            if (closed) return true;
+            if (saving || mutating)
+            {
+                ShowMessage("A job action is in progress. Wait for it to finish before closing this tab.", false);
+                return false;
+            }
+            int count = drafts.Count(d => d.IsDirty);
+            return count == 0 || Confirm("There are unsaved commands in " + count + " step(s). Close and discard those changes?",
+                "Unsaved step changes", warning: true);
+        }
+
+        public void Dispose()
+        {
+            if (closed) return;
             closed = true;
             lifetime.Cancel();
             lifetime.Dispose();

@@ -71,6 +71,7 @@
     <Compile Include="JobQuickView\JobQuickViewModels.cs" />
     <Compile Include="JobQuickView\JobQuickViewService.cs" />
     <Compile Include="JobQuickView\JobQuickViewCommand.cs" />
+    <Compile Include="JobQuickView\JobQuickViewPane.cs" />
     <Compile Include="JobQuickView\JobQuickViewSelection.cs" />
     <Compile Include="JobQuickView\JobCommandEditorSupport.cs" />
     <Compile Include="JobQuickView\JobQuickViewWindow.xaml.cs">

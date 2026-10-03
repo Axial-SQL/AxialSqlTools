@@ -3,11 +3,12 @@ using Microsoft.SqlServer.Management.UI.VSIntegration.ObjectExplorer;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.Drawing;
 using System.Windows.Forms;
-using System.Windows.Interop;
+using System.Linq;
 using System.Windows.Threading;
 using System.Threading.Tasks;
 
@@ -22,6 +23,8 @@ namespace AxialSqlTools.JobQuickView
         private readonly OleMenuCommand command;
         private readonly DispatcherTimer attachTimer;
         private readonly Image settingsIcon;
+        private readonly List<JobQuickViewPane> jobTabs = new List<JobQuickViewPane>();
+        private int nextTabId;
         private IObjectExplorerService explorer;
         private TreeView tree;
         private ContextMenuStrip menu;
@@ -196,11 +199,33 @@ namespace AxialSqlTools.JobQuickView
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (disposed || package.DisposalToken.IsCancellationRequested) return;
-            var window = new JobQuickViewWindow(new JobQuickViewService(selection.CreateConnection), selection.ServerName, selection.JobName);
-            var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
-            if (shell != null && shell.GetDialogOwnerHwnd(out IntPtr owner) == 0)
-                new WindowInteropHelper(window).Owner = owner;
-            window.Show();
+            var existing = jobTabs.FirstOrDefault(tab => tab.Matches(selection));
+            if (existing != null)
+            {
+                ToolWindowDisplay.ShowAsDocument(existing);
+                return;
+            }
+            var pane = package.FindToolWindow(typeof(JobQuickViewPane), ++nextTabId, true) as JobQuickViewPane;
+            if (pane == null) throw new InvalidOperationException("Cannot create the Quick Manage tab.");
+            try
+            {
+                pane.Initialize(selection);
+                pane.Closed += JobTabClosed;
+                jobTabs.Add(pane);
+                ToolWindowDisplay.ShowAsDocument(pane);
+            }
+            catch
+            {
+                pane.Dispose();
+                throw;
+            }
+        }
+
+        private void JobTabClosed(object sender, EventArgs e)
+        {
+            var pane = (JobQuickViewPane)sender;
+            pane.Closed -= JobTabClosed;
+            jobTabs.Remove(pane);
         }
 
         private void ShowError(Exception error)
@@ -254,6 +279,9 @@ namespace AxialSqlTools.JobQuickView
                 }
                 commands.RemoveCommand(command);
                 settingsIcon?.Dispose();
+                // Pane lifetime belongs to the shell, not to menu integration.
+                foreach (var pane in jobTabs) pane.Closed -= JobTabClosed;
+                jobTabs.Clear();
             });
         }
     }

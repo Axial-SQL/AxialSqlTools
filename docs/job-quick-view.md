@@ -2,7 +2,9 @@
 
 In Object Explorer, right-click a job under **SQL Server Agent > Jobs** and select **Quick Manage**. The same window is available from **Axial SQL Tools toolbar > Tools > Quick Manage** when a job is selected.
 
-Quick Manage opens a resizable window with the job name and server, current status, schedules, and the latest execution result. Details load asynchronously. The Steps tab keeps the step list beside the command editor. Job details, Schedules, and Execution tabs provide tabular information without reducing editor space. Compact last/next execution summaries and colored status badges remain visible above the tabs.
+Quick Manage opens in the SSMS document area alongside query tabs, titled **Job name - Quick Manage**. Reopening the same job on the same server and authentication identity activates its existing tab without replacing drafts. Different jobs can remain open simultaneously. Tabs are session-only and are not restored when SSMS restarts.
+
+The tab shows the job name and server, current status, schedules, and the latest execution result. Details load asynchronously. The Steps tab keeps the step list beside the command editor. Job details, Schedules, and Execution tabs provide tabular information without reducing editor space. Compact last/next execution summaries and colored status badges remain visible above the tabs. Narrow or split document groups scroll the content to keep actions reachable.
 
 ## Common tasks
 
@@ -36,5 +38,7 @@ Use a disposable test job when checking actions and edits:
 5. Leave the window idle and confirm it does not poll. Enable, disable, start, and stop the test job. Verify observed status and the latest completion result after refresh. Confirm a start uses saved commands.
 6. Test an account without modification permissions, an unreachable server, a stopped SQL Server Agent, and closing during an asynchronous load. Confirm errors remain actionable and SSMS stays responsive.
 7. Open the job context menu repeatedly, then open a non-job context menu. Confirm Quick Manage appears only once and only for a single job.
+8. Open two different jobs and confirm separate document tabs. Open the first again and confirm its existing tab and drafts are retained. Switch to a SQL query and back; verify no reload or lost edits. Check Ctrl+F, Ctrl+S, and Ctrl+Shift+F in the hosted editor.
+9. Close a dirty tab and choose No: it must remain open with its drafts. Repeat through Close All. Choose Yes and reopen: it must load fresh data. Attempt to close during a save or job action: closing must be blocked until the write finishes. Close during initial loading and verify safe cancellation. Resize/split the document group and check both scrollbars and editor scrolling. Confirm closed tabs are not restored after restarting SSMS.
 
 Builds are started manually from GitHub Actions. This feature does not add automatic pull request or push triggers.

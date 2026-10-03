@@ -49,6 +49,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(HealthDashboard_Server), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(DataCompare.DataCompareWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(PivotGrid.PivotGridWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(JobQuickView.JobQuickViewPane), MultiInstances = true, Style = VsDockStyle.MDI, DocumentLikeTool = true, Transient = true)]
     [ProvideToolWindow(typeof(DataTransferWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(SqlServerBuildsWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(QueryHistoryWindow), Style = VsDockStyle.MDI)]

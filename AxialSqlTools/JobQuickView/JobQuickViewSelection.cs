@@ -24,6 +24,11 @@ namespace AxialSqlTools.JobQuickView
         public string ServerName { get; }
         public string JobName { get; }
 
+        internal bool HasSameConnection(JobQuickViewSelection other)
+            => other != null && string.Equals(ServerName, other.ServerName, StringComparison.OrdinalIgnoreCase) &&
+                connection.Authentication == other.connection.Authentication &&
+                string.Equals(connection.UserName, other.connection.UserName, StringComparison.Ordinal);
+
         public static bool IsJob(INodeInformation node)
         {
             if (node == null || !(node.Connection is SqlConnectionInfo)) return false;
