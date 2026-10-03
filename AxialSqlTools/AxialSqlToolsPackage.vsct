@@ -271,13 +271,13 @@
 
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialJobQuickViewCommand" priority="0x0100" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
-        <Icon guid="guidQueryHistory" id="bmpQueryHistory" />
+        <Icon guid="guidImagesSettings" id="bmpSettings" />
         <CommandFlag>DefaultDisabled</CommandFlag>
         <Strings>
-          <ButtonText>Job Quick View</ButtonText>
+          <ButtonText>Quick Manage</ButtonText>
           <CanonicalName>AxialSqlTools.JobQuickView</CanonicalName>
           <LocCanonicalName>AxialSqlTools.JobQuickView</LocCanonicalName>
-          <ToolTipText>View the SQL Server Agent job selected in Object Explorer</ToolTipText>
+          <ToolTipText>Manage the SQL Server Agent job selected in Object Explorer</ToolTipText>
         </Strings>
       </Button>
 

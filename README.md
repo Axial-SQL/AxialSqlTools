@@ -36,7 +36,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
   
 - [**Export Grid as Temp Table**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Export-grid-results-as-a-temp-table): Convert the grid result(s) into temp table with insert statements.
   
-- [**SQL Agent Job Quick View**](docs/job-quick-view.md): Open a job from Object Explorer to see its schedules and latest execution, browse highlighted step commands, enable or disable the job, start or stop it, and save command-only edits.
+- [**SQL Agent Quick Manage**](docs/job-quick-view.md): Open a job from Object Explorer to see its schedules and latest execution, browse highlighted step commands, enable or disable the job, start or stop it, and save command-only edits.
 
 - [**Quick Search**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Quick-Search): Quick Search helps you find SQL text quickly across one database or across all accessible databases on a server.
  

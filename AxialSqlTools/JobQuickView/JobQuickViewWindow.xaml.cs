@@ -5,12 +5,12 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace AxialSqlTools.JobQuickView
@@ -22,7 +22,6 @@ namespace AxialSqlTools.JobQuickView
         private readonly string requestedJobName;
         private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private readonly CancellationToken token;
-        private readonly DispatcherTimer refreshTimer;
         private readonly ToolWindowThemeController theme;
         private readonly SearchPanel searchPanel;
         private readonly ObservableCollection<StepDraft> drafts = new ObservableCollection<StepDraft>();
@@ -35,7 +34,7 @@ namespace AxialSqlTools.JobQuickView
         private bool saving;
         private bool mutating;
         private bool applyingSnapshot;
-        private bool refreshMessage;
+        private bool stateUpdatePending;
 
         internal JobQuickViewWindow(JobQuickViewService service, string serverName, string jobName)
         {
@@ -46,7 +45,7 @@ namespace AxialSqlTools.JobQuickView
             InitializeComponent();
             JobNameText.Text = requestedJobName;
             ServerText.Text = this.serverName;
-            Title = requestedJobName + " - Job Quick View";
+            Title = requestedJobName + " - Quick Manage";
             StepsList.ItemsSource = drafts;
             CommandEditor.Options.ConvertTabsToSpaces = false;
             CommandEditor.Options.IndentationSize = 4;
@@ -55,24 +54,16 @@ namespace AxialSqlTools.JobQuickView
             searchPanel.SetResourceReference(Control.BackgroundProperty, "AxialThemeHeaderBackgroundBrush");
             searchPanel.SetResourceReference(Control.ForegroundProperty, "AxialThemeForegroundBrush");
             theme = new ToolWindowThemeController(this, ApplyTheme);
-            refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
-            refreshTimer.Tick += RefreshTimer_Tick;
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             if (loaded) return;
             loaded = true;
-            await RefreshAsync(false);
-            if (!closed) refreshTimer.Start();
+            await RefreshAsync();
         }
 
-        private async void RefreshTimer_Tick(object sender, EventArgs e)
-        {
-            if (IsVisible && !busy && !refreshing) await RefreshAsync(true);
-        }
-
-        private async Task<bool> RefreshAsync(bool automatic)
+        private async Task<bool> RefreshAsync()
         {
             if (closed || busy || refreshing) return false;
             refreshing = true;
@@ -89,12 +80,10 @@ namespace AxialSqlTools.JobQuickView
                 if (!string.IsNullOrWhiteSpace(result.ActivityWarning))
                 {
                     ShowMessage(result.ActivityWarning, false);
-                    refreshMessage = true;
                 }
-                else if (refreshMessage || !automatic)
+                else
                 {
                     MessageBanner.Visibility = Visibility.Collapsed;
-                    refreshMessage = false;
                 }
                 return true;
             }
@@ -106,14 +95,14 @@ namespace AxialSqlTools.JobQuickView
                     RefreshText.Text = "Refresh failed";
                     ShowMessage("Could not refresh this job. " + ex.Message +
                         (snapshot == null ? " Use Refresh to retry." : " Displayed information may be out of date; drafts are preserved."), true);
-                    refreshMessage = true;
                     if (snapshot == null)
                     {
-                        ScheduleSummaryText.Text = "Unavailable";
+                        ScheduleStatusText.Text = "Schedules could not be loaded. Use Refresh to retry.";
                         LastRunSummaryText.Text = "Unavailable";
                         NextRunText.Text = "Unavailable";
                         EnabledText.Text = "Unknown";
                         RunningText.Text = "Status unknown";
+                        ApplyStatusBadges();
                         EditorEmptyText.Text = "Job steps could not be loaded. Use Refresh to retry.";
                     }
                 }
@@ -135,10 +124,7 @@ namespace AxialSqlTools.JobQuickView
             EnabledText.Text = result.IsEnabled ? "Enabled" : "Disabled";
             RunningText.Text = EmptyValue(result.ExecutionStatus, "Status unknown");
             RunningText.ToolTip = result.RunningSince.HasValue ? "Started " + ServerDate(result.RunningSince) + " (server local time)" : null;
-            ScheduleSummaryText.Text = !result.SchedulesLoaded ? "Unavailable" : result.Schedules.Count == 0 ? "On demand" :
-                result.Schedules.Count(s => s.IsEnabled) + " enabled / " + result.Schedules.Count + " total";
-            ScheduleDetailText.Text = !result.SchedulesLoaded ? "Schedule information could not be loaded" : result.Schedules.Count == 0 ? "No schedules attached" : string.Join(", ", result.Schedules.Select(s => s.Name));
-            ScheduleDetailText.ToolTip = ScheduleDetailText.Text;
+            ApplyStatusBadges();
             LastRunSummaryText.Text = EmptyValue(result.LastRunOutcome, "No recorded execution");
             LastRunSummaryText.SetResourceReference(TextBlock.ForegroundProperty,
                 string.Equals(result.LastRunOutcome, "Failed", StringComparison.OrdinalIgnoreCase)
@@ -148,21 +134,39 @@ namespace AxialSqlTools.JobQuickView
                 : result.HistoryLoaded ? "No completed job history is available" : "Execution details could not be loaded";
             NextRunText.Text = !result.IsEnabled ? "Job disabled" : ServerDate(result.NextRun, "No scheduled time");
             NextRunDetailText.Text = !result.IsEnabled ? "Enable the job to allow scheduled runs" : "SQL Server local time; Agent cache may lag";
-            JobDetailsText.Text = "Job: " + result.Name + "\r\nServer: " + serverName + "\r\nOwner: " + EmptyValue(result.Owner) +
-                "\r\nStarting step: " + result.StartStepId + "\r\nJob ID: " + result.JobId + "\r\n\r\n" + EmptyValue(result.Description, "No description.");
-            var scheduleDetails = new StringBuilder();
-            foreach (var schedule in result.Schedules)
+            JobDetailsGrid.ItemsSource = new[]
             {
-                if (scheduleDetails.Length > 0) scheduleDetails.AppendLine().AppendLine();
-                scheduleDetails.Append(schedule.Name).Append(schedule.IsEnabled ? " (enabled)" : " (disabled)")
-                    .AppendLine().Append(EmptyValue(schedule.Description))
-                    .AppendLine().Append("Next run: ").Append(ServerDate(schedule.NextRun, schedule.IsEnabled ? "No scheduled time" : "Schedule disabled"));
-            }
-            SchedulesText.Text = (!result.SchedulesLoaded ? "Schedules could not be loaded. Use Refresh to retry." : scheduleDetails.Length == 0 ? "No schedules attached. This job can be started manually." : scheduleDetails.ToString()) +
-                "\r\n\r\n" + JobQuickViewSnapshot.NextRunNote;
-            LastRunMessageText.Text = "Outcome: " + EmptyValue(result.LastRunOutcome, "No recorded execution") +
-                "\r\nStarted: " + ServerDate(result.LastRunStarted) + "\r\nDuration: " + Duration(result.LastRunDuration) +
-                "\r\n\r\n" + EmptyValue(result.LastRunMessage, result.HistoryLoaded ? "No execution message is available." : "Execution details could not be loaded. Use Refresh to retry.");
+                new DetailRow("Job", result.Name),
+                new DetailRow("Server", serverName),
+                new DetailRow("Owner", EmptyValue(result.Owner)),
+                new DetailRow("Status", result.IsEnabled ? "Enabled" : "Disabled"),
+                new DetailRow("Starting step", result.StartStepId.ToString(CultureInfo.CurrentCulture)),
+                new DetailRow("Job ID", result.JobId.ToString()),
+                new DetailRow("Description", EmptyValue(result.Description, "No description."))
+            };
+            ScheduleStatusText.Text = !result.SchedulesLoaded ? "Schedules could not be loaded. Use Refresh to retry." :
+                result.Schedules.Count == 0 ? "No schedules attached. This job can be started manually." :
+                result.Schedules.Count(s => s.IsEnabled) + " enabled / " + result.Schedules.Count + " total";
+            SchedulesGrid.ItemsSource = result.Schedules.Select(schedule => new ScheduleRow
+            {
+                Name = schedule.Name,
+                Status = schedule.IsEnabled ? "Enabled" : "Disabled",
+                Description = EmptyValue(schedule.Description),
+                NextRun = ServerDate(schedule.NextRun, schedule.IsEnabled ? "No scheduled time" : "Schedule disabled")
+            }).ToList();
+            ScheduleNoteText.Text = JobQuickViewSnapshot.NextRunNote;
+            ExecutionGrid.ItemsSource = new[]
+            {
+                new DetailRow("Current status", EmptyValue(result.ExecutionStatus)),
+                new DetailRow("Running since", ServerDate(result.RunningSince)),
+                new DetailRow("Last outcome", EmptyValue(result.LastRunOutcome, "No recorded execution")),
+                new DetailRow("Last started", ServerDate(result.LastRunStarted)),
+                new DetailRow("Last duration", Duration(result.LastRunDuration)),
+                new DetailRow("Next execution", !result.IsEnabled ? "Job disabled" : ServerDate(result.NextRun, "No scheduled time")),
+                new DetailRow("Time zone", "SQL Server local time")
+            };
+            LastRunMessageText.Text = EmptyValue(result.LastRunMessage, result.HistoryLoaded
+                ? "No execution message is available." : "Execution details could not be loaded. Use Refresh to retry.");
 
             // Keep the original server command as the concurrency baseline for every draft.
             // A server refresh may update clean documents, but never replaces unsaved work.
@@ -203,7 +207,6 @@ namespace AxialSqlTools.JobQuickView
             finally { applyingSnapshot = false; }
             SelectDraft(StepsList.SelectedItem as StepDraft);
             StepsCountText.Text = "JOB STEPS (" + result.Steps.Count + ")";
-            FooterText.Text = "Schedule and execution times use the SQL Server's local time.";
             UpdateActions();
         }
 
@@ -229,6 +232,8 @@ namespace AxialSqlTools.JobQuickView
                     CommandEditor.ScrollToVerticalOffset(draft.VerticalOffset);
                 }
             }
+            // The editor footer and step list observe the same draft, including format/undo/redo.
+            EditorFooter.DataContext = draft;
             EditorEmptyText.Visibility = draft == null ? Visibility.Visible : Visibility.Collapsed;
             EditorEmptyText.Text = snapshot == null ? "Loading job steps..." : "This job has no steps.";
             StepNameText.Text = draft == null ? "Select a job step" : draft.DisplayName;
@@ -241,7 +246,13 @@ namespace AxialSqlTools.JobQuickView
 
         private void Draft_Changed(object sender, PropertyChangedEventArgs e)
         {
-            if (!closed && !applyingSnapshot) UpdateActions();
+            if (closed || applyingSnapshot || stateUpdatePending) return;
+            stateUpdatePending = true;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                stateUpdatePending = false;
+                if (!closed) UpdateActions();
+            }), DispatcherPriority.DataBind);
         }
 
         private void UpdateActions()
@@ -251,24 +262,22 @@ namespace AxialSqlTools.JobQuickView
             StartButton.IsEnabled = canAct && snapshot.IsRunning == false;
             StopButton.IsEnabled = canAct && snapshot.IsRunning == true;
             EnabledButton.IsEnabled = canAct;
-            EnabledButton.Content = snapshot?.IsEnabled == false ? "Enable job" : "Disable job";
+            EnabledActionText.Text = snapshot?.IsEnabled == false ? "Enable job" : "Disable job";
+            EnabledIcon.SetResourceReference(System.Windows.Shapes.Path.DataProperty,
+                snapshot?.IsEnabled == false ? "EnableIconGeometry" : "DisableIconGeometry");
             RefreshButton.IsEnabled = !busy && !refreshing;
             StepsList.IsEnabled = !busy;
             CommandEditor.IsReadOnly = selectedDraft == null || busy;
             FormatButton.IsEnabled = !busy && !refreshing && selectedDraft?.Original.IsSql == true && !selectedDraft.IsRemoved;
             FindButton.IsEnabled = selectedDraft != null;
-            SaveButton.IsEnabled = canAct && selectedDraft?.IsDirty == true && !selectedDraft.IsRemoved;
-            DiscardButton.IsEnabled = !busy && selectedDraft?.IsDirty == true;
-            if (selectedDraft == null) EditorStateText.Text = string.Empty;
-            else if (selectedDraft.IsRemoved) EditorStateText.Text = "This step was removed on the server. Copy your draft before discarding it.";
-            else if (selectedDraft.HasRemoteChanges) EditorStateText.Text = "The command or execution context changed on the server. Your draft is preserved; discard it to load that version.";
-            else EditorStateText.Text = selectedDraft.IsDirty ? "Unsaved command changes" : "Saved command. Edit here, then save this step.";
+            // Child buttons bind to StepDraft.CanSave/IsDirty. Do not overwrite those bindings.
+            EditorActions.IsEnabled = canAct;
             int dirtyCount = drafts.Count(d => d.IsDirty);
-            Title = (dirtyCount == 0 ? string.Empty : "* ") + (snapshot?.Name ?? requestedJobName) + " - Job Quick View";
+            Title = (dirtyCount == 0 ? string.Empty : "* ") + (snapshot?.Name ?? requestedJobName) + " - Quick Manage";
             Caret_PositionChanged(null, EventArgs.Empty);
         }
 
-        private async void Refresh_Click(object sender, RoutedEventArgs e) { await RefreshAsync(false); }
+        private async void Refresh_Click(object sender, RoutedEventArgs e) { await RefreshAsync(); }
 
         private async void Enabled_Click(object sender, RoutedEventArgs e)
         {
@@ -314,11 +323,10 @@ namespace AxialSqlTools.JobQuickView
             }
             if (succeeded)
             {
-                bool refreshed = await RefreshAsync(false);
+                bool refreshed = await RefreshAsync();
                 if (closed) return;
                 string warning = !refreshed ? MessageText.Text : snapshot.ActivityWarning;
                 ShowMessage(successMessage + (string.IsNullOrWhiteSpace(warning) ? string.Empty : "\r\n" + warning), !refreshed);
-                refreshMessage = !string.IsNullOrWhiteSpace(warning);
             }
         }
 
@@ -383,7 +391,7 @@ namespace AxialSqlTools.JobQuickView
                     using (draft.Document.RunUpdate()) draft.Document.Replace(start, length, formatted);
                     CommandEditor.Select(start, formatted.Length);
                 }
-                ShowMessage("Formatting applied to this draft. Save step to update the job command; Ctrl+Z undoes formatting.", false);
+                draft.NotifyStateChanged();
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { }
             catch (Exception ex)
@@ -400,6 +408,7 @@ namespace AxialSqlTools.JobQuickView
         private void Find_Click(object sender, RoutedEventArgs e)
         {
             if (selectedDraft == null) return;
+            MainTabs.SelectedItem = StepsTab;
             searchPanel.Open();
             searchPanel.Reactivate();
         }
@@ -409,7 +418,7 @@ namespace AxialSqlTools.JobQuickView
             if (e.Key == Key.F5 && Keyboard.Modifiers == ModifierKeys.None)
             {
                 e.Handled = true;
-                await RefreshAsync(false);
+                await RefreshAsync();
             }
             else if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
             {
@@ -419,11 +428,13 @@ namespace AxialSqlTools.JobQuickView
             else if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 e.Handled = true;
+                MainTabs.SelectedItem = StepsTab;
                 await SaveSelectedAsync();
             }
             else if (e.Key == Key.F && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
             {
                 e.Handled = true;
+                MainTabs.SelectedItem = StepsTab;
                 await FormatSelectedAsync();
             }
         }
@@ -446,7 +457,47 @@ namespace AxialSqlTools.JobQuickView
         private void ApplyTheme()
         {
             ToolWindowThemeResources.ApplySharedTheme(this);
+            ApplySemanticColors();
+            ApplyStatusBadges();
             ApplyEditorTheme();
+        }
+
+        private void ApplySemanticColors()
+        {
+            var background = VsThemeBrushResolver.GetBrushColor(Background, SystemColors.WindowColor);
+            var foreground = VsThemeBrushResolver.GetBrushColor(Foreground, SystemColors.WindowTextColor);
+            bool light = VsThemeBrushResolver.GetRelativeLuminance(background) > 0.6;
+            SetSemanticPalette("Green", Color.FromRgb(0x12, 0x7A, 0x3A), background, foreground, light);
+            SetSemanticPalette("Blue", Color.FromRgb(0x00, 0x67, 0xB8), background, foreground, light);
+            SetSemanticPalette("Amber", Color.FromRgb(0xAB, 0x62, 0x00), background, foreground, light);
+            var red = light ? Color.FromRgb(0xB4, 0x23, 0x18) : Color.FromRgb(0xFF, 0x8A, 0x80);
+            var dirtyBackground = VsThemeBrushResolver.BlendColors(background, red, light ? 0.09 : 0.14);
+            Resources["QuickManageDirtyBackgroundBrush"] = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(dirtyBackground);
+            Resources["QuickManageDirtyForegroundBrush"] = SystemParameters.HighContrast ? SystemColors.WindowTextBrush :
+                new SolidColorBrush(VsThemeBrushResolver.EnsureTextContrast(red, dirtyBackground, foreground));
+            Resources["QuickManageDirtyTextBrush"] = SystemParameters.HighContrast ? SystemColors.WindowTextBrush :
+                new SolidColorBrush(VsThemeBrushResolver.EnsureTextContrast(red, background, foreground));
+        }
+
+        private void SetSemanticPalette(string name, Color color, Color background, Color foreground, bool light)
+        {
+            var fill = VsThemeBrushResolver.BlendColors(background, color, light ? 0.12 : 0.26);
+            Resources["QuickManage" + name + "BackgroundBrush"] = SystemParameters.HighContrast ? SystemColors.WindowBrush : new SolidColorBrush(fill);
+            Resources["QuickManage" + name + "ForegroundBrush"] = SystemParameters.HighContrast ? SystemColors.WindowTextBrush :
+                new SolidColorBrush(VsThemeBrushResolver.EnsureTextContrast(color, fill, foreground));
+        }
+
+        private void ApplyStatusBadges()
+        {
+            SetStatusBadge(EnabledBadge, EnabledText, snapshot?.IsEnabled == true ? "Green" : "Amber");
+            SetStatusBadge(RunningBadge, RunningText, snapshot?.IsRunning == true ? "Green" : snapshot?.IsRunning == false ? "Blue" : "Amber");
+        }
+
+        private static void SetStatusBadge(Border badge, TextBlock text, string color)
+        {
+            badge.SetResourceReference(Border.BackgroundProperty, "QuickManage" + color + "BackgroundBrush");
+            badge.SetResourceReference(Border.BorderBrushProperty, "QuickManage" + color + "ForegroundBrush");
+            text.SetResourceReference(TextBlock.ForegroundProperty, "QuickManage" + color + "ForegroundBrush");
         }
 
         private void ApplyEditorTheme()
@@ -456,23 +507,10 @@ namespace AxialSqlTools.JobQuickView
 
         private void ShowMessage(string message, bool error)
         {
-            refreshMessage = false;
             MessageText.Text = message;
             MessageBanner.SetResourceReference(Border.BorderBrushProperty, error ? "AxialThemeStatusErrorBrush" : "AxialThemeAccentBrush");
             MessageText.SetResourceReference(TextBlock.ForegroundProperty, error ? "AxialThemeStatusErrorBrush" : "AxialThemeForegroundBrush");
             MessageBanner.Visibility = Visibility.Visible;
-        }
-
-        private void ContentGrid_LayoutUpdated(object sender, EventArgs e)
-        {
-            if (closed || ContentScroll.ViewportHeight <= 0 || double.IsInfinity(ContentScroll.ViewportHeight)) return;
-            // Keep the editor's measure finite so large commands use its own scrollbar.
-            // At small window sizes, the outer scrollbar makes expanded details and Save reachable.
-            double minimum = ContentGrid.RowDefinitions[5].MinHeight;
-            for (int i = 0; i < ContentGrid.RowDefinitions.Count; i++)
-                if (i != 5) minimum += ContentGrid.RowDefinitions[i].ActualHeight;
-            double height = Math.Max(ContentScroll.ViewportHeight, minimum);
-            if (Math.Abs(ContentGrid.Height - height) > 0.5) ContentGrid.Height = height;
         }
 
         private void Window_Closing(object sender, CancelEventArgs e)
@@ -492,8 +530,6 @@ namespace AxialSqlTools.JobQuickView
         private void Window_Closed(object sender, EventArgs e)
         {
             closed = true;
-            refreshTimer.Stop();
-            refreshTimer.Tick -= RefreshTimer_Tick;
             lifetime.Cancel();
             lifetime.Dispose();
             theme.Dispose();
@@ -512,6 +548,21 @@ namespace AxialSqlTools.JobQuickView
         private static string EmptyValue(string value, string fallback = "Not available")
             => string.IsNullOrWhiteSpace(value) ? fallback : value;
 
+        private sealed class DetailRow
+        {
+            public string Field { get; }
+            public string Value { get; }
+            public DetailRow(string field, string value) { Field = field; Value = value; }
+        }
+
+        private sealed class ScheduleRow
+        {
+            public string Name { get; set; }
+            public string Status { get; set; }
+            public string Description { get; set; }
+            public string NextRun { get; set; }
+        }
+
         private sealed class StepDraft : INotifyPropertyChanged
         {
             private string baseline;
@@ -522,6 +573,10 @@ namespace AxialSqlTools.JobQuickView
             public double VerticalOffset { get; set; }
             public bool IsRemoved { get; private set; }
             public bool IsDirty => !string.Equals(baseline, Document.Text, StringComparison.Ordinal);
+            public bool CanSave => IsDirty && !IsRemoved;
+            public string EditorStatus => IsRemoved ? "This step was removed on the server. Copy your draft before discarding it." :
+                HasRemoteChanges ? "The command or execution context changed on the server. Your draft is preserved; discard it to load that version." :
+                IsDirty ? "Unsaved command changes" : "Saved command. Edit here, then save this step.";
             public bool HasRemoteChanges => IsDirty &&
                 (!string.Equals(baseline, Latest.Command ?? string.Empty, StringComparison.Ordinal) || Original.StepId != Latest.StepId ||
                  !string.Equals(Original.Subsystem, Latest.Subsystem, StringComparison.Ordinal) ||
@@ -564,6 +619,7 @@ namespace AxialSqlTools.JobQuickView
             }
 
             public void MarkRemoved() { IsRemoved = true; Notify(); }
+            public void NotifyStateChanged() { Notify(); }
 
             private void ResetToLatest()
             {

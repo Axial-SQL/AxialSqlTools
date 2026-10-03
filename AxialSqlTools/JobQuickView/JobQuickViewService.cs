@@ -273,7 +273,7 @@ ORDER BY h.instance_id DESC;";
                 catch (SqlException ex) when (ex.Number == 50001)
                 {
                     throw new JobCommandConflictException(
-                        "This step was changed, moved, or deleted outside Quick View. Your edit was not saved. Copy your changes, then reload the step before trying again.", ex);
+                        "This step was changed, moved, or deleted outside Quick Manage. Your edit was not saved. Copy your changes, then reload the step before trying again.", ex);
                 }
             }
         }

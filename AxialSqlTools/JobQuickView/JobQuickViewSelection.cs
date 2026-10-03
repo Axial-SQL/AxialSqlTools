@@ -35,7 +35,7 @@ namespace AxialSqlTools.JobQuickView
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (!IsJob(node))
-                throw new InvalidOperationException("Select one SQL Server Agent job in Object Explorer, then choose Quick View.");
+                throw new InvalidOperationException("Select one SQL Server Agent job in Object Explorer, then choose Quick Manage.");
 
             // URN attributes preserve apostrophes, brackets, slashes and exact catalog
             // casing. The tree caption may contain localized status decorations.
@@ -70,7 +70,7 @@ namespace AxialSqlTools.JobQuickView
             var created = connection.Copy().CreateConnectionObject();
             if (created is SqlConnection sqlConnection) return sqlConnection;
             created?.Dispose();
-            throw new NotSupportedException("Quick View requires the Microsoft.Data.SqlClient connection provider included with SSMS 22.");
+            throw new NotSupportedException("Quick Manage requires the Microsoft.Data.SqlClient connection provider included with SSMS 22.");
         }
     }
 }

@@ -558,7 +558,9 @@
     <Content Include="Resources\search.png" />
     <Content Include="Resources\select.png" />
     <Content Include="Resources\server-health.png" />
-    <Content Include="Resources\settings.png" />
+    <EmbeddedResource Include="Resources\settings.png">
+      <LogicalName>AxialSqlTools.Resources.settings.png</LogicalName>
+    </EmbeddedResource>
     <Content Include="Resources\snippet.png" />
     <Content Include="Resources\sort-ascending.png" />
     <Content Include="Resources\sort-descending.png" />

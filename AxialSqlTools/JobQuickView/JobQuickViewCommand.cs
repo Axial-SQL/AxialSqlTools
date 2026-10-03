@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.ComponentModel;
 using System.ComponentModel.Design;
+using System.Drawing;
 using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Threading;
@@ -20,6 +21,7 @@ namespace AxialSqlTools.JobQuickView
         private readonly OleMenuCommandService commands;
         private readonly OleMenuCommand command;
         private readonly DispatcherTimer attachTimer;
+        private readonly Image settingsIcon;
         private IObjectExplorerService explorer;
         private TreeView tree;
         private ContextMenuStrip menu;
@@ -32,6 +34,7 @@ namespace AxialSqlTools.JobQuickView
         {
             this.package = package;
             this.commands = commands;
+            settingsIcon = LoadSettingsIcon();
             command = new OleMenuCommand(OpenSelectedJob, new CommandID(CommandSet, CommandId));
             command.BeforeQueryStatus += QueryStatus;
             commands.AddCommand(command);
@@ -88,7 +91,7 @@ namespace AxialSqlTools.JobQuickView
                 // usable, rather than breaking extension initialization.
                 if (!reportedIntegrationError)
                 {
-                    AxialSqlToolsPackage._logger?.Warn("Quick View could not attach to Object Explorer ({0}). The Tools command remains available.", ex.GetType().Name);
+                    AxialSqlToolsPackage._logger?.Warn("Quick Manage could not attach to Object Explorer ({0}). The Tools command remains available.", ex.GetType().Name);
                     reportedIntegrationError = true;
                 }
                 return false;
@@ -117,10 +120,12 @@ namespace AxialSqlTools.JobQuickView
             menu = tree?.ContextMenuStrip;
             if (menu == null) return;
             menu.Opening += MenuOpening;
-            quickViewItem = new ToolStripMenuItem("Quick View")
+            quickViewItem = new ToolStripMenuItem("Quick Manage")
             {
                 Name = "AxialSqlTools.JobQuickView",
-                ToolTipText = "View job steps, schedule and execution details"
+                ToolTipText = "Manage job steps, schedules and execution",
+                Image = settingsIcon,
+                ImageScaling = ToolStripItemImageScaling.SizeToFit
             };
             quickViewItem.Click += OpenContextJob;
             separator = new ToolStripSeparator();
@@ -200,8 +205,17 @@ namespace AxialSqlTools.JobQuickView
 
         private void ShowError(Exception error)
         {
-            VsShellUtilities.ShowMessageBox(package, error.Message, "Job Quick View",
+            VsShellUtilities.ShowMessageBox(package, error.Message, "Quick Manage",
                 OLEMSGICON.OLEMSGICON_WARNING, OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+        }
+
+        private static Image LoadSettingsIcon()
+        {
+            using (var stream = typeof(JobQuickViewCommand).Assembly.GetManifestResourceStream("AxialSqlTools.Resources.settings.png"))
+            {
+                if (stream == null) return null;
+                using (var image = Image.FromStream(stream)) return new Bitmap(image);
+            }
         }
 
         private void DetachMenu()
@@ -239,6 +253,7 @@ namespace AxialSqlTools.JobQuickView
                     tree = null;
                 }
                 commands.RemoveCommand(command);
+                settingsIcon?.Dispose();
             });
         }
     }
