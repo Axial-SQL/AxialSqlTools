@@ -269,6 +269,17 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDistributedAgDashboardCommand" priority="0x0010" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
+        <Icon guid="guidServerHealth" id="bmpServerHealth" />
+        <Strings>
+          <ButtonText>Distributed AG Health Dashboard</ButtonText>
+          <CanonicalName>AxialSqlTools.DistributedAgHealthDashboard</CanonicalName>
+          <LocCanonicalName>AxialSqlTools.DistributedAgHealthDashboard</LocCanonicalName>
+          <ToolTipText>Open the distributed availability group selected in Object Explorer</ToolTipText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlServerBuildsCommand" priority="0x3000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidSqlBuildInfo" id="bmpSqlBuildInfo" />
@@ -474,6 +485,7 @@
       <IDSymbol name="AxialExportGridToPivotTable" value="4159" />
 
       <IDSymbol name="AxialHealthDashboardServerCommand" value="4140" />
+      <IDSymbol name="AxialDistributedAgDashboardCommand" value="4160" />
       <IDSymbol name="AxialHealthDashboardServersCommand" value="4142" />
 
       <IDSymbol name="AxialDataTransferCommand" value="4143" />
