@@ -1,0 +1,104 @@
+name: Publish to galleries
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: publish-to-galleries
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  find_signed:
+    name: Find a signed VSIX for this commit
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact_id: ${{ steps.find.outputs.artifact_id }}
+      run_id: ${{ steps.find.outputs.run_id }}
+    steps:
+      - name: Look for an existing signed artifact
+        id: find
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const workflows = new Set([
+              '.github/workflows/build-sign-vsix.yml',
+              '.github/workflows/prepare-new-release.yml',
+              '.github/workflows/publish-to-galleries.yml'
+            ]);
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+              ...context.repo, head_sha: context.sha,
+              event: 'workflow_dispatch', status: 'completed', per_page: 100
+            });
+            for (const run of runs) {
+              if (!workflows.has(run.path) || run.id === context.runId) continue;
+              const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                ...context.repo, run_id: run.id, per_page: 100
+              });
+              const signed = artifacts.find(artifact =>
+                !artifact.expired && /^AxialSqlTools-Signed-\d+\.\d+(?:\.\d+){0,2}$/.test(artifact.name));
+              if (signed) {
+                core.setOutput('artifact_id', signed.id);
+                core.setOutput('run_id', run.id);
+                return;
+              }
+            }
+
+  build_and_sign:
+    name: Build and Sign VSIX
+    needs: find_signed
+    if: needs.find_signed.outputs.artifact_id == ''
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/build-sign-vsix.yml
+    secrets: inherit
+
+  publish:
+    name: Publish signed VSIX to both galleries
+    needs: [find_signed, build_and_sign]
+    if: >-
+      ${{ !cancelled() && needs.find_signed.result == 'success' &&
+          (needs.build_and_sign.result == 'success' || needs.build_and_sign.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Download signed VSIX
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.find_signed.outputs.artifact_id || needs.build_and_sign.outputs.signed_artifact_id }}
+          run-id: ${{ needs.find_signed.outputs.run_id || github.run_id }}
+          github-token: ${{ github.token }}
+          path: release-assets
+
+      - name: Locate the signed package
+        id: package
+        shell: bash
+        run: |
+          files=(release-assets/*.vsix)
+          [[ ${#files[@]} -eq 1 && -f "${files[0]}" ]] || { echo 'Expected exactly one signed VSIX.'; exit 1; }
+          echo "path=${files[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to SSMS Gallery
+        uses: madskristensen/publish-vsixgallery@v1
+        with:
+          vsix-file: ${{ steps.package.outputs.path }}
+          gallery-url: https://ssmsgallery.azurewebsites.net
+          readme: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/README.md
+          manage-token: ${{ secrets.SSMS_GALLERY_MANAGE_TOKEN }}
+
+      - name: Publish to Open VSIX Gallery
+        uses: madskristensen/publish-vsixgallery@v1
+        with:
+          vsix-file: ${{ steps.package.outputs.path }}
+          gallery-url: https://www.vsixgallery.com
+          readme: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/README.md
+          manage-token: ${{ secrets.VSIX_GALLERY_MANAGE_TOKEN }}

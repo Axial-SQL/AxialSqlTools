@@ -81,6 +81,8 @@ After installation and an SSMS restart, the **Axial SQL Tools** toolbar will app
 
 Axial SQL Tools is maintained as an open-source project, and community participation is encouraged. Contributions can include bug reports, feature ideas, documentation improvements, query library additions, testing, and code changes.
 
+Maintainers can use the [release and gallery publishing guide](.github/RELEASING.md) to prepare signed releases and publish them to both extension galleries.
+
 ### Submitting Ideas and Bugs
 
 1. Submit bugs in the [Issues](https://github.com/Axial-SQL/AxialSqlTools/issues) section of this repository.

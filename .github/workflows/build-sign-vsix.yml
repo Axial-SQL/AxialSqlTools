@@ -2,7 +2,14 @@ name: Build and Sign VSIX
 
 on:
   workflow_dispatch:
-
+  workflow_call:
+    outputs:
+      version:
+        description: Version of the signed VSIX
+        value: ${{ jobs.build.outputs.version }}
+      signed_artifact_id:
+        description: Artifact containing the signed VSIX and checksum
+        value: ${{ jobs.sign.outputs.signed_artifact_id }}
 
 concurrency:
   group: vsix-signing
@@ -22,6 +29,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
       - name: Install SQL Server Management Studio 22 build dependencies
         shell: pwsh
@@ -174,6 +184,7 @@ jobs:
           name: unsigned-vsix
           path: unsigned-vsix/AxialSqlTools.vsix
           if-no-files-found: error
+          overwrite: true
           retention-days: 3
 
   sign:
@@ -181,6 +192,9 @@ jobs:
     needs: build
     runs-on: windows-2025
     environment: vsix-signing
+
+    outputs:
+      signed_artifact_id: ${{ steps.upload_signed.outputs.artifact-id }}
 
     permissions:
       contents: read
@@ -383,9 +397,11 @@ jobs:
           "Certificate profile: ${{ vars.ARTIFACT_SIGNING_PROFILE }}" | Out-File $env:GITHUB_STEP_SUMMARY -Append
 
       - name: Upload signed VSIX
+        id: upload_signed
         uses: actions/upload-artifact@v7
         with:
           name: AxialSqlTools-Signed-${{ needs.build.outputs.version }}
           path: signed-output/*
           if-no-files-found: error
+          overwrite: true
           retention-days: 30
