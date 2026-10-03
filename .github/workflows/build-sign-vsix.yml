@@ -2,6 +2,11 @@ name: Build and Sign VSIX
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-sign-vsix.yml'
 
 concurrency:
   group: vsix-signing
@@ -21,6 +26,40 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Install SQL Server Management Studio 22 build dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $ssmsRoot = 'C:\Program Files\Microsoft SQL Server Management Studio 22\Release'
+          $required = Join-Path $ssmsRoot 'Common7\IDE\Extensions\Application\Microsoft.SqlServer.TransactSql.ScriptDom.dll'
+
+          if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+            $bootstrapper = Join-Path $env:RUNNER_TEMP 'vs_SSMS.exe'
+
+            Invoke-WebRequest `
+              -Uri 'https://aka.ms/ssms/22/release/vs_SSMS.exe' `
+              -OutFile $bootstrapper
+
+            & $bootstrapper `
+              --installPath 'C:\Program Files\Microsoft SQL Server Management Studio 22\Release' `
+              --quiet `
+              --wait `
+              --norestart
+
+            $exitCode = $LASTEXITCODE
+
+            if ($exitCode -notin @(0, 3010)) {
+              throw "SSMS 22 installation failed with exit code $exitCode"
+            }
+          }
+
+          if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+            throw "Required SSMS assembly was not installed: $required"
+          }
+
+          Write-Host "SSMS 22 build dependencies are available at $ssmsRoot"
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
