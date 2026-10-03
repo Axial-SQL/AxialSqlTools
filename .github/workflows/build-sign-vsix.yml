@@ -42,13 +42,21 @@ jobs:
               -Uri 'https://aka.ms/ssms/22/release/vs_SSMS.exe' `
               -OutFile $bootstrapper
 
-            & $bootstrapper `
-              --installPath 'C:\Program Files\Microsoft SQL Server Management Studio 22\Release' `
-              --quiet `
-              --wait `
-              --norestart
+            $installerArgs = @(
+              '--installPath',
+              'C:\Program Files\Microsoft SQL Server Management Studio 22\Release',
+              '--quiet',
+              '--wait',
+              '--norestart'
+            )
 
-            $exitCode = $LASTEXITCODE
+            $process = Start-Process `
+              -FilePath $bootstrapper `
+              -ArgumentList $installerArgs `
+              -Wait `
+              -PassThru
+
+            $exitCode = $process.ExitCode
 
             if ($exitCode -notin @(0, 3010)) {
               throw "SSMS 22 installation failed with exit code $exitCode"
