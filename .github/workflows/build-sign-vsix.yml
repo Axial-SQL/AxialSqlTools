@@ -2,7 +2,33 @@ name: Build and Sign VSIX
 
 on:
   workflow_dispatch:
-
+  workflow_call:
+    inputs:
+      build_ref:
+        description: Commit or release tag to check out
+        required: true
+        type: string
+      expected_sha:
+        description: Commit that the build ref must resolve to
+        required: true
+        type: string
+      expected_version:
+        description: Expected VSIX manifest version
+        required: true
+        type: string
+    outputs:
+      version:
+        description: Version of the signed VSIX
+        value: ${{ jobs.build.outputs.version }}
+      source_sha:
+        description: Commit used to build the VSIX
+        value: ${{ jobs.build.outputs.source_sha }}
+      signed_artifact_id:
+        description: Exact artifact containing the signed VSIX and checksum
+        value: ${{ jobs.sign.outputs.signed_artifact_id }}
+      vsix_sha256:
+        description: SHA256 of the final signed VSIX
+        value: ${{ jobs.sign.outputs.vsix_sha256 }}
 
 concurrency:
   group: vsix-signing
@@ -18,10 +44,39 @@ jobs:
 
     outputs:
       version: ${{ steps.package.outputs.version }}
+      source_sha: ${{ steps.source.outputs.source_sha }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.build_ref || github.sha }}
+          persist-credentials: false
+
+      - name: Validate release source
+        id: source
+        shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $sourceSha = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to identify the checked-out commit.'
+          }
+          if ($env:EXPECTED_SHA -and $sourceSha -ne $env:EXPECTED_SHA) {
+            throw "Build ref resolved to $sourceSha instead of $env:EXPECTED_SHA."
+          }
+
+          [xml]$manifest = Get-Content -LiteralPath 'AxialSqlTools\source.extension.vsixmanifest'
+          $version = $manifest.PackageManifest.Metadata.Identity.Version
+          if ($env:EXPECTED_VERSION -and $version -ne $env:EXPECTED_VERSION) {
+            throw "Manifest version $version does not match release version $env:EXPECTED_VERSION."
+          }
+
+          "source_sha=$sourceSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Install SQL Server Management Studio 22 build dependencies
         shell: pwsh
@@ -174,6 +229,7 @@ jobs:
           name: unsigned-vsix
           path: unsigned-vsix/AxialSqlTools.vsix
           if-no-files-found: error
+          overwrite: true
           retention-days: 3
 
   sign:
@@ -181,6 +237,10 @@ jobs:
     needs: build
     runs-on: windows-2025
     environment: vsix-signing
+
+    outputs:
+      signed_artifact_id: ${{ steps.upload_signed.outputs.artifact-id }}
+      vsix_sha256: ${{ steps.release_artifact.outputs.vsix_sha256 }}
 
     permissions:
       contents: read
@@ -190,6 +250,12 @@ jobs:
       SIGN_CLI_VERSION: 0.9.1-beta.26475.3
 
     steps:
+      - name: Checkout verification scripts
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.build.outputs.source_sha }}
+          persist-credentials: false
+
       - name: Download unsigned VSIX
         uses: actions/download-artifact@v8
         with:
@@ -297,74 +363,27 @@ jobs:
             throw "VSIX signing failed with exit code $LASTEXITCODE."
           }
 
-      - name: Verify VSIX package signature
+      - name: Verify signed VSIX and embedded assembly
         shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ needs.build.outputs.version }}
         run: |
-          $ErrorActionPreference = 'Stop'
-
-          $vsix = Join-Path $env:GITHUB_WORKSPACE "sign-input\AxialSqlTools.vsix"
-          $verifyTool = Get-ChildItem `
-            -Path (Join-Path $env:RUNNER_TEMP "vsixsigntool") `
-            -Filter "VSIXSignTool.exe" `
-            -Recurse `
-            -File |
-            Select-Object -First 1
-
-          if ($null -eq $verifyTool) {
-            throw "VSIXSignTool.exe was not found."
-          }
-
-          & $verifyTool.FullName verify /v $vsix
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "VSIX package signature verification failed with exit code $LASTEXITCODE."
-          }
-
-      - name: Verify embedded AxialSqlTools assembly signature
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          $vsix = Join-Path $env:GITHUB_WORKSPACE "sign-input\AxialSqlTools.vsix"
-          $verifyRoot = Join-Path $env:RUNNER_TEMP "axial-vsix-verify"
-          $zip = Join-Path $verifyRoot "package.zip"
-          $expanded = Join-Path $verifyRoot "expanded"
-
-          Remove-Item -LiteralPath $verifyRoot -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $verifyRoot -Force | Out-Null
-          Copy-Item -LiteralPath $vsix -Destination $zip -Force
-          Expand-Archive -LiteralPath $zip -DestinationPath $expanded -Force
-
-          $dll = Get-ChildItem `
-            -Path $expanded `
-            -Filter "AxialSqlTools.dll" `
-            -Recurse `
-            -File |
-            Select-Object -First 1
-
-          if ($null -eq $dll) {
-            throw "AxialSqlTools.dll was not found inside the signed VSIX."
-          }
-
-          $signature = Get-AuthenticodeSignature -LiteralPath $dll.FullName
-
-          Write-Host "Embedded assembly: $($dll.FullName)"
-          Write-Host "Signature status: $($signature.Status)"
-          Write-Host "Signer: $($signature.SignerCertificate.Subject)"
-          Write-Host "Thumbprint: $($signature.SignerCertificate.Thumbprint)"
-
-          if ($signature.Status -ne 'Valid') {
-            throw "Embedded AxialSqlTools.dll signature is not valid. Status: $($signature.Status)"
-          }
+          ./.github/scripts/verify-signed-vsix.ps1 `
+            -VsixPath (Join-Path $env:GITHUB_WORKSPACE 'sign-input\AxialSqlTools.vsix') `
+            -ExpectedVersion $env:EXPECTED_VERSION `
+            -VerifierRoot (Join-Path $env:RUNNER_TEMP 'vsixsigntool')
 
       - name: Prepare signed release artifact
+        id: release_artifact
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
 
           $source = Join-Path $env:GITHUB_WORKSPACE "sign-input\AxialSqlTools.vsix"
           $output = Join-Path $env:GITHUB_WORKSPACE "signed-output"
-          $version = "${{ needs.build.outputs.version }}"
+          $version = $env:RELEASE_VERSION
           $fileName = "AxialSqlTools_SSMS22_$version.vsix"
           $destination = Join-Path $output $fileName
 
@@ -373,6 +392,7 @@ jobs:
 
           $hash = Get-FileHash -LiteralPath $destination -Algorithm SHA256
           "$($hash.Hash)  $fileName" | Set-Content -LiteralPath (Join-Path $output "$fileName.sha256") -Encoding ascii
+          "vsix_sha256=$($hash.Hash)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
           "### Signed VSIX" | Out-File $env:GITHUB_STEP_SUMMARY -Append
           "" | Out-File $env:GITHUB_STEP_SUMMARY -Append
@@ -383,9 +403,11 @@ jobs:
           "Certificate profile: ${{ vars.ARTIFACT_SIGNING_PROFILE }}" | Out-File $env:GITHUB_STEP_SUMMARY -Append
 
       - name: Upload signed VSIX
+        id: upload_signed
         uses: actions/upload-artifact@v7
         with:
           name: AxialSqlTools-Signed-${{ needs.build.outputs.version }}
           path: signed-output/*
           if-no-files-found: error
+          overwrite: true
           retention-days: 30

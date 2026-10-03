@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -351,12 +352,34 @@ namespace AxialSqlTools
                 value = value.Substring(1);
             }
 
-            if (Version.TryParse(value, out Version parsed))
+            if (!Version.TryParse(value, out Version parsed))
             {
-                return parsed;
+                return null;
             }
 
-            return null;
+            string[] parts = value.Split('.');
+            if (parts.Length >= 3 && parts[2].Length == 8)
+            {
+                // Release tags use major.minor.yyyyMMdd.HHmm (UTC). Keep them
+                // numeric so older clients can discover the first update, but
+                // compare the installed product version without the timestamp.
+                if (parts.Length != 4 || parts[3].Length != 4 || !DateTime.TryParseExact(
+                    parts[2] + parts[3],
+                    "yyyyMMddHHmm",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out _))
+                {
+                    return null;
+                }
+
+                return new Version(parsed.Major, parsed.Minor, 0, 0);
+            }
+
+            // Version treats omitted build/revision components as -1, while
+            // assembly versions always include them. Compare omitted parts as 0.
+            return new Version(parsed.Major, parsed.Minor,
+                Math.Max(parsed.Build, 0), Math.Max(parsed.Revision, 0));
         }
 
         private static void ShowUpdatePrompt(AsyncPackage package, GitHubRelease release, Version latestVersion)
