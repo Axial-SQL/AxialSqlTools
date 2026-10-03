@@ -37,4 +37,4 @@ Use a disposable test job when checking actions and edits:
 6. Test an account without modification permissions, an unreachable server, a stopped SQL Server Agent, and closing during an asynchronous load. Confirm errors remain actionable and SSMS stays responsive.
 7. Open the job context menu repeatedly, then open a non-job context menu. Confirm Quick View appears only once and only for a single job.
 
-Pull requests run the existing Windows build with SSMS 22 dependencies. PR builds produce an unsigned VSIX and skip signing.
+Builds are started manually from GitHub Actions. This feature does not add automatic pull request or push triggers.
