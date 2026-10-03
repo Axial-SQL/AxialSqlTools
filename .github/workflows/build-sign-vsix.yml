@@ -1,6 +1,10 @@
 name: Build and Sign VSIX
 
 on:
+  pull_request:
+    paths:
+      - 'AxialSqlTools/**'
+      - '.github/workflows/build-sign-vsix.yml'
   workflow_dispatch:
   workflow_call:
     outputs:
@@ -12,7 +16,7 @@ on:
         value: ${{ jobs.sign.outputs.signed_artifact_id }}
 
 concurrency:
-  group: vsix-signing
+  group: vsix-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'signing' }}
   cancel-in-progress: false
 
 permissions:
@@ -188,6 +192,8 @@ jobs:
           retention-days: 3
 
   sign:
+    # Pull requests compile the extension without accessing signing credentials.
+    if: github.event_name != 'pull_request'
     name: Sign and verify VSIX
     needs: build
     runs-on: windows-2025

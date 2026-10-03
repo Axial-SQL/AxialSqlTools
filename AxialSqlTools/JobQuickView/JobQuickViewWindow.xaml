@@ -1,0 +1,208 @@
+<Window x:Class="AxialSqlTools.JobQuickView.JobQuickViewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        Title="Job Quick View" Width="1200" Height="850" MinWidth="940" MinHeight="690"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource AxialThemeBackgroundBrush}"
+        Foreground="{DynamicResource AxialThemeForegroundBrush}"
+        FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True"
+        Loaded="Window_Loaded" Closing="Window_Closing" Closed="Window_Closed"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="SummaryCard" TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource AxialThemeSubtleBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Background" Value="{DynamicResource AxialThemeHeaderBackgroundBrush}" />
+                <Setter Property="CornerRadius" Value="5" />
+                <Setter Property="Padding" Value="15,11" />
+            </Style>
+            <Style x:Key="CardLabel" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Margin" Value="0,0,0,5" />
+            </Style>
+            <Style x:Key="ActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Padding" Value="13,6" />
+                <Setter Property="Margin" Value="0,0,7,0" />
+                <Setter Property="MinHeight" Value="31" />
+            </Style>
+            <Style x:Key="ReadOnlyDetails" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="IsReadOnly" Value="True" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="9" />
+                <Setter Property="MinHeight" Value="45" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    <ScrollViewer x:Name="ContentScroll" Margin="20,17,20,12" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+    <Grid x:Name="ContentGrid" Height="620" LayoutUpdated="ContentGrid_LayoutUpdated">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="230" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,20,0">
+                <TextBlock Text="SQL SERVER AGENT / QUICK VIEW" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource AxialThemeLinkBrush}" Margin="0,0,0,5" />
+                <TextBlock x:Name="JobNameText" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                <TextBlock x:Name="ServerText" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Style="{StaticResource SummaryCard}" Padding="10,5" Margin="0,0,7,0">
+                    <TextBlock x:Name="EnabledText" Text="Loading" FontWeight="SemiBold" />
+                </Border>
+                <Border Style="{StaticResource SummaryCard}" Padding="10,5">
+                    <TextBlock x:Name="RunningText" Text="Checking status" FontWeight="SemiBold" />
+                </Border>
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Row="1" Margin="0,17,0,15">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="StartButton" Content="Start job" Style="{StaticResource ActionButton}" Click="Start_Click" IsEnabled="False"
+                        ToolTip="Run the saved job from its configured starting step" />
+                <Button x:Name="StopButton" Content="Stop job" Style="{StaticResource ActionButton}" Click="Stop_Click" IsEnabled="False" />
+                <Border Width="1" Background="{DynamicResource AxialThemeSubtleBorderBrush}" Margin="3,3,11,3" />
+                <Button x:Name="EnabledButton" Content="Disable job" Style="{StaticResource ActionButton}" Click="Enabled_Click" IsEnabled="False" />
+                <Button x:Name="RefreshButton" Content="Refresh" Style="{StaticResource ActionButton}" Click="Refresh_Click" ToolTip="Refresh job information (F5). Unsaved step edits are preserved." />
+            </StackPanel>
+            <TextBlock x:Name="RefreshText" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Text="Loading job information..." />
+        </Grid>
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource SummaryCard}" Margin="0,0,7,0">
+                <StackPanel>
+                    <TextBlock Text="SCHEDULES" Style="{StaticResource CardLabel}" />
+                    <TextBlock x:Name="ScheduleSummaryText" Text="Loading..." FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="ScheduleDetailText" Text="" Margin="0,4,0,0" TextWrapping="Wrap" MaxHeight="37" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource SummaryCard}" Margin="0,0,7,0">
+                <StackPanel>
+                    <TextBlock Text="LAST EXECUTION" Style="{StaticResource CardLabel}" />
+                    <TextBlock x:Name="LastRunSummaryText" Text="Loading..." FontSize="17" FontWeight="SemiBold" />
+                    <TextBlock x:Name="LastRunDetailText" Margin="0,4,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource SummaryCard}">
+                <StackPanel>
+                    <TextBlock Text="NEXT EXECUTION" Style="{StaticResource CardLabel}" />
+                    <TextBlock x:Name="NextRunText" Text="Loading..." FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="NextRunDetailText" Text="SQL Server local time" Margin="0,4,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Expander Grid.Row="3" Header="Job details, schedules and execution message" Margin="0,0,0,10">
+            <TabControl MaxHeight="185" Margin="0,6,0,0">
+                <TabItem Header="Job details">
+                    <TextBox x:Name="JobDetailsText" Style="{StaticResource ReadOnlyDetails}" AutomationProperties.Name="Job details" />
+                </TabItem>
+                <TabItem Header="Schedules">
+                    <TextBox x:Name="SchedulesText" Style="{StaticResource ReadOnlyDetails}" AutomationProperties.Name="Schedule details" />
+                </TabItem>
+                <TabItem Header="Last execution">
+                    <TextBox x:Name="LastRunMessageText" Style="{StaticResource ReadOnlyDetails}" AutomationProperties.Name="Last execution details" />
+                </TabItem>
+            </TabControl>
+        </Expander>
+        <Border x:Name="MessageBanner" Grid.Row="4" Visibility="Collapsed" BorderThickness="3,0,0,0"
+                BorderBrush="{DynamicResource AxialThemeAccentBrush}" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}"
+                Padding="10,8" Margin="0,0,0,10">
+            <TextBlock x:Name="MessageText" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        </Border>
+        <Grid Grid.Row="5">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="245" MinWidth="190" /><ColumnDefinition Width="9" /><ColumnDefinition MinWidth="420" /></Grid.ColumnDefinitions>
+            <Border BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="1" CornerRadius="4">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <Border BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="0,0,0,1"
+                            Background="{DynamicResource AxialThemeHeaderBackgroundBrush}" Padding="12,10">
+                        <TextBlock x:Name="StepsCountText" Text="JOB STEPS" FontSize="11" FontWeight="SemiBold" />
+                    </Border>
+                    <ListBox x:Name="StepsList" Grid.Row="1" BorderThickness="0" SelectionChanged="Steps_SelectionChanged"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Job steps">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="11,10" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="9,8">
+                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Details}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding EditState}" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Grid.Row="2" Text="Drafts stay with each step." FontSize="11" Margin="11,8" TextWrapping="Wrap" />
+                </Grid>
+            </Border>
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"
+                          ToolTip="Resize the step list" />
+            <Border Grid.Column="2" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="1" CornerRadius="4">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <Border Background="{DynamicResource AxialThemeHeaderBackgroundBrush}" Padding="13,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock x:Name="StepNameText" Text="Select a job step" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                                <TextBlock x:Name="StepContextText" Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="FindButton" Content="Find" Margin="0,0,7,0" Padding="10,5" Click="Find_Click" IsEnabled="False" ToolTip="Find in this command (Ctrl+F)" />
+                                <Button x:Name="FormatButton" Content="Format SQL" Padding="10,5" Click="Format_Click" IsEnabled="False"
+                                        ToolTip="Format the selection or entire SQL command (Ctrl+Shift+F). Changes remain a draft until saved." />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border Grid.Row="1" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" Padding="13,6">
+                        <TextBlock x:Name="StepFlowText" FontSize="11" TextWrapping="Wrap" Text="Step commands load asynchronously." />
+                    </Border>
+                    <avalonedit:TextEditor x:Name="CommandEditor" Grid.Row="2" Style="{StaticResource AxialSqlEditorStyle}"
+                                          BorderThickness="0" FontSize="14" Padding="6,8" IsReadOnly="True"
+                                          PreviewMouseWheel="Editor_PreviewMouseWheel" AutomationProperties.Name="Job step command" />
+                    <TextBlock x:Name="EditorEmptyText" Grid.Row="2" Text="Loading job steps..." TextWrapping="Wrap" Margin="25" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Border Grid.Row="3" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="0,1,0,0" Padding="12,9">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="EditorStateText" Text="" FontSize="12" TextWrapping="Wrap" />
+                                <TextBlock x:Name="CaretText" Text="Ctrl+F Find  |  Ctrl+S Save  |  Ctrl+wheel Zoom" FontSize="10" Margin="0,3,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="DiscardButton" Content="Discard" Margin="0,0,7,0" Padding="12,6" Click="Discard_Click" IsEnabled="False" />
+                                <Button x:Name="SaveButton" Content="Save step" Style="{StaticResource AxialPrimaryButtonStyle}" Padding="13,6" Click="Save_Click" IsEnabled="False"
+                                        ToolTip="Save only the command of the selected step (Ctrl+S)" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+        <DockPanel Grid.Row="6" Margin="0,10,0,0">
+            <TextBlock x:Name="FooterText" Text="Loading job information in the background." FontSize="11" />
+            <TextBlock Text="Status refreshes every 10 seconds" FontSize="11" HorizontalAlignment="Right" />
+        </DockPanel>
+    </Grid>
+    </ScrollViewer>
+</Window>

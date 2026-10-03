@@ -68,6 +68,14 @@
     <UseWinFormsOutOfProcDesigner>True</UseWinFormsOutOfProcDesigner>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="JobQuickView\JobQuickViewModels.cs" />
+    <Compile Include="JobQuickView\JobQuickViewService.cs" />
+    <Compile Include="JobQuickView\JobQuickViewCommand.cs" />
+    <Compile Include="JobQuickView\JobQuickViewSelection.cs" />
+    <Compile Include="JobQuickView\JobCommandEditorSupport.cs" />
+    <Compile Include="JobQuickView\JobQuickViewWindow.xaml.cs">
+      <DependentUpon>JobQuickViewWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="PivotGrid\PivotDetailsWindow.xaml.cs">
       <DependentUpon>PivotDetailsWindow.xaml</DependentUpon>
     </Compile>
@@ -565,6 +573,10 @@
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="JobQuickView\JobQuickViewWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="PivotGrid\PivotDetailsWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

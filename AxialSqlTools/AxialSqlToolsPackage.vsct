@@ -269,6 +269,18 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialJobQuickViewCommand" priority="0x0100" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
+        <Icon guid="guidQueryHistory" id="bmpQueryHistory" />
+        <CommandFlag>DefaultDisabled</CommandFlag>
+        <Strings>
+          <ButtonText>Job Quick View</ButtonText>
+          <CanonicalName>AxialSqlTools.JobQuickView</CanonicalName>
+          <LocCanonicalName>AxialSqlTools.JobQuickView</LocCanonicalName>
+          <ToolTipText>View the SQL Server Agent job selected in Object Explorer</ToolTipText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlServerBuildsCommand" priority="0x3000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidSqlBuildInfo" id="bmpSqlBuildInfo" />
@@ -474,6 +486,7 @@
       <IDSymbol name="AxialExportGridToPivotTable" value="4159" />
 
       <IDSymbol name="AxialHealthDashboardServerCommand" value="4140" />
+      <IDSymbol name="AxialJobQuickViewCommand" value="4160" />
       <IDSymbol name="AxialHealthDashboardServersCommand" value="4142" />
 
       <IDSymbol name="AxialDataTransferCommand" value="4143" />

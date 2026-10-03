@@ -70,6 +70,7 @@ namespace AxialSqlTools
         public event EventHandler SQLBuildsChanged;
 
         private Task _sqlBuildsRefreshTask;
+        private JobQuickView.JobQuickViewCommand _jobQuickViewCommand;
 
         public Task RefreshSqlServerBuildsAsync(string localFile = null)
         {
@@ -192,6 +193,7 @@ namespace AxialSqlTools
                 await AboutWindowCommand.InitializeAsync(this);
                 await ScriptSelectedObject.InitializeAsync(this);
                 await OpenInObjectExplorerCommand.InitializeAsync(this);
+                _jobQuickViewCommand = await JobQuickView.JobQuickViewCommand.InitializeAsync(this);
                 await ExportGridToAsInsertsCommand.InitializeAsync(this);
                 await ToolWindowGridToEmailCommand.InitializeAsync(this);
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
@@ -298,6 +300,7 @@ namespace AxialSqlTools
         {
             if (disposing)
             {
+                _jobQuickViewCommand?.Dispose();
                 UpdateChecker.LaunchDeferredUpdateOnClose();
             }
 
