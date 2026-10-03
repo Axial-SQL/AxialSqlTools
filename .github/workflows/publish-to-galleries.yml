@@ -13,220 +13,92 @@ permissions:
 jobs:
   find_signed:
     name: Find a signed VSIX for this commit
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
     outputs:
-      version: ${{ steps.artifact.outputs.version }}
-      source_sha: ${{ steps.artifact.outputs.source_sha }}
-      signed_artifact_id: ${{ steps.artifact.outputs.signed_artifact_id }}
-      signed_run_id: ${{ steps.artifact.outputs.signed_run_id }}
+      artifact_id: ${{ steps.find.outputs.artifact_id }}
+      run_id: ${{ steps.find.outputs.run_id }}
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-
       - name: Look for an existing signed artifact
-        id: artifact
+        id: find
         uses: actions/github-script@v9
         with:
           script: |
-            const gallery = require('./.github/scripts/gallery.js');
-            await gallery.findSignedArtifact({ github, context, core });
+            const workflows = new Set([
+              '.github/workflows/build-sign-vsix.yml',
+              '.github/workflows/prepare-new-release.yml',
+              '.github/workflows/publish-to-galleries.yml'
+            ]);
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+              ...context.repo, head_sha: context.sha,
+              event: 'workflow_dispatch', status: 'completed', per_page: 100
+            });
+            for (const run of runs) {
+              if (!workflows.has(run.path) || run.id === context.runId) continue;
+              const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                ...context.repo, run_id: run.id, per_page: 100
+              });
+              const signed = artifacts.find(artifact =>
+                !artifact.expired && /^AxialSqlTools-Signed-\d+\.\d+(?:\.\d+){0,2}$/.test(artifact.name));
+              if (signed) {
+                core.setOutput('artifact_id', signed.id);
+                core.setOutput('run_id', run.id);
+                return;
+              }
+            }
 
   build_and_sign:
     name: Build and Sign VSIX
     needs: find_signed
-    if: needs.find_signed.outputs.signed_artifact_id == ''
+    if: needs.find_signed.outputs.artifact_id == ''
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/build-sign-vsix.yml
-    with:
-      build_ref: ${{ needs.find_signed.outputs.source_sha }}
-      expected_sha: ${{ needs.find_signed.outputs.source_sha }}
-      expected_version: ${{ needs.find_signed.outputs.version }}
     secrets: inherit
 
   publish:
-    name: Verify and publish to both galleries
+    name: Publish signed VSIX to both galleries
     needs: [find_signed, build_and_sign]
     if: >-
       ${{ !cancelled() && needs.find_signed.result == 'success' &&
           (needs.build_and_sign.result == 'success' || needs.build_and_sign.result == 'skipped') }}
-    runs-on: windows-2025
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
-    env:
-      RELEASE_VERSION: ${{ needs.find_signed.outputs.version }}
     steps:
-      - name: Checkout verification scripts
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.find_signed.outputs.source_sha }}
-          persist-credentials: false
-
-      - name: Select the exact signed artifact
-        id: selected
-        uses: actions/github-script@v9
-        env:
-          REUSED_ARTIFACT_ID: ${{ needs.find_signed.outputs.signed_artifact_id }}
-          REUSED_RUN_ID: ${{ needs.find_signed.outputs.signed_run_id }}
-          BUILT_ARTIFACT_ID: ${{ needs.build_and_sign.outputs.signed_artifact_id }}
-          BUILT_SOURCE_SHA: ${{ needs.build_and_sign.outputs.source_sha }}
-          BUILT_VERSION: ${{ needs.build_and_sign.outputs.version }}
-        with:
-          script: |
-            const reused = Boolean(process.env.REUSED_ARTIFACT_ID);
-            const artifactId = reused ? process.env.REUSED_ARTIFACT_ID : process.env.BUILT_ARTIFACT_ID;
-            const runId = reused ? process.env.REUSED_RUN_ID : String(context.runId);
-            if (!/^[1-9]\d*$/.test(artifactId || '') || !/^[1-9]\d*$/.test(runId || '')) {
-              throw new Error('No exact signed artifact and source run were selected.');
-            }
-            if (!reused && (process.env.BUILT_SOURCE_SHA !== context.sha ||
-                process.env.BUILT_VERSION !== process.env.RELEASE_VERSION)) {
-              throw new Error('The signed build does not match this commit and version.');
-            }
-            core.setOutput('artifact_id', artifactId);
-            core.setOutput('run_id', runId);
-
-      - name: Download the selected signed VSIX
+      - name: Download signed VSIX
         uses: actions/download-artifact@v8
         with:
-          artifact-ids: ${{ steps.selected.outputs.artifact_id }}
-          run-id: ${{ steps.selected.outputs.run_id }}
+          artifact-ids: ${{ needs.find_signed.outputs.artifact_id || needs.build_and_sign.outputs.signed_artifact_id }}
+          run-id: ${{ needs.find_signed.outputs.run_id || github.run_id }}
           github-token: ${{ github.token }}
           path: release-assets
 
-      - name: Verify artifact contents and checksum
+      - name: Locate the signed package
         id: package
-        uses: actions/github-script@v9
-        env:
-          SIGNED_VSIX_SHA256: ${{ needs.build_and_sign.outputs.vsix_sha256 }}
-        with:
-          script: |
-            const fs = require('node:fs');
-            const release = require('./.github/scripts/release.js');
-            const version = release.readVersion(process.cwd());
-            if (version !== process.env.RELEASE_VERSION) throw new Error('The source version changed.');
-            const file = `release-assets/AxialSqlTools_SSMS22_${version}.vsix`;
-            const checksum = fs.readFileSync(`${file}.sha256`, 'ascii').split(/\s+/)[0];
-            const hash = process.env.SIGNED_VSIX_SHA256 || checksum;
-            release.readAssets('release-assets', version, hash);
-            core.setOutput('vsix_path', file);
-            core.setOutput('sha256', hash.toLowerCase());
-
-      - name: Setup NuGet for VSIX verification
-        uses: NuGet/setup-nuget@v2
-
-      - name: Install VSIX signature verifier
-        shell: pwsh
+        shell: bash
         run: |
-          nuget install Microsoft.VSSDK.VsixSignTool `
-            -Version 17.10.34916.79 `
-            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'vsixsigntool') `
-            -NonInteractive
-          if ($LASTEXITCODE -ne 0) { throw 'Unable to install VSIXSignTool verifier.' }
+          files=(release-assets/*.vsix)
+          [[ ${#files[@]} -eq 1 && -f "${files[0]}" ]] || { echo 'Expected exactly one signed VSIX.'; exit 1; }
+          echo "path=${files[0]}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify signed VSIX and embedded assembly
-        id: verify
-        shell: pwsh
-        env:
-          VSIX_PATH: ${{ steps.package.outputs.vsix_path }}
-        run: |
-          ./.github/scripts/verify-signed-vsix.ps1 `
-            -VsixPath $env:VSIX_PATH `
-            -ExpectedVersion $env:RELEASE_VERSION `
-            -VerifierRoot (Join-Path $env:RUNNER_TEMP 'vsixsigntool')
-
-      - name: Check current SSMS Gallery package
-        id: ssms
-        if: ${{ !cancelled() && steps.verify.outcome == 'success' }}
-        uses: actions/github-script@v9
-        env:
-          VSIX_SHA256: ${{ steps.package.outputs.sha256 }}
-          GALLERY_MANAGE_TOKEN: ${{ secrets.SSMS_GALLERY_MANAGE_TOKEN }}
+      - name: Publish to SSMS Gallery
+        uses: madskristensen/publish-vsixgallery@v1
         with:
-          script: |
-            const { checkGallery } = require('./.github/scripts/gallery-publish.js');
-            const result = await checkGallery({
-              galleryUrl: 'https://ssmsgallery.azurewebsites.net', extensionId: 'AxialSqlTools',
-              version: process.env.RELEASE_VERSION, sha256: process.env.VSIX_SHA256
-            });
-            if (result.publish && !process.env.GALLERY_MANAGE_TOKEN?.trim()) {
-              throw new Error('Set repository secret SSMS_GALLERY_MANAGE_TOKEN to a saved random gallery management password before publishing.');
-            }
-            core.setOutput('publish', String(result.publish));
-            await core.summary.addRaw(`## SSMS Gallery\n\n${result.reason}\n`).write();
-
-      - name: Publish Axial SQL Tools to SSMS Gallery
-        id: publish_ssms
-        if: ${{ !cancelled() && steps.ssms.outputs.publish == 'true' }}
-        uses: madskristensen/publish-vsixgallery@fca01a5688f52684fc11b469205143a7737890cb # v1
-        with:
-          vsix-file: ${{ steps.package.outputs.vsix_path }}
+          vsix-file: ${{ steps.package.outputs.path }}
           gallery-url: https://ssmsgallery.azurewebsites.net
           readme: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/README.md
           manage-token: ${{ secrets.SSMS_GALLERY_MANAGE_TOKEN }}
 
-      - name: Confirm SSMS Gallery serves the signed package
-        if: ${{ !cancelled() && steps.publish_ssms.outcome == 'success' }}
-        uses: actions/github-script@v9
-        env:
-          VSIX_SHA256: ${{ steps.package.outputs.sha256 }}
+      - name: Publish to Open VSIX Gallery
+        uses: madskristensen/publish-vsixgallery@v1
         with:
-          script: |
-            const { checkGallery } = require('./.github/scripts/gallery-publish.js');
-            const result = await checkGallery({
-              galleryUrl: 'https://ssmsgallery.azurewebsites.net', extensionId: 'AxialSqlTools',
-              version: process.env.RELEASE_VERSION, sha256: process.env.VSIX_SHA256
-            });
-            if (result.publish) throw new Error('SSMS Gallery has not published the expected signed package.');
-
-      - name: Check current Open VSIX Gallery package
-        id: open
-        if: ${{ !cancelled() && steps.verify.outcome == 'success' }}
-        uses: actions/github-script@v9
-        env:
-          VSIX_SHA256: ${{ steps.package.outputs.sha256 }}
-          GALLERY_MANAGE_TOKEN: ${{ secrets.VSIX_GALLERY_MANAGE_TOKEN }}
-        with:
-          script: |
-            const { checkGallery } = require('./.github/scripts/gallery-publish.js');
-            const result = await checkGallery({
-              galleryUrl: 'https://www.vsixgallery.com', extensionId: 'AxialSqlTools',
-              version: process.env.RELEASE_VERSION, sha256: process.env.VSIX_SHA256
-            });
-            if (result.publish && !process.env.GALLERY_MANAGE_TOKEN?.trim()) {
-              throw new Error('Set repository secret VSIX_GALLERY_MANAGE_TOKEN to a saved random gallery management password before publishing.');
-            }
-            core.setOutput('publish', String(result.publish));
-            await core.summary.addRaw(`## Open VSIX Gallery\n\n${result.reason}\n`).write();
-
-      - name: Publish Axial SQL Tools to Open VSIX Gallery
-        id: publish_open
-        if: ${{ !cancelled() && steps.open.outputs.publish == 'true' }}
-        uses: madskristensen/publish-vsixgallery@fca01a5688f52684fc11b469205143a7737890cb # v1
-        with:
-          vsix-file: ${{ steps.package.outputs.vsix_path }}
+          vsix-file: ${{ steps.package.outputs.path }}
           gallery-url: https://www.vsixgallery.com
           readme: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/README.md
           manage-token: ${{ secrets.VSIX_GALLERY_MANAGE_TOKEN }}
-
-      - name: Confirm Open VSIX Gallery serves the signed package
-        if: ${{ !cancelled() && steps.publish_open.outcome == 'success' }}
-        uses: actions/github-script@v9
-        env:
-          VSIX_SHA256: ${{ steps.package.outputs.sha256 }}
-        with:
-          script: |
-            const { checkGallery } = require('./.github/scripts/gallery-publish.js');
-            const result = await checkGallery({
-              galleryUrl: 'https://www.vsixgallery.com', extensionId: 'AxialSqlTools',
-              version: process.env.RELEASE_VERSION, sha256: process.env.VSIX_SHA256
-            });
-            if (result.publish) throw new Error('Open VSIX Gallery has not published the expected signed package.');

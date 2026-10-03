@@ -12,16 +12,11 @@ permissions:
 
 jobs:
   prepare:
-    name: Validate version and create release tag
+    name: Check release version
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: write
     outputs:
-      version: ${{ steps.release.outputs.version }}
-      tag: ${{ steps.release.outputs.tag }}
-      source_sha: ${{ steps.release.outputs.source_sha }}
-      already_published: ${{ steps.release.outputs.already_published }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout release source
         uses: actions/checkout@v7
@@ -29,57 +24,78 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Prepare release
-        id: release
+      - name: Read manifest version
+        id: version
+        shell: python
+        run: |
+          import os
+          import re
+          import xml.etree.ElementTree as ET
+          manifest = ET.parse('AxialSqlTools/source.extension.vsixmanifest')
+          version = manifest.find('.//{*}Identity').attrib['Version']
+          if not re.fullmatch(r'\d+\.\d+(?:\.\d+){0,2}', version):
+              raise ValueError(f'Invalid release version: {version}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              print(f'version={version}', file=output)
+
+      - name: Fail if the version tag already exists
         uses: actions/github-script@v9
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         with:
           script: |
-            const release = require('./.github/scripts/release.js');
-            await release.prepare({ github, context, core });
+            try {
+              await github.rest.git.getRef({
+                ...context.repo, ref: `tags/${process.env.RELEASE_VERSION}`
+              });
+            } catch (error) {
+              if (error.status === 404) return;
+              throw error;
+            }
+            throw new Error(`Tag ${process.env.RELEASE_VERSION} already exists. Increment the version before releasing.`);
 
   build_and_sign:
     name: Build and Sign VSIX
     needs: prepare
-    if: needs.prepare.outputs.already_published != 'true'
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/build-sign-vsix.yml
-    with:
-      build_ref: refs/tags/${{ needs.prepare.outputs.tag }}
-      expected_sha: ${{ needs.prepare.outputs.source_sha }}
-      expected_version: ${{ needs.prepare.outputs.version }}
     secrets: inherit
 
   publish:
-    name: Publish signed release
+    name: Create prerelease
     needs: [prepare, build_and_sign]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout release source
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.prepare.outputs.source_sha }}
-          persist-credentials: false
-
-      - name: Download the signed artifact from this build
+      - name: Download signed VSIX and checksum
         uses: actions/download-artifact@v8
         with:
           artifact-ids: ${{ needs.build_and_sign.outputs.signed_artifact_id }}
           path: release-assets
 
-      - name: Verify files and publish release
+      - name: Create version tag at this commit
         uses: actions/github-script@v9
         env:
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          RELEASE_SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
-          SIGNED_SOURCE_SHA: ${{ needs.build_and_sign.outputs.source_sha }}
-          SIGNED_VERSION: ${{ needs.build_and_sign.outputs.version }}
-          SIGNED_VSIX_SHA256: ${{ needs.build_and_sign.outputs.vsix_sha256 }}
         with:
           script: |
-            const release = require('./.github/scripts/release.js');
-            await release.publish({ github, context, core, env: process.env });
+            await github.rest.git.createRef({
+              ...context.repo,
+              ref: `refs/tags/${process.env.RELEASE_VERSION}`,
+              sha: context.sha
+            });
+
+      - name: Publish GitHub prerelease
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ needs.prepare.outputs.version }}
+          artifacts: release-assets/*
+          artifactErrorsFailBuild: true
+          generateReleaseNotes: true
+          immutableCreate: true
+          prerelease: true
+          makeLatest: false
+          allowUpdates: false
