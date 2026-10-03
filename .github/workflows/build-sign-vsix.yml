@@ -43,8 +43,6 @@ jobs:
               -OutFile $bootstrapper
 
             $installerArgs = @(
-              '--installPath',
-              'C:\Program Files\Microsoft SQL Server Management Studio 22\Release',
               '--quiet',
               '--wait',
               '--norestart'
