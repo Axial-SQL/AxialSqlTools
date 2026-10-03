@@ -1,0 +1,295 @@
+name: Build and Sign VSIX
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: vsix-signing
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build unsigned VSIX
+    runs-on: windows-2025
+
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Release VSIX
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          msbuild "AxialSqlTools\AxialSqlTools.sln" `
+            /restore `
+            /m `
+            /t:Rebuild `
+            /p:Configuration=Release `
+            /p:Platform="Any CPU" `
+            /p:DeployExtension=false `
+            /p:PostBuildEvent=
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "MSBuild failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Stage unsigned VSIX
+        id: package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $vsix = Join-Path $env:GITHUB_WORKSPACE "AxialSqlTools\bin\Release\AxialSqlTools.vsix"
+          $manifest = Join-Path $env:GITHUB_WORKSPACE "AxialSqlTools\source.extension.vsixmanifest"
+          $stage = Join-Path $env:GITHUB_WORKSPACE "unsigned-vsix"
+
+          if (-not (Test-Path -LiteralPath $vsix -PathType Leaf)) {
+            throw "Expected VSIX was not produced: $vsix"
+          }
+
+          [xml]$manifestXml = Get-Content -LiteralPath $manifest
+          $version = $manifestXml.PackageManifest.Metadata.Identity.Version
+
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "Unable to read VSIX version from $manifest"
+          }
+
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          Copy-Item -LiteralPath $vsix -Destination (Join-Path $stage "AxialSqlTools.vsix") -Force
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+          Write-Host "Built AxialSqlTools.vsix version $version"
+          Get-Item -LiteralPath $vsix | Format-List FullName, Length, LastWriteTime
+
+      - name: Upload unsigned VSIX
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-vsix
+          path: unsigned-vsix/AxialSqlTools.vsix
+          if-no-files-found: error
+          retention-days: 3
+
+  sign:
+    name: Sign and verify VSIX
+    needs: build
+    runs-on: windows-2025
+    environment: vsix-signing
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      SIGN_CLI_VERSION: 0.9.1-beta.26475.3
+
+    steps:
+      - name: Download unsigned VSIX
+        uses: actions/download-artifact@v8
+        with:
+          name: unsigned-vsix
+          path: sign-input
+
+      - name: Setup .NET for Sign CLI
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup NuGet for VSIX verification
+        uses: NuGet/setup-nuget@v2
+
+      - name: Install signing tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $signToolPath = Join-Path $env:RUNNER_TEMP "sign-tools"
+
+          dotnet tool install sign `
+            --tool-path $signToolPath `
+            --version $env:SIGN_CLI_VERSION
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to install Sign CLI."
+          }
+
+          nuget install Microsoft.VSSDK.VsixSignTool `
+            -Version 17.10.34916.79 `
+            -OutputDirectory (Join-Path $env:RUNNER_TEMP "vsixsigntool") `
+            -NonInteractive
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to install VSIXSignTool verifier."
+          }
+
+      - name: Login to Azure using GitHub OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate Artifact Signing configuration
+        shell: pwsh
+        env:
+          ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          ARTIFACT_SIGNING_ACCOUNT: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          ARTIFACT_SIGNING_PROFILE: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          foreach ($name in @(
+            'ARTIFACT_SIGNING_ENDPOINT',
+            'ARTIFACT_SIGNING_ACCOUNT',
+            'ARTIFACT_SIGNING_PROFILE'
+          )) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              throw "Missing GitHub environment variable: $name"
+            }
+
+            Write-Host "$name is configured."
+          }
+
+      - name: Sign VSIX with Azure Artifact Signing
+        working-directory: sign-input
+        shell: pwsh
+        env:
+          ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          ARTIFACT_SIGNING_ACCOUNT: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          ARTIFACT_SIGNING_PROFILE: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $vsix = Join-Path (Get-Location) "AxialSqlTools.vsix"
+          $sign = Join-Path $env:RUNNER_TEMP "sign-tools\sign.exe"
+          $fileList = Join-Path (Get-Location) "sign-files.txt"
+
+          if (-not (Test-Path -LiteralPath $vsix -PathType Leaf)) {
+            throw "VSIX not found: $vsix"
+          }
+
+          @(
+            '**/AxialSqlTools*.dll'
+            'AxialSqlTools.vsix'
+          ) | Set-Content -LiteralPath $fileList -Encoding utf8
+
+          & $sign code artifact-signing `
+            "AxialSqlTools.vsix" `
+            --base-directory (Get-Location).Path `
+            --file-list "sign-files.txt" `
+            --azure-credential-type azure-cli `
+            --artifact-signing-endpoint $env:ARTIFACT_SIGNING_ENDPOINT `
+            --artifact-signing-account $env:ARTIFACT_SIGNING_ACCOUNT `
+            --artifact-signing-certificate-profile $env:ARTIFACT_SIGNING_PROFILE `
+            --file-digest sha256 `
+            --timestamp-url "http://timestamp.acs.microsoft.com/" `
+            --timestamp-digest sha256
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "VSIX signing failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Verify VSIX package signature
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $vsix = Join-Path $env:GITHUB_WORKSPACE "sign-input\AxialSqlTools.vsix"
+          $verifyTool = Get-ChildItem `
+            -Path (Join-Path $env:RUNNER_TEMP "vsixsigntool") `
+            -Filter "VSIXSignTool.exe" `
+            -Recurse `
+            -File |
+            Select-Object -First 1
+
+          if ($null -eq $verifyTool) {
+            throw "VSIXSignTool.exe was not found."
+          }
+
+          & $verifyTool.FullName verify /v $vsix
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "VSIX package signature verification failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Verify embedded AxialSqlTools assembly signature
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $vsix = Join-Path $env:GITHUB_WORKSPACE "sign-input\AxialSqlTools.vsix"
+          $verifyRoot = Join-Path $env:RUNNER_TEMP "axial-vsix-verify"
+          $zip = Join-Path $verifyRoot "package.zip"
+          $expanded = Join-Path $verifyRoot "expanded"
+
+          Remove-Item -LiteralPath $verifyRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $verifyRoot -Force | Out-Null
+          Copy-Item -LiteralPath $vsix -Destination $zip -Force
+          Expand-Archive -LiteralPath $zip -DestinationPath $expanded -Force
+
+          $dll = Get-ChildItem `
+            -Path $expanded `
+            -Filter "AxialSqlTools.dll" `
+            -Recurse `
+            -File |
+            Select-Object -First 1
+
+          if ($null -eq $dll) {
+            throw "AxialSqlTools.dll was not found inside the signed VSIX."
+          }
+
+          $signature = Get-AuthenticodeSignature -LiteralPath $dll.FullName
+
+          Write-Host "Embedded assembly: $($dll.FullName)"
+          Write-Host "Signature status: $($signature.Status)"
+          Write-Host "Signer: $($signature.SignerCertificate.Subject)"
+          Write-Host "Thumbprint: $($signature.SignerCertificate.Thumbprint)"
+
+          if ($signature.Status -ne 'Valid') {
+            throw "Embedded AxialSqlTools.dll signature is not valid. Status: $($signature.Status)"
+          }
+
+      - name: Prepare signed release artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $source = Join-Path $env:GITHUB_WORKSPACE "sign-input\AxialSqlTools.vsix"
+          $output = Join-Path $env:GITHUB_WORKSPACE "signed-output"
+          $version = "${{ needs.build.outputs.version }}"
+          $fileName = "AxialSqlTools_SSMS22_$version.vsix"
+          $destination = Join-Path $output $fileName
+
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          Copy-Item -LiteralPath $source -Destination $destination -Force
+
+          $hash = Get-FileHash -LiteralPath $destination -Algorithm SHA256
+          "$($hash.Hash)  $fileName" | Set-Content -LiteralPath (Join-Path $output "$fileName.sha256") -Encoding ascii
+
+          "### Signed VSIX" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "File: $fileName" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "Version: $version" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "SHA256: $($hash.Hash)" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "Artifact Signing account: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "Certificate profile: ${{ vars.ARTIFACT_SIGNING_PROFILE }}" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Upload signed VSIX
+        uses: actions/upload-artifact@v7
+        with:
+          name: AxialSqlTools-Signed-${{ needs.build.outputs.version }}
+          path: signed-output/*
+          if-no-files-found: error
+          retention-days: 30
