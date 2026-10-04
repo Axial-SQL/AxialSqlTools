@@ -54,7 +54,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 
 - [**Sync to GitHub**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Sync-to-GitHub): Rudimentary, low effort, manually triggered source control.
 
-- [**Export Grid to Pivot Table**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Pivot-Grid): A basic Pitot Table functionality to alculate statistics, and explore totals in a separate SSMS tab using the free NReco.PivotData engine.
+- [**Export Grid to Pivot Table**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Pivot-Grid): Group results with a searchable field builder, compare multiple measures, filter rows, sort columns, and save layouts in a separate SSMS tab. Includes pinned totals and drill-down using NReco.PivotData. [User guide](docs/Pivot-Grid.md).
 
 - [**Copy Column Names from Grid**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Copy-Column-Names-from-Grid): Quickly copy the column names from the results grid to the clipboard.
   

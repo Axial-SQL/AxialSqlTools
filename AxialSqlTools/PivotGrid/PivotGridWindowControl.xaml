@@ -1,7 +1,8 @@
 <UserControl x:Class="AxialSqlTools.PivotGrid.PivotGridWindowControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             MinWidth="700" MinHeight="420"
+             xmlns:local="clr-namespace:AxialSqlTools.PivotGrid"
+             MinWidth="700" MinHeight="420" PreviewKeyDown="ControlKeyDown" SizeChanged="ControlSizeChanged"
              Background="{DynamicResource AxialThemeBackgroundBrush}"
              Foreground="{DynamicResource AxialThemeForegroundBrush}">
     <UserControl.Resources>
@@ -11,65 +12,48 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid Margin="12">
+    <Grid Margin="10">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <TextBlock x:Name="SourceInfo" Text="Capturing result grid..." Margin="0,0,0,8" TextWrapping="Wrap" />
-        <Grid x:Name="Options" Grid.Row="1" IsEnabled="False">
+        <TextBlock x:Name="SourceInfo" Text="Capturing result grid..." Margin="0,0,0,6" TextWrapping="Wrap" />
+        <WrapPanel x:Name="LayoutToolbar" Grid.Row="1" Margin="0,0,0,6" IsEnabled="False">
+            <Label Content="_Layout" Target="{Binding ElementName=LayoutNames}" VerticalAlignment="Center" />
+            <ComboBox x:Name="LayoutNames" Width="180" IsEditable="True" IsTextSearchEnabled="False" MaxDropDownHeight="260"
+                      VerticalAlignment="Center" ToolTip="Choose a saved layout or enter a name to save. Layouts match the result column names, order and types." />
+            <Button Content="Load" Click="LoadLayoutClicked" Padding="9,3" Margin="5,0,0,0" ToolTip="Load this layout into setup, then Apply." />
+            <Button Content="Save" Click="SaveLayoutClicked" Padding="9,3" Margin="5,0,0,0" ToolTip="Save the current setup using this name." />
+            <Button Content="Delete" Click="DeleteLayoutClicked" Padding="9,3" Margin="5,0,12,0" ToolTip="Delete the selected named layout." />
+            <Button Content="Swap rows/columns" Click="SwapAxesClicked" Padding="9,3" Margin="0,0,5,0" />
+            <Button Content="Reset" Click="ResetClicked" Padding="9,3" ToolTip="Reset setup to Count rows with no groups or filters. Apply to update the grid." />
+        </WrapPanel>
+        <Expander x:Name="SetupExpander" Grid.Row="2" Header="Fields and filters" IsExpanded="True" Margin="0,0,0,6">
+            <ScrollViewer x:Name="SetupScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="310">
+                <local:PivotBuilderControl x:Name="Builder" Margin="0,6,0,0" IsEnabled="False" />
+            </ScrollViewer>
+        </Expander>
+        <Grid Grid.Row="3" Margin="0,0,0,6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="1.4*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <GroupBox Header="Rows" Margin="0,0,8,0">
-                <ListBox x:Name="RowFields" Height="116" SelectionMode="Multiple" DisplayMemberPath="Label"
-                         ToolTip="Click to select or deselect fields. Groups follow source column order." />
-            </GroupBox>
-            <GroupBox Grid.Column="1" Header="Columns" Margin="0,0,8,0">
-                <ListBox x:Name="ColumnFields" Height="116" SelectionMode="Multiple" DisplayMemberPath="Label"
-                         ToolTip="Leave empty for a grouped summary. Click to select or deselect fields." />
-            </GroupBox>
-            <StackPanel Grid.Column="2">
-                <Label Content="_Aggregation" Target="{Binding ElementName=AggregationBox}" />
-                <ComboBox x:Name="AggregationBox" SelectionChanged="AggregationChanged" DisplayMemberPath="Label" />
-                <Label Content="_Values" Target="{Binding ElementName=ValueField}" />
-                <ComboBox x:Name="ValueField" DisplayMemberPath="Label" />
-                <WrapPanel Margin="0,8,0,0">
-                    <CheckBox x:Name="NullTextIsNull" Content="Treat displayed NULL as null" IsChecked="True" Margin="0,0,16,0" VerticalAlignment="Center"
-                          ToolTip="SSMS exposes display text. SQL NULL and the literal text NULL cannot be distinguished in text columns. Clear this option to count them as text. Numeric NULLs are always null." />
-                    <Label Content="Sort values" Target="{Binding ElementName=ValueSort}" VerticalAlignment="Center" />
-                    <ComboBox x:Name="ValueSort" Width="110" SelectedIndex="0" SelectionChanged="ValueSortChanged"
-                              ToolTip="Sort rows by Value, or by the row Grand total when Columns are selected. Grand total stays last. None restores the original order.">
-                        <ComboBoxItem Content="None" />
-                        <ComboBoxItem Content="Ascending" />
-                        <ComboBoxItem Content="Descending" />
-                    </ComboBox>
-                </WrapPanel>
+            <StackPanel Margin="0,0,8,0">
+                <TextBlock x:Name="AppliedSummary" Text="Choose fields or apply an ungrouped count." TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                <TextBlock x:Name="PendingState" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,3,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button x:Name="ApplyButton" Content="_Apply" Click="ApplyClicked" IsEnabled="False" Padding="14,4" Margin="0,0,5,0"
+                        ToolTip="Apply setup to the captured rows. Ctrl+Enter also applies changes." />
+                <Button x:Name="CancelButton" Content="Cancel" Click="CancelClicked" IsEnabled="False" Padding="10,4" />
             </StackPanel>
         </Grid>
-        <Grid Grid.Row="2" Margin="0,10,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="180" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <Label Content="_Filter" Target="{Binding ElementName=FilterField}" VerticalAlignment="Center" />
-            <ComboBox x:Name="FilterField" Grid.Column="1" DisplayMemberPath="Label" IsEnabled="False" />
-            <Label Grid.Column="2" Content="contains" VerticalAlignment="Center" />
-            <TextBox x:Name="FilterText" Grid.Column="3" Margin="4,0,12,0" VerticalContentAlignment="Center"
-                     IsEnabled="False" ToolTip="Case-insensitive search in the displayed source values." />
-            <Button x:Name="ApplyButton" Grid.Column="4" Content="_Apply" Click="ApplyClicked" IsEnabled="False" Padding="14,5" Margin="0,0,6,0" />
-            <Button x:Name="CancelButton" Grid.Column="5" Content="Cancel" Click="CancelClicked" IsEnabled="False" Padding="14,5" />
-        </Grid>
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="4" MinHeight="100">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
@@ -82,7 +66,7 @@
                   ContextMenuOpening="ResultContextMenuOpening" AutoGenerateColumns="False" IsReadOnly="True"
                   Background="{DynamicResource AxialThemeBackgroundBrush}" RowBackground="{DynamicResource AxialThemeBackgroundBrush}" AlternatingRowBackground="{DynamicResource AxialThemeBackgroundBrush}" Foreground="{DynamicResource AxialThemeForegroundBrush}"
                   HorizontalGridLinesBrush="{DynamicResource AxialThemeBorderBrush}" VerticalGridLinesBrush="{DynamicResource AxialThemeBorderBrush}"
-                  CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
+                  CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="True" Sorting="ResultSorting"
                   EnableRowVirtualization="True" EnableColumnVirtualization="True"
                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                   ScrollViewer.CanContentScroll="True" SelectionUnit="CellOrRowHeader"
@@ -129,13 +113,13 @@
                 </DataGrid>
             </Grid>
         </Grid>
-        <StackPanel Grid.Row="4" Margin="0,8,0,0">
+        <StackPanel Grid.Row="5" Margin="0,6,0,0">
             <DockPanel>
                 <Button x:Name="DrillButton" DockPanel.Dock="Right" Content="Show underlying rows" IsEnabled="False"
                         Click="DrillClicked" Padding="10,4" Margin="8,0,0,0" ToolTip="Select a value or total, then click here, double-click the cell, or press Enter." />
-                <TextBlock x:Name="Status" TextWrapping="Wrap" />
+                <TextBlock x:Name="Status" TextWrapping="Wrap" VerticalAlignment="Center" />
             </DockPanel>
-            <TextBlock Text="Snapshot of displayed grid values. SSMS text truncation applies. Calculated with NReco.PivotData."
+            <TextBlock Text="Snapshot of displayed values. SSMS text truncation applies. Click a header to sort; click again to reverse, then clear. Ctrl+C copies selected cells."
                        Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap" />
         </StackPanel>
     </Grid>
