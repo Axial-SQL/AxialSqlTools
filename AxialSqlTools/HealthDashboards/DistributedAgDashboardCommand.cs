@@ -14,7 +14,7 @@ namespace AxialSqlTools
 {
     internal sealed class DistributedAgDashboardCommand : IDisposable
     {
-        public const int CommandId = 4160;
+        public const int CommandId = 4161;
         internal const string MenuText = "Distributed AG Health Dashboard";
         private readonly AxialSqlToolsPackage package;
         private readonly OleMenuCommandService commands;
