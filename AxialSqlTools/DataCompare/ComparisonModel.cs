@@ -23,7 +23,30 @@ namespace AxialSqlTools.DataCompare
         public string Collation { get; set; }
         public bool Writable => !Computed && !Generated && Type != "timestamp" && Type != "rowversion";
         public bool Supported => !Encrypted && ValueCodec.SupportedTypes.Contains(Type);
-        public string Display => Name + " (" + Type + ")" + (!Supported ? " - unsupported" : !Writable ? " - read only" : "");
+        public string TypeDisplay
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case "char": case "varchar": case "binary": case "varbinary":
+                        return Type + "(" + (Length == -1 ? "max" : Length.ToString()) + ")";
+                    case "nchar": case "nvarchar":
+                        return Type + "(" + (Length == -1 ? "max" : (Length / 2).ToString()) + ")";
+                    case "decimal": case "numeric":
+                        return Type + "(" + Precision + "," + Scale + ")";
+                    case "datetime2": case "datetimeoffset": case "time":
+                        return Type + "(" + Scale + ")";
+                    case "float":
+                        return Type + "(" + Precision + ")";
+                    default:
+                        return Type;
+                }
+            }
+        }
+        public bool HasMatchingType(TableColumn other) => other != null && Type == other.Type &&
+            Length == other.Length && Precision == other.Precision && Scale == other.Scale;
+        public string Display => Name + " (" + TypeDisplay + ")" + (!Supported ? " - unsupported" : !Writable ? " - read only" : "");
         public override string ToString() => Display;
     }
 
@@ -49,15 +72,48 @@ namespace AxialSqlTools.DataCompare
 
     public sealed class ColumnMapping : INotifyPropertyChanged
     {
+        private TableColumn source;
         private TableColumn target;
         private bool include;
         private bool key;
-        public TableColumn Source { get; set; }
+        private bool duplicateTarget;
+        public TableColumn Source { get => source; set { source = value; Changed(nameof(Source)); } }
         public TableColumn Target { get => target; set { target = value; Changed(nameof(Target)); } }
         public bool Include { get => include; set { include = value; if (!value) IsKey = false; Changed(nameof(Include)); } }
         public bool IsKey { get => key; set { key = value; if (value) Include = true; Changed(nameof(IsKey)); } }
+        public bool HasDuplicateTarget
+        {
+            get => duplicateTarget;
+            set
+            {
+                if (duplicateTarget == value) return;
+                duplicateTarget = value;
+                Changed(nameof(HasDuplicateTarget));
+            }
+        }
+        public bool HasIssue => Include && (Source == null || Target == null || !Source.Supported || !Target.Supported ||
+            !Source.HasMatchingType(Target) || HasDuplicateTarget || (IsKey && (!Source.Writable || !Target.Writable)));
+        public string Status
+        {
+            get
+            {
+                string prefix = Include ? "" : "Excluded - ";
+                if (Source == null) return prefix + "choose source";
+                if (Target == null) return prefix + "choose target";
+                if (Include && HasDuplicateTarget) return "Target mapped more than once";
+                if (!Source.Supported || !Target.Supported) return prefix + "unsupported";
+                if (!Source.HasMatchingType(Target)) return prefix + "type mismatch";
+                if (!Source.Writable || !Target.Writable) return IsKey ? "Invalid key - read only" : prefix + "read only";
+                return !Include ? "Excluded" : IsKey ? "Key" : "Included";
+            }
+        }
         public event PropertyChangedEventHandler PropertyChanged;
-        private void Changed(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private void Changed(string name)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Status)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasIssue)));
+        }
         public ColumnMapping Copy() => new ColumnMapping { Source = Source, Target = Target, Include = Include, IsKey = IsKey };
     }
 
@@ -99,8 +155,7 @@ namespace AxialSqlTools.DataCompare
             {
                 if (!column.Source.Supported || !column.Target.Supported)
                     throw new InvalidOperationException("Unsupported or encrypted column: " + column.Source.Name + ". Exclude it to continue.");
-                if (column.Source.Type != column.Target.Type || column.Source.Scale != column.Target.Scale ||
-                    column.Source.Precision != column.Target.Precision || column.Source.Length != column.Target.Length)
+                if (!column.Source.HasMatchingType(column.Target))
                     throw new InvalidOperationException("Mapped types, lengths, precision and scale must match: " + column.Source.Name + ".");
                 if (column.IsKey && (!column.Source.Writable || !column.Target.Writable))
                     throw new InvalidOperationException("Computed, generated and rowversion columns cannot be comparison keys.");

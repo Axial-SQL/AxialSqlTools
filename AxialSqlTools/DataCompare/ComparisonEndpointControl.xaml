@@ -11,16 +11,41 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <StackPanel>
-        <WrapPanel x:Name="ConnectionButtons">
-            <Button Content="Object Explorer" ToolTip="Use the database selected in Object Explorer" Click="ObjectExplorerClick" Margin="0,0,6,6"/>
-            <Button Content="Active query" ToolTip="Use the connection of the active SQL query" Click="ActiveQueryClick" Margin="0,0,6,6"/>
-            <Button Content="New connection..." Click="NewConnectionClick" Margin="0,0,6,6"/>
-            <Button Content="Refresh" Click="RefreshClick" Margin="0,0,0,6"/>
+        <WrapPanel>
+            <Button x:Name="ObjectExplorerButton" Content="Use Object Explorer"
+                    ToolTip="Select a database or table in SSMS Object Explorer, then click here to use that database's connection."
+                    Click="ObjectExplorerClick" Margin="0,0,6,6"/>
+            <Button x:Name="RefreshButton" Content="Refresh tables" IsEnabled="False"
+                    ToolTip="Reload tables from this database and keep the selected table if it still exists."
+                    Click="RefreshClick" Margin="0,0,0,6"/>
         </WrapPanel>
-        <TextBlock x:Name="ConnectionLabel" Text="Choose a SQL Server connection" TextWrapping="Wrap" Margin="0,0,0,8"/>
-        <ComboBox x:Name="TableBox" IsEditable="True" IsReadOnly="True" IsTextSearchEnabled="True"
-                  TextSearch.TextPath="QualifiedName" MaxDropDownHeight="350" MinHeight="28"
-                  SelectionChanged="TableSelectionChanged" AutomationProperties.Name="Table"/>
-        <TextBlock x:Name="ErrorLabel" TextWrapping="Wrap" Foreground="{DynamicResource AxialThemeStatusErrorBrush}" Margin="0,5,0,0"/>
+        <TextBlock x:Name="ConnectionLabel" Text="No database selected" TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Label Content="Find table" Target="{Binding ElementName=TableSearchBox}" VerticalAlignment="Center" Padding="0,0,8,0"/>
+            <TextBox x:Name="TableSearchBox" Grid.Column="1" MinHeight="26" Padding="5,3" IsEnabled="False"
+                     VerticalContentAlignment="Center" TextChanged="TableSearchChanged"
+                     ToolTip="Filter by any part of the schema or table name. Search is case-insensitive."
+                     AutomationProperties.Name="Find table"/>
+            <Button x:Name="ClearSearchButton" Grid.Column="2" Content="Clear" Margin="6,0,0,0"
+                    IsEnabled="False" Click="ClearSearchClick" ToolTip="Clear the table search"/>
+            <Label Grid.Row="1" Content="Table" Target="{Binding ElementName=TableBox}" VerticalAlignment="Center" Padding="0,0,8,0" Margin="0,6,0,0"/>
+            <ComboBox x:Name="TableBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,6,0,0"
+                      IsEnabled="False" DisplayMemberPath="QualifiedName" IsSynchronizedWithCurrentItem="False"
+                      IsTextSearchEnabled="True" TextSearch.TextPath="QualifiedName" MaxDropDownHeight="350" MinHeight="28"
+                      SelectionChanged="TableSelectionChanged" AutomationProperties.Name="Table"/>
+        </Grid>
+        <TextBlock x:Name="StatusLabel" Text="Choose a database in Object Explorer, then select Use Object Explorer."
+                   TextWrapping="Wrap" Margin="0,5,0,0"/>
+        <TextBlock x:Name="ErrorLabel" TextWrapping="Wrap" Visibility="Collapsed"
+                   Foreground="{DynamicResource AxialThemeStatusErrorBrush}" Margin="0,5,0,0"/>
     </StackPanel>
 </UserControl>
