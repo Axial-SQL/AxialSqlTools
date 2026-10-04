@@ -20,7 +20,7 @@
                 <TextBlock Text="Choose tables, review differences, then preview or apply selected changes to the target." Margin="0,3,8,0" TextWrapping="Wrap"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <Button x:Name="CompareButton" Content="Compare" Click="CompareClick" MinWidth="100" Height="30" Margin="6,0" IsEnabled="False" Style="{StaticResource AxialPrimaryButtonStyle}" ToolTipService.ShowOnDisabled="True"/>
+                <Button x:Name="CompareButton" Content="Compare" Click="CompareClick" MinWidth="100" Height="30" Margin="6,0" IsEnabled="False" ToolTipService.ShowOnDisabled="True"/>
                 <Button x:Name="CancelButton" Content="Cancel" Click="CancelClick" MinWidth="80" Height="30" IsEnabled="False" Visibility="Collapsed"/>
             </StackPanel>
         </Grid>
@@ -171,7 +171,7 @@
                     <StackPanel Grid.Row="5" Margin="0,8,0,0">
                         <TextBlock x:Name="CategoryHintText" Text="Double-click a column for full values." TextWrapping="Wrap"/>
                         <WrapPanel x:Name="SyncActions" Margin="0,8,0,0">
-                            <Button x:Name="GenerateButton" Content="Preview script" Style="{StaticResource AxialPrimaryButtonStyle}" Click="GenerateClick" Margin="0,0,8,0"/>
+                            <Button x:Name="GenerateButton" Content="Preview script" Click="GenerateClick" Margin="0,0,8,0"/>
                             <Button x:Name="ExportScriptButton" Content="Save SQL..." Click="ExportScriptClick" Margin="0,0,8,0"/>
                             <Button Content="Export comparison CSV..." Click="ExportCsvClick" Margin="0,0,8,0"/>
                             <Button x:Name="ApplyButton" Content="Apply selected to target..." Click="ApplyClick" Margin="0,0,8,0"/>
