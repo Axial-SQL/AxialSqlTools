@@ -269,8 +269,9 @@
         </Strings>
       </Button>
 
+      <!-- Keep the command registered without a toolbar/menu placement.
+           Quick Manage is exposed on SQL Agent job context menus. -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialJobQuickViewCommand" priority="0x0100" type="Button">
-        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidImagesSettings" id="bmpSettings" />
         <CommandFlag>DefaultDisabled</CommandFlag>
         <Strings>

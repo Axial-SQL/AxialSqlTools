@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -30,6 +31,8 @@ namespace AxialSqlTools.JobQuickView
         private readonly ObservableCollection<StepDraft> drafts = new ObservableCollection<StepDraft>();
         private JobQuickViewSnapshot snapshot;
         private StepDraft selectedDraft;
+        private HistoryNode selectedHistory;
+        private HistoryNode[] historyNodes = Array.Empty<HistoryNode>();
         private bool loaded;
         private bool closed;
         private bool refreshing;
@@ -74,6 +77,7 @@ namespace AxialSqlTools.JobQuickView
         {
             if (loaded || closed) return;
             loaded = true;
+            JobCommandEditorSupport.ApplyHostEditorFont(CommandEditor);
             await RefreshAsync();
         }
 
@@ -112,6 +116,8 @@ namespace AxialSqlTools.JobQuickView
                     if (snapshot == null)
                     {
                         ScheduleStatusText.Text = "Schedules could not be loaded. Use Refresh to retry.";
+                        HistoryStatusText.Text = "Execution history unavailable";
+                        HistoryEmptyText.Text = "Execution history could not be loaded. Use Refresh to retry.";
                         LastRunSummaryText.Text = "Unavailable";
                         NextRunText.Text = "Unavailable";
                         EnabledText.Text = "Unknown";
@@ -168,18 +174,7 @@ namespace AxialSqlTools.JobQuickView
                 NextRun = ServerDate(schedule.NextRun, schedule.IsEnabled ? "No scheduled time" : "Schedule disabled")
             }).ToList();
             ScheduleNoteText.Text = JobQuickViewSnapshot.NextRunNote;
-            ExecutionGrid.ItemsSource = new[]
-            {
-                new DetailRow("Current status", EmptyValue(result.ExecutionStatus)),
-                new DetailRow("Running since", ServerDate(result.RunningSince)),
-                new DetailRow("Last outcome", EmptyValue(result.LastRunOutcome, "No recorded execution")),
-                new DetailRow("Last started", ServerDate(result.LastRunStarted)),
-                new DetailRow("Last duration", Duration(result.LastRunDuration)),
-                new DetailRow("Next execution", !result.IsEnabled ? "Job disabled" : ServerDate(result.NextRun, "No scheduled time")),
-                new DetailRow("Time zone", "SQL Server local time")
-            };
-            LastRunMessageText.Text = EmptyValue(result.LastRunMessage, result.HistoryLoaded
-                ? "No execution message is available." : "Execution details could not be loaded. Use Refresh to retry.");
+            ApplyHistory(result);
 
             // Keep the original server command as the concurrency baseline for every draft.
             // A server refresh may update clean documents, but never replaces unsaved work.
@@ -223,6 +218,76 @@ namespace AxialSqlTools.JobQuickView
             StepsCountText.Text = "JOB STEPS (" + result.Steps.Count + ")";
             UpdateActions();
         }
+
+        private void ApplyHistory(JobQuickViewSnapshot result)
+        {
+            string currentStatus = "Current status: " + EmptyValue(result.ExecutionStatus, "Unknown") +
+                (result.RunningSince.HasValue ? " (started " + HistoryDate(result.RunningSince) + ")" : string.Empty);
+            if (!result.HistoryLoaded)
+            {
+                HistoryStatusText.Text = currentStatus + "  |  History refresh failed";
+                HistoryNoteText.Text = historyNodes.Length == 0
+                    ? "Execution history could not be loaded. Use Refresh to retry."
+                    : "Showing previously loaded history. Use Refresh to retry. Times use the SQL Server's local time.";
+                HistoryEmptyText.Text = "Execution history could not be loaded. Use Refresh to retry.";
+                HistoryEmptyText.Visibility = historyNodes.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+                return;
+            }
+
+            var previousSelection = selectedHistory;
+            var expandedRuns = historyNodes.Where(node => node.IsExpanded).Select(node => node.Item.InstanceId).ToArray();
+            bool firstHistory = historyNodes.Length == 0;
+            historyNodes = result.History.Select(run => new HistoryNode(run)).ToArray();
+            foreach (var node in historyNodes)
+                node.IsExpanded = expandedRuns.Contains(node.Item.InstanceId) || (firstHistory && node == historyNodes[0]);
+
+            var selection = previousSelection == null ? null : historyNodes
+                .SelectMany(node => new[] { node }.Concat(node.Children))
+                .FirstOrDefault(node => node.Item.InstanceId == previousSelection.Item.InstanceId);
+            if (selection == null && previousSelection != null)
+                selection = historyNodes.FirstOrDefault(node => node.Item.InstanceId == previousSelection.Run.InstanceId);
+            selection = selection ?? historyNodes.FirstOrDefault();
+            if (selection != null)
+            {
+                selection.IsSelected = true;
+                if (selection.Item.StepId != 0)
+                    historyNodes.First(node => node.Run.InstanceId == selection.Run.InstanceId).IsExpanded = true;
+            }
+            HistoryTree.ItemsSource = historyNodes;
+            ShowHistorySelection(selection);
+            HistoryStatusText.Text = result.History.Count + (result.History.Count == 1 ? " run" : " runs") +
+                "  |  " + currentStatus;
+            HistoryEmptyText.Text = "No retained execution history. This job may not have run, or its history was purged.";
+            HistoryEmptyText.Visibility = historyNodes.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+            HistoryNoteText.Text = EmptyValue(result.HistoryNote,
+                "Expand a run to see its recorded step attempts. Times use the SQL Server's local time.");
+        }
+
+        private void History_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (!closed && e.NewValue is HistoryNode node) ShowHistorySelection(node);
+        }
+
+        private void ShowHistorySelection(HistoryNode node)
+        {
+            selectedHistory = node;
+            HistoryTitleText.Text = node?.Title ?? "Select a run or step";
+            HistoryDetailText.Text = node == null ? string.Empty : EmptyValue(node.Item.Outcome) +
+                "  |  Started " + HistoryDate(node.Item.StartedAt) + "  |  Duration " + Duration(node.Item.Duration);
+            HistoryContextText.Text = node == null ? string.Empty :
+                (node.Item.StepId == 0 ? string.Empty : "Run " + HistoryDate(node.Run.StartedAt) + "  |  ") +
+                "Server: " + EmptyValue(node.Item.Server, serverName) +
+                (node.Item.SqlMessageId != 0 || node.Item.SqlSeverity != 0
+                    ? "  |  SQL message " + node.Item.SqlMessageId + ", severity " + node.Item.SqlSeverity : string.Empty);
+            HistoryContextText.Visibility = string.IsNullOrEmpty(HistoryContextText.Text) ? Visibility.Collapsed : Visibility.Visible;
+            HistorySelectionNoteText.Text = node?.Run.Note ?? string.Empty;
+            HistorySelectionNoteText.Visibility = string.IsNullOrWhiteSpace(HistorySelectionNoteText.Text) ? Visibility.Collapsed : Visibility.Visible;
+            HistoryMessageText.Text = node == null ? string.Empty : EmptyValue(node.Item.Message, "No message was recorded for this entry.");
+            HistoryMessageText.ScrollToHome();
+        }
+
+        private static string HistoryDate(DateTime? value)
+            => value.HasValue ? value.Value.ToString("G", CultureInfo.CurrentCulture) : "Unknown start time";
 
         private void Steps_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -470,9 +535,23 @@ namespace AxialSqlTools.JobQuickView
         private void ApplyTheme()
         {
             ToolWindowThemeResources.ApplySharedTheme(this);
+            ApplyHistoryTreeStyle();
             ApplySemanticColors();
             ApplyStatusBadges();
             ApplyEditorTheme();
+        }
+
+        private void ApplyHistoryTreeStyle()
+        {
+            // Keep the shell's expander, focus and selection treatment in every theme.
+            var hostStyle = HistoryTree.TryFindResource(typeof(TreeViewItem)) as Style;
+            if (HistoryTree.ItemContainerStyle != null && HistoryTree.ItemContainerStyle.BasedOn == hostStyle) return;
+            var style = new Style(typeof(TreeViewItem), hostStyle);
+            style.Setters.Add(new Setter(TreeViewItem.IsExpandedProperty, new Binding("IsExpanded") { Mode = BindingMode.TwoWay }));
+            style.Setters.Add(new Setter(TreeViewItem.IsSelectedProperty, new Binding("IsSelected") { Mode = BindingMode.TwoWay }));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(5)));
+            style.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch));
+            HistoryTree.ItemContainerStyle = style;
         }
 
         private void ApplySemanticColors()
@@ -592,6 +671,32 @@ namespace AxialSqlTools.JobQuickView
             public string Status { get; set; }
             public string Description { get; set; }
             public string NextRun { get; set; }
+        }
+
+        private sealed class HistoryNode
+        {
+            public JobQuickViewHistoryItem Item { get; }
+            public JobQuickViewHistoryRun Run { get; }
+            public HistoryNode[] Children { get; }
+            public bool IsExpanded { get; set; }
+            public bool IsSelected { get; set; }
+            public string Title => Item.StepId == 0 ? HistoryDate(Item.StartedAt) :
+                "Step " + Item.StepId + ": " + EmptyValue(Item.StepName, "Unnamed step");
+            public string Summary => EmptyValue(Item.Outcome) + "  |  " + Duration(Item.Duration) +
+                (Item.StepId == 0 ? "  |  " + Children.Length + (Children.Length == 1 ? " step record" : " step records") : string.Empty);
+
+            public HistoryNode(JobQuickViewHistoryRun run)
+            {
+                Item = Run = run;
+                Children = run.Steps.Select(step => new HistoryNode(step, run)).ToArray();
+            }
+
+            private HistoryNode(JobQuickViewHistoryItem item, JobQuickViewHistoryRun run)
+            {
+                Item = item;
+                Run = run;
+                Children = Array.Empty<HistoryNode>();
+            }
         }
 
         private sealed class StepDraft : INotifyPropertyChanged

@@ -198,7 +198,7 @@
                         <TextBlock x:Name="StepFlowText" FontSize="11" TextWrapping="Wrap" Text="Step commands load asynchronously." />
                     </Border>
                     <avalonedit:TextEditor x:Name="CommandEditor" Grid.Row="2" Style="{StaticResource AxialSqlEditorStyle}"
-                                          BorderThickness="0" FontSize="14" Padding="6,8" IsReadOnly="True"
+                                          BorderThickness="0" Padding="6,8" IsReadOnly="True"
                                           PreviewMouseWheel="Editor_PreviewMouseWheel" AutomationProperties.Name="Job step command" />
                     <TextBlock x:Name="EditorEmptyText" Grid.Row="2" Text="Loading job steps..." TextWrapping="Wrap" Margin="25" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     <Border x:Name="EditorFooter" Grid.Row="3" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="0,1,0,0" Padding="12,9">
@@ -257,18 +257,50 @@
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
-            <TabItem Header="Execution">
+            <TabItem Header="Execution history">
                 <Grid Margin="0,8,0,0">
-                    <Grid.RowDefinitions><RowDefinition Height="3*" /><RowDefinition Height="Auto" /><RowDefinition Height="2*" /></Grid.RowDefinitions>
-                    <DataGrid x:Name="ExecutionGrid" Style="{StaticResource DetailTable}" ScrollViewer.CanContentScroll="False" AutomationProperties.Name="Execution details">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Property" Binding="{Binding Field}" Width="180" ElementStyle="{StaticResource DetailValue}" />
-                            <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*" ElementStyle="{StaticResource DetailValue}" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                    <TextBlock Grid.Row="1" Text="Last execution message" Margin="0,12,0,6" FontWeight="SemiBold" />
-                    <TextBox x:Name="LastRunMessageText" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap" Padding="10"
-                             VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Last execution message" />
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <TextBlock x:Name="HistoryStatusText" Text="Loading execution history..." Margin="0,0,0,7" FontSize="11" TextWrapping="Wrap" />
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="340" MinWidth="270" /><ColumnDefinition Width="9" /><ColumnDefinition MinWidth="360" /></Grid.ColumnDefinitions>
+                        <Grid>
+                            <TreeView x:Name="HistoryTree" SelectedItemChanged="History_SelectedItemChanged"
+                                      Background="{DynamicResource AxialThemeInputBackgroundBrush}" Foreground="{DynamicResource AxialThemeInputForegroundBrush}"
+                                      BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="1" Padding="3"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                      AutomationProperties.Name="Execution history, runs and step attempts">
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                        <StackPanel ToolTip="{Binding Title}">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Summary}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                            <TextBlock x:Name="HistoryEmptyText" Text="Loading execution history..." Margin="18" TextWrapping="Wrap"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
+                        </Grid>
+                        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"
+                                      ToolTip="Resize execution history" />
+                        <Border Grid.Column="2" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="1" CornerRadius="4">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
+                                <Border Background="{DynamicResource AxialThemeHeaderBackgroundBrush}" Padding="11,8">
+                                    <StackPanel>
+                                        <TextBlock x:Name="HistoryTitleText" Text="Select a run or step" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <TextBlock x:Name="HistoryDetailText" Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap" />
+                                        <TextBlock x:Name="HistoryContextText" Margin="0,3,0,0" FontSize="11" TextWrapping="Wrap" Visibility="Collapsed" />
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock x:Name="HistorySelectionNoteText" Grid.Row="1" Margin="11,7" FontSize="11" TextWrapping="Wrap" Visibility="Collapsed" />
+                                <TextBox x:Name="HistoryMessageText" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap" Padding="11,8" BorderThickness="0"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Selected execution message" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <TextBlock x:Name="HistoryNoteText" Grid.Row="2" Margin="0,7,0,0" FontSize="11" TextWrapping="Wrap" />
                 </Grid>
             </TabItem>
         </TabControl>

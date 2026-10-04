@@ -90,11 +90,11 @@ namespace AxialSqlTools.JobQuickView
                     tree.Disposed -= TreeDisposed;
                     tree = null;
                 }
-                // A future SSMS change must leave its own menu and the Tools fallback
-                // usable, rather than breaking extension initialization.
+                // A future SSMS change must leave its own menu usable rather than
+                // breaking extension initialization.
                 if (!reportedIntegrationError)
                 {
-                    AxialSqlToolsPackage._logger?.Warn("Quick Manage could not attach to Object Explorer ({0}). The Tools command remains available.", ex.GetType().Name);
+                    AxialSqlToolsPackage._logger?.Warn("Quick Manage could not attach to Object Explorer ({0}).", ex.GetType().Name);
                     reportedIntegrationError = true;
                 }
                 return false;

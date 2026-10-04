@@ -1,15 +1,58 @@
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
 using System.Xml;
 
 namespace AxialSqlTools.JobQuickView
 {
     internal static class JobCommandEditorSupport
     {
+        // Visual Studio's Text Editor font category, shared by the SSMS T-SQL editor.
+        private static readonly Guid TextEditorFontCategory = new Guid(FontsAndColorsCategory.TextEditor);
+
+        internal static void ApplyHostEditorFont(TextEditor editor)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (editor == null) return;
+
+            editor.FontFamily = new FontFamily("Consolas");
+            editor.FontSize = 10.0 * 96.0 / 72.0;
+            try
+            {
+                var storage = Package.GetGlobalService(typeof(SVsFontAndColorStorage)) as IVsFontAndColorStorage;
+                if (storage == null) return;
+                var category = TextEditorFontCategory;
+                // Read default values too, without creating or changing host settings.
+                uint flags = (uint)(__FCSTORAGEFLAGS.FCSF_READONLY | __FCSTORAGEFLAGS.FCSF_LOADDEFAULTS);
+                if (storage.OpenCategory(ref category, flags) < 0) return;
+                try
+                {
+                    var font = new FontInfo[1];
+                    if (storage.GetFont(new LOGFONTW[1], font) < 0) return;
+                    if (!string.IsNullOrWhiteSpace(font[0].bstrFaceName))
+                        editor.FontFamily = new FontFamily(font[0].bstrFaceName);
+                    // The host stores points; WPF uses 1/96-inch units and handles monitor DPI.
+                    if (font[0].wPointSize > 0)
+                        editor.FontSize = font[0].wPointSize * 96.0 / 72.0;
+                }
+                finally
+                {
+                    storage.CloseCategory();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Typography must not prevent the job window from opening.
+                AxialSqlToolsPackage._logger?.Debug("Unable to read the SSMS editor font ({0}).", ex.GetType().Name);
+            }
+        }
+
         internal static void ApplyTheme(TextEditor editor, FrameworkElement scope, string subsystem)
         {
             // Reuse the host-aware selection, line number, SQL and high-contrast treatment.

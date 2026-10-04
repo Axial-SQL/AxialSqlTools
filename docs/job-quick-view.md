@@ -1,10 +1,10 @@
 # SQL Agent Quick Manage
 
-In Object Explorer, right-click a job under **SQL Server Agent > Jobs** and select **Quick Manage**. The same window is available from **Axial SQL Tools toolbar > Tools > Quick Manage** when a job is selected.
+In Object Explorer, right-click a job under **SQL Server Agent > Jobs** and select **Quick Manage**. The command is available only in a job's context menu.
 
 Quick Manage opens in the SSMS document area alongside query tabs, titled **Job name - Quick Manage**. Reopening the same job on the same server and authentication identity activates its existing tab without replacing drafts. Different jobs can remain open simultaneously. Tabs are session-only and are not restored when SSMS restarts.
 
-The tab shows the job name and server, current status, schedules, and the latest execution result. Details load asynchronously. The Steps tab keeps the step list beside the command editor. Job details combines description, category, creation/modification dates, job ID, and schedules. The Execution tab shows runtime details and messages. A compact header keeps job identity, status badges, and actions together, followed by a single-line last/next execution strip. Narrow or split document groups scroll the content to keep actions reachable.
+The tab shows the job name and server, current status, schedules, and the latest execution result. Details load asynchronously. The Steps tab keeps the step list beside the command editor. Job details combines description, category, creation/modification dates, job ID, and schedules. The Execution history tab shows up to the latest 100 completed runs in a tree, newest first. Expand a run to inspect its step attempts, including retries; select any run or step to read its full recorded message, outcome, start time, and duration. A compact header keeps job identity, status badges, and actions together, followed by a single-line last/next execution strip. Narrow or split document groups scroll the content to keep actions reachable.
 
 ## Common tasks
 
@@ -15,9 +15,11 @@ The tab shows the job name and server, current status, schedules, and the latest
 - Edit the command and select **Save step** to persist that step only. **Discard** restores the saved command.
 - **Format SQL** applies the existing Axial SQL Tools formatter to a T-SQL command. Formatting is an editable, undoable change and is not saved automatically.
 
-The editor includes syntax highlighting, line numbers, search, and undo/redo. Non-SQL commands are not passed to the T-SQL formatter. Commands that the formatter cannot parse, including some SQL Agent token expressions, remain unchanged if formatting fails.
+The editor uses the font family and size configured for SSMS's T-SQL editor when the tab opens, with Consolas 10pt as a fallback. Ctrl+wheel changes the zoom for the current Quick Manage tab. The editor includes syntax highlighting, line numbers, search, and undo/redo. Non-SQL commands are not passed to the T-SQL formatter. Commands that the formatter cannot parse, including some SQL Agent token expressions, remain unchanged if formatting fails.
 
 Schedules appear in **Job details**, with SQL Server's human-readable descriptions from `msdb.dbo.sp_help_jobschedule @include_description = 1`, including frequency and active-date information.
+
+Execution history loads asynchronously with the rest of the job. The most recent run is initially expanded; Refresh preserves the selected history entry and expanded runs when those records are still available. If a history refresh fails, previously loaded history stays visible with a warning. SQL Server Agent retention determines how many of the 100 runs and step messages are available. In-progress steps are not attached to a completed run.
 
 ## Status and edits
 
@@ -33,7 +35,7 @@ Quick Manage uses the selected Object Explorer connection and does not elevate p
 
 Use a disposable test job when checking actions and edits:
 
-1. Open Quick Manage with no query editor open. Verify the settings icon and command name in both menus, action icons, colored status badges, SQL highlighting, and the Steps, Job details, and Execution tabs. Compare the readable schedule description with the native job properties dialog; verify category and created/modified dates. Confirm redundant header fields are absent from Job details.
+1. Open Quick Manage with no query editor open. Verify the settings icon and command name in the job context menu, confirm Quick Manage is absent from the toolbar Tools menu, and check action icons, colored status badges, SQL highlighting, and the Steps, Job details, and Execution history tabs. Compare the command font with a T-SQL query editor; change SSMS's Text Editor font setting, reopen Quick Manage, and confirm the new family and size. Check that Ctrl+wheel zoom survives switching steps and themes. Compare the readable schedule description with the native job properties dialog; verify category and created/modified dates. Confirm redundant header fields are absent from Job details.
 2. Check a job with several steps, several schedules, no schedule, no history, and a long command. Configure a starting step other than step 1; verify its flag, change the starting step externally, and refresh. Ensure the flag follows the configuration while unsaved commands stay intact. Resize the window and check light, dark, and high-contrast themes.
 3. Format a previously unmodified step. Confirm the bold red unsaved state and enabled Save/Discard buttons; undo to restore the clean state. Edit two steps, switch between them, and refresh. Confirm both drafts remain. Save one step and verify all other job settings are unchanged. Confirm closing warns about the remaining draft.
 4. Change a step externally while a local draft is open. A save must report a conflict rather than overwrite the external change. Repeat with a deleted/recreated or renumbered step.
@@ -42,5 +44,6 @@ Use a disposable test job when checking actions and edits:
 7. Open the job context menu repeatedly, then open a non-job context menu. Confirm Quick Manage appears only once and only for a single job.
 8. Open two different jobs and confirm separate document tabs. Open the first again and confirm its existing tab and drafts are retained. Switch to a SQL query and back; verify no reload or lost edits. Check Ctrl+F, Ctrl+S, and Ctrl+Shift+F in the hosted editor.
 9. Close a dirty tab and choose No: it must remain open with its drafts. Repeat through Close All. Choose Yes and reopen: it must load fresh data. Attempt to close during a save or job action: closing must be blocked until the write finishes. Close during initial loading and verify safe cancellation. Resize/split the document group and check both scrollbars and editor scrolling. Confirm closed tabs are not restored after restarting SSMS.
+10. Open a job with more than 100 completed runs. Verify exactly the latest 100 roots, newest first; expand runs containing failures and retries and compare every step/message with native job history. Select an older step, expand multiple runs, and refresh; retained selection and expansion should remain. Check no-history and purged-history cases, and confirm that a currently running step never appears under the preceding completed run. Simulate a history permission failure after a successful load and verify that the old history remains visible with a warning.
 
 Builds are started manually from GitHub Actions. This feature does not add automatic pull request or push triggers.

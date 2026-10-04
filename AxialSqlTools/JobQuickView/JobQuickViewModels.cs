@@ -28,6 +28,8 @@ namespace AxialSqlTools.JobQuickView
         public bool HistoryLoaded { get; internal set; } = true;
         public IReadOnlyList<JobQuickViewStep> Steps { get; internal set; } = new JobQuickViewStep[0];
         public IReadOnlyList<JobQuickViewSchedule> Schedules { get; internal set; } = new JobQuickViewSchedule[0];
+        public IReadOnlyList<JobQuickViewHistoryRun> History { get; internal set; } = new JobQuickViewHistoryRun[0];
+        public string HistoryNote { get; internal set; } = "Up to 100 completed runs are shown. Only retained history is available; runs or step messages may have been purged. Times use the SQL Server's local time.";
 
         public const string NextRunNote = "Times use the SQL Server's local time. Next run is an estimate; SQL Server Agent's schedule cache can lag by up to 20 minutes.";
     }
@@ -54,6 +56,135 @@ namespace AxialSqlTools.JobQuickView
         public string Description { get; internal set; }
         public bool IsEnabled { get; internal set; }
         public DateTime? NextRun { get; internal set; }
+    }
+
+    internal class JobQuickViewHistoryItem
+    {
+        public int InstanceId { get; internal set; }
+        public int StepId { get; internal set; }
+        public string StepName { get; internal set; }
+        public string Server { get; internal set; }
+        public int RunStatus { get; internal set; }
+        public DateTime? StartedAt { get; internal set; }
+        public TimeSpan? Duration { get; internal set; }
+        public string Outcome { get; internal set; }
+        public string Message { get; internal set; }
+        public int SqlSeverity { get; internal set; }
+        public int SqlMessageId { get; internal set; }
+    }
+
+    internal sealed class JobQuickViewHistoryRun : JobQuickViewHistoryItem
+    {
+        public IReadOnlyList<JobQuickViewHistoryItem> Steps { get; internal set; } = new JobQuickViewHistoryItem[0];
+        public bool IsPartial { get; internal set; }
+        public string Note { get; internal set; }
+    }
+
+    internal static class JobQuickViewHistory
+    {
+        public const int MaximumRuns = 100;
+
+        // Input belongs to one job. Final step_id=0 rows close runs independently per server.
+        // The extra preceding summary is a boundary, not an additional run displayed in the UI.
+        internal static IReadOnlyList<JobQuickViewHistoryRun> Group(
+            IEnumerable<JobQuickViewHistoryItem> rows, int maximumRuns = MaximumRuns)
+        {
+            if (rows == null)
+                throw new ArgumentNullException(nameof(rows));
+            if (maximumRuns < 1 || maximumRuns > MaximumRuns)
+                throw new ArgumentOutOfRangeException(nameof(maximumRuns));
+
+            var ordered = new List<JobQuickViewHistoryItem>(rows);
+            ordered.Sort((left, right) => left.InstanceId.CompareTo(right.InstanceId));
+            var runs = new List<JobQuickViewHistoryRun>();
+            var servers = new Dictionary<string, ServerHistoryState>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in ordered)
+            {
+                ServerHistoryState state;
+                string server = item.Server ?? string.Empty;
+                if (!servers.TryGetValue(server, out state))
+                {
+                    state = new ServerHistoryState();
+                    servers.Add(server, state);
+                }
+                var steps = state.Steps;
+                if (item.StepId > 0)
+                {
+                    steps.Add(item);
+                    continue;
+                }
+                if (item.StepId != 0 || (item.RunStatus != 0 && item.RunStatus != 1 && item.RunStatus != 3))
+                    continue;
+
+                DateTime? endedAt = null;
+                if (item.StartedAt.HasValue && item.Duration.HasValue && item.Duration.Value >= TimeSpan.Zero
+                    && item.Duration.Value.Ticks <= DateTime.MaxValue.Ticks - item.StartedAt.Value.Ticks - TimeSpan.TicksPerSecond)
+                {
+                    // Agent start times and durations have whole-second precision.
+                    endedAt = item.StartedAt.Value.Add(item.Duration.Value).AddSeconds(1);
+                }
+                var matchedSteps = new List<JobQuickViewHistoryItem>();
+                bool omittedSteps = false;
+                bool unknownTimestamps = !item.StartedAt.HasValue || !endedAt.HasValue;
+                foreach (var step in steps)
+                {
+                    // An abandoned run might never write a final summary. Do not attach its
+                    // records to the next completed run merely because its IDs lie in the gap.
+                    if (step.StartedAt.HasValue && item.StartedAt.HasValue
+                        && (step.StartedAt.Value < item.StartedAt.Value
+                            || (endedAt.HasValue && step.StartedAt.Value > endedAt.Value)))
+                    {
+                        omittedSteps = true;
+                        continue;
+                    }
+                    matchedSteps.Add(step);
+                    unknownTimestamps |= !step.StartedAt.HasValue;
+                }
+
+                var notes = new List<string>();
+                if (!state.HasPreviousSummary)
+                    notes.Add("Earlier history is unavailable for this server. Step messages for this run may be incomplete.");
+                if (omittedSteps)
+                    notes.Add("Some step records fall outside this run's recorded time range and were omitted because their run could not be identified reliably.");
+                if (unknownTimestamps)
+                    notes.Add("Some timestamps are unavailable. Step-to-run matches use retained record order and could not be fully verified.");
+                if (matchedSteps.Count == 0)
+                    notes.Add("No matching retained step messages are available for this run.");
+
+                var run = new JobQuickViewHistoryRun
+                {
+                    InstanceId = item.InstanceId,
+                    StepId = item.StepId,
+                    StepName = item.StepName,
+                    Server = item.Server,
+                    RunStatus = item.RunStatus,
+                    StartedAt = item.StartedAt,
+                    Duration = item.Duration,
+                    Outcome = item.Outcome,
+                    Message = item.Message,
+                    SqlSeverity = item.SqlSeverity,
+                    SqlMessageId = item.SqlMessageId,
+                    Steps = matchedSteps.ToArray(),
+                    IsPartial = !state.HasPreviousSummary || omittedSteps || unknownTimestamps,
+                    Note = string.Join(" ", notes)
+                };
+                runs.Add(run);
+                steps.Clear();
+                state.HasPreviousSummary = true;
+            }
+
+            // Pending rows after each server's latest summary belong to unfinished runs; omit them.
+            if (runs.Count > maximumRuns)
+                runs.RemoveRange(0, runs.Count - maximumRuns);
+            runs.Reverse();
+            return runs;
+        }
+
+        private sealed class ServerHistoryState
+        {
+            public bool HasPreviousSummary;
+            public List<JobQuickViewHistoryItem> Steps { get; } = new List<JobQuickViewHistoryItem>();
+        }
     }
 
     internal sealed class JobCommandConflictException : InvalidOperationException

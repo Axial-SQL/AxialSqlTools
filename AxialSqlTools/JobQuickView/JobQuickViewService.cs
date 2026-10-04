@@ -176,28 +176,98 @@ ORDER BY s.step_id;";
 
         private static async Task ReadHistoryAsync(SqlConnection connection, JobQuickViewSnapshot snapshot, CancellationToken token)
         {
-            const string sql = @"
-SELECT TOP (1) h.run_date, h.run_time, h.run_duration, h.run_status, h.message
+            var rows = new List<JobQuickViewHistoryItem>();
+            using (var command = Query(connection, HistorySql, snapshot.JobId))
+            {
+                command.Parameters.Add("@summary_count", SqlDbType.Int).Value = JobQuickViewHistory.MaximumRuns + 1;
+                using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
+                {
+                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    {
+                        int status = Number(reader, "run_status");
+                        rows.Add(new JobQuickViewHistoryItem
+                        {
+                            InstanceId = Number(reader, "instance_id"),
+                            StepId = Number(reader, "step_id"),
+                            StepName = Text(reader, "step_name"),
+                            Server = Text(reader, "server"),
+                            RunStatus = status,
+                            StartedAt = JobQuickViewValue.DateTimeFromAgent(Number(reader, "run_date"), Number(reader, "run_time")),
+                            Duration = JobQuickViewValue.DurationFromAgent(Number(reader, "run_duration")),
+                            Outcome = JobQuickViewValue.Outcome(status),
+                            Message = Text(reader, "message"),
+                            SqlSeverity = Number(reader, "sql_severity"),
+                            SqlMessageId = Number(reader, "sql_message_id")
+                        });
+                    }
+                }
+            }
+
+            snapshot.History = JobQuickViewHistory.Group(rows);
+            if (snapshot.History.Count > 0)
+            {
+                var latest = snapshot.History[0];
+                snapshot.LastRunStarted = latest.StartedAt;
+                snapshot.LastRunDuration = latest.Duration;
+                snapshot.LastRunOutcome = latest.Outcome;
+                snapshot.LastRunMessage = latest.Message;
+            }
+            else
+            {
+                snapshot.LastRunMessage = "No retained execution history. The job may not have completed a run, or its history was purged.";
+            }
+        }
+
+        // Capture 100 completed summaries plus the preceding boundary once, so a concurrent
+        // completion cannot change the selected run set while its step rows are being loaded.
+        // Both branches use the same job and upper boundary. Grouping omits each server's
+        // unfinished tail; its oldest run may have incomplete history when a boundary is absent.
+        internal const string HistorySql = @"
+SET NOCOUNT ON;
+DECLARE @completed_runs TABLE
+(
+    instance_id int NOT NULL PRIMARY KEY,
+    step_id int NOT NULL,
+    step_name nvarchar(128) NULL,
+    [server] nvarchar(128) NULL,
+    run_date int NOT NULL,
+    run_time int NOT NULL,
+    run_duration int NOT NULL,
+    run_status int NOT NULL,
+    message nvarchar(4000) NULL,
+    sql_severity int NULL,
+    sql_message_id int NULL
+);
+INSERT INTO @completed_runs
+    (instance_id, step_id, step_name, [server], run_date, run_time, run_duration,
+     run_status, message, sql_severity, sql_message_id)
+SELECT TOP (@summary_count) h.instance_id, h.step_id, h.step_name, h.[server],
+       h.run_date, h.run_time, h.run_duration, h.run_status, h.message,
+       h.sql_severity, h.sql_message_id
 FROM dbo.sysjobhistory AS h
 INNER JOIN dbo.sysjobs_view AS j ON j.job_id = h.job_id
 WHERE h.job_id = @job_id AND h.step_id = 0 AND h.run_status IN (0, 1, 3)
-ORDER BY h.instance_id DESC;";
-            using (var command = Query(connection, sql, snapshot.JobId))
-            using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
-            {
-                if (await reader.ReadAsync(token).ConfigureAwait(false))
-                {
-                    snapshot.LastRunStarted = JobQuickViewValue.DateTimeFromAgent(Number(reader, "run_date"), Number(reader, "run_time"));
-                    snapshot.LastRunDuration = JobQuickViewValue.DurationFromAgent(Number(reader, "run_duration"));
-                    snapshot.LastRunOutcome = JobQuickViewValue.Outcome(Number(reader, "run_status"));
-                    snapshot.LastRunMessage = Text(reader, "message");
-                }
-                else
-                {
-                    snapshot.LastRunMessage = "No retained execution history. The job may not have run, or its history was purged.";
-                }
-            }
-        }
+ORDER BY h.instance_id DESC;
+
+WITH HistoryWindow AS
+(
+    SELECT MAX(instance_id) AS newest_summary_id,
+           CASE WHEN COUNT(*) = @summary_count THEN MIN(instance_id) ELSE 0 END AS previous_summary_id
+    FROM @completed_runs
+)
+SELECT instance_id, step_id, step_name, [server], run_date, run_time, run_duration,
+       run_status, message, sql_severity, sql_message_id
+FROM @completed_runs
+UNION ALL
+SELECT h.instance_id, h.step_id, h.step_name, h.[server], h.run_date, h.run_time, h.run_duration,
+       h.run_status, h.message, h.sql_severity, h.sql_message_id
+FROM dbo.sysjobhistory AS h
+INNER JOIN dbo.sysjobs_view AS j ON j.job_id = h.job_id
+CROSS JOIN HistoryWindow AS bounds
+WHERE h.job_id = @job_id AND h.step_id > 0
+  AND h.instance_id > bounds.previous_summary_id
+  AND h.instance_id < bounds.newest_summary_id
+ORDER BY instance_id;";
 
         private static async Task ReadActivityAsync(SqlConnection connection, JobQuickViewSnapshot snapshot, CancellationToken token)
         {
