@@ -33,22 +33,22 @@ namespace AxialSqlTools.JobQuickView
         {
             if (string.IsNullOrEmpty(jobName))
                 throw new ArgumentException("A job name is required.", nameof(jobName));
-            return LoadCoreAsync(null, jobName, cancellationToken);
+            return LoadCoreAsync(null, jobName, cancellationToken, executionOnly: false, includeHistory: true);
         }
 
         public Task<JobQuickViewSnapshot> LoadAsync(Guid jobId, CancellationToken cancellationToken)
         {
             ValidateJobId(jobId);
-            return LoadCoreAsync(jobId, null, cancellationToken);
+            return LoadCoreAsync(jobId, null, cancellationToken, executionOnly: false, includeHistory: false);
         }
 
         public Task<JobQuickViewSnapshot> LoadExecutionAsync(Guid jobId, CancellationToken cancellationToken)
         {
             ValidateJobId(jobId);
-            return LoadCoreAsync(jobId, null, cancellationToken, executionOnly: true);
+            return LoadCoreAsync(jobId, null, cancellationToken, executionOnly: true, includeHistory: true);
         }
 
-        private async Task<JobQuickViewSnapshot> LoadCoreAsync(Guid? jobId, string jobName, CancellationToken token, bool executionOnly = false)
+        private async Task<JobQuickViewSnapshot> LoadCoreAsync(Guid? jobId, string jobName, CancellationToken token, bool executionOnly, bool includeHistory)
         {
             using (var connection = await OpenAsync(token).ConfigureAwait(false))
             {
@@ -100,14 +100,18 @@ namespace AxialSqlTools.JobQuickView
                         warnings.Add("Schedules could not be loaded: " + ex.Message);
                     }
                 }
-                try
+                // History loads on first open and through its dedicated refresh only.
+                if (includeHistory)
                 {
-                    await ReadHistoryAsync(connection, snapshot, token).ConfigureAwait(false);
-                }
-                catch (SqlException ex) when (!token.IsCancellationRequested)
-                {
-                    snapshot.HistoryLoaded = false;
-                    warnings.Add("Execution history could not be loaded: " + ex.Message);
+                    try
+                    {
+                        await ReadHistoryAsync(connection, snapshot, token).ConfigureAwait(false);
+                    }
+                    catch (SqlException ex) when (!token.IsCancellationRequested)
+                    {
+                        snapshot.HistoryLoaded = false;
+                        warnings.Add("Execution history could not be loaded: " + ex.Message);
+                    }
                 }
                 try
                 {

@@ -137,6 +137,20 @@ namespace AxialSqlTools.JobQuickView
 
         private void ApplySnapshot(JobQuickViewSnapshot result)
         {
+            bool initialLoad = snapshot == null;
+            if (!initialLoad)
+            {
+                // Regular refresh does not query or replace the independently refreshed history.
+                result.History = snapshot.History;
+                result.HistoryLoaded = snapshot.HistoryLoaded;
+                result.HistoryNote = snapshot.HistoryNote;
+                if (result.LastRunStarted.HasValue && result.LastRunStarted == snapshot.LastRunStarted
+                    && string.Equals(result.LastRunOutcome, snapshot.LastRunOutcome, StringComparison.Ordinal))
+                {
+                    result.LastRunDuration = snapshot.LastRunDuration;
+                    result.LastRunMessage = snapshot.LastRunMessage;
+                }
+            }
             snapshot = result;
             JobNameText.Text = result.Name;
             JobNameText.ToolTip = result.Name;
@@ -161,7 +175,8 @@ namespace AxialSqlTools.JobQuickView
                 NextRun = ServerDate(schedule.NextRun, schedule.IsEnabled ? "No scheduled time" : "Schedule disabled")
             }).ToList();
             ScheduleNoteText.Text = JobQuickViewSnapshot.NextRunNote;
-            ApplyHistory(result);
+            if (initialLoad) ApplyHistory(result);
+            else UpdateHistoryStatus(result);
 
             // Keep the original server command as the concurrency baseline for every draft.
             // A server refresh may update clean documents, but never replaces unsaved work.
@@ -217,7 +232,7 @@ namespace AxialSqlTools.JobQuickView
                 string.Equals(result.LastRunOutcome, "Failed", StringComparison.OrdinalIgnoreCase)
                     ? "AxialThemeStatusErrorBrush" : "AxialThemeForegroundBrush");
             LastRunDetailText.Text = result.LastRunStarted.HasValue
-                ? ServerDate(result.LastRunStarted) + "  |  " + Duration(result.LastRunDuration)
+                ? ServerDate(result.LastRunStarted) + (result.LastRunDuration.HasValue ? "  |  " + Duration(result.LastRunDuration) : string.Empty)
                 : result.HistoryLoaded ? "No completed job history is available" : "Execution details could not be loaded";
             NextRunText.Text = !result.IsEnabled ? "Job disabled" : ServerDate(result.NextRun, "No scheduled time");
             NextRunText.ToolTip = NextRunText.Text + "\n" + (!result.IsEnabled
@@ -290,13 +305,20 @@ namespace AxialSqlTools.JobQuickView
             }
         }
 
-        private void ApplyHistory(JobQuickViewSnapshot result)
+        private void UpdateHistoryStatus(JobQuickViewSnapshot result)
         {
             string currentStatus = "Current status: " + EmptyValue(result.ExecutionStatus, "Unknown") +
                 (result.RunningSince.HasValue ? " (started " + HistoryDate(result.RunningSince) + ")" : string.Empty);
+            HistoryStatusText.Text = result.HistoryLoaded
+                ? result.History.Count + (result.History.Count == 1 ? " run" : " runs") + "  |  " + currentStatus
+                : currentStatus + "  |  History refresh failed";
+        }
+
+        private void ApplyHistory(JobQuickViewSnapshot result)
+        {
+            UpdateHistoryStatus(result);
             if (!result.HistoryLoaded)
             {
-                HistoryStatusText.Text = currentStatus + "  |  History refresh failed";
                 HistoryNoteText.Text = historyNodes.Length == 0
                     ? "Execution history could not be loaded. Use Refresh history to retry."
                     : "Showing previously loaded history. Use Refresh history to retry. Times use the SQL Server's local time.";
@@ -326,8 +348,6 @@ namespace AxialSqlTools.JobQuickView
             }
             HistoryTree.ItemsSource = historyNodes;
             ShowHistorySelection(selection);
-            HistoryStatusText.Text = result.History.Count + (result.History.Count == 1 ? " run" : " runs") +
-                "  |  " + currentStatus;
             HistoryEmptyText.Text = "No retained execution history. This job may not have run, or its history was purged.";
             HistoryEmptyText.Visibility = historyNodes.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
             HistoryNoteText.Text = EmptyValue(result.HistoryNote,

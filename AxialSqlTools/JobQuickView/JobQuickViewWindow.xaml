@@ -86,7 +86,7 @@
                     <Button x:Name="EnabledButton" Style="{StaticResource ActionButton}" Click="Enabled_Click" IsEnabled="False" AutomationProperties.Name="Enable or disable job">
                         <StackPanel Orientation="Horizontal"><Path x:Name="EnabledIcon" Data="{StaticResource DisableIconGeometry}" Style="{StaticResource ActionIcon}" /><TextBlock x:Name="EnabledActionText" Text="Disable job" /></StackPanel>
                     </Button>
-                    <Button x:Name="RefreshButton" Style="{StaticResource ActionButton}" Click="Refresh_Click" ToolTip="Refresh job information (F5). Unsaved step edits are preserved." AutomationProperties.Name="Refresh job">
+                    <Button x:Name="RefreshButton" Style="{StaticResource ActionButton}" Click="Refresh_Click" ToolTip="Refresh job information and status (F5). Use Refresh history to reload execution history. Unsaved step edits are preserved." AutomationProperties.Name="Refresh job">
                         <StackPanel Orientation="Horizontal"><Path Data="M 12,5 A 5,5 0 1 0 11,10 M 8,5 L 12,5 L 12,1" Fill="Transparent" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.7" Style="{StaticResource ActionIcon}" /><TextBlock Text="Refresh" /></StackPanel>
                     </Button>
                 </StackPanel>
