@@ -273,10 +273,10 @@
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidServerHealth" id="bmpServerHealth" />
         <Strings>
-          <ButtonText>Distributed AG Health Dashboard</ButtonText>
+          <ButtonText>AG Health Dashboard</ButtonText>
           <CanonicalName>AxialSqlTools.DistributedAgHealthDashboard</CanonicalName>
           <LocCanonicalName>AxialSqlTools.DistributedAgHealthDashboard</LocCanonicalName>
-          <ToolTipText>Open the distributed availability group selected in Object Explorer</ToolTipText>
+          <ToolTipText>Open AG health for the selected Object Explorer group or connected SQL Server instance</ToolTipText>
         </Strings>
       </Button>
 

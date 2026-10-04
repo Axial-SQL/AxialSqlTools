@@ -4,8 +4,8 @@ Run the publishing workflows manually from `main`. Each run uses the commit sele
 
 | Workflow | Result |
 | --- | --- |
-| **Build and Sign VSIX** | Builds, signs, and verifies the VSIX, then saves it and its SHA256 checksum as an Actions artifact. |
-| **Prepare New Release** | Checks the version tag, builds and signs, creates the tag, and publishes a GitHub prerelease with the signed files. |
+| **Build and Sign VSIX** | Builds, signs, and verifies the VSIX, then saves the signed VSIX as an Actions artifact. |
+| **Prepare New Release** | Checks the version tag, builds and signs, creates the tag, and publishes a GitHub prerelease with the signed VSIX. |
 | **Publish to galleries** | Reuses a signed artifact for the same commit if available, otherwise builds and signs, then uploads to both galleries. |
 
 ## Prepare a release
@@ -17,7 +17,7 @@ Run the publishing workflows manually from `main`. Each run uses the commit sele
 
 The tag is exactly the manifest version, for example `4.15`. There is no date or time suffix. The workflow fails if that tag already exists, including on a rerun after successful publication. It never replaces an existing release or automatically makes one Latest.
 
-The tag is created at the selected commit after building and signing succeed. The release action stages the signed VSIX and checksum in a draft before publishing the prerelease. Assets are named `AxialSqlTools_SSMS22_4.15.vsix` and `AxialSqlTools_SSMS22_4.15.vsix.sha256`.
+The tag is created at the selected commit after building and signing succeed. The release action stages the signed VSIX in a draft before publishing the prerelease. The asset is named `AxialSqlTools_SSMS22_4.15.vsix`. GitHub automatically computes its SHA256 digest and exposes it in the release UI and API. The updater uses that digest to verify downloads; no separate checksum file is published.
 
 If building or signing fails, retry the run. If publication fails after tag creation, inspect the tag and any draft release before retrying. To retry the same version, manually remove only that failed attempt's unpublished tag/draft; otherwise increment the version. There is no automatic cleanup or overwrite.
 

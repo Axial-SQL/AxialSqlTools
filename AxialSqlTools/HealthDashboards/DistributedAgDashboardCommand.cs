@@ -15,7 +15,7 @@ namespace AxialSqlTools
     internal sealed class DistributedAgDashboardCommand : IDisposable
     {
         public const int CommandId = 4161;
-        internal const string MenuText = "Distributed AG Health Dashboard";
+        internal const string MenuText = "AG Health Dashboard";
         private readonly AxialSqlToolsPackage package;
         private readonly OleMenuCommandService commands;
         private readonly OleMenuCommand command;
@@ -53,12 +53,12 @@ namespace AxialSqlTools
                 // before opening the pane changes focus. Never use the active query's server.
                 var node = GetSelectedNode(GetExplorer());
                 if (node == null)
-                    throw new InvalidOperationException("Select a connected SQL Server instance or distributed availability group in Object Explorer, then open this dashboard.");
+                    throw new InvalidOperationException("Select a connected SQL Server instance or availability group in Object Explorer, then open this dashboard.");
                 bool hasGroup = TryGetAvailabilityGroup(node, out string name);
                 if (requireAvailabilityGroup && !hasGroup)
-                    throw new InvalidOperationException("Select a distributed availability group in Object Explorer, then open this dashboard.");
+                    throw new InvalidOperationException("Select an availability group in Object Explorer, then open this dashboard.");
                 // The Tools command also accepts a connected instance. A null name asks
-                // the dashboard to list that instance's distributed availability groups.
+                // the dashboard to list that instance's availability groups.
                 if (!hasGroup) name = null;
 
                 ConnectionInfo connection = ScriptFactoryAccess.GetCurrentConnectionInfoFromObjectExplorer(inMaster: true);
@@ -68,13 +68,13 @@ namespace AxialSqlTools
                 var window = package.FindToolWindow(typeof(DistributedAgDashboardWindow), package.GetNextToolWindowId(), true)
                     as DistributedAgDashboardWindow;
                 if (window?.Frame == null)
-                    throw new NotSupportedException("Cannot create the Distributed AG Health Dashboard window.");
+                    throw new NotSupportedException("Cannot create the AG Health Dashboard window.");
                 window.Initialize(connection, name);
                 ToolWindowDisplay.ShowAsDocument(window);
             }
             catch (Exception ex)
             {
-                AxialSqlToolsPackage._logger?.Error(ex, "Cannot open the Distributed AG Health Dashboard.");
+                AxialSqlToolsPackage._logger?.Error(ex, "Cannot open the AG Health Dashboard.");
                 VsShellUtilities.ShowMessageBox(package, ex.Message, MenuText,
                     OLEMSGICON.OLEMSGICON_WARNING, OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
             }
@@ -106,7 +106,7 @@ namespace AxialSqlTools
             if (!urn.IsValidUrn() || !string.Equals(urn.Type, "AvailabilityGroup", StringComparison.Ordinal)) return false;
             name = urn.GetAttribute("Name");
             // Use the catalog URN, never the localized caption with (Primary)/(Distributed).
-            // The dashboard checks is_distributed asynchronously after it opens.
+            // Regular and distributed AG nodes use the same dashboard.
             return !string.IsNullOrWhiteSpace(name);
         }
 
@@ -206,7 +206,7 @@ namespace AxialSqlTools
                 if (reportedError) return;
                 reportedError = true;
                 AxialSqlToolsPackage._logger?.Warn(error,
-                    "Cannot attach the Distributed AG Object Explorer menu. The Axial SQL Tools menu remains available.");
+                    "Cannot attach the AG Health Dashboard Object Explorer menu. The Axial SQL Tools menu remains available.");
             }
 
             private void RemoveItems()

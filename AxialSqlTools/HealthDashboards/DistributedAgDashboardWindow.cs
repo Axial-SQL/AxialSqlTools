@@ -8,7 +8,7 @@ namespace AxialSqlTools
     {
         public DistributedAgDashboardWindow() : base(null)
         {
-            Caption = "Distributed AG Health Dashboard";
+            Caption = "AG Health Dashboard";
             Content = new DistributedAgDashboardControl();
         }
 
@@ -16,7 +16,7 @@ namespace AxialSqlTools
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             ((DistributedAgDashboardControl)Content).Initialize(connection, availabilityGroupName);
-            Caption = "Distributed AG | " + (availabilityGroupName ?? connection.ServerName);
+            Caption = "AG Health Dashboard | " + (availabilityGroupName ?? connection.ServerName);
         }
 
         protected override void Dispose(bool disposing)

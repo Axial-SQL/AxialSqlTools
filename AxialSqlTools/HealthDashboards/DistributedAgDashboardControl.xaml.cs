@@ -18,6 +18,7 @@ namespace AxialSqlTools
         private string selectedGroup;
         private bool groupsLoaded;
         private bool changingSelection;
+        private bool refreshOnResume;
         private bool disposed;
         private DistributedAgHealthSnapshot snapshot;
 
@@ -29,6 +30,7 @@ namespace AxialSqlTools
             refreshTimer.Tick += TimerTick;
             Loaded += ControlLoaded;
             Unloaded += ControlUnloaded;
+            ShowUnavailable("Not refreshed", "Open an availability group to load its health.");
         }
 
         public void Initialize(ScriptFactoryAccess.ConnectionInfo connection, string availabilityGroupName)
@@ -37,7 +39,7 @@ namespace AxialSqlTools
                 throw new ArgumentException("Select a connected SQL Server instance in Object Explorer.", nameof(connection));
             connectionString = connection.FullConnectionString;
             selectedGroup = availabilityGroupName;
-            ConnectionLabel.Text = "Observed from " + connection.ServerName;
+            ConnectionLabel.Text = "Connected instance: " + connection.ServerName;
             RefreshButton.IsEnabled = true;
             if (IsLoaded) _ = RefreshAsync();
         }
@@ -46,12 +48,19 @@ namespace AxialSqlTools
         {
             if (disposed) return;
             refreshTimer.Start();
+            if (refreshCancellation != null)
+            {
+                // A pane can be shown again before its cancelled query has finished.
+                refreshOnResume = refreshCancellation.IsCancellationRequested;
+                return;
+            }
             await RefreshAsync();
         }
 
         private void ControlUnloaded(object sender, RoutedEventArgs e)
         {
             refreshTimer.Stop();
+            refreshOnResume = false;
             refreshCancellation?.Cancel();
         }
 
@@ -68,8 +77,12 @@ namespace AxialSqlTools
             selectedGroup = GroupPicker.SelectedItem as string;
             snapshot = null;
             MemberCards.ItemsSource = null;
-            DatabaseGrid.ItemsSource = null;
-            DatabaseCountLabel.Text = "";
+            LocalDatabaseGrid.ItemsSource = null;
+            ReplicaGrid.ItemsSource = null;
+            LocalCountLabel.Text = "";
+            ReplicaCountLabel.Text = "";
+            LocalRoleLabel.Text = "";
+            GroupScopeLabel.Text = "AG VISIBILITY";
             UpdatedLabel.Text = "Not refreshed yet";
             await RefreshAsync();
         }
@@ -83,8 +96,9 @@ namespace AxialSqlTools
             GroupPicker.IsEnabled = false;
             BusyIndicator.Visibility = Visibility.Visible;
             ErrorLabel.Visibility = Visibility.Collapsed;
-            StatusLabel.DataContext = null;
-            StatusLabel.Text = "Refreshing...";
+            ShowUnavailable("Refreshing...", "Reading availability group state from the connected instance.");
+            SnapshotNoteLabel.Text = snapshot == null ? "Loading local database health..."
+                : "Refreshing. The tables show the previous snapshot from " + snapshot.CollectedAt.ToString("HH:mm:ss") + " (local time).";
             try
             {
                 if (!groupsLoaded)
@@ -104,10 +118,11 @@ namespace AxialSqlTools
                     groupsLoaded = names.Count > 0;
                     if (!groupsLoaded)
                     {
-                        StatusLabel.Text = "No distributed availability groups visible";
-                        StatusDetailLabel.Text = "This instance has no visible distributed AGs. Check the server selection and metadata permissions.";
-                        EmptyLabel.Text = "No distributed availability groups are visible on this instance.";
-                        EmptyLabel.Visibility = Visibility.Visible;
+                        ShowUnavailable("No availability groups", "This instance has no visible AGs. Check the server selection and metadata permissions.");
+                        SnapshotNoteLabel.Text = "No availability groups are visible on this instance.";
+                        LocalEmptyLabel.Text = "No availability groups found.";
+                        LocalEmptyLabel.Visibility = Visibility.Visible;
+                        ReplicaEmptyLabel.Visibility = Visibility.Visible;
                         return;
                     }
                 }
@@ -116,44 +131,36 @@ namespace AxialSqlTools
                 cancellation.Token.ThrowIfCancellationRequested();
                 if (disposed) return;
                 snapshot = result;
-                ConnectionLabel.Text = "Observed from " + result.ServerName + " | SQL Server " + result.ServerVersion;
-                StatusLabel.DataContext = result;
-                StatusLabel.Text = result.StatusText;
-                StatusDetailLabel.Text = result.StatusDetail;
-                MemberCards.ItemsSource = result.Members.OrderBy(member => member.RoleCode == 1 ? 0 : 1).ThenBy(member => member.Name);
-                DatabaseGrid.ItemsSource = result.Databases;
-                DatabaseCountLabel.Text = result.Databases.Select(row => row.DatabaseName).Distinct().Count()
-                    + " visible databases / " + result.Databases.Count + " reported rows";
+                ConnectionLabel.Text = "Connected instance: " + result.ServerName + " | SQL Server " + result.ServerVersion;
+                SetSummary(LocalSummary, result.LocalStatusLevel, result.LocalStatusText, result.LocalStatusDetail);
+                SetSummary(GroupSummary, result.StatusLevel, result.StatusText, result.StatusDetail);
+                GroupScopeLabel.Text = result.IsDistributed ? "DISTRIBUTED AG LINK" : "AVAILABILITY GROUP";
+                LocalRoleLabel.Text = "Local role: " + result.LocalRole
+                    + (result.LocalGroupNames.Count == 0 ? "" : " | AG: " + string.Join(", ", result.LocalGroupNames));
+                LocalDatabaseGrid.ItemsSource = result.LocalDatabases.OrderBy(row => row.DatabaseName).ThenBy(row => row.GroupName);
+                ReplicaGrid.ItemsSource = result.Databases.OrderBy(row => row.DatabaseName)
+                    .ThenBy(row => row.GroupName).ThenBy(row => row.IsLocal == true ? 0 : 1).ThenBy(row => row.MemberName);
+                MemberCards.ItemsSource = result.Members.OrderBy(member => member.IsDistributedGroup ? 0 : 1)
+                    .ThenBy(member => member.GroupName).ThenBy(member => member.IsLocal == true ? 0 : 1).ThenBy(member => member.Name);
+                LocalCountLabel.Text = result.LocalDatabaseCount + " databases on this instance: "
+                    + result.LocalHealthyCount + " healthy, " + result.LocalWarningCount + " partially healthy, "
+                    + result.LocalCriticalCount + " need attention, " + result.LocalUnknownCount + " not visible.";
+                ReplicaCountLabel.Text = result.Databases.Count + " reported database/replica rows. AG and scope identify the source of each row; remote values are reported by this instance.";
                 UpdatedLabel.Text = "Refreshed " + result.CollectedAt.ToString("HH:mm:ss") + " (local time)";
-                EmptyLabel.Text = "No database replica state is visible from this instance. Connect to the global primary or forwarder and check permissions.";
-                EmptyLabel.Visibility = result.Databases.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+                SnapshotNoteLabel.Text = result.IsDistributed
+                    ? "Local database health comes from the participating AG hosted here. Distributed-link health is shown separately."
+                    : "The first tab shows databases on this instance. Replica details includes every visible replica in the selected AG.";
+                LocalEmptyLabel.Text = "No local database state is visible for this group. Check local AG membership and metadata permissions.";
+                LocalEmptyLabel.Visibility = result.LocalDatabases.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+                ReplicaEmptyLabel.Visibility = result.Databases.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             }
             catch (OperationCanceledException)
             {
-                if (!disposed)
-                {
-                    StatusLabel.DataContext = null;
-                    StatusLabel.Text = "Refresh cancelled";
-                    StatusDetailLabel.Text = snapshot == null ? "Refresh again to obtain current health."
-                        : "Showing stale data from " + snapshot.CollectedAt.ToString("yyyy-MM-dd HH:mm:ss") + " (local time). Refresh again for current health.";
-                }
+                if (!disposed) ShowRefreshFailure("Refresh cancelled", null);
             }
             catch (Exception error)
             {
-                if (!disposed)
-                {
-                    StatusLabel.DataContext = null;
-                    StatusLabel.Text = "Unable to refresh";
-                    StatusDetailLabel.Text = snapshot == null ? "No current health snapshot is available."
-                        : "Showing stale data from " + snapshot.CollectedAt.ToString("yyyy-MM-dd HH:mm:ss") + " (local time).";
-                    ErrorLabel.Text = error.Message;
-                    ErrorLabel.Visibility = Visibility.Visible;
-                    if (snapshot == null)
-                    {
-                        EmptyLabel.Text = "No health data available. Resolve the error above and refresh.";
-                        EmptyLabel.Visibility = Visibility.Visible;
-                    }
-                }
+                if (!disposed) ShowRefreshFailure("Unable to refresh", error.Message);
             }
             finally
             {
@@ -164,14 +171,47 @@ namespace AxialSqlTools
                     BusyIndicator.Visibility = Visibility.Collapsed;
                     RefreshButton.IsEnabled = true;
                     GroupPicker.IsEnabled = true;
+                    if (refreshOnResume && IsLoaded)
+                    {
+                        refreshOnResume = false;
+                        await RefreshAsync();
+                    }
                 }
             }
+        }
+
+        private void ShowRefreshFailure(string title, string error)
+        {
+            string detail = snapshot == null ? "No current health snapshot is available."
+                : "Stale snapshot from " + snapshot.CollectedAt.ToString("yyyy-MM-dd HH:mm:ss") + " (local time).";
+            ShowUnavailable(title, detail);
+            SnapshotNoteLabel.Text = detail + " Refresh again for current health.";
+            ErrorLabel.Text = error ?? "";
+            ErrorLabel.Visibility = string.IsNullOrEmpty(error) ? Visibility.Collapsed : Visibility.Visible;
+            if (snapshot == null)
+            {
+                LocalEmptyLabel.Text = "No health data available. Resolve the error above and refresh.";
+                LocalEmptyLabel.Visibility = Visibility.Visible;
+                ReplicaEmptyLabel.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void ShowUnavailable(string title, string detail)
+        {
+            SetSummary(LocalSummary, DistributedAgHealthLevel.Unknown, title, detail);
+            SetSummary(GroupSummary, DistributedAgHealthLevel.Unknown, title, detail);
+        }
+
+        private static void SetSummary(Border target, DistributedAgHealthLevel level, string title, string detail)
+        {
+            target.DataContext = new { StatusLevel = level, StatusText = title, StatusDetail = detail };
         }
 
         public void Dispose()
         {
             if (disposed) return;
             disposed = true;
+            refreshOnResume = false;
             refreshTimer.Stop();
             refreshTimer.Tick -= TimerTick;
             Loaded -= ControlLoaded;

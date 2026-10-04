@@ -48,7 +48,7 @@ Immediately identify open transactions and clearly see when Always Encrypted is 
 
 - [**Server Health Dashboard**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Server-Health-Dashboard): A quick overview of the server's most important metrics.
 
-- [**Distributed AG Health Dashboard**](docs/distributed-ag-health-dashboard.md): View participating availability groups, connection health, synchronization state, and database send/redo queues from Object Explorer.
+- [**AG Health Dashboard**](docs/distributed-ag-health-dashboard.md): Monitor regular and distributed availability groups from Object Explorer, with local database health, send/redo queues, and separate replica and AG visibility details.
 
 - [**Table Data Compare**](https://github.com/Axial-SQL/AxialSqlTools/wiki/Table-Data-Compare): Compare tables across SQL Server connections, inspect row and column differences, and generate or apply selected synchronization actions.
   

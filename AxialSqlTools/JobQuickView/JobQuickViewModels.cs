@@ -29,7 +29,7 @@ namespace AxialSqlTools.JobQuickView
         public IReadOnlyList<JobQuickViewStep> Steps { get; internal set; } = new JobQuickViewStep[0];
         public IReadOnlyList<JobQuickViewSchedule> Schedules { get; internal set; } = new JobQuickViewSchedule[0];
         public IReadOnlyList<JobQuickViewHistoryRun> History { get; internal set; } = new JobQuickViewHistoryRun[0];
-        public string HistoryNote { get; internal set; } = "Up to 100 completed runs are shown. Only retained history is available; runs or step messages may have been purged. Times use the SQL Server's local time.";
+        public string HistoryNote { get; internal set; } = "Latest 100 retained executions. Select a run to load its steps and messages. Times use the SQL Server's local time.";
 
         public const string NextRunNote = "Times use the SQL Server's local time. Next run is an estimate; SQL Server Agent's schedule cache can lag by up to 20 minutes.";
     }

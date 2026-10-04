@@ -70,7 +70,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download signed VSIX and checksum
+      - name: Download signed VSIX
         uses: actions/download-artifact@v8
         with:
           artifact-ids: ${{ needs.build_and_sign.outputs.signed_artifact_id }}
@@ -92,7 +92,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ needs.prepare.outputs.version }}
-          artifacts: release-assets/*
+          artifacts: release-assets/*.vsix
           artifactErrorsFailBuild: true
           generateReleaseNotes: true
           immutableCreate: true

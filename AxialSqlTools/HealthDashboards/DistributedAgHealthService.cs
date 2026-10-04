@@ -21,38 +21,74 @@ SELECT CONVERT(nvarchar(256), SERVERPROPERTY('ServerName')) AS ServerName,
        HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER STATE') AS CanViewState,
        HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER PERFORMANCE STATE') AS CanViewPerformanceState;";
 
-        // The DAG replicas are underlying AG names. Do not join member AG database rows into this result.
-        // LEFT JOIN preserves configured members when their state is not visible from the current replica.
+        // A distributed replica names an underlying AG, not a SQL Server instance. Include only
+        // those locally visible regular AGs that are explicitly members of the selected DAG.
+        // Group identity remains on every row so local AG health cannot be mistaken for DAG link health.
         private const string HealthSql = @"
 DECLARE @GroupId uniqueidentifier =
-    (SELECT group_id FROM sys.availability_groups WHERE is_distributed = 1 AND name = @GroupName);
-SELECT name FROM sys.availability_groups WHERE group_id = @GroupId;
+    (SELECT group_id FROM sys.availability_groups WHERE name = @GroupName);
+DECLARE @IsDistributed bit = (SELECT is_distributed FROM sys.availability_groups WHERE group_id = @GroupId);
+DECLARE @Groups TABLE (group_id uniqueidentifier PRIMARY KEY, name sysname, is_distributed bit);
+INSERT INTO @Groups
+SELECT group_id, name, is_distributed FROM sys.availability_groups WHERE group_id = @GroupId;
+INSERT INTO @Groups
+SELECT DISTINCT ag.group_id, ag.name, ag.is_distributed
+FROM sys.availability_groups AS ag
+JOIN sys.availability_replicas AS dag_member
+  ON dag_member.group_id = @GroupId AND dag_member.replica_server_name = ag.name
+WHERE @IsDistributed = 1 AND ag.is_distributed = 0;
+SELECT name, CONVERT(nvarchar(36), group_id) AS GroupId, is_distributed
+FROM @Groups WHERE group_id = @GroupId;
 
-SELECT ar.replica_server_name AS MemberName, ar.endpoint_url, ar.availability_mode_desc,
+SELECT g.name AS GroupName, CONVERT(nvarchar(36), g.group_id) AS GroupId, g.is_distributed,
+       ar.replica_server_name AS MemberName, ar.endpoint_url, ar.availability_mode_desc,
        ars.replica_id AS StateReplicaId, ars.is_local, ars.role, ars.connected_state,
        ars.connected_state_desc, ars.operational_state, ars.synchronization_health,
        ars.last_connect_error_number, ars.last_connect_error_description, ars.last_connect_error_timestamp
 FROM sys.availability_replicas AS ar
+JOIN @Groups AS g ON g.group_id = ar.group_id
 LEFT JOIN sys.dm_hadr_availability_replica_states AS ars
   ON ars.group_id = ar.group_id AND ars.replica_id = ar.replica_id
-WHERE ar.group_id = @GroupId
-ORDER BY ar.replica_server_name;
+ORDER BY g.is_distributed DESC, g.name, ar.replica_server_name;
 
-SELECT COALESCE(adc.database_name, dbs.name, CONVERT(nvarchar(36), drs.group_database_id)) AS DatabaseName,
-       ar.replica_server_name AS MemberName,
+;WITH DatabaseRows AS
+(
+    SELECT drs.group_id, drs.replica_id, drs.group_database_id
+    FROM sys.dm_hadr_database_replica_states AS drs
+    JOIN @Groups AS g ON g.group_id = drs.group_id
+    UNION
+    -- Preserve configured regular-AG databases missing their local DMV row (for example, not joined yet).
+    -- Distributed AGs do not have a corresponding WSFC database roster.
+    SELECT adc.group_id, local_replica.replica_id, adc.group_database_id
+    FROM sys.availability_databases_cluster AS adc
+    JOIN @Groups AS g ON g.group_id = adc.group_id AND g.is_distributed = 0
+    JOIN sys.dm_hadr_availability_replica_states AS local_replica
+      ON local_replica.group_id = adc.group_id AND local_replica.is_local = 1
+)
+SELECT g.name AS GroupName, CONVERT(nvarchar(36), g.group_id) AS GroupId, g.is_distributed,
+       COALESCE(adc.database_name, dbs.name, CONVERT(nvarchar(36), roster.group_database_id)) AS DatabaseName,
+       CONVERT(nvarchar(36), roster.group_database_id) AS GroupDatabaseId, drs.database_id,
+       drs.replica_id AS StateReplicaId, ar.replica_server_name AS MemberName,
+       COALESCE(drs.is_local, ars.is_local) AS is_local, ars.role,
        drs.synchronization_state, drs.synchronization_state_desc, drs.synchronization_health,
        drs.database_state, drs.database_state_desc, drs.is_suspended, drs.suspend_reason_desc,
        drs.log_send_queue_size, drs.log_send_rate, drs.redo_queue_size, drs.redo_rate,
-       CASE WHEN drs.is_suspended = 1 THEN NULL ELSE drs.secondary_lag_seconds END AS LagSeconds,
-       drs.last_hardened_time
-FROM sys.dm_hadr_database_replica_states AS drs
+       CASE WHEN drs.is_suspended = 1 OR (drs.is_local = 1 AND ars.role = 1)
+            THEN NULL ELSE drs.secondary_lag_seconds END AS LagSeconds,
+       drs.last_hardened_time, drs.last_redone_time, drs.last_commit_time
+FROM DatabaseRows AS roster
+JOIN @Groups AS g ON g.group_id = roster.group_id
 JOIN sys.availability_replicas AS ar
-  ON ar.group_id = drs.group_id AND ar.replica_id = drs.replica_id
+  ON ar.group_id = roster.group_id AND ar.replica_id = roster.replica_id
+LEFT JOIN sys.dm_hadr_database_replica_states AS drs
+  ON drs.group_id = roster.group_id AND drs.replica_id = roster.replica_id
+ AND drs.group_database_id = roster.group_database_id
+LEFT JOIN sys.dm_hadr_availability_replica_states AS ars
+  ON ars.group_id = roster.group_id AND ars.replica_id = roster.replica_id
 LEFT JOIN sys.availability_databases_cluster AS adc
-  ON adc.group_id = drs.group_id AND adc.group_database_id = drs.group_database_id
+  ON adc.group_id = roster.group_id AND adc.group_database_id = roster.group_database_id
 LEFT JOIN sys.databases AS dbs ON dbs.database_id = drs.database_id
-WHERE drs.group_id = @GroupId
-ORDER BY DatabaseName, MemberName;";
+ORDER BY DatabaseName, g.is_distributed, g.name, MemberName;";
 
         public static async Task<IReadOnlyList<string>> ListGroupsAsync(string connectionString, CancellationToken token)
         {
@@ -61,7 +97,7 @@ ORDER BY DatabaseName, MemberName;";
                 await connection.OpenAsync(token).ConfigureAwait(false);
                 await ReadServerAsync(connection, token).ConfigureAwait(false);
                 using (var command = CreateCommand(connection,
-                    "SELECT name FROM sys.availability_groups WHERE is_distributed = 1 ORDER BY name;"))
+                    "SELECT name FROM sys.availability_groups ORDER BY name;"))
                 using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
                 {
                     var groups = new List<string>();
@@ -75,7 +111,7 @@ ORDER BY DatabaseName, MemberName;";
             string connectionString, string groupName, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(groupName))
-                throw new ArgumentException("Select a distributed availability group.", nameof(groupName));
+                throw new ArgumentException("Select an availability group.", nameof(groupName));
 
             using (var connection = new SqlConnection(connectionString))
             {
@@ -88,10 +124,12 @@ ORDER BY DatabaseName, MemberName;";
                     using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
                     {
                         if (!await reader.ReadAsync(token).ConfigureAwait(false))
-                            throw new InvalidOperationException("The selected distributed AG is not visible on this instance. " +
-                                "Connect to the primary replica of one of its underlying availability groups and refresh. " +
+                            throw new InvalidOperationException("The selected availability group is not visible on this instance. " +
+                                "Connect to an instance that hosts the group and refresh. " +
                                 "The group may also have been removed or renamed.");
                         snapshot.GroupName = reader.GetString(0);
+                        snapshot.GroupId = Text(reader, "GroupId");
+                        snapshot.IsDistributed = Number<bool>(reader, "is_distributed") == true;
                         await reader.NextResultAsync(token).ConfigureAwait(false);
                         while (await reader.ReadAsync(token).ConfigureAwait(false))
                             snapshot.Members.Add(ReadMember(reader));
@@ -114,7 +152,7 @@ ORDER BY DatabaseName, MemberName;";
                 await reader.ReadAsync(token).ConfigureAwait(false);
                 int majorVersion = Number<int>(reader, "MajorVersion") ?? 0;
                 if (majorVersion < 13)
-                    throw new InvalidOperationException("Distributed availability groups require SQL Server 2016 or later.");
+                    throw new InvalidOperationException("This availability group dashboard requires SQL Server 2016 or later.");
                 if (Number<int>(reader, "IsHadrEnabled") != 1)
                     throw new InvalidOperationException("Always On availability groups are not enabled on this instance.");
 
@@ -147,7 +185,10 @@ ORDER BY DatabaseName, MemberName;";
             return new DistributedAgMemberHealth
             {
                 Name = Text(reader, "MemberName"),
-                Role = role == 1 ? "Global primary" : role == 2 ? "Forwarder" : role == 0 ? "Resolving" : "Not visible",
+                GroupName = Text(reader, "GroupName"),
+                GroupId = Text(reader, "GroupId"),
+                IsDistributedGroup = Number<bool>(reader, "is_distributed") == true,
+                Role = DistributedAgHealthEvaluator.RoleText(Number<bool>(reader, "is_distributed") == true, role),
                 AvailabilityMode = Text(reader, "availability_mode_desc"),
                 ConnectionState = Text(reader, "connected_state_desc"),
                 SynchronizationHealth = HealthText(health),
@@ -169,6 +210,15 @@ ORDER BY DatabaseName, MemberName;";
             {
                 DatabaseName = Text(reader, "DatabaseName"),
                 MemberName = Text(reader, "MemberName"),
+                GroupName = Text(reader, "GroupName"),
+                GroupId = Text(reader, "GroupId"),
+                IsDistributedGroup = Number<bool>(reader, "is_distributed") == true,
+                IsLocal = Number<bool>(reader, "is_local"),
+                RoleCode = Number<int>(reader, "role"),
+                Role = DistributedAgHealthEvaluator.RoleText(Number<bool>(reader, "is_distributed") == true, Number<int>(reader, "role")),
+                HasState = !reader.IsDBNull(reader.GetOrdinal("StateReplicaId")),
+                DatabaseId = Number<int>(reader, "database_id"),
+                GroupDatabaseId = Text(reader, "GroupDatabaseId"),
                 SynchronizationState = Text(reader, "synchronization_state_desc"),
                 SynchronizationHealth = HealthText(health),
                 DatabaseState = Text(reader, "database_state_desc"),
@@ -180,6 +230,8 @@ ORDER BY DatabaseName, MemberName;";
                 RedoRateKb = Number<long>(reader, "redo_rate"),
                 LagSeconds = Number<long>(reader, "LagSeconds"),
                 LastHardenedTime = Number<DateTime>(reader, "last_hardened_time"),
+                LastRedoneTime = Number<DateTime>(reader, "last_redone_time"),
+                LastCommitTime = Number<DateTime>(reader, "last_commit_time"),
                 SynchronizationStateCode = Number<int>(reader, "synchronization_state"),
                 SynchronizationHealthCode = health,
                 DatabaseStateCode = Number<int>(reader, "database_state")
