@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace AxialSqlTools.DataCompare
@@ -26,7 +27,7 @@ namespace AxialSqlTools.DataCompare
         private ComparisonResult result;
         private CancellationTokenSource operation;
         private long page;
-        private bool initialized, settingKey, disposed;
+        private bool initialized, settingKey, changingMappings, disposed;
         public DataCompareWindowControl()
         {
             InitializeComponent();
@@ -36,16 +37,18 @@ namespace AxialSqlTools.DataCompare
             SourceEndpoint.EndpointChanged += EndpointChanged;
             TargetEndpoint.EndpointChanged += EndpointChanged;
             initialized = true;
+            CollectionViewSource.GetDefaultView(mappings).Filter = MatchesColumnFilter;
+            UpdateSetupState();
         }
 
         private async void EndpointChanged(object sender, EventArgs e)
         {
-            if (!initialized || disposed) return;
+            if (!initialized || disposed || operation != null) return;
             InvalidateResult();
             foreach (var mapping in mappings) mapping.PropertyChanged -= MappingChanged;
             mappings.Clear(); TargetColumns.Clear(); KeyBox.ItemsSource = null;
             sourceSchema = targetSchema = null; CompareButton.IsEnabled = false;
-            MappingStatus.Text = "Select a source and target table to load their columns.";
+            UpdateSetupState();
             if (SourceEndpoint.IsBusy || TargetEndpoint.IsBusy || SourceEndpoint.SelectedTable == null || TargetEndpoint.SelectedTable == null) return;
             var source = SourceEndpoint.SelectedTable; var target = TargetEndpoint.SelectedTable;
             string sourceConnection = SourceEndpoint.ConnectionString, targetConnection = TargetEndpoint.ConnectionString;
@@ -66,39 +69,126 @@ namespace AxialSqlTools.DataCompare
                 KeyBox.SelectedItem = keys.FirstOrDefault(k => k.Key != null && k.Key.Columns.Count == mappings.Count(m => m.IsKey) &&
                     k.Key.Columns.All(n => mappings.Any(m => m.IsKey && m.Source.Name == n))) ?? keys[0];
                 settingKey = false;
-                int unsupported = mappings.Count(m => !m.Source.Supported || (m.Target != null && !m.Target.Supported));
-                int missing = mappings.Count(m => m.Target == null);
-                MappingStatus.Text = mappings.Count + " source columns; " + mappings.Count(m => m.Include) + " included. " +
-                    missing + " unmapped; " + unsupported + " unsupported. Computed and rowversion columns are excluded by default.";
                 StatusText.Text = "Review the mappings and comparison key, then select Compare.";
             }, "Loading table metadata...");
         }
 
+        private void ReloadMappingClick(object sender, RoutedEventArgs e) => EndpointChanged(sender, e);
+
         private void MappingChanged(object sender, PropertyChangedEventArgs e)
         {
+            if (changingMappings || (e.PropertyName != nameof(ColumnMapping.Include) &&
+                e.PropertyName != nameof(ColumnMapping.IsKey) && e.PropertyName != nameof(ColumnMapping.Target))) return;
             InvalidateResult();
-            if (e.PropertyName == nameof(ColumnMapping.IsKey) && !settingKey && KeyBox.Items.Count > 0)
+            if (!settingKey && KeyBox.Items.Count > 0 && KeyBox.SelectedItem is KeyChoice choice && choice.Key != null &&
+                !choice.Key.Columns.OrderBy(n => n, StringComparer.Ordinal).SequenceEqual(
+                    mappings.Where(m => m.IsKey).Select(m => m.Source.Name).OrderBy(n => n, StringComparer.Ordinal)))
             { settingKey = true; KeyBox.SelectedIndex = 0; settingKey = false; }
+            UpdateSetupState();
         }
 
         private void KeyChanged(object sender, SelectionChangedEventArgs e)
         {
             if (settingKey || !(KeyBox.SelectedItem is KeyChoice choice) || choice.Key == null) return;
-            settingKey = true;
-            foreach (var mapping in mappings) mapping.IsKey = choice.Key.Columns.Contains(mapping.Source.Name);
-            settingKey = false;
+            changingMappings = settingKey = true;
+            try { foreach (var mapping in mappings) mapping.IsKey = choice.Key.Columns.Contains(mapping.Source.Name); }
+            finally { changingMappings = settingKey = false; }
+            InvalidateResult();
+            UpdateSetupState();
         }
 
-        private void OptionsChanged(object sender, RoutedEventArgs e) { if (initialized) InvalidateResult(); }
-
-        private ComparisonPlan BuildPlan()
+        private void IncludeCompatibleClick(object sender, RoutedEventArgs e)
         {
-            MappingGrid.CommitEdit(DataGridEditingUnit.Cell, true);
-            MappingGrid.CommitEdit(DataGridEditingUnit.Row, true);
+            changingMappings = true;
+            try
+            {
+                foreach (var mapping in mappings.Where(m => m.Target != null && m.Source.Supported && m.Target.Supported &&
+                    m.Source.Writable && m.Target.Writable && m.Source.HasMatchingType(m.Target))) mapping.Include = true;
+            }
+            finally { changingMappings = false; }
+            InvalidateResult(); UpdateSetupState();
+        }
+
+        private void KeysOnlyClick(object sender, RoutedEventArgs e)
+        {
+            changingMappings = true;
+            try { foreach (var mapping in mappings.Where(m => !m.IsKey)) mapping.Include = false; }
+            finally { changingMappings = false; }
+            InvalidateResult(); UpdateSetupState();
+        }
+
+        private bool MatchesColumnFilter(object value)
+        {
+            var mapping = (ColumnMapping)value;
+            if (IssuesOnlyBox.IsChecked == true && !mapping.HasIssue) return false;
+            string search = ColumnSearchBox.Text.Trim();
+            return search.Length == 0 || mapping.Source.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                (mapping.Target != null && mapping.Target.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private void ColumnFilterChanged(object sender, RoutedEventArgs e)
+        {
+            if (initialized) RefreshMappingFilter();
+        }
+
+        private void RefreshMappingFilter()
+        {
+            CollectionViewSource.GetDefaultView(mappings).Refresh();
+            MappingEmptyText.Text = mappings.Count == 0 ? "Choose both tables to see their columns." : "No columns match this filter.";
+            MappingEmptyText.Visibility = MappingGrid.Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void OptionsChanged(object sender, RoutedEventArgs e)
+        {
+            if (!initialized) return;
+            InvalidateResult(); UpdateSetupState();
+        }
+
+        private void UpdateSetupState()
+        {
+            if (!initialized || disposed) return;
+            var duplicateTargets = new HashSet<string>(mappings.Where(m => m.Include && m.Target != null)
+                .GroupBy(m => m.Target.Name, StringComparer.Ordinal).Where(group => group.Count() > 1).Select(group => group.Key), StringComparer.Ordinal);
+            foreach (var mapping in mappings)
+                mapping.HasDuplicateTarget = mapping.Include && mapping.Target != null && duplicateTargets.Contains(mapping.Target.Name);
+            bool endpointsReady = !SourceEndpoint.IsBusy && !TargetEndpoint.IsBusy &&
+                SourceEndpoint.SelectedTable != null && TargetEndpoint.SelectedTable != null;
+            bool schemasReady = sourceSchema != null && targetSchema != null;
+            ReloadMappingButton.IsEnabled = operation == null && endpointsReady;
+            MappingActions.IsEnabled = KeyBox.IsEnabled = schemasReady && operation == null;
+            MappingStatus.Text = schemasReady ? mappings.Count.ToString("N0") + " columns | " +
+                mappings.Count(m => m.Include).ToString("N0") + " included | " + mappings.Count(m => m.IsKey) + " key columns | " +
+                mappings.Count(m => m.Target == null) + " unmapped. Computed and rowversion columns are excluded by default." :
+                "Select a source and target table to load their columns.";
+            string message;
+            bool valid = false;
+            if (SourceEndpoint.IsBusy || TargetEndpoint.IsBusy) message = "Loading tables...";
+            else if (!endpointsReady) message = "Choose a source table and a target table to begin.";
+            else if (!schemasReady) message = operation != null ? "Loading table columns..." : "Columns are not loaded. Select Reload columns to retry.";
+            else
+            {
+                try { BuildPlan(false); valid = true; message = "Ready to compare. Comparison reads both tables; it does not change data."; }
+                catch (InvalidOperationException ex) { message = ex.Message; }
+            }
+            ValidationText.Text = message;
+            ValidationText.SetResourceReference(TextBlock.ForegroundProperty,
+                schemasReady && !valid ? "AxialThemeStatusErrorBrush" : "AxialThemeForegroundBrush");
+            CompareButton.IsEnabled = valid && operation == null;
+            CompareButton.ToolTip = valid ? "Compare the selected columns using the chosen row key." : message;
+            RefreshMappingFilter();
+        }
+
+        private ComparisonPlan BuildPlan(bool commitEdits = true)
+        {
+            if (commitEdits)
+            {
+                MappingGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+                MappingGrid.CommitEdit(DataGridEditingUnit.Row, true);
+            }
             if (!int.TryParse(TimeoutBox.Text, out int timeout) || timeout < 1 || timeout > 86400)
-                throw new InvalidOperationException("Enter a query timeout between 1 and 86400 seconds.");
+                throw new InvalidOperationException("In Advanced options, enter a query timeout between 1 and 86400 seconds.");
             if (!int.TryParse(DiskLimitBox.Text, out int disk) || disk < 1 || disk > 1024)
-                throw new InvalidOperationException("Enter a temporary storage limit between 1 and 1024 GiB.");
+                throw new InvalidOperationException("In Advanced options, enter a temporary storage limit between 1 and 1024 GiB.");
             var plan = new ComparisonPlan { Source = sourceSchema, Target = targetSchema,
                 Columns = mappings.Where(m => m.Include).Select(m => m.Copy()).ToList(),
                 Options = new ComparisonOptions { CommandTimeoutSeconds = timeout, MaxTemporaryBytes = disk * 1024L * 1024 * 1024,
@@ -119,6 +209,7 @@ namespace AxialSqlTools.DataCompare
                     SqlTableReader.ReadRows(sourceConnection, plan, true, token), SqlTableReader.ReadRows(targetConnection, plan, false, token), token, progress), token);
                 if (disposed) { comparison.Dispose(); return; }
                 result = comparison; ResultsTab.IsEnabled = true;
+                ComparisonContextText.Text = "Source: " + EndpointLabel(result.Plan.Source) + "   ->   Target: " + EndpointLabel(result.Plan.Target);
                 KindBox.ItemsSource = Enum.GetValues(typeof(DifferenceKind)).Cast<DifferenceKind>().Select(k => new KindChoice { Kind = k, Label = KindLabel(k) + " (" + result.Count(k).ToString("N0") + ")" }).ToList();
                 KindBox.SelectedIndex = Array.FindIndex(Enum.GetValues(typeof(DifferenceKind)).Cast<DifferenceKind>().ToArray(), k => result.Count(k) > 0);
                 if (KindBox.SelectedIndex < 0) KindBox.SelectedIndex = 0;
@@ -160,17 +251,25 @@ namespace AxialSqlTools.DataCompare
         {
             SetupPanel.IsEnabled = !busy; ResultActions.IsEnabled = !busy; RowsGrid.IsEnabled = !busy;
             SyncActions.IsEnabled = !busy; CancelButton.IsEnabled = busy;
-            CompareButton.IsEnabled = !busy && sourceSchema != null && targetSchema != null;
+            CancelButton.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+            UpdateSetupState();
             BusyProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
             if (!busy) UpdateSummary();
         }
 
         private void CancelClick(object sender, RoutedEventArgs e) { operation?.Cancel(); CancelButton.IsEnabled = false; StatusText.Text = "Cancelling..."; }
 
-        private void InvalidateScript() { ScriptBox.Clear(); ScriptTab.IsEnabled = false; }
+        private void InvalidateScript()
+        {
+            ScriptBox.Clear(); ScriptNote.Text = ""; ScriptTab.IsEnabled = false;
+            if (MainTabs.SelectedItem == ScriptTab) MainTabs.SelectedIndex = result == null ? 0 : 1;
+        }
         private void InvalidateResult()
         {
             if (result != null) { result.Dispose(); result = null; StatusText.Text = "Setup changed. Run the comparison again."; }
+            if (MainTabs != null) MainTabs.SelectedIndex = 0;
+            if (SummaryText != null) SummaryText.Text = "";
+            if (SelectionSummaryText != null) SelectionSummaryText.Text = "";
             if (RowsGrid != null) RowsGrid.ItemsSource = null;
             if (DetailsGrid != null) DetailsGrid.ItemsSource = null;
             if (ResultsTab != null) ResultsTab.IsEnabled = false;
@@ -188,21 +287,35 @@ namespace AxialSqlTools.DataCompare
             long pages = Math.Max(1, (result.Count(CurrentKind) + PageSize - 1) / PageSize);
             page = Math.Max(0, Math.Min(page, pages - 1));
             RowsGrid.ItemsSource = result.Read(CurrentKind, page * PageSize, PageSize).Select(r => new RowView(result, r, () => { InvalidateScript(); UpdateSummary(); })).ToList();
-            PageLabel.Text = (page + 1).ToString("N0") + " / " + pages.ToString("N0");
+            long count = result.Count(CurrentKind);
+            PageLabel.Text = count == 0 ? "0 rows" : "Rows " + (page * PageSize + 1).ToString("N0") + "-" +
+                Math.Min((page + 1) * PageSize, count).ToString("N0") + " of " + count.ToString("N0");
+            ResultsEmptyText.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            SelectCategoryButton.IsEnabled = ClearCategoryButton.IsEnabled = count > 0 && CurrentKind != DifferenceKind.Identical;
+            ChangedOnlyBox.IsEnabled = CurrentKind == DifferenceKind.Different;
+            CategoryHintText.Text = CurrentKind == DifferenceKind.OnlyTarget ?
+                "Selected target-only rows will be DELETED from the target. These rows are excluded by default. Selection applies across all pages." :
+                CurrentKind == DifferenceKind.OnlySource ? "Selected source-only rows will be INSERTED into the target. Selection applies across all pages." :
+                CurrentKind == DifferenceKind.Identical ? "These rows match using the selected comparison options and need no synchronization." :
+                "Selected rows will UPDATE target values. Double-click a column below to inspect its full source and target values.";
             PreviousButton.IsEnabled = page > 0; NextButton.IsEnabled = page + 1 < pages;
             if (RowsGrid.Items.Count > 0) RowsGrid.SelectedIndex = 0;
             else DetailsGrid.ItemsSource = null;
             UpdateSummary();
         }
 
-        private void RowChanged(object sender, SelectionChangedEventArgs e)
+        private void RowChanged(object sender, SelectionChangedEventArgs e) => ShowDetails();
+        private void DetailFilterChanged(object sender, RoutedEventArgs e) => ShowDetails();
+
+        private void ShowDetails()
         {
             if (!(RowsGrid.SelectedItem is RowView row) || result == null) { DetailsGrid.ItemsSource = null; return; }
             var difference = result.Read(row.Kind, row.Index, 1).Single();
             DetailsGrid.ItemsSource = result.Plan.Columns.Select((m, i) => new ColumnView {
                 Name = m.Source.Name + (m.Source.Name == m.Target.Name ? "" : " -> " + m.Target.Name) + (m.IsKey ? " (key)" : ""),
                 Source = CellDisplay(difference.Source, i), Target = CellDisplay(difference.Target, i), Changed = difference.Changed[i],
-                SourceValue = difference.Source?[i], TargetValue = difference.Target?[i], HasSource = difference.Source != null, HasTarget = difference.Target != null }).ToList();
+                SourceValue = difference.Source?[i], TargetValue = difference.Target?[i], HasSource = difference.Source != null, HasTarget = difference.Target != null })
+                .Where(c => CurrentKind != DifferenceKind.Different || ChangedOnlyBox.IsChecked != true || c.Changed).ToList();
         }
 
         private void DetailDoubleClick(object sender, MouseButtonEventArgs e)
@@ -234,8 +347,11 @@ namespace AxialSqlTools.DataCompare
         private void UpdateSummary()
         {
             if (result == null) return;
-            SummaryText.Text = string.Join("   |   ", Enum.GetValues(typeof(DifferenceKind)).Cast<DifferenceKind>().Select(k => KindLabel(k) + ": " + result.Count(k).ToString("N0"))) +
-                "   |   Selected: " + result.SelectedCount.ToString("N0");
+            SummaryText.Text = string.Join("   |   ", Enum.GetValues(typeof(DifferenceKind)).Cast<DifferenceKind>().Select(k => KindLabel(k) + ": " + result.Count(k).ToString("N0")));
+            SelectionSummaryText.Text = "Selected for target: " +
+                result.Selection.Count(DifferenceKind.OnlySource, result.Count(DifferenceKind.OnlySource)).ToString("N0") + " inserts, " +
+                result.Selection.Count(DifferenceKind.Different, result.Count(DifferenceKind.Different)).ToString("N0") + " updates, " +
+                result.Selection.Count(DifferenceKind.OnlyTarget, result.Count(DifferenceKind.OnlyTarget)).ToString("N0") + " deletes.";
             GenerateButton.IsEnabled = ExportScriptButton.IsEnabled = ApplyButton.IsEnabled = result.SelectedCount > 0;
         }
 
@@ -318,7 +434,9 @@ namespace AxialSqlTools.DataCompare
         }
 
         private static string CellDisplay(object[] row, int ordinal) => row == null ? "<no row>" : row[ordinal] is string text && text.Length == 0 ? "<empty string>" : ValueCodec.Display(row[ordinal]);
-        private static string KindLabel(DifferenceKind kind) => kind == DifferenceKind.OnlySource ? "Only in source" : kind == DifferenceKind.OnlyTarget ? "Only in target" : kind.ToString();
+        private static string EndpointLabel(TableSchema table) => table.Server + " / " + table.Database + " / " + table.QualifiedName;
+        private static string KindLabel(DifferenceKind kind) => kind == DifferenceKind.OnlySource ? "Source only (insert)" :
+            kind == DifferenceKind.OnlyTarget ? "Target only (delete)" : kind == DifferenceKind.Different ? "Different (update)" : "Identical";
 
         public void Dispose()
         {
