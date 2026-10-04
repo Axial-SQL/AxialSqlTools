@@ -264,7 +264,7 @@
                         <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <TextBlock x:Name="HistoryStatusText" Text="Loading execution history..." Margin="0,0,12,0" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" />
                         <Button x:Name="HistoryRefreshButton" Grid.Column="1" Style="{StaticResource ActionButton}" Margin="0"
-                                Click="HistoryRefresh_Click" IsEnabled="False" ToolTip="Reload execution history and status. Keeps the selected entry and expanded runs."
+                                Click="HistoryRefresh_Click" IsEnabled="False" ToolTip="Reload execution summaries and status. Detailed messages load only when you select an execution."
                                 AutomationProperties.Name="Refresh execution history">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="M 12,5 A 5,5 0 1 0 11,10 M 8,5 L 12,5 L 12,1" Fill="Transparent"
@@ -276,21 +276,59 @@
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="340" MinWidth="270" /><ColumnDefinition Width="9" /><ColumnDefinition MinWidth="360" /></Grid.ColumnDefinitions>
                         <Grid>
-                            <TreeView x:Name="HistoryTree" SelectedItemChanged="History_SelectedItemChanged"
-                                      Background="{DynamicResource AxialThemeInputBackgroundBrush}" Foreground="{DynamicResource AxialThemeInputForegroundBrush}"
-                                      BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="1" Padding="3"
-                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                      VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                      AutomationProperties.Name="Execution history, runs and step attempts">
-                                <TreeView.ItemTemplate>
-                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                        <StackPanel ToolTip="{Binding Title}">
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding Summary}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </HierarchicalDataTemplate>
-                                </TreeView.ItemTemplate>
-                            </TreeView>
+                            <ListBox x:Name="HistoryList" SelectionChanged="History_SelectionChanged"
+                                     BorderThickness="1" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                     AutomationProperties.Name="Job executions">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Padding" Value="8,7" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                            <Border Margin="0,0,9,0" Padding="5" CornerRadius="3" VerticalAlignment="Top">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="{DynamicResource QuickManageAmberBackgroundBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Item.RunStatus}" Value="1"><Setter Property="Background" Value="{DynamicResource QuickManageGreenBackgroundBrush}" /></DataTrigger>
+                                                            <DataTrigger Binding="{Binding Item.RunStatus}" Value="0"><Setter Property="Background" Value="{DynamicResource QuickManageDirtyBackgroundBrush}" /></DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Path Width="14" Height="14" Stretch="Uniform" StrokeThickness="2"
+                                                      ToolTip="{Binding Item.Outcome}" AutomationProperties.Name="{Binding Item.Outcome}">
+                                                    <Path.Style>
+                                                        <Style TargetType="Path">
+                                                            <Setter Property="Data" Value="M 1,7 L 13,7" />
+                                                            <Setter Property="Stroke" Value="{DynamicResource QuickManageAmberForegroundBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Item.RunStatus}" Value="1">
+                                                                    <Setter Property="Data" Value="M 1,7 L 5,11 L 13,2" />
+                                                                    <Setter Property="Stroke" Value="{DynamicResource QuickManageGreenForegroundBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Item.RunStatus}" Value="0">
+                                                                    <Setter Property="Data" Value="M 2,2 L 12,12 M 12,2 L 2,12" />
+                                                                    <Setter Property="Stroke" Value="{DynamicResource QuickManageDirtyForegroundBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Path.Style>
+                                                </Path>
+                                            </Border>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Summary}" FontSize="11" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                             <TextBlock x:Name="HistoryEmptyText" Text="Loading execution history..." Margin="18" TextWrapping="Wrap"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
                         </Grid>
@@ -298,16 +336,32 @@
                                       ToolTip="Resize execution history" />
                         <Border Grid.Column="2" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}" BorderThickness="1" CornerRadius="4">
                             <Grid>
-                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
                                 <Border Background="{DynamicResource AxialThemeHeaderBackgroundBrush}" Padding="11,8">
-                                    <StackPanel>
-                                        <TextBlock x:Name="HistoryTitleText" Text="Select a run or step" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                        <TextBlock x:Name="HistoryDetailText" Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap" />
-                                        <TextBlock x:Name="HistoryContextText" Margin="0,3,0,0" FontSize="11" TextWrapping="Wrap" Visibility="Collapsed" />
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Margin="0,0,8,0">
+                                            <TextBlock x:Name="HistoryTitleText" Text="Select an execution" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <TextBlock x:Name="HistoryDetailText" Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap" />
+                                            <TextBlock x:Name="HistoryContextText" Margin="0,3,0,0" FontSize="11" TextWrapping="Wrap" Visibility="Collapsed" />
+                                        </StackPanel>
+                                        <Button x:Name="HistoryDetailsRetryButton" Grid.Column="1" Content="Load / retry details"
+                                                Click="HistoryDetailsRetry_Click" IsEnabled="False" Padding="7,4" VerticalAlignment="Top"
+                                                AutomationProperties.Name="Load or retry execution details" />
+                                    </Grid>
                                 </Border>
                                 <TextBlock x:Name="HistorySelectionNoteText" Grid.Row="1" Margin="11,7" FontSize="11" TextWrapping="Wrap" Visibility="Collapsed" />
-                                <TextBox x:Name="HistoryMessageText" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap" Padding="11,8" BorderThickness="0"
+                                <DataGrid x:Name="HistoryEntriesGrid" Grid.Row="2" Style="{StaticResource DetailTable}" MaxHeight="180"
+                                          SelectionMode="Single" SelectionUnit="FullRow" SelectionChanged="HistoryEntry_SelectionChanged"
+                                          AutomationProperties.Name="Selected execution steps and attempts">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Step / attempt" Binding="{Binding EntryLabel}" Width="*" ElementStyle="{StaticResource DetailValue}" />
+                                        <DataGridTextColumn Header="Outcome" Binding="{Binding Item.Outcome}" Width="90" ElementStyle="{StaticResource DetailValue}" />
+                                        <DataGridTextColumn Header="Duration" Binding="{Binding DurationText}" Width="90" ElementStyle="{StaticResource DetailValue}" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <TextBox x:Name="HistoryMessageText" Grid.Row="3" IsReadOnly="True" TextWrapping="Wrap" Padding="11,8" BorderThickness="0"
+                                         Text="Select an execution on the left to load its steps and output messages."
                                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Selected execution message" />
                             </Grid>
                         </Border>
