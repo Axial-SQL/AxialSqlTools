@@ -8,7 +8,7 @@ on:
         description: Version of the signed VSIX
         value: ${{ jobs.build.outputs.version }}
       signed_artifact_id:
-        description: Artifact containing the signed VSIX and checksum
+        description: Artifact containing the signed VSIX
         value: ${{ jobs.sign.outputs.signed_artifact_id }}
 
 concurrency:
@@ -385,14 +385,10 @@ jobs:
           New-Item -ItemType Directory -Path $output -Force | Out-Null
           Copy-Item -LiteralPath $source -Destination $destination -Force
 
-          $hash = Get-FileHash -LiteralPath $destination -Algorithm SHA256
-          "$($hash.Hash)  $fileName" | Set-Content -LiteralPath (Join-Path $output "$fileName.sha256") -Encoding ascii
-
           "### Signed VSIX" | Out-File $env:GITHUB_STEP_SUMMARY -Append
           "" | Out-File $env:GITHUB_STEP_SUMMARY -Append
           "File: $fileName" | Out-File $env:GITHUB_STEP_SUMMARY -Append
           "Version: $version" | Out-File $env:GITHUB_STEP_SUMMARY -Append
-          "SHA256: $($hash.Hash)" | Out-File $env:GITHUB_STEP_SUMMARY -Append
           "Artifact Signing account: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}" | Out-File $env:GITHUB_STEP_SUMMARY -Append
           "Certificate profile: ${{ vars.ARTIFACT_SIGNING_PROFILE }}" | Out-File $env:GITHUB_STEP_SUMMARY -Append
 
@@ -401,7 +397,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: AxialSqlTools-Signed-${{ needs.build.outputs.version }}
-          path: signed-output/*
+          path: signed-output/*.vsix
           if-no-files-found: error
           overwrite: true
           retention-days: 30
