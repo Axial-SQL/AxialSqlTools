@@ -2,6 +2,8 @@ using Microsoft.SqlServer.Management.UI.Grid;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.Data;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -21,6 +23,10 @@ namespace AxialSqlTools.PivotGrid
         private readonly ToolWindowThemeController theme;
         private PivotSnapshot snapshot;
         private PivotResult displayedResult;
+        private PivotRequest appliedRequest;
+        private int sortColumn = -1;
+        private ListSortDirection? sortDirection;
+        private string resultStatus = "";
         private PivotDetailsWindow detailsWindow;
         private DataGrid activeResultGrid;
         private bool syncingScroll;
@@ -62,27 +68,11 @@ namespace AxialSqlTools.PivotGrid
 
         private static readonly IValueConverter ColumnWidth = new ColumnWidthConverter();
 
-        private sealed class AggregationChoice
-        {
-            public string Label { get; set; }
-            public PivotAggregation Value { get; set; }
-        }
-
         public PivotGridWindowControl()
         {
             InitializeComponent();
             theme = new ToolWindowThemeController(this, () => ToolWindowThemeResources.ApplySharedTheme(this));
-            AggregationBox.ItemsSource = new[]
-            {
-                new AggregationChoice { Label = "Count rows", Value = PivotAggregation.CountRows },
-                new AggregationChoice { Label = "Count non-null values", Value = PivotAggregation.CountValues },
-                new AggregationChoice { Label = "Distinct count", Value = PivotAggregation.DistinctCount },
-                new AggregationChoice { Label = "Sum", Value = PivotAggregation.Sum },
-                new AggregationChoice { Label = "Average", Value = PivotAggregation.Average },
-                new AggregationChoice { Label = "Minimum", Value = PivotAggregation.Minimum },
-                new AggregationChoice { Label = "Maximum", Value = PivotAggregation.Maximum }
-            };
-            AggregationBox.SelectedIndex = 0;
+            Builder.ConfigurationChanged += BuilderChanged;
         }
 
         internal Task LoadGridAsync(IGridControl grid)
@@ -92,14 +82,12 @@ namespace AxialSqlTools.PivotGrid
                 snapshot = await PivotGridSnapshot.CaptureAsync(grid, token,
                     (done, total) => Status.Text = string.Format("Copying grid: {0:N0} / {1:N0} rows...", done, total));
                 if (disposed) return;
-                SourceInfo.Text = string.Format("{0:N0} rows, {1:N0} columns. Choose grouping fields, then Apply. The source query is not re-run.",
-                    snapshot.Rows.Length, snapshot.Fields.Length);
-                RowFields.ItemsSource = snapshot.Fields;
-                ColumnFields.ItemsSource = snapshot.Fields;
-                FilterField.ItemsSource = new[] { new PivotField(-1, "(No filter)", typeof(string)) }.Concat(snapshot.Fields).ToArray();
-                FilterField.SelectedIndex = 0;
-                RowFields.SelectedItem = snapshot.Fields.FirstOrDefault(f => !f.IsNumeric) ?? snapshot.Fields[0];
-                UpdateValueFields();
+                SourceInfo.Text = string.Format("{0:N0} captured rows  |  {1:N0} columns  |  Snapshot {2:t}. The source query is not re-run.",
+                    snapshot.Rows.Length, snapshot.Fields.Length, DateTime.Now);
+                Builder.Initialize(snapshot);
+                var remembered = PivotLayoutStore.GetLast(snapshot);
+                if (remembered != null) Builder.SetRequest(remembered);
+                RefreshLayoutNames();
                 await BuildAsync(token);
             });
         }
@@ -108,53 +96,79 @@ namespace AxialSqlTools.PivotGrid
             AxialSqlToolsPackage.PackageInstance.JoinableTaskFactory.RunAsync(() => RunAsync(BuildAsync))
                 .FileAndForget("AxialSqlTools/PivotGrid/Apply");
 
+        private void ControlSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // Reserve room for the result even when the document is short or docked.
+            if (SetupScroll != null) SetupScroll.MaxHeight = Math.Max(72, Math.Min(310, ActualHeight - 330));
+        }
+
+        private void ControlKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control && ApplyButton.IsEnabled)
+            {
+                e.Handled = true;
+                ApplyClicked(sender, e);
+            }
+        }
+
         private async Task BuildAsync(CancellationToken token)
         {
             if (snapshot == null) return;
-            var request = new PivotRequest
-            {
-                Rows = RowFields.SelectedItems.Cast<PivotField>().OrderBy(f => f.Index).Select(f => f.Index).ToArray(),
-                Columns = ColumnFields.SelectedItems.Cast<PivotField>().OrderBy(f => f.Index).Select(f => f.Index).ToArray(),
-                Value = (ValueField.SelectedItem as PivotField)?.Index ?? -1,
-                Aggregation = ((AggregationChoice)AggregationBox.SelectedItem).Value,
-                NullTextIsNull = NullTextIsNull.IsChecked == true,
-                FilterField = (FilterField.SelectedItem as PivotField)?.Index ?? -1,
-                FilterText = FilterText.Text
-            };
+            var request = Builder.GetRequest().Copy();
+            PivotEngine.Validate(snapshot, request);
+            Builder.IsEnabled = false;
             var source = snapshot;
-            displayedResult = null;
-            // Clear previous results so a failed/cancelled Apply cannot look like current statistics.
-            ResultGrid.ItemsSource = TotalGrid.ItemsSource = null;
-            ResultGrid.Columns.Clear();
-            TotalGrid.Columns.Clear();
-            activeResultGrid = null;
+            // Keep the applied view and its identities intact until the replacement is ready.
+            PendingState.Text = displayedResult == null ? "Calculating..." : "Calculating... The grid shows the last applied layout.";
             Status.Text = "Calculating pivot...";
             var elapsed = Stopwatch.StartNew();
             var result = await Task.Run(() => PivotEngine.Build(source, request, token), token);
             token.ThrowIfCancellationRequested();
             if (disposed) return;
+            DisplayResult(result, request);
+            resultStatus = string.Format("{0:N0} of {1:N0} source rows match. {2:N0} groups. Calculated in {3:N2}s.",
+                result.MatchedRows, source.Rows.Length, result.Table.Rows.Count - 1, elapsed.Elapsed.TotalSeconds);
+            Status.Text = resultStatus;
+            AppliedSummary.Text = "Applied: " + DescribeRequest(request);
+            if (!PivotLayoutStore.SaveLast(source, request))
+                Status.Text += " Layout could not be remembered: " + PivotLayoutStore.LastError;
+        }
+
+        private void DisplayResult(PivotResult result, PivotRequest request)
+        {
             var textStyle = CreateTextStyle(false);
             var numericStyle = CreateTextStyle(true);
             var view = result.Table.DefaultView;
             var totalRow = view[view.Count - 1];
             var valueCellStyle = CreateCellStyle(this, false, totalRow);
             var groupingCellStyle = CreateCellStyle(this, true, totalRow);
-            int rowColumnCount = Math.Max(1, request.Rows.Length);
+            var widths = ResultGrid.Columns.GroupBy(c => Convert.ToString(c.Header)).ToDictionary(g => g.Key, g => g.First().Width);
+            string previousSort = sortColumn >= 0 && displayedResult != null && sortColumn < displayedResult.Table.Columns.Count
+                ? displayedResult.Table.Columns[sortColumn].Caption : null;
+            var columns = new List<DataGridTextColumn>();
             foreach (DataColumn column in result.Table.Columns)
             {
-                bool numeric = column.Ordinal >= rowColumnCount ||
-                    (column.Ordinal < request.Rows.Length && source.Fields[request.Rows[column.Ordinal]].IsNumeric);
-                var gridColumn = new DataGridTextColumn
+                bool numeric = column.Ordinal >= result.RowColumnCount ||
+                    (column.Ordinal < request.Rows.Length && snapshot.Fields[request.Rows[column.Ordinal]].IsNumeric);
+                columns.Add(new DataGridTextColumn
                 {
                     Header = column.Caption,
+                    SortMemberPath = column.ColumnName,
                     Binding = new Binding("[" + column.ColumnName + "]")
                         { Mode = BindingMode.OneWay, Converter = CellDisplay, ConverterParameter = numeric, TargetNullValue = "(NULL)" },
                     ElementStyle = numeric ? numericStyle : textStyle,
-                    CellStyle = column.Ordinal < rowColumnCount ||
-                        (request.Columns.Length > 0 && column.Ordinal == result.Table.Columns.Count - 1)
+                    CellStyle = column.Ordinal < result.RowColumnCount || result.IsTotalColumn(column.Ordinal)
                         ? groupingCellStyle : valueCellStyle,
-                    Width = new DataGridLength(150)
-                };
+                    Width = widths.TryGetValue(column.Caption, out var width) ? width : new DataGridLength(150)
+                });
+            }
+            // No source rows or prior grid are discarded during aggregation or validation.
+            ResultGrid.ItemsSource = TotalGrid.ItemsSource = null;
+            ResultGrid.Columns.Clear();
+            TotalGrid.Columns.Clear();
+            activeResultGrid = null;
+            foreach (var gridColumn in columns)
+            {
                 ResultGrid.Columns.Add(gridColumn);
                 var totalColumn = new DataGridTextColumn
                 {
@@ -163,18 +177,139 @@ namespace AxialSqlTools.PivotGrid
                     ElementStyle = gridColumn.ElementStyle,
                     CellStyle = groupingCellStyle
                 };
-                // Follow rendered widths, including drag resizing and automatic sizing.
                 BindingOperations.SetBinding(totalColumn, DataGridColumn.WidthProperty,
                     new Binding(nameof(DataGridColumn.ActualWidth))
                         { Source = gridColumn, Mode = BindingMode.OneWay, Converter = ColumnWidth });
                 TotalGrid.Columns.Add(totalColumn);
             }
-            ResultGrid.FrozenColumnCount = TotalGrid.FrozenColumnCount = rowColumnCount;
+            ResultGrid.FrozenColumnCount = TotalGrid.FrozenColumnCount = result.RowColumnCount;
             TotalGrid.ItemsSource = new[] { totalRow };
             displayedResult = result;
-            ApplyValueSort();
-            Status.Text = string.Format("{0:N0} matching rows. {1:N0} pivot rows including grand total. Calculated in {2:N2}s. Double-click a value or total to see underlying rows. Ctrl+C copies selected cells.",
-                result.MatchedRows, result.Table.Rows.Count, elapsed.Elapsed.TotalSeconds);
+            appliedRequest = request.Copy();
+            sortColumn = previousSort == null ? -1 : result.Table.Columns.Cast<DataColumn>()
+                .Where(c => c.Caption == previousSort).Select(c => c.Ordinal).DefaultIfEmpty(-1).First();
+            if (sortColumn < 0) sortDirection = null;
+            ApplySort();
+        }
+
+        private string DescribeRequest(PivotRequest request)
+        {
+            string Fields(int[] indexes) => indexes.Length == 0 ? "none" : string.Join(" > ", indexes.Select(i => snapshot.Fields[i].Name));
+            string filters = request.Filters.Length == 0 ? "none" : string.Join("; ", request.Filters.Select(f =>
+                snapshot.Fields[f.Field].Name + " " + f.Operator +
+                (f.Operator == PivotFilterOperator.In ? " (" + f.Values.Length + " selected)" :
+                f.Operator == PivotFilterOperator.IsNull || f.Operator == PivotFilterOperator.IsNotNull ? "" : " " + f.Text)));
+            return "Rows: " + Fields(request.Rows) + "  |  Columns: " + Fields(request.Columns) + "  |  " +
+                string.Join(", ", request.Measures.Select(m => m.GetLabel(snapshot))) + "  |  Filters: " + filters;
+        }
+
+        private void BuilderChanged(object sender, EventArgs e)
+        {
+            if (disposed || snapshot == null) return;
+            if (operation == null)
+            {
+                Status.SetResourceReference(TextBlock.ForegroundProperty, "AxialThemeForegroundBrush");
+                Status.Text = resultStatus;
+            }
+            UpdatePendingState();
+        }
+
+        private void UpdatePendingState()
+        {
+            if (disposed || snapshot == null) return;
+            string validation = null;
+            PivotRequest draft = null;
+            try
+            {
+                draft = Builder.GetRequest();
+                PivotEngine.Validate(snapshot, draft);
+            }
+            catch (Exception ex) { validation = ex.Message; }
+            bool pending = !PivotPresentation.RequestsEqual(appliedRequest, draft);
+            ApplyButton.IsEnabled = operation == null && validation == null && (pending || displayedResult == null);
+            PendingState.SetResourceReference(TextBlock.ForegroundProperty,
+                validation == null ? "AxialThemeForegroundBrush" : "AxialThemeStatusErrorBrush");
+            PendingState.Text = validation != null
+                ? validation + (displayedResult == null ? "" : " The grid still shows the last applied layout.")
+                : operation != null ? (displayedResult == null ? "Working..." : "Working... The grid shows the last applied layout.")
+                : pending ? (displayedResult == null ? "Ready to apply." : "Changes pending. The grid shows the last applied layout.")
+                : "Up to date.";
+        }
+
+        private void RefreshLayoutNames()
+        {
+            string name = LayoutNames.Text;
+            LayoutNames.ItemsSource = PivotLayoutStore.GetLayouts(snapshot).Select(l => l.Name).ToArray();
+            LayoutNames.Text = name;
+        }
+
+        private void ShowLayoutError(string fallback)
+        {
+            Status.SetResourceReference(TextBlock.ForegroundProperty, "AxialThemeStatusErrorBrush");
+            Status.Text = string.IsNullOrEmpty(PivotLayoutStore.LastError) ? fallback : PivotLayoutStore.LastError;
+        }
+
+        private void LoadLayoutClicked(object sender, RoutedEventArgs e)
+        {
+            var layouts = PivotLayoutStore.GetLayouts(snapshot);
+            var layout = layouts.FirstOrDefault(l => string.Equals(l.Name, LayoutNames.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (layout == null) { ShowLayoutError("Choose a saved layout for these result columns."); return; }
+            Builder.SetRequest(layout.Request.Copy());
+            SetupExpander.IsExpanded = true;
+        }
+
+        private void SaveLayoutClicked(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var request = Builder.GetRequest();
+                PivotEngine.Validate(snapshot, request);
+                string name = LayoutNames.Text.Trim();
+                var layouts = PivotLayoutStore.GetLayouts(snapshot);
+                if (layouts.Any(l => string.Equals(l.Name, name, StringComparison.OrdinalIgnoreCase)) &&
+                    MessageBox.Show("Replace saved layout '" + name + "'?", "Pivot Grid", MessageBoxButton.YesNo,
+                        MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                if (!PivotLayoutStore.SaveNamed(snapshot, name, request)) { ShowLayoutError("Could not save the layout."); return; }
+                RefreshLayoutNames();
+                LayoutNames.Text = name;
+                Status.SetResourceReference(TextBlock.ForegroundProperty, "AxialThemeForegroundBrush");
+                Status.Text = "Layout saved. Apply to update the grid.";
+            }
+            catch (Exception ex)
+            {
+                Status.SetResourceReference(TextBlock.ForegroundProperty, "AxialThemeStatusErrorBrush");
+                Status.Text = ex.Message;
+            }
+        }
+
+        private void DeleteLayoutClicked(object sender, RoutedEventArgs e)
+        {
+            string name = LayoutNames.Text.Trim();
+            if (!PivotLayoutStore.GetLayouts(snapshot).Any(l => string.Equals(l.Name, name, StringComparison.OrdinalIgnoreCase)))
+            { ShowLayoutError("Choose a saved layout to delete."); return; }
+            if (MessageBox.Show("Delete saved layout '" + name + "'?", "Pivot Grid", MessageBoxButton.YesNo,
+                MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (!PivotLayoutStore.DeleteNamed(snapshot, name)) { ShowLayoutError("Could not delete the layout."); return; }
+            LayoutNames.Text = "";
+            RefreshLayoutNames();
+            Status.SetResourceReference(TextBlock.ForegroundProperty, "AxialThemeForegroundBrush");
+            Status.Text = "Saved layout deleted.";
+        }
+
+        private void SwapAxesClicked(object sender, RoutedEventArgs e)
+        {
+            var request = Builder.GetRequest();
+            var rows = request.Rows;
+            request.Rows = request.Columns;
+            request.Columns = rows;
+            Builder.SetRequest(request);
+        }
+
+        private void ResetClicked(object sender, RoutedEventArgs e)
+        {
+            Builder.SetRequest(new PivotRequest());
+            LayoutNames.Text = "";
+            SetupExpander.IsExpanded = true;
         }
 
         private static ScrollViewer GetScrollViewer(DataGrid grid)
@@ -205,24 +340,28 @@ namespace AxialSqlTools.PivotGrid
                 TotalGrid.Columns[ResultGrid.Columns.IndexOf(column)].DisplayIndex = column.DisplayIndex;
         }
 
-        private void ValueSortChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void ResultSorting(object sender, DataGridSortingEventArgs e)
         {
-            if (displayedResult != null) ApplyValueSort();
+            e.Handled = true;
+            if (displayedResult == null || operation != null) return;
+            int column = ResultGrid.Columns.IndexOf(e.Column);
+            if (sortColumn != column || !sortDirection.HasValue)
+            {
+                sortColumn = column;
+                sortDirection = ListSortDirection.Ascending;
+            }
+            else if (sortDirection == ListSortDirection.Ascending) sortDirection = ListSortDirection.Descending;
+            else { sortColumn = -1; sortDirection = null; }
+            ApplySort();
         }
 
-        private void ApplyValueSort()
+        private void ApplySort()
         {
             if (displayedResult == null) return;
-            // Reorder only the presentation. Keep DataRows and engine row-key indexes intact
-            // so drill-down still resolves the selected group after sorting.
-            var view = displayedResult.Table.DefaultView;
-            int valueColumn = displayedResult.Table.Columns.Count - 1;
-            var rows = view.Cast<DataRowView>().Take(view.Count - 1);
-            Func<DataRowView, decimal?> value = row => row[valueColumn] == DBNull.Value
-                ? (decimal?)null : Convert.ToDecimal(row[valueColumn], CultureInfo.InvariantCulture);
-            if (ValueSort.SelectedIndex == 1) rows = rows.OrderBy(value);
-            else if (ValueSort.SelectedIndex == 2) rows = rows.OrderByDescending(value);
-            ResultGrid.ItemsSource = rows.ToArray();
+            // Only presentation order changes; drill-down retains the original row and column identities.
+            ResultGrid.ItemsSource = PivotPresentation.SortRows(displayedResult, snapshot, appliedRequest, sortColumn, sortDirection);
+            for (int i = 0; i < ResultGrid.Columns.Count; i++)
+                ResultGrid.Columns[i].SortDirection = i == sortColumn ? sortDirection : null;
         }
 
         internal static Style CreateTextStyle(bool numeric)
@@ -342,22 +481,9 @@ namespace AxialSqlTools.PivotGrid
                     }
                     finally { detailsWindow = null; }
                 }
-                if (!disposed) Status.Text = "Details closed. Double-click another value or total to inspect its source rows.";
+                if (!disposed) Status.Text = resultStatus;
             })).FileAndForget("AxialSqlTools/PivotGrid/DrillDown");
             return true;
-        }
-
-        private void AggregationChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateValueFields();
-
-        private void UpdateValueFields()
-        {
-            if (snapshot == null || AggregationBox.SelectedItem == null) return;
-            var aggregation = ((AggregationChoice)AggregationBox.SelectedItem).Value;
-            var previous = ValueField.SelectedItem as PivotField;
-            var fields = snapshot.Fields.Where(f => !PivotEngine.RequiresNumber(aggregation) || f.IsNumeric).ToArray();
-            ValueField.ItemsSource = fields;
-            ValueField.SelectedItem = fields.Contains(previous) ? previous : fields.FirstOrDefault();
-            ValueField.IsEnabled = aggregation != PivotAggregation.CountRows;
         }
 
         private async Task RunAsync(Func<CancellationToken, Task> action)
@@ -368,13 +494,14 @@ namespace AxialSqlTools.PivotGrid
             SetBusy(true);
             Status.SetResourceReference(TextBlock.ForegroundProperty, "AxialThemeForegroundBrush");
             try { await action(current.Token); }
-            catch (OperationCanceledException) { if (!disposed) Status.Text = "Cancelled. No partial results are shown."; }
+            catch (OperationCanceledException) { if (!disposed) Status.Text = displayedResult == null ? "Cancelled." : "Cancelled. The last applied result is still shown."; }
             catch (Exception ex)
             {
                 if (!disposed)
                 {
                     Status.SetResourceReference(TextBlock.ForegroundProperty, "AxialThemeStatusErrorBrush");
-                    Status.Text = ex is OverflowException ? "The total exceeds the decimal range. Cast or scale the values in SQL first." : ex.Message;
+                    Status.Text = (ex is OverflowException ? "The total exceeds the decimal range. Cast or scale the values in SQL first." : ex.Message)
+                        + (displayedResult == null ? "" : " The last applied result is still shown.");
                 }
             }
             finally
@@ -391,10 +518,11 @@ namespace AxialSqlTools.PivotGrid
 
         private void SetBusy(bool busy)
         {
-            Options.IsEnabled = FilterField.IsEnabled = FilterText.IsEnabled = ApplyButton.IsEnabled = !busy && snapshot != null;
+            Builder.IsEnabled = LayoutToolbar.IsEnabled = !busy && snapshot != null;
             CancelButton.IsEnabled = busy;
             DrillButton.IsEnabled = !busy && TryGetDrillCell(out _, out _);
             DrillMenuItem.IsEnabled = TotalDrillMenuItem.IsEnabled = DrillButton.IsEnabled;
+            UpdatePendingState();
         }
 
         private void CancelClicked(object sender, RoutedEventArgs e) => operation?.Cancel();
@@ -411,7 +539,10 @@ namespace AxialSqlTools.PivotGrid
             ResultGrid.Columns.Clear();
             TotalGrid.Columns.Clear();
             activeResultGrid = null;
-            RowFields.ItemsSource = ColumnFields.ItemsSource = FilterField.ItemsSource = ValueField.ItemsSource = null;
+            appliedRequest = null;
+            Builder.ConfigurationChanged -= BuilderChanged;
+            Builder.Dispose();
+            LayoutNames.ItemsSource = null;
             theme.Dispose();
         }
     }

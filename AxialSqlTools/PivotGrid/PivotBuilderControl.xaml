@@ -1,0 +1,143 @@
+<UserControl x:Class="AxialSqlTools.PivotGrid.PivotBuilderControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource AxialThemeBackgroundBrush}"
+             Foreground="{DynamicResource AxialThemeForegroundBrush}">
+    <UserControl.Resources>
+      <ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary Source="/AxialSqlTools;component/Themes/SharedToolWindowTheme.xaml" />
+        </ResourceDictionary.MergedDictionaries>
+        <Style x:Key="BuilderButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="6,3" />
+            <Setter Property="MinWidth" Value="24" />
+        </Style>
+        <DataTemplate x:Key="AxisFieldTemplate">
+            <DockPanel LastChildFill="True" Margin="1,1">
+                <Button DockPanel.Dock="Right" Content="&#x00D7;" Click="AxisItemRemoveClicked"
+                        Tag="{Binding}" ToolTip="Remove this grouping field"
+                        AutomationProperties.Name="Remove grouping field" Padding="4,0" MinWidth="22" Margin="3,0,0,0" />
+                <TextBlock Text="{Binding Label}" ToolTip="{Binding Label}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </DataTemplate>
+      </ResourceDictionary>
+    </UserControl.Resources>
+    <StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.1*" MinWidth="160" />
+                <ColumnDefinition Width="*" MinWidth="120" />
+                <ColumnDefinition Width="*" MinWidth="120" />
+                <ColumnDefinition Width="1.6*" MinWidth="220" />
+            </Grid.ColumnDefinitions>
+            <GroupBox Header="Available fields" Padding="6,5,6,6" Margin="0,0,6,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="112" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel Margin="0,0,0,4">
+                        <Label Content="Search" Target="{Binding ElementName=FieldSearch}" Padding="0,0,5,0" VerticalAlignment="Center" />
+                        <TextBox x:Name="FieldSearch" TextChanged="FieldSearchChanged" Padding="4,2"
+                                 AutomationProperties.Name="Search fields" ToolTip="Search column names. Select a field, then add it to Rows, Columns or Values." />
+                    </DockPanel>
+                    <ListBox x:Name="FieldCatalog" Grid.Row="1" SelectionMode="Single" SelectionChanged="CatalogSelectionChanged"
+                             PreviewMouseLeftButtonDown="FieldMouseDown" PreviewMouseMove="FieldMouseMove"
+                             MouseDoubleClick="CatalogDoubleClicked" PreviewKeyDown="CatalogKeyDown"
+                             AutomationProperties.Name="Available fields" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel ToolTip="{Binding Description}">
+                                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Detail}" FontSize="10" Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <UniformGrid Grid.Row="2" Columns="3" Margin="0,4,0,0">
+                        <Button x:Name="AddRowsButton" Content="Rows" Click="AddRowsClicked" Style="{StaticResource BuilderButton}"
+                                ToolTip="Add selected field to Rows (Alt+R). Moves it from Columns when already assigned." AutomationProperties.Name="Add selected field to Rows" Margin="0,0,2,0" />
+                        <Button x:Name="AddColumnsButton" Content="Columns" Click="AddColumnsClicked" Style="{StaticResource BuilderButton}"
+                                ToolTip="Add selected field to Columns (Alt+C). Moves it from Rows when already assigned." AutomationProperties.Name="Add selected field to Columns" Margin="0,0,2,0" />
+                        <Button x:Name="AddValuesButton" Content="Values" Click="AddValuesClicked" Style="{StaticResource BuilderButton}"
+                                ToolTip="Add selected field as a measure (Alt+V)." AutomationProperties.Name="Add selected field to Values" />
+                    </UniformGrid>
+                </Grid>
+            </GroupBox>
+            <GroupBox Grid.Column="1" Header="Rows" Padding="6,5,6,6" Margin="0,0,6,0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <Grid>
+                        <ListBox x:Name="RowAxis" ItemsSource="{Binding}" ItemTemplate="{StaticResource AxisFieldTemplate}"
+                                 AllowDrop="True" DragOver="AxisDragOver" Drop="AxisDrop"
+                                 PreviewMouseLeftButtonDown="FieldMouseDown" PreviewMouseMove="FieldMouseMove"
+                                 SelectionChanged="AxisSelectionChanged" PreviewKeyDown="AxisKeyDown"
+                                 AutomationProperties.Name="Row fields, in grouping order"
+                                 ToolTip="Drag fields here or use the Rows button. Alt+Up/Down reorders; Delete removes."
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                        <TextBlock x:Name="EmptyRows" Text="Add or drop fields" IsHitTestVisible="False"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" Opacity="0.65" />
+                    </Grid>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
+                        <Button x:Name="RowUpButton" Content="&#x2191;" Tag="Rows" Click="MoveUpClicked" Style="{StaticResource BuilderButton}" ToolTip="Move selected row field up (Alt+Up)" AutomationProperties.Name="Move row field up" Margin="0,0,3,0" />
+                        <Button x:Name="RowDownButton" Content="&#x2193;" Tag="Rows" Click="MoveDownClicked" Style="{StaticResource BuilderButton}" ToolTip="Move selected row field down (Alt+Down)" AutomationProperties.Name="Move row field down" Margin="0,0,3,0" />
+                        <Button x:Name="RowRemoveButton" Content="Remove" Tag="Rows" Click="RemoveAxisClicked" Style="{StaticResource BuilderButton}" ToolTip="Remove selected row field (Delete)" AutomationProperties.Name="Remove selected row field" />
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+            <GroupBox Grid.Column="2" Header="Columns" Padding="6,5,6,6" Margin="0,0,6,0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <Grid>
+                        <ListBox x:Name="ColumnAxis" ItemsSource="{Binding}" ItemTemplate="{StaticResource AxisFieldTemplate}"
+                                 AllowDrop="True" DragOver="AxisDragOver" Drop="AxisDrop"
+                                 PreviewMouseLeftButtonDown="FieldMouseDown" PreviewMouseMove="FieldMouseMove"
+                                 SelectionChanged="AxisSelectionChanged" PreviewKeyDown="AxisKeyDown"
+                                 AutomationProperties.Name="Column fields, in grouping order"
+                                 ToolTip="Drag fields here or use the Columns button. Alt+Up/Down reorders; Delete removes."
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                        <TextBlock x:Name="EmptyColumns" Text="Optional" IsHitTestVisible="False"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" Opacity="0.65" />
+                    </Grid>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
+                        <Button x:Name="ColumnUpButton" Content="&#x2191;" Tag="Columns" Click="MoveUpClicked" Style="{StaticResource BuilderButton}" ToolTip="Move selected column field up (Alt+Up)" AutomationProperties.Name="Move column field up" Margin="0,0,3,0" />
+                        <Button x:Name="ColumnDownButton" Content="&#x2193;" Tag="Columns" Click="MoveDownClicked" Style="{StaticResource BuilderButton}" ToolTip="Move selected column field down (Alt+Down)" AutomationProperties.Name="Move column field down" Margin="0,0,3,0" />
+                        <Button x:Name="ColumnRemoveButton" Content="Remove" Tag="Columns" Click="RemoveAxisClicked" Style="{StaticResource BuilderButton}" ToolTip="Remove selected column field (Delete)" AutomationProperties.Name="Remove selected column field" />
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+            <GroupBox Grid.Column="3" Header="Values" Padding="6,5,6,6" AllowDrop="True" DragOver="ValuesDragOver" Drop="ValuesDrop">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="146">
+                        <StackPanel x:Name="MeasureRows" />
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
+                        <Button Content="Add measure" Click="AddMeasureClicked" Style="{StaticResource BuilderButton}" ToolTip="Add another value and aggregation" Margin="0,0,5,0" />
+                        <Button Content="Add count" Click="AddCountClicked" Style="{StaticResource BuilderButton}" ToolTip="Add a row-count measure" />
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+        </Grid>
+        <DockPanel Margin="0,7,0,0" LastChildFill="True">
+            <TextBlock DockPanel.Dock="Left" Text="Filters" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="6,0,0,0">
+                <Button Content="Add filter" Click="AddFilterClicked" Style="{StaticResource BuilderButton}" ToolTip="Add a filter. All filters must match." Margin="0,0,5,0" />
+                <Button x:Name="ClearFiltersButton" Content="Clear all" Click="ClearFiltersClicked" Style="{StaticResource BuilderButton}" ToolTip="Remove all filters" />
+            </StackPanel>
+            <WrapPanel x:Name="FilterChips" VerticalAlignment="Center" />
+        </DockPanel>
+        <DockPanel Margin="0,5,0,0">
+            <Expander DockPanel.Dock="Right" Header="Advanced" Margin="10,0,0,0" VerticalAlignment="Top">
+                <CheckBox x:Name="NullTextIsNull" Content="Treat displayed NULL as null" IsChecked="True" Margin="0,4,0,0"
+                          Checked="NullHandlingChanged" Unchecked="NullHandlingChanged"
+                          ToolTip="SSMS exposes display text. SQL NULL and the literal text NULL cannot be distinguished in text columns. Numeric NULLs are always null." />
+            </Expander>
+            <TextBlock x:Name="BuilderMessage" TextWrapping="Wrap" VerticalAlignment="Center" Opacity="0.8" FontSize="11"
+                       AutomationProperties.LiveSetting="Polite" />
+        </DockPanel>
+    </StackPanel>
+</UserControl>

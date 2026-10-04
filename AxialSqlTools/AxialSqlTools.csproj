@@ -71,6 +71,14 @@
     <Compile Include="PivotGrid\PivotDetailsWindow.xaml.cs">
       <DependentUpon>PivotDetailsWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PivotGrid\PivotBuilderControl.xaml.cs">
+      <DependentUpon>PivotBuilderControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PivotGrid\PivotFilterWindow.xaml.cs">
+      <DependentUpon>PivotFilterWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PivotGrid\PivotLayoutStore.cs" />
+    <Compile Include="PivotGrid\PivotPresentation.cs" />
     <Compile Include="PivotGrid\PivotEngine.cs" />
     <Compile Include="PivotGrid\PivotGridSnapshot.cs" />
     <Compile Include="PivotGrid\PivotGridCommand.cs" />
@@ -565,6 +573,14 @@
     <Content Include="Resources\wizard.png" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="PivotGrid\PivotBuilderControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="PivotGrid\PivotFilterWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="PivotGrid\PivotDetailsWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
