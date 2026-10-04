@@ -89,6 +89,8 @@ namespace AxialSqlTools.JobQuickView
         {
             if (closed || busy || refreshing) return false;
             refreshing = true;
+            if (historyDetailsLoading) ResetHistoryDetails(selectedHistory);
+            CancelHistoryDetails();
             RefreshText.Text = snapshot == null ? "Loading job information..." : "Refreshing...";
             UpdateActions();
             try
@@ -98,6 +100,8 @@ namespace AxialSqlTools.JobQuickView
                     : await service.LoadAsync(snapshot.JobId, token);
                 if (closed) return false;
                 ApplySnapshot(result);
+                if (selectedHistory != null) await LoadSelectedHistoryAsync();
+                if (closed) return false;
                 RefreshText.Text = "Updated " + DateTime.Now.ToString("T", CultureInfo.CurrentCulture);
                 if (!string.IsNullOrWhiteSpace(result.ActivityWarning))
                 {
@@ -141,19 +145,11 @@ namespace AxialSqlTools.JobQuickView
 
         private void ApplySnapshot(JobQuickViewSnapshot result)
         {
-            bool initialLoad = snapshot == null;
-            if (!initialLoad)
+            if (!result.HistoryLoaded && snapshot != null)
             {
-                // Regular refresh does not query or replace the independently refreshed history.
+                // A failed history query keeps the previously displayed list available.
                 result.History = snapshot.History;
-                result.HistoryLoaded = snapshot.HistoryLoaded;
                 result.HistoryNote = snapshot.HistoryNote;
-                if (result.LastRunStarted.HasValue && result.LastRunStarted == snapshot.LastRunStarted
-                    && string.Equals(result.LastRunOutcome, snapshot.LastRunOutcome, StringComparison.Ordinal))
-                {
-                    result.LastRunDuration = snapshot.LastRunDuration;
-                    result.LastRunMessage = snapshot.LastRunMessage;
-                }
             }
             snapshot = result;
             JobNameText.Text = result.Name;
@@ -179,8 +175,7 @@ namespace AxialSqlTools.JobQuickView
                 NextRun = ServerDate(schedule.NextRun, schedule.IsEnabled ? "No scheduled time" : "Schedule disabled")
             }).ToList();
             ScheduleNoteText.Text = JobQuickViewSnapshot.NextRunNote;
-            if (initialLoad) ApplyHistory(result);
-            else UpdateHistoryStatus(result);
+            ApplyHistory(result);
 
             // Keep the original server command as the concurrency baseline for every draft.
             // A server refresh may update clean documents, but never replaces unsaved work.
@@ -243,72 +238,6 @@ namespace AxialSqlTools.JobQuickView
                 ? "Enable the job to allow scheduled runs" : JobQuickViewSnapshot.NextRunNote);
         }
 
-        private async void HistoryRefresh_Click(object sender, RoutedEventArgs e)
-        {
-            if (closed || busy || refreshing || snapshot == null) return;
-            refreshing = true;
-            HistoryRefreshActionText.Text = "Refreshing...";
-            UpdateActions();
-            try
-            {
-                var result = await service.LoadExecutionAsync(snapshot.JobId, token);
-                if (closed) return;
-                bool replaceLoadWarning = MessageBanner.Visibility == Visibility.Visible
-                    && !string.IsNullOrWhiteSpace(snapshot.ActivityWarning)
-                    && string.Equals(MessageText.Text, snapshot.ActivityWarning, StringComparison.Ordinal);
-                // Update execution state only. Step documents, schedules and job details stay intact.
-                snapshot.IsEnabled = result.IsEnabled;
-                snapshot.IsRunning = result.IsRunning;
-                snapshot.ExecutionStatus = result.ExecutionStatus;
-                snapshot.RunningSince = result.RunningSince;
-                snapshot.NextRun = result.NextRun;
-                snapshot.HistoryLoaded = result.HistoryLoaded;
-                if (result.HistoryLoaded)
-                {
-                    snapshot.History = result.History;
-                    snapshot.HistoryNote = result.HistoryNote;
-                    snapshot.LastRunStarted = result.LastRunStarted;
-                    snapshot.LastRunDuration = result.LastRunDuration;
-                    snapshot.LastRunOutcome = result.LastRunOutcome;
-                    snapshot.LastRunMessage = result.LastRunMessage;
-                }
-                ApplyExecutionSummary(snapshot);
-                ApplyHistory(snapshot);
-                if (!string.IsNullOrWhiteSpace(result.ActivityWarning))
-                    HistoryNoteText.Text += Environment.NewLine + result.ActivityWarning;
-                snapshot.ActivityWarning = string.Join(Environment.NewLine, new[]
-                {
-                    snapshot.SchedulesLoaded ? null : ScheduleStatusText.Text,
-                    result.ActivityWarning
-                }.Where(warning => !string.IsNullOrWhiteSpace(warning)));
-                // Retire an old load warning after recovery, preserving unrelated action messages.
-                if (replaceLoadWarning)
-                {
-                    if (string.IsNullOrWhiteSpace(snapshot.ActivityWarning)) MessageBanner.Visibility = Visibility.Collapsed;
-                    else ShowMessage(snapshot.ActivityWarning, false);
-                }
-            }
-            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
-            catch (Exception ex)
-            {
-                if (!closed)
-                {
-                    snapshot.HistoryLoaded = false;
-                    ApplyHistory(snapshot);
-                    HistoryNoteText.Text += Environment.NewLine + ex.Message;
-                }
-            }
-            finally
-            {
-                refreshing = false;
-                if (!closed)
-                {
-                    HistoryRefreshActionText.Text = "Refresh history";
-                    UpdateActions();
-                }
-            }
-        }
-
         private void UpdateHistoryStatus(JobQuickViewSnapshot result)
         {
             string currentStatus = "Current status: " + EmptyValue(result.ExecutionStatus, "Unknown") +
@@ -324,9 +253,9 @@ namespace AxialSqlTools.JobQuickView
             if (!result.HistoryLoaded)
             {
                 HistoryNoteText.Text = historyRows.Length == 0
-                    ? "Execution summaries could not be loaded. Use Refresh history to retry."
-                    : "Showing previously loaded executions. Use Refresh history to retry.";
-                HistoryEmptyText.Text = "Execution summaries could not be loaded. Use Refresh history to retry.";
+                    ? "Execution summaries could not be loaded. Use Refresh to retry."
+                    : "Showing previously loaded executions. Use Refresh to retry.";
+                HistoryEmptyText.Text = "Execution summaries could not be loaded. Use Refresh to retry.";
                 HistoryEmptyText.Visibility = historyRows.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
                 return;
             }
@@ -343,7 +272,7 @@ namespace AxialSqlTools.JobQuickView
                 selectedHistory = selection;
             }
             finally { applyingHistory = false; }
-            // Refreshing summaries never causes a detail request, including the initial load.
+            // Preserve selection without auto-selecting a run. RefreshAsync reloads selected details.
             if (selection == null || loadedHistory?.InstanceId != selection.Item.InstanceId)
                 ResetHistoryDetails(selection);
             HistoryEmptyText.Text = "No retained executions. This job may not have run, or its history was purged.";
@@ -510,7 +439,6 @@ namespace AxialSqlTools.JobQuickView
             EnabledIcon.SetResourceReference(System.Windows.Shapes.Path.DataProperty,
                 snapshot?.IsEnabled == false ? "EnableIconGeometry" : "DisableIconGeometry");
             RefreshButton.IsEnabled = !busy && !refreshing;
-            HistoryRefreshButton.IsEnabled = canAct;
             HistoryList.IsEnabled = !refreshing;
             HistoryDetailsRetryButton.IsEnabled = selectedHistory != null && !historyDetailsLoading && !refreshing;
             HistoryDetailsRetryButton.Content = historyDetailsLoading ? "Loading..." : loadedHistory == null ? "Load / retry details" : "Reload details";

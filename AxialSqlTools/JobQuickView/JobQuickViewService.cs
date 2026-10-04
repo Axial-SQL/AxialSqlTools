@@ -33,22 +33,16 @@ namespace AxialSqlTools.JobQuickView
         {
             if (string.IsNullOrEmpty(jobName))
                 throw new ArgumentException("A job name is required.", nameof(jobName));
-            return LoadCoreAsync(null, jobName, cancellationToken, executionOnly: false, includeHistory: true);
+            return LoadCoreAsync(null, jobName, cancellationToken);
         }
 
         public Task<JobQuickViewSnapshot> LoadAsync(Guid jobId, CancellationToken cancellationToken)
         {
             ValidateJobId(jobId);
-            return LoadCoreAsync(jobId, null, cancellationToken, executionOnly: false, includeHistory: false);
+            return LoadCoreAsync(jobId, null, cancellationToken);
         }
 
-        public Task<JobQuickViewSnapshot> LoadExecutionAsync(Guid jobId, CancellationToken cancellationToken)
-        {
-            ValidateJobId(jobId);
-            return LoadCoreAsync(jobId, null, cancellationToken, executionOnly: true, includeHistory: true);
-        }
-
-        private async Task<JobQuickViewSnapshot> LoadCoreAsync(Guid? jobId, string jobName, CancellationToken token, bool executionOnly, bool includeHistory)
+        private async Task<JobQuickViewSnapshot> LoadCoreAsync(Guid? jobId, string jobName, CancellationToken token)
         {
             using (var connection = await OpenAsync(token).ConfigureAwait(false))
             {
@@ -86,32 +80,25 @@ namespace AxialSqlTools.JobQuickView
                 }
 
                 var warnings = new List<string>();
-                if (!executionOnly)
+                // Read nvarchar(max) directly: sp_help_job's documented step result can be truncated.
+                snapshot.Steps = await ReadStepsAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
+                try
                 {
-                    // Read nvarchar(max) directly: sp_help_job's documented step result can be truncated.
-                    snapshot.Steps = await ReadStepsAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
-                    try
-                    {
-                        snapshot.Schedules = await ReadSchedulesAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
-                    }
-                    catch (SqlException ex) when (!token.IsCancellationRequested)
-                    {
-                        snapshot.SchedulesLoaded = false;
-                        warnings.Add("Schedules could not be loaded: " + ex.Message);
-                    }
+                    snapshot.Schedules = await ReadSchedulesAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
                 }
-                // History loads on first open and through its dedicated refresh only.
-                if (includeHistory)
+                catch (SqlException ex) when (!token.IsCancellationRequested)
                 {
-                    try
-                    {
-                        await ReadHistoryAsync(connection, snapshot, token).ConfigureAwait(false);
-                    }
-                    catch (SqlException ex) when (!token.IsCancellationRequested)
-                    {
-                        snapshot.HistoryLoaded = false;
-                        warnings.Add("Execution history could not be loaded: " + ex.Message);
-                    }
+                    snapshot.SchedulesLoaded = false;
+                    warnings.Add("Schedules could not be loaded: " + ex.Message);
+                }
+                try
+                {
+                    await ReadHistoryAsync(connection, snapshot, token).ConfigureAwait(false);
+                }
+                catch (SqlException ex) when (!token.IsCancellationRequested)
+                {
+                    snapshot.HistoryLoaded = false;
+                    warnings.Add("Execution history could not be loaded: " + ex.Message);
                 }
                 try
                 {
@@ -239,7 +226,7 @@ ORDER BY h.instance_id DESC;";
                 using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
                 {
                     if (!await reader.ReadAsync(token).ConfigureAwait(false))
-                        throw new InvalidOperationException("This execution is no longer available. Its history may have been purged. Use Refresh history to update the list.");
+                        throw new InvalidOperationException("This execution is no longer available. Its history may have been purged. Use Refresh to update the list.");
                     var summary = ReadHistoryItem(reader);
                     var rows = new List<JobQuickViewHistoryItem>();
                     int previousId = Number(reader, "previous_id");
