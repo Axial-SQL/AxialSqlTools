@@ -42,7 +42,13 @@ namespace AxialSqlTools.JobQuickView
             return LoadCoreAsync(jobId, null, cancellationToken);
         }
 
-        private async Task<JobQuickViewSnapshot> LoadCoreAsync(Guid? jobId, string jobName, CancellationToken token)
+        public Task<JobQuickViewSnapshot> LoadExecutionAsync(Guid jobId, CancellationToken cancellationToken)
+        {
+            ValidateJobId(jobId);
+            return LoadCoreAsync(jobId, null, cancellationToken, executionOnly: true);
+        }
+
+        private async Task<JobQuickViewSnapshot> LoadCoreAsync(Guid? jobId, string jobName, CancellationToken token, bool executionOnly = false)
         {
             using (var connection = await OpenAsync(token).ConfigureAwait(false))
             {
@@ -79,17 +85,20 @@ namespace AxialSqlTools.JobQuickView
                     }
                 }
 
-                // Read nvarchar(max) directly: sp_help_job's documented step result can be truncated.
-                snapshot.Steps = await ReadStepsAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
                 var warnings = new List<string>();
-                try
+                if (!executionOnly)
                 {
-                    snapshot.Schedules = await ReadSchedulesAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
-                }
-                catch (SqlException ex) when (!token.IsCancellationRequested)
-                {
-                    snapshot.SchedulesLoaded = false;
-                    warnings.Add("Schedules could not be loaded: " + ex.Message);
+                    // Read nvarchar(max) directly: sp_help_job's documented step result can be truncated.
+                    snapshot.Steps = await ReadStepsAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
+                    try
+                    {
+                        snapshot.Schedules = await ReadSchedulesAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
+                    }
+                    catch (SqlException ex) when (!token.IsCancellationRequested)
+                    {
+                        snapshot.SchedulesLoaded = false;
+                        warnings.Add("Schedules could not be loaded: " + ex.Message);
+                    }
                 }
                 try
                 {

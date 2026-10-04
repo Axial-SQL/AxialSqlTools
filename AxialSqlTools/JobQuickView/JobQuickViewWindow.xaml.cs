@@ -141,20 +141,7 @@ namespace AxialSqlTools.JobQuickView
             JobNameText.Text = result.Name;
             JobNameText.ToolTip = result.Name;
             ServerText.Text = serverName + "  |  Owner: " + EmptyValue(result.Owner);
-            EnabledText.Text = result.IsEnabled ? "Enabled" : "Disabled";
-            RunningText.Text = EmptyValue(result.ExecutionStatus, "Status unknown");
-            RunningText.ToolTip = result.RunningSince.HasValue ? "Started " + ServerDate(result.RunningSince) + " (server local time)" : null;
-            ApplyStatusBadges();
-            LastRunSummaryText.Text = EmptyValue(result.LastRunOutcome, "No recorded execution");
-            LastRunSummaryText.SetResourceReference(TextBlock.ForegroundProperty,
-                string.Equals(result.LastRunOutcome, "Failed", StringComparison.OrdinalIgnoreCase)
-                    ? "AxialThemeStatusErrorBrush" : "AxialThemeForegroundBrush");
-            LastRunDetailText.Text = result.LastRunStarted.HasValue
-                ? ServerDate(result.LastRunStarted) + "  |  " + Duration(result.LastRunDuration)
-                : result.HistoryLoaded ? "No completed job history is available" : "Execution details could not be loaded";
-            NextRunText.Text = !result.IsEnabled ? "Job disabled" : ServerDate(result.NextRun, "No scheduled time");
-            NextRunText.ToolTip = NextRunText.Text + "\n" + (!result.IsEnabled
-                ? "Enable the job to allow scheduled runs" : JobQuickViewSnapshot.NextRunNote);
+            ApplyExecutionSummary(result);
             JobDetailsGrid.ItemsSource = new[]
             {
                 new DetailRow("Description", EmptyValue(result.Description, "No description.")),
@@ -219,6 +206,90 @@ namespace AxialSqlTools.JobQuickView
             UpdateActions();
         }
 
+        private void ApplyExecutionSummary(JobQuickViewSnapshot result)
+        {
+            EnabledText.Text = result.IsEnabled ? "Enabled" : "Disabled";
+            RunningText.Text = EmptyValue(result.ExecutionStatus, "Status unknown");
+            RunningText.ToolTip = result.RunningSince.HasValue ? "Started " + ServerDate(result.RunningSince) + " (server local time)" : null;
+            ApplyStatusBadges();
+            LastRunSummaryText.Text = EmptyValue(result.LastRunOutcome, "No recorded execution");
+            LastRunSummaryText.SetResourceReference(TextBlock.ForegroundProperty,
+                string.Equals(result.LastRunOutcome, "Failed", StringComparison.OrdinalIgnoreCase)
+                    ? "AxialThemeStatusErrorBrush" : "AxialThemeForegroundBrush");
+            LastRunDetailText.Text = result.LastRunStarted.HasValue
+                ? ServerDate(result.LastRunStarted) + "  |  " + Duration(result.LastRunDuration)
+                : result.HistoryLoaded ? "No completed job history is available" : "Execution details could not be loaded";
+            NextRunText.Text = !result.IsEnabled ? "Job disabled" : ServerDate(result.NextRun, "No scheduled time");
+            NextRunText.ToolTip = NextRunText.Text + "\n" + (!result.IsEnabled
+                ? "Enable the job to allow scheduled runs" : JobQuickViewSnapshot.NextRunNote);
+        }
+
+        private async void HistoryRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            if (closed || busy || refreshing || snapshot == null) return;
+            refreshing = true;
+            HistoryRefreshActionText.Text = "Refreshing...";
+            UpdateActions();
+            try
+            {
+                var result = await service.LoadExecutionAsync(snapshot.JobId, token);
+                if (closed) return;
+                bool replaceLoadWarning = MessageBanner.Visibility == Visibility.Visible
+                    && !string.IsNullOrWhiteSpace(snapshot.ActivityWarning)
+                    && string.Equals(MessageText.Text, snapshot.ActivityWarning, StringComparison.Ordinal);
+                // Update execution state only. Step documents, schedules and job details stay intact.
+                snapshot.IsEnabled = result.IsEnabled;
+                snapshot.IsRunning = result.IsRunning;
+                snapshot.ExecutionStatus = result.ExecutionStatus;
+                snapshot.RunningSince = result.RunningSince;
+                snapshot.NextRun = result.NextRun;
+                snapshot.HistoryLoaded = result.HistoryLoaded;
+                if (result.HistoryLoaded)
+                {
+                    snapshot.History = result.History;
+                    snapshot.HistoryNote = result.HistoryNote;
+                    snapshot.LastRunStarted = result.LastRunStarted;
+                    snapshot.LastRunDuration = result.LastRunDuration;
+                    snapshot.LastRunOutcome = result.LastRunOutcome;
+                    snapshot.LastRunMessage = result.LastRunMessage;
+                }
+                ApplyExecutionSummary(snapshot);
+                ApplyHistory(snapshot);
+                if (!string.IsNullOrWhiteSpace(result.ActivityWarning))
+                    HistoryNoteText.Text += Environment.NewLine + result.ActivityWarning;
+                snapshot.ActivityWarning = string.Join(Environment.NewLine, new[]
+                {
+                    snapshot.SchedulesLoaded ? null : ScheduleStatusText.Text,
+                    result.ActivityWarning
+                }.Where(warning => !string.IsNullOrWhiteSpace(warning)));
+                // Retire an old load warning after recovery, preserving unrelated action messages.
+                if (replaceLoadWarning)
+                {
+                    if (string.IsNullOrWhiteSpace(snapshot.ActivityWarning)) MessageBanner.Visibility = Visibility.Collapsed;
+                    else ShowMessage(snapshot.ActivityWarning, false);
+                }
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                if (!closed)
+                {
+                    snapshot.HistoryLoaded = false;
+                    ApplyHistory(snapshot);
+                    HistoryNoteText.Text += Environment.NewLine + ex.Message;
+                }
+            }
+            finally
+            {
+                refreshing = false;
+                if (!closed)
+                {
+                    HistoryRefreshActionText.Text = "Refresh history";
+                    UpdateActions();
+                }
+            }
+        }
+
         private void ApplyHistory(JobQuickViewSnapshot result)
         {
             string currentStatus = "Current status: " + EmptyValue(result.ExecutionStatus, "Unknown") +
@@ -227,9 +298,9 @@ namespace AxialSqlTools.JobQuickView
             {
                 HistoryStatusText.Text = currentStatus + "  |  History refresh failed";
                 HistoryNoteText.Text = historyNodes.Length == 0
-                    ? "Execution history could not be loaded. Use Refresh to retry."
-                    : "Showing previously loaded history. Use Refresh to retry. Times use the SQL Server's local time.";
-                HistoryEmptyText.Text = "Execution history could not be loaded. Use Refresh to retry.";
+                    ? "Execution history could not be loaded. Use Refresh history to retry."
+                    : "Showing previously loaded history. Use Refresh history to retry. Times use the SQL Server's local time.";
+                HistoryEmptyText.Text = "Execution history could not be loaded. Use Refresh history to retry.";
                 HistoryEmptyText.Visibility = historyNodes.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
                 return;
             }
@@ -345,6 +416,7 @@ namespace AxialSqlTools.JobQuickView
             EnabledIcon.SetResourceReference(System.Windows.Shapes.Path.DataProperty,
                 snapshot?.IsEnabled == false ? "EnableIconGeometry" : "DisableIconGeometry");
             RefreshButton.IsEnabled = !busy && !refreshing;
+            HistoryRefreshButton.IsEnabled = canAct;
             StepsList.IsEnabled = !busy;
             CommandEditor.IsReadOnly = selectedDraft == null || busy;
             FormatButton.IsEnabled = !busy && !refreshing && selectedDraft?.Original.IsSql == true && !selectedDraft.IsRemoved;

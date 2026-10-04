@@ -260,7 +260,19 @@
             <TabItem Header="Execution history">
                 <Grid Margin="0,8,0,0">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <TextBlock x:Name="HistoryStatusText" Text="Loading execution history..." Margin="0,0,0,7" FontSize="11" TextWrapping="Wrap" />
+                    <Grid Margin="0,0,0,7">
+                        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBlock x:Name="HistoryStatusText" Text="Loading execution history..." Margin="0,0,12,0" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button x:Name="HistoryRefreshButton" Grid.Column="1" Style="{StaticResource ActionButton}" Margin="0"
+                                Click="HistoryRefresh_Click" IsEnabled="False" ToolTip="Reload execution history and status. Keeps the selected entry and expanded runs."
+                                AutomationProperties.Name="Refresh execution history">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="M 12,5 A 5,5 0 1 0 11,10 M 8,5 L 12,5 L 12,1" Fill="Transparent"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.7" Style="{StaticResource ActionIcon}" />
+                                <TextBlock x:Name="HistoryRefreshActionText" Text="Refresh history" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="340" MinWidth="270" /><ColumnDefinition Width="9" /><ColumnDefinition MinWidth="360" /></Grid.ColumnDefinitions>
                         <Grid>
