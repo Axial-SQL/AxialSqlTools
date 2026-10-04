@@ -147,16 +147,15 @@ namespace AxialSqlTools.JobQuickView
                 ? ServerDate(result.LastRunStarted) + "  |  " + Duration(result.LastRunDuration)
                 : result.HistoryLoaded ? "No completed job history is available" : "Execution details could not be loaded";
             NextRunText.Text = !result.IsEnabled ? "Job disabled" : ServerDate(result.NextRun, "No scheduled time");
-            NextRunDetailText.Text = !result.IsEnabled ? "Enable the job to allow scheduled runs" : "SQL Server local time; Agent cache may lag";
+            NextRunText.ToolTip = NextRunText.Text + "\n" + (!result.IsEnabled
+                ? "Enable the job to allow scheduled runs" : JobQuickViewSnapshot.NextRunNote);
             JobDetailsGrid.ItemsSource = new[]
             {
-                new DetailRow("Job", result.Name),
-                new DetailRow("Server", serverName),
-                new DetailRow("Owner", EmptyValue(result.Owner)),
-                new DetailRow("Status", result.IsEnabled ? "Enabled" : "Disabled"),
-                new DetailRow("Starting step", result.StartStepId.ToString(CultureInfo.CurrentCulture)),
-                new DetailRow("Job ID", result.JobId.ToString()),
-                new DetailRow("Description", EmptyValue(result.Description, "No description."))
+                new DetailRow("Description", EmptyValue(result.Description, "No description.")),
+                new DetailRow("Category", EmptyValue(result.Category)),
+                new DetailRow("Created", ServerDate(result.CreatedAt)),
+                new DetailRow("Modified", ServerDate(result.ModifiedAt)),
+                new DetailRow("Job ID", result.JobId.ToString())
             };
             ScheduleStatusText.Text = !result.SchedulesLoaded ? "Schedules could not be loaded. Use Refresh to retry." :
                 result.Schedules.Count == 0 ? "No schedules attached. This job can be started manually." :
@@ -198,6 +197,7 @@ namespace AxialSqlTools.JobQuickView
                         draft = new StepDraft(step);
                         draft.PropertyChanged += Draft_Changed;
                     }
+                    draft.SetStartingStep(result.StartStepId);
                     next.Add(draft);
                     existing.Remove(step.StepUid);
                 }
@@ -603,6 +603,7 @@ namespace AxialSqlTools.JobQuickView
             public int CaretOffset { get; set; }
             public double VerticalOffset { get; set; }
             public bool IsRemoved { get; private set; }
+            public bool IsStartingStep { get; private set; }
             public bool IsDirty => !string.Equals(baseline, Document.Text, StringComparison.Ordinal);
             public bool CanSave => IsDirty && !IsRemoved;
             public string EditorStatus => IsRemoved ? "This step was removed on the server. Copy your draft before discarding it." :
@@ -649,7 +650,15 @@ namespace AxialSqlTools.JobQuickView
                 Notify();
             }
 
-            public void MarkRemoved() { IsRemoved = true; Notify(); }
+            public void SetStartingStep(int startStepId)
+            {
+                bool isStartingStep = !IsRemoved && Latest.StepId == startStepId;
+                if (IsStartingStep == isStartingStep) return;
+                IsStartingStep = isStartingStep;
+                Notify();
+            }
+
+            public void MarkRemoved() { IsRemoved = true; IsStartingStep = false; Notify(); }
             public void NotifyStateChanged() { Notify(); }
 
             private void ResetToLatest()

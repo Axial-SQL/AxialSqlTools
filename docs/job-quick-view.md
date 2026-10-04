@@ -4,18 +4,20 @@ In Object Explorer, right-click a job under **SQL Server Agent > Jobs** and sele
 
 Quick Manage opens in the SSMS document area alongside query tabs, titled **Job name - Quick Manage**. Reopening the same job on the same server and authentication identity activates its existing tab without replacing drafts. Different jobs can remain open simultaneously. Tabs are session-only and are not restored when SSMS restarts.
 
-The tab shows the job name and server, current status, schedules, and the latest execution result. Details load asynchronously. The Steps tab keeps the step list beside the command editor. Job details, Schedules, and Execution tabs provide tabular information without reducing editor space. Compact last/next execution summaries and colored status badges remain visible above the tabs. Narrow or split document groups scroll the content to keep actions reachable.
+The tab shows the job name and server, current status, schedules, and the latest execution result. Details load asynchronously. The Steps tab keeps the step list beside the command editor. Job details combines description, category, creation/modification dates, job ID, and schedules. The Execution tab shows runtime details and messages. A compact header keeps job identity, status badges, and actions together, followed by a single-line last/next execution strip. Narrow or split document groups scroll the content to keep actions reachable.
 
 ## Common tasks
 
 - **Start / Stop** requests a job start or stop through SQL Server Agent. Starting uses the job's configured starting step and its saved commands.
 - **Enable / Disable** changes the job's enabled flag. Individual schedules and other job properties are not changed.
 - **Refresh** reloads server details while retaining unsaved command drafts.
-- Select a step to inspect its command, subsystem, database, and success/failure routing.
+- Select a step to inspect its command, subsystem, database, and success/failure routing. A flag marks the configured starting step, which may be a step other than step 1. The marker follows server changes on refresh.
 - Edit the command and select **Save step** to persist that step only. **Discard** restores the saved command.
 - **Format SQL** applies the existing Axial SQL Tools formatter to a T-SQL command. Formatting is an editable, undoable change and is not saved automatically.
 
 The editor includes syntax highlighting, line numbers, search, and undo/redo. Non-SQL commands are not passed to the T-SQL formatter. Commands that the formatter cannot parse, including some SQL Agent token expressions, remain unchanged if formatting fails.
+
+Schedules appear in **Job details**, with SQL Server's human-readable descriptions from `msdb.dbo.sp_help_jobschedule @include_description = 1`, including frequency and active-date information.
 
 ## Status and edits
 
@@ -31,8 +33,8 @@ Quick Manage uses the selected Object Explorer connection and does not elevate p
 
 Use a disposable test job when checking actions and edits:
 
-1. Open Quick Manage with no query editor open. Verify the settings icon and command name in both menus, action icons, colored status badges, SQL highlighting, and the Job details, Schedules, and Execution tabs.
-2. Check a job with several steps, several schedules, no schedule, no history, and a long command. Resize the window and check light, dark, and high-contrast themes.
+1. Open Quick Manage with no query editor open. Verify the settings icon and command name in both menus, action icons, colored status badges, SQL highlighting, and the Steps, Job details, and Execution tabs. Compare the readable schedule description with the native job properties dialog; verify category and created/modified dates. Confirm redundant header fields are absent from Job details.
+2. Check a job with several steps, several schedules, no schedule, no history, and a long command. Configure a starting step other than step 1; verify its flag, change the starting step externally, and refresh. Ensure the flag follows the configuration while unsaved commands stay intact. Resize the window and check light, dark, and high-contrast themes.
 3. Format a previously unmodified step. Confirm the bold red unsaved state and enabled Save/Discard buttons; undo to restore the clean state. Edit two steps, switch between them, and refresh. Confirm both drafts remain. Save one step and verify all other job settings are unchanged. Confirm closing warns about the remaining draft.
 4. Change a step externally while a local draft is open. A save must report a conflict rather than overwrite the external change. Repeat with a deleted/recreated or renumbered step.
 5. Leave the window idle and confirm it does not poll. Enable, disable, start, and stop the test job. Verify observed status and the latest completion result after refresh. Confirm a start uses saved commands.

@@ -61,7 +61,10 @@ namespace AxialSqlTools.JobQuickView
                         snapshot.JobId = (Guid)reader["job_id"];
                         snapshot.Name = Text(reader, "name");
                         snapshot.Owner = Text(reader, "owner");
+                        snapshot.Category = Text(reader, "category");
                         snapshot.Description = Text(reader, "description");
+                        snapshot.CreatedAt = ServerDateTime(reader, "date_created");
+                        snapshot.ModifiedAt = ServerDateTime(reader, "date_modified");
                         snapshot.IsEnabled = Number(reader, "enabled") != 0;
                         snapshot.StartStepId = Number(reader, "start_step_id");
                         int status = Number(reader, "current_execution_status");
@@ -160,7 +163,7 @@ ORDER BY s.step_id;";
                         schedules.Add(new JobQuickViewSchedule
                         {
                             ScheduleId = Number(reader, "schedule_id"),
-                            Name = Text(reader, "schedule_name"),
+                            Name = ReadScheduleName(reader),
                             IsEnabled = enabled,
                             Description = Text(reader, "schedule_description"),
                             NextRun = enabled ? JobQuickViewValue.DateTimeFromAgent(Number(reader, "next_run_date"), Number(reader, "next_run_time")) : null
@@ -361,6 +364,25 @@ END CATCH;";
         private static string Text(SqlDataReader reader, string name)
         {
             return reader[name] == DBNull.Value ? string.Empty : Convert.ToString(reader[name], CultureInfo.InvariantCulture);
+        }
+
+        internal static string ReadScheduleName(IDataRecord reader)
+        {
+            // Handle the returned 'name' column as well as the documented 'schedule_name'.
+            for (int index = 0; index < reader.FieldCount; index++)
+            {
+                if (string.Equals(reader.GetName(index), "name", StringComparison.OrdinalIgnoreCase))
+                    return reader.IsDBNull(index) ? string.Empty : reader.GetString(index);
+            }
+            object value = reader["schedule_name"];
+            return value == DBNull.Value ? string.Empty : Convert.ToString(value, CultureInfo.InvariantCulture);
+        }
+
+        private static DateTime? ServerDateTime(SqlDataReader reader, string name)
+        {
+            return reader[name] == DBNull.Value
+                ? (DateTime?)null
+                : DateTime.SpecifyKind((DateTime)reader[name], DateTimeKind.Unspecified);
         }
 
         private static void ValidateJobId(Guid jobId)

@@ -19,16 +19,16 @@
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Background" Value="{DynamicResource AxialThemeHeaderBackgroundBrush}" />
                 <Setter Property="CornerRadius" Value="4" />
-                <Setter Property="Padding" Value="11,6" />
+                <Setter Property="Padding" Value="7,3" />
             </Style>
             <Style x:Key="ActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                <Setter Property="Padding" Value="12,6" />
-                <Setter Property="Margin" Value="0,0,7,0" />
-                <Setter Property="MinHeight" Value="32" />
+                <Setter Property="Padding" Value="9,4" />
+                <Setter Property="Margin" Value="0,0,5,0" />
+                <Setter Property="MinHeight" Value="28" />
             </Style>
             <Style x:Key="ActionIcon" TargetType="Path">
                 <Setter Property="Width" Value="12" /><Setter Property="Height" Value="12" />
-                <Setter Property="Stretch" Value="Uniform" /><Setter Property="Margin" Value="0,0,7,0" />
+                <Setter Property="Stretch" Value="Uniform" /><Setter Property="Margin" Value="0,0,5,0" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
             </Style>
@@ -43,85 +43,84 @@
                 <Setter Property="RowHeaderWidth" Value="0" />
             </Style>
             <Style x:Key="DetailValue" TargetType="TextBlock">
-                <Setter Property="Margin" Value="9,7" /><Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="Margin" Value="8,4" /><Setter Property="TextWrapping" Value="Wrap" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
         </ResourceDictionary>
     </UserControl.Resources>
-    <ScrollViewer x:Name="DocumentScroll" Margin="20,16,20,16" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="DocumentScroll" Margin="12,10,12,10" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
     <Grid x:Name="DocumentLayout" Width="900" Height="600" LayoutUpdated="DocumentLayout_LayoutUpdated">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" /><RowDefinition Height="*" MinHeight="260" />
         </Grid.RowDefinitions>
-        <Grid>
+        <Grid Margin="0,0,0,7">
             <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,20,0">
-                <TextBlock Text="SQL SERVER AGENT / QUICK MANAGE" FontSize="11" FontWeight="SemiBold"
-                           Foreground="{DynamicResource AxialThemeLinkBrush}" Margin="0,0,0,5" />
-                <TextBlock x:Name="JobNameText" FontSize="23" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
-                <TextBlock x:Name="ServerText" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"
+            <StackPanel Margin="0,0,14,0">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock x:Name="JobNameText" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Border x:Name="EnabledBadge" Style="{StaticResource StatusBadge}" Margin="0,0,5,0">
+                            <TextBlock x:Name="EnabledText" Text="Loading" FontSize="11" FontWeight="SemiBold" />
+                        </Border>
+                        <Border x:Name="RunningBadge" Style="{StaticResource StatusBadge}">
+                            <TextBlock x:Name="RunningText" Text="Checking status" FontSize="11" FontWeight="SemiBold" />
+                        </Border>
+                    </StackPanel>
+                </Grid>
+                <TextBlock x:Name="ServerText" Margin="0,3,0,0" FontSize="11" TextTrimming="CharacterEllipsis"
                            ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Border x:Name="EnabledBadge" Style="{StaticResource StatusBadge}" Margin="0,0,7,0">
-                    <TextBlock x:Name="EnabledText" Text="Loading" FontWeight="SemiBold" />
-                </Border>
-                <Border x:Name="RunningBadge" Style="{StaticResource StatusBadge}">
-                    <TextBlock x:Name="RunningText" Text="Checking status" FontWeight="SemiBold" />
-                </Border>
+            <StackPanel Grid.Column="1">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="StartButton" Style="{StaticResource ActionButton}" Click="Start_Click" IsEnabled="False"
+                            ToolTip="Run the saved job from its configured starting step" AutomationProperties.Name="Start job">
+                        <StackPanel Orientation="Horizontal"><Path Data="M 0,0 L 12,7 L 0,14 Z" Style="{StaticResource ActionIcon}" /><TextBlock Text="Start job" /></StackPanel>
+                    </Button>
+                    <Button x:Name="StopButton" Style="{StaticResource ActionButton}" Click="Stop_Click" IsEnabled="False" AutomationProperties.Name="Stop job">
+                        <StackPanel Orientation="Horizontal"><Path Data="M 0,0 H 12 V 12 H 0 Z" Style="{StaticResource ActionIcon}" /><TextBlock Text="Stop job" /></StackPanel>
+                    </Button>
+                    <Border Width="1" Background="{DynamicResource AxialThemeSubtleBorderBrush}" Margin="3,3,11,3" />
+                    <Button x:Name="EnabledButton" Style="{StaticResource ActionButton}" Click="Enabled_Click" IsEnabled="False" AutomationProperties.Name="Enable or disable job">
+                        <StackPanel Orientation="Horizontal"><Path x:Name="EnabledIcon" Data="{StaticResource DisableIconGeometry}" Style="{StaticResource ActionIcon}" /><TextBlock x:Name="EnabledActionText" Text="Disable job" /></StackPanel>
+                    </Button>
+                    <Button x:Name="RefreshButton" Style="{StaticResource ActionButton}" Click="Refresh_Click" ToolTip="Refresh job information (F5). Unsaved step edits are preserved." AutomationProperties.Name="Refresh job">
+                        <StackPanel Orientation="Horizontal"><Path Data="M 12,5 A 5,5 0 1 0 11,10 M 8,5 L 12,5 L 12,1" Fill="Transparent" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.7" Style="{StaticResource ActionIcon}" /><TextBlock Text="Refresh" /></StackPanel>
+                    </Button>
+                </StackPanel>
+                <TextBlock x:Name="RefreshText" HorizontalAlignment="Right" Margin="0,3,5,0" Text="Loading job information..." FontSize="10" />
             </StackPanel>
         </Grid>
-        <Grid Grid.Row="1" Margin="0,14,0,12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /></Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal">
-                <Button x:Name="StartButton" Style="{StaticResource ActionButton}" Click="Start_Click" IsEnabled="False"
-                        ToolTip="Run the saved job from its configured starting step" AutomationProperties.Name="Start job">
-                    <StackPanel Orientation="Horizontal"><Path Data="M 0,0 L 12,7 L 0,14 Z" Style="{StaticResource ActionIcon}" /><TextBlock Text="Start job" /></StackPanel>
-                </Button>
-                <Button x:Name="StopButton" Style="{StaticResource ActionButton}" Click="Stop_Click" IsEnabled="False" AutomationProperties.Name="Stop job">
-                    <StackPanel Orientation="Horizontal"><Path Data="M 0,0 H 12 V 12 H 0 Z" Style="{StaticResource ActionIcon}" /><TextBlock Text="Stop job" /></StackPanel>
-                </Button>
-                <Border Width="1" Background="{DynamicResource AxialThemeSubtleBorderBrush}" Margin="3,3,11,3" />
-                <Button x:Name="EnabledButton" Style="{StaticResource ActionButton}" Click="Enabled_Click" IsEnabled="False" AutomationProperties.Name="Enable or disable job">
-                    <StackPanel Orientation="Horizontal"><Path x:Name="EnabledIcon" Data="{StaticResource DisableIconGeometry}" Style="{StaticResource ActionIcon}" /><TextBlock x:Name="EnabledActionText" Text="Disable job" /></StackPanel>
-                </Button>
-                <Button x:Name="RefreshButton" Style="{StaticResource ActionButton}" Click="Refresh_Click" ToolTip="Refresh job information (F5). Unsaved step edits are preserved." AutomationProperties.Name="Refresh job">
-                    <StackPanel Orientation="Horizontal"><Path Data="M 12,5 A 5,5 0 1 0 11,10 M 8,5 L 12,5 L 12,1" Fill="Transparent" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.7" Style="{StaticResource ActionIcon}" /><TextBlock Text="Refresh" /></StackPanel>
-                </Button>
-            </StackPanel>
-            <TextBlock x:Name="RefreshText" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Text="Loading job information..." FontSize="12" />
-        </Grid>
-        <Border Grid.Row="2" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}"
-                BorderThickness="1" CornerRadius="4" Padding="12,8" Margin="0,0,0,12">
+        <Border Grid.Row="1" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}" BorderBrush="{DynamicResource AxialThemeSubtleBorderBrush}"
+                BorderThickness="1" CornerRadius="3" Padding="9,5" Margin="0,0,0,7">
             <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="1" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                <StackPanel Margin="0,0,12,0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="LAST EXECUTION" FontSize="10" FontWeight="SemiBold" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <TextBlock x:Name="LastRunSummaryText" Text="Loading..." FontSize="13" FontWeight="SemiBold" />
-                    </StackPanel>
-                    <TextBlock x:Name="LastRunDetailText" Margin="0,3,0,0" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
-                </StackPanel>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="3*" /><ColumnDefinition Width="1" /><ColumnDefinition Width="2*" /></Grid.ColumnDefinitions>
+                <Grid Margin="0,0,10,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                    <TextBlock Text="Last execution" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock x:Name="LastRunSummaryText" Grid.Column="1" Text="Loading..." FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock x:Name="LastRunDetailText" Grid.Column="2" Margin="9,0,0,0" FontSize="11" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                </Grid>
                 <Border Grid.Column="1" Background="{DynamicResource AxialThemeSubtleBorderBrush}" />
-                <StackPanel Grid.Column="2" Margin="13,0,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="NEXT EXECUTION" FontSize="10" FontWeight="SemiBold" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <TextBlock x:Name="NextRunText" Text="Loading..." FontSize="13" FontWeight="SemiBold" />
-                    </StackPanel>
-                    <TextBlock x:Name="NextRunDetailText" Text="SQL Server local time" Margin="0,3,0,0" FontSize="12" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
+                <Grid Grid.Column="2" Margin="10,0,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                    <TextBlock Text="Next execution" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock x:Name="NextRunText" Grid.Column="1" Text="Loading..." FontSize="12" FontWeight="SemiBold"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </Grid>
             </Grid>
         </Border>
-        <Border x:Name="MessageBanner" Grid.Row="3" Visibility="Collapsed" BorderThickness="3,0,0,0"
+        <Border x:Name="MessageBanner" Grid.Row="2" Visibility="Collapsed" BorderThickness="3,0,0,0"
                 BorderBrush="{DynamicResource AxialThemeAccentBrush}" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}"
                 Padding="10,8" Margin="0,0,0,10" MaxHeight="96">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <TextBlock x:Name="MessageText" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
             </ScrollViewer>
         </Border>
-        <TabControl x:Name="MainTabs" Grid.Row="4">
+        <TabControl x:Name="MainTabs" Grid.Row="3">
             <TabItem x:Name="StepsTab" Header="Steps">
         <Grid Margin="0,8,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="245" MinWidth="190" /><ColumnDefinition Width="9" /><ColumnDefinition MinWidth="420" /></Grid.ColumnDefinitions>
@@ -137,13 +136,27 @@
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="Padding" Value="11,10" />
+                                <Setter Property="Padding" Value="9,7" />
                             </Style>
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Margin="9,8">
-                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <StackPanel>
+                                    <DockPanel>
+                                        <Border DockPanel.Dock="Left" Margin="0,0,6,0" Padding="3" CornerRadius="3" VerticalAlignment="Top"
+                                                Background="{DynamicResource QuickManageGreenBackgroundBrush}" ToolTip="Starting step"
+                                                AutomationProperties.Name="Starting step">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers><DataTrigger Binding="{Binding IsStartingStep}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Path Width="12" Height="12" Stretch="Uniform" Fill="{DynamicResource QuickManageGreenForegroundBrush}"
+                                                  Data="M 1,0 H 3 V 1 H 13 L 10,5 L 13,9 H 3 V 15 H 1 Z" />
+                                        </Border>
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    </DockPanel>
                                     <TextBlock Text="{Binding Details}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
                                     <Border Background="{DynamicResource QuickManageDirtyBackgroundBrush}" CornerRadius="3" Padding="5,3" Margin="0,5,0,0" HorizontalAlignment="Left">
                                         <Border.Style>
@@ -219,27 +232,30 @@
         </Grid>
             </TabItem>
             <TabItem Header="Job details">
-                <DataGrid x:Name="JobDetailsGrid" Style="{StaticResource DetailTable}" Margin="0,8,0,0" ScrollViewer.CanContentScroll="False" AutomationProperties.Name="Job details">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Property" Binding="{Binding Field}" Width="180" ElementStyle="{StaticResource DetailValue}" />
-                        <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*" ElementStyle="{StaticResource DetailValue}" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </TabItem>
-            <TabItem Header="Schedules">
-                <Grid Margin="0,8,0,0">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <TextBlock x:Name="ScheduleStatusText" Text="Loading schedules..." Margin="0,0,0,8" TextWrapping="Wrap" />
-                    <DataGrid x:Name="SchedulesGrid" Grid.Row="1" Style="{StaticResource DetailTable}" AutomationProperties.Name="Job schedules">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Schedule" Binding="{Binding Name}" Width="210" ElementStyle="{StaticResource DetailValue}" />
-                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" ElementStyle="{StaticResource DetailValue}" />
-                            <DataGridTextColumn Header="Frequency" Binding="{Binding Description}" Width="*" ElementStyle="{StaticResource DetailValue}" />
-                            <DataGridTextColumn Header="Next execution" Binding="{Binding NextRun}" Width="165" ElementStyle="{StaticResource DetailValue}" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                    <TextBlock x:Name="ScheduleNoteText" Grid.Row="2" Margin="0,9,0,0" FontSize="11" TextWrapping="Wrap" />
-                </Grid>
+                <ScrollViewer Margin="0,6,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <DataGrid x:Name="JobDetailsGrid" Style="{StaticResource DetailTable}" MaxHeight="220"
+                                  ScrollViewer.CanContentScroll="False" AutomationProperties.Name="Job details">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Property" Binding="{Binding Field}" Width="150" ElementStyle="{StaticResource DetailValue}" />
+                                <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*" ElementStyle="{StaticResource DetailValue}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <DockPanel Margin="0,10,0,6">
+                            <TextBlock Text="Schedules" FontWeight="SemiBold" Margin="0,0,12,0" />
+                            <TextBlock x:Name="ScheduleStatusText" Text="Loading schedules..." FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </DockPanel>
+                        <DataGrid x:Name="SchedulesGrid" Style="{StaticResource DetailTable}" MaxHeight="360" MinHeight="75" AutomationProperties.Name="Job schedules">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Schedule" Binding="{Binding Name}" Width="190" ElementStyle="{StaticResource DetailValue}" />
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80" ElementStyle="{StaticResource DetailValue}" />
+                                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" ElementStyle="{StaticResource DetailValue}" />
+                                <DataGridTextColumn Header="Next execution" Binding="{Binding NextRun}" Width="165" ElementStyle="{StaticResource DetailValue}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock x:Name="ScheduleNoteText" Margin="0,6,0,0" FontSize="11" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
             <TabItem Header="Execution">
                 <Grid Margin="0,8,0,0">

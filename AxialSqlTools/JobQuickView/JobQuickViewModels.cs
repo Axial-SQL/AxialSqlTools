@@ -9,7 +9,10 @@ namespace AxialSqlTools.JobQuickView
         public Guid JobId { get; internal set; }
         public string Name { get; internal set; }
         public string Owner { get; internal set; }
+        public string Category { get; internal set; }
         public string Description { get; internal set; }
+        public DateTime? CreatedAt { get; internal set; }
+        public DateTime? ModifiedAt { get; internal set; }
         public bool IsEnabled { get; internal set; }
         public int StartStepId { get; internal set; }
         public bool? IsRunning { get; internal set; }
