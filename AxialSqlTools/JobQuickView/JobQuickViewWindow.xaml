@@ -52,7 +52,7 @@
     <Grid x:Name="DocumentLayout" Width="900" Height="600" LayoutUpdated="DocumentLayout_LayoutUpdated">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" /><RowDefinition Height="*" MinHeight="260" />
+            <RowDefinition Height="*" MinHeight="260" />
         </Grid.RowDefinitions>
         <Grid Margin="0,0,0,7">
             <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -113,14 +113,7 @@
                 </Grid>
             </Grid>
         </Border>
-        <Border x:Name="MessageBanner" Grid.Row="2" Visibility="Collapsed" BorderThickness="3,0,0,0"
-                BorderBrush="{DynamicResource AxialThemeAccentBrush}" Background="{DynamicResource AxialThemeHeaderBackgroundBrush}"
-                Padding="10,8" Margin="0,0,0,10" MaxHeight="96">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <TextBlock x:Name="MessageText" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-            </ScrollViewer>
-        </Border>
-        <TabControl x:Name="MainTabs" Grid.Row="3">
+        <TabControl x:Name="MainTabs" Grid.Row="2">
             <TabItem x:Name="StepsTab" Header="Steps">
         <Grid Margin="0,8,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="245" MinWidth="190" /><ColumnDefinition Width="9" /><ColumnDefinition MinWidth="420" /></Grid.ColumnDefinitions>

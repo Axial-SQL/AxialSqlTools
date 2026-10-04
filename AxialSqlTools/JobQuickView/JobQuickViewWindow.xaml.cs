@@ -45,6 +45,7 @@ namespace AxialSqlTools.JobQuickView
         private bool mutating;
         private bool applyingSnapshot;
         private bool stateUpdatePending;
+        private string lastMessage;
 
         internal string Caption { get; private set; }
         internal string JobName => snapshot?.Name ?? requestedJobName;
@@ -109,7 +110,7 @@ namespace AxialSqlTools.JobQuickView
                 }
                 else
                 {
-                    MessageBanner.Visibility = Visibility.Collapsed;
+                    ShowMessage("Job information refreshed.", false);
                 }
                 return true;
             }
@@ -501,7 +502,7 @@ namespace AxialSqlTools.JobQuickView
             {
                 bool refreshed = await RefreshAsync();
                 if (closed) return;
-                string warning = !refreshed ? MessageText.Text : snapshot.ActivityWarning;
+                string warning = !refreshed ? lastMessage : snapshot.ActivityWarning;
                 ShowMessage(successMessage + (string.IsNullOrWhiteSpace(warning) ? string.Empty : "\r\n" + warning), !refreshed);
             }
         }
@@ -682,10 +683,21 @@ namespace AxialSqlTools.JobQuickView
 
         private void ShowMessage(string message, bool error)
         {
-            MessageText.Text = message;
-            MessageBanner.SetResourceReference(Border.BorderBrushProperty, error ? "AxialThemeStatusErrorBrush" : "AxialThemeAccentBrush");
-            MessageText.SetResourceReference(TextBlock.ForegroundProperty, error ? "AxialThemeStatusErrorBrush" : "AxialThemeForegroundBrush");
-            MessageBanner.Visibility = Visibility.Visible;
+            ThreadHelper.ThrowIfNotOnUIThread();
+            lastMessage = message;
+            try
+            {
+                var statusBar = ServiceProvider.GlobalProvider.GetService(typeof(SVsStatusbar)) as IVsStatusbar;
+                // The shared host status bar is a single line; retain all message text.
+                string text = ("Quick Manage - " + JobName + ": " + (error ? "Error: " : string.Empty) + message)
+                    .Replace("\r\n", " ").Replace('\r', ' ').Replace('\n', ' ');
+                statusBar?.SetText(text);
+            }
+            catch (System.Runtime.InteropServices.COMException ex)
+            {
+                // A host notification failure must not turn a completed job action into a failure.
+                System.Diagnostics.Debug.WriteLine("Quick Manage status bar: " + ex.Message);
+            }
         }
 
         private static bool Confirm(string message, string title, bool warning = false)
