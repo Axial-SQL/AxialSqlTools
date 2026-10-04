@@ -269,6 +269,19 @@
         </Strings>
       </Button>
 
+      <!-- Keep the command registered without a toolbar/menu placement.
+           Quick Manage is exposed on SQL Agent job context menus. -->
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialJobQuickViewCommand" priority="0x0100" type="Button">
+        <Icon guid="guidImagesSettings" id="bmpSettings" />
+        <CommandFlag>DefaultDisabled</CommandFlag>
+        <Strings>
+          <ButtonText>Quick Manage</ButtonText>
+          <CanonicalName>AxialSqlTools.JobQuickView</CanonicalName>
+          <LocCanonicalName>AxialSqlTools.JobQuickView</LocCanonicalName>
+          <ToolTipText>Manage the SQL Server Agent job selected in Object Explorer</ToolTipText>
+        </Strings>
+      </Button>
+
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialSqlServerBuildsCommand" priority="0x3000" type="Button">
         <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
         <Icon guid="guidSqlBuildInfo" id="bmpSqlBuildInfo" />
@@ -474,6 +487,7 @@
       <IDSymbol name="AxialExportGridToPivotTable" value="4159" />
 
       <IDSymbol name="AxialHealthDashboardServerCommand" value="4140" />
+      <IDSymbol name="AxialJobQuickViewCommand" value="4160" />
       <IDSymbol name="AxialHealthDashboardServersCommand" value="4142" />
 
       <IDSymbol name="AxialDataTransferCommand" value="4143" />

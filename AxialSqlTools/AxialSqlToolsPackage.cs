@@ -49,6 +49,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(HealthDashboard_Server), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(DataCompare.DataCompareWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(PivotGrid.PivotGridWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(JobQuickView.JobQuickViewPane), MultiInstances = true, Style = VsDockStyle.MDI, DocumentLikeTool = true, Transient = true)]
     [ProvideToolWindow(typeof(DataTransferWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(SqlServerBuildsWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(QueryHistoryWindow), Style = VsDockStyle.MDI)]
@@ -70,6 +71,7 @@ namespace AxialSqlTools
         public event EventHandler SQLBuildsChanged;
 
         private Task _sqlBuildsRefreshTask;
+        private JobQuickView.JobQuickViewCommand _jobQuickViewCommand;
 
         public Task RefreshSqlServerBuildsAsync(string localFile = null)
         {
@@ -192,6 +194,7 @@ namespace AxialSqlTools
                 await AboutWindowCommand.InitializeAsync(this);
                 await ScriptSelectedObject.InitializeAsync(this);
                 await OpenInObjectExplorerCommand.InitializeAsync(this);
+                _jobQuickViewCommand = await JobQuickView.JobQuickViewCommand.InitializeAsync(this);
                 await ExportGridToAsInsertsCommand.InitializeAsync(this);
                 await ToolWindowGridToEmailCommand.InitializeAsync(this);
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
@@ -298,6 +301,7 @@ namespace AxialSqlTools
         {
             if (disposing)
             {
+                _jobQuickViewCommand?.Dispose();
                 UpdateChecker.LaunchDeferredUpdateOnClose();
             }
 
