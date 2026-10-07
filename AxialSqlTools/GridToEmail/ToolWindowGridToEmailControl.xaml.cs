@@ -175,7 +175,8 @@
 
             exportedFilename = Path.Combine(folderPath, defaultName);
 
-            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+            // ponytail: Shift alone overrides the setting; shortcut modifiers do not.
+            bool isShiftPressed = Keyboard.Modifiers == ModifierKeys.Shift;
 
             ExcelExport.SaveDataTableToExcel(dataTables, exportedFilename, isShiftPressed);
 

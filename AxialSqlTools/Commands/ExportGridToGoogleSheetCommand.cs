@@ -61,7 +61,8 @@ namespace AxialSqlTools
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            bool isShiftPressed = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+            // ponytail: Shift alone overrides the setting; shortcut modifiers do not.
+            bool isShiftPressed = Keyboard.Modifiers == ModifierKeys.Shift;
 
             List<System.Data.DataTable> dataTables = GridAccess.GetDataTables();
             if (dataTables.Count == 0)
