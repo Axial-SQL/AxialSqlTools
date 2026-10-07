@@ -240,6 +240,8 @@ namespace AxialSqlTools
                 windowEvents.WindowActivated += new _dispWindowEvents_WindowActivatedEventHandler(WindowActivated_Event);
                 windowEvents.WindowClosing += new _dispWindowEvents_WindowClosingEventHandler(WindowClosing_Event);
 
+                // The active editor may predate this package's asynchronous initialization.
+                WindowActivated_Event(application.ActiveWindow, null);
                 StartActiveWindowConnectionMonitor();
 
                 // "File.ConnectObjectExplorer"

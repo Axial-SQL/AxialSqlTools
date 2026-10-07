@@ -150,6 +150,7 @@ as select 1;
                 UseAlwaysEncryptedWarning.IsChecked = generalSettings.useAlwaysEncryptedWarning;
                 UsePreciseExecutionTime.IsChecked = generalSettings.usePreciseExecutionTime;
                 AlignNumericValuesToRight.IsChecked = generalSettings.alignNumericValuesToRight;
+                SelectQuotedStringOnDoubleClick.IsChecked = generalSettings.selectQuotedStringOnDoubleClick;
 
                 ScriptFolder.Text = SettingsManager.GetTemplatesFolder();
                 UpdateTemplatesFolderStatus();
@@ -399,7 +400,8 @@ as select 1;
                     useTransactionWarning = UseTransactionWarning.IsChecked.GetValueOrDefault(),
                     useAlwaysEncryptedWarning = UseAlwaysEncryptedWarning.IsChecked.GetValueOrDefault(),
                     usePreciseExecutionTime = UsePreciseExecutionTime.IsChecked.GetValueOrDefault(),
-                    alignNumericValuesToRight = AlignNumericValuesToRight.IsChecked.GetValueOrDefault()
+                    alignNumericValuesToRight = AlignNumericValuesToRight.IsChecked.GetValueOrDefault(),
+                    selectQuotedStringOnDoubleClick = SelectQuotedStringOnDoubleClick.IsChecked.GetValueOrDefault()
                 },
                 TemplatesFolder = ScriptFolder.Text,
                 Snippets = snippets,
