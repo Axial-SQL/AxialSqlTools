@@ -591,7 +591,7 @@
                     <CheckBox
 						Grid.Row="1" Grid.ColumnSpan="2"
 						x:Name="ExcelExportIncludeSourceQuery"
-						Content="Include content of attached query-window on its own sheet (hold Shift to do the opposite)"
+						Content="Include query-window content on its own sheet (hold only Shift and click Export to reverse)"
 						Margin="5"/>
                     
                     <CheckBox
@@ -663,7 +663,7 @@
                         <Run Text="." />
                     </TextBlock>
 
-                    <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="GoogleSheetsIncludeSourceQuery" Content="Include content of attached query-window on its own sheet (hold Shift to do the opposite)" Margin="5"/>
+                    <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="GoogleSheetsIncludeSourceQuery" Content="Include query-window content on its own sheet (hold only Shift and click Export to reverse)" Margin="5"/>
                     <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" x:Name="GoogleSheetsExportBoolsAsNumbers" Content="Export booleans as numbers (TRUE/FALSE -> 1/0)" Margin="5"/>
 
                     <Label Grid.Row="3" Grid.Column="0" Content="Default Spreadsheet Title:" Margin="5"/>
