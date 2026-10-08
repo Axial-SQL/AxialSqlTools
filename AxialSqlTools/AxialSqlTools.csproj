@@ -92,6 +92,13 @@
     <Compile Include="DataImport\DataImportWindowControl.xaml.cs">
       <DependentUpon>DataImportWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="HealthDashboards\DistributedAgDashboardCommand.cs" />
+    <Compile Include="HealthDashboards\DistributedAgDashboardWindow.cs" />
+    <Compile Include="HealthDashboards\DistributedAgHealthModels.cs" />
+    <Compile Include="HealthDashboards\DistributedAgHealthService.cs" />
+    <Compile Include="HealthDashboards\DistributedAgDashboardControl.xaml.cs">
+      <DependentUpon>DistributedAgDashboardControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Modules\ExcelImport.cs" />
     <Compile Include="Modules\ScriptObjectDefinition.cs" />
     <Compile Include="Commands\OpenInObjectExplorerCommand.cs" />
@@ -655,6 +662,10 @@
     <Page Include="GridToEmail\ToolWindowGridToEmailControl.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="HealthDashboards\DistributedAgDashboardControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="HealthDashboards\HealthDashboard_ServerControl.xaml">
       <SubType>Designer</SubType>

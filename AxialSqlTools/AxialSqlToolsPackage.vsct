@@ -269,6 +269,17 @@
         </Strings>
       </Button>
 
+      <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialDistributedAgDashboardCommand" priority="0x0010" type="Button">
+        <Parent guid="guidAxialSqlToolsPackageCmdSet" id="AxialToolsSubMenuGroup_Health" />
+        <Icon guid="guidServerHealth" id="bmpServerHealth" />
+        <Strings>
+          <ButtonText>AG Health Dashboard</ButtonText>
+          <CanonicalName>AxialSqlTools.DistributedAgHealthDashboard</CanonicalName>
+          <LocCanonicalName>AxialSqlTools.DistributedAgHealthDashboard</LocCanonicalName>
+          <ToolTipText>Open AG health for the selected Object Explorer group or connected SQL Server instance</ToolTipText>
+        </Strings>
+      </Button>
+
       <!-- Keep the command registered without a toolbar/menu placement.
            Quick Manage is exposed on SQL Agent job context menus. -->
       <Button guid="guidAxialSqlToolsPackageCmdSet" id="AxialJobQuickViewCommand" priority="0x0100" type="Button">
@@ -487,6 +498,7 @@
       <IDSymbol name="AxialExportGridToPivotTable" value="4159" />
 
       <IDSymbol name="AxialHealthDashboardServerCommand" value="4140" />
+      <IDSymbol name="AxialDistributedAgDashboardCommand" value="4161" />
       <IDSymbol name="AxialJobQuickViewCommand" value="4160" />
       <IDSymbol name="AxialHealthDashboardServersCommand" value="4142" />
 
