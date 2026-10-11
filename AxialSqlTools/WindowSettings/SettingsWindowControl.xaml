@@ -153,7 +153,9 @@
                                 <Run Text="Wiki"/>
                             </Hyperlink>
                         </TextBlock>
-                        <TextBlock Text="Changes apply to subsequent query executions after saving." TextWrapping="Wrap"/>
+                        <CheckBox x:Name="SelectQuotedStringOnDoubleClick" Content="Select single-quoted string content on double-click" Margin="0,0,0,5"/>
+                        <TextBlock Text="Double-click inside a SQL string to select its entire content, excluding the surrounding quotes." Margin="20,0,0,18" TextWrapping="Wrap"/>
+                        <TextBlock Text="Query execution options apply to subsequent query executions after saving." TextWrapping="Wrap"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

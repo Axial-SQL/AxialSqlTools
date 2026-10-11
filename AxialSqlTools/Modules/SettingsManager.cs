@@ -80,6 +80,7 @@ namespace AxialSqlTools
             public bool useAlwaysEncryptedWarning = true;
             public bool usePreciseExecutionTime = true;
             public bool alignNumericValuesToRight = true;
+            public bool selectQuotedStringOnDoubleClick = false;
         }
 
         public static GeneralSettings GetGeneralSettings()

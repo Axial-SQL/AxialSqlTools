@@ -4,9 +4,14 @@ using Microsoft.VisualStudio.CommandBars;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.SqlServer.Management.UI.VSIntegration;
 using Microsoft.VisualStudio.TextManager.Interop;
+using Microsoft.VisualStudio.ComponentModelHost;
+using Microsoft.VisualStudio.Editor;
+using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Windows.Input;
 
 namespace AxialSqlTools
 {
@@ -213,33 +218,31 @@ namespace AxialSqlTools
                 _logger.Error(ex, "Failed to reattach statistics handler during window activation.");
             }
 
-            if (SettingsManager.GetUseSnippets())
+            try
             {
-                try
+                // Attach editor gestures independently of the snippet setting.
+                var DocData = GridAccess.GetProperty(GotFocus?.Object, "DocData");
+                if (DocData != null)
                 {
-                    // snippet processor
-                    var DocData = GridAccess.GetProperty(GotFocus.Object, "DocData");
-                    if (DocData != null)
-                    {
-                        var txtMgr = (IVsTextManager)GridAccess.GetProperty(DocData, "TextManager");
+                    var txtMgr = (IVsTextManager)GridAccess.GetProperty(DocData, "TextManager");
 
-                        IVsTextView textView;
-                        if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
+                    IVsTextView textView;
+                    if (txtMgr != null && txtMgr.GetActiveView(0, null, out textView) == VSConstants.S_OK)
+                    {
+                        AttachStringSelection(textView);
+                        // Prevent duplicate filters on the same text view
+                        if (SettingsManager.GetUseSnippets() && !_registeredTextViews.Contains(textView))
                         {
-                            // Prevent duplicate filters on the same text view
-                            if (!_registeredTextViews.Contains(textView))
-                            {
-                                _registeredTextViews.Add(textView);
-                                var CommandFilter = new KeypressCommandFilter(this, textView);
-                                CommandFilter.AddToChain();
-                            }
+                            _registeredTextViews.Add(textView);
+                            var CommandFilter = new KeypressCommandFilter(this, textView);
+                            CommandFilter.AddToChain();
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "An exception occurred");
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "An exception occurred attaching editor gestures.");
             }
 
             // Apply connection-based coloring (document tab + status bar)
@@ -257,6 +260,49 @@ namespace AxialSqlTools
                 _logger.Error(ex, "An exception occurred applying connection color");
             }
 
+        }
+
+        private static void AttachStringSelection(IVsTextView nativeView)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var components = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+            var view = components?.GetService<IVsEditorAdaptersFactoryService>()?.GetWpfTextView(nativeView);
+            if (view == null || view.IsClosed || view.Properties.ContainsProperty(typeof(SqlStringContent))) return;
+
+            view.VisualElement.PreviewMouseLeftButtonDown += OnMouseDown;
+            view.Closed += OnClosed;
+            view.Properties.AddProperty(typeof(SqlStringContent), true);
+
+            void OnMouseDown(object sender, MouseButtonEventArgs e)
+            {
+                if (e.ClickCount != 2 || Keyboard.Modifiers != ModifierKeys.None || view.IsClosed
+                    || !SettingsManager.GetGeneralSettings().selectQuotedStringOnDoubleClick) return;
+                try
+                {
+                    var mouse = e.GetPosition(view.VisualElement);
+                    var line = view.TextViewLines.GetTextViewLineContainingYCoordinate(mouse.Y + view.ViewportTop);
+                    var point = line?.GetBufferPositionFromXCoordinate(mouse.X + view.ViewportLeft);
+                    if (!point.HasValue) return;
+                    var snapshot = point.Value.Snapshot;
+                    if (!SqlStringContent.TryFind(snapshot.GetText(), point.Value.Position, out int start, out int length)) return;
+                    var span = new SnapshotSpan(snapshot, start, length);
+                    view.Selection.Mode = TextSelectionMode.Stream;
+                    view.Selection.Select(span, false);
+                    view.Caret.MoveTo(span.End);
+                    e.Handled = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.Warn("Unable to select SQL string content ({0}).", ex.GetType().Name);
+                }
+            }
+
+            void OnClosed(object sender, EventArgs e)
+            {
+                view.VisualElement.PreviewMouseLeftButtonDown -= OnMouseDown;
+                view.Closed -= OnClosed;
+                view.Properties.RemoveProperty(typeof(SqlStringContent));
+            }
         }
 
         private void WindowClosing_Event(EnvDTE.Window Window)
