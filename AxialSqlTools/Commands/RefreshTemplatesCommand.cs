@@ -86,23 +86,19 @@ namespace AxialSqlTools
         /// </summary>
         /// <param name="sender">Event sender.</param>
         /// <param name="e">Event args.</param>
-        private void Execute(object sender, EventArgs e)
+        private async void Execute(object sender, EventArgs e)
         {
+            try
+            {
+                bool succeeded = await package.RefreshTemplatesListAsync();
+                if (succeeded || package.DisposalToken.IsCancellationRequested) return;
 
-            this.package.RefreshTemplatesList();
-
-            ThreadHelper.ThrowIfNotOnUIThread();
-            string message = string.Format(CultureInfo.CurrentCulture, "The list of templates has been updated!", this.GetType().FullName);
-            string title = "Completed";
-
-            // Show a message box to prove we were here
-            VsShellUtilities.ShowMessageBox(
-                this.package,
-                message,
-                title,
-                OLEMSGICON.OLEMSGICON_INFO,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
+                VsShellUtilities.ShowMessageBox(package, package.TemplateRefreshMessage,
+                    "Query Templates", OLEMSGICON.OLEMSGICON_WARNING,
+                    OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+            }
+            catch (OperationCanceledException) when (package.DisposalToken.IsCancellationRequested) { }
         }
     }
 }

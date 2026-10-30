@@ -130,6 +130,10 @@
       <DependentUpon>FatalActionWarningDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Modules\AuroraCore.cs" />
+    <Compile Include="Modules\QueryTemplateCatalog.cs" />
+    <Compile Include="AxialSqlToolsPackage.Templates.cs">
+      <DependentUpon>AxialSqlToolsPackage.cs</DependentUpon>
+    </Compile>
     <Compile Include="Modules\AsteriskExpansionService.cs" />
     <Compile Include="UpdateChecker.cs" />
     <Compile Include="UpdateInfoBar.cs" />

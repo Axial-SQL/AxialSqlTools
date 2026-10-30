@@ -92,7 +92,7 @@ namespace AxialSqlTools
         private void Execute(object sender, EventArgs e)
         {
 
-            this.package.RefreshTemplatesList();
+            ThreadHelper.ThrowIfNotOnUIThread();
 
             try
             {
