@@ -20,70 +20,101 @@ namespace AxialSqlTools
         private CommandRegistry m_commandRegistry;
         private CommandBar m_commandBarQueryTemplates;
         private ImageList _templateIcons;
-        private Task<bool> _templateRefreshTask;
+        private readonly QueryTemplateRefreshCoordinator _templateRefreshCoordinator = new QueryTemplateRefreshCoordinator();
         private Microsoft.VisualStudio.Threading.JoinableTask _templateStartupTask;
-        private bool _templateRefreshRequested;
+        private Microsoft.VisualStudio.Threading.JoinableTask _templateRefreshWorker;
+        private IVsShell _templateShell;
 
         internal string TemplateRefreshMessage { get; private set; }
 
         private void StartQueryTemplatesInitialization()
         {
-            // Background package loading can precede command-bar restoration.
-            // Yield to the shell, then retry failed registration without requiring
-            // the user to restart SSMS. Manual refresh uses the same recovery path.
-            _templateStartupTask = JoinableTaskFactory.RunAsync(async () =>
+            // ShellInitialized only means the message loop has started. A Connect
+            // dialog may still be open. Idle priority must be explicit: the SDK's
+            // default background priority is allowed to run inside modal dialogs.
+            _templateStartupTask = JoinableTaskFactory.StartOnIdle(async () =>
             {
                 try
                 {
-                    await KnownUIContexts.ShellInitializedContext;
-                    DisposalToken.ThrowIfCancellationRequested();
-                    for (int attempt = 0; attempt < 5; attempt++)
-                    {
-                        await Task.Delay(250 * (1 << attempt), DisposalToken);
-                        await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
-                        if (await RefreshTemplatesListAsync()) return;
-                    }
+                    await RefreshTemplatesListAsync();
                 }
-                catch (OperationCanceledException) { }
-            });
+                catch (OperationCanceledException) when (DisposalToken.IsCancellationRequested) { }
+                catch (Exception ex) { _logger?.Error(ex, "Query templates startup failed. Use Refresh Templates to retry."); }
+            }, VsTaskRunContext.UIThreadIdlePriority);
         }
 
         public async Task<bool> RefreshTemplatesListAsync()
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
-            if (_templateRefreshTask != null && !_templateRefreshTask.IsCompleted)
+            // Publish the shared task before the scheduled worker can re-enter
+            // native UI code. Repeated requests share one run, without a rerun loop.
+            try
             {
-                _templateRefreshRequested = true;
-                return await _templateRefreshTask;
+                return await _templateRefreshCoordinator.RequestAsync(RefreshTemplatesCoreAsync,
+                    work => _templateRefreshWorker = JoinableTaskFactory.StartOnIdle(work, VsTaskRunContext.UIThreadIdlePriority));
             }
-            _templateRefreshTask = RefreshRequestedTemplatesAsync();
-            return await _templateRefreshTask;
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+                TemplateRefreshMessage = "Could not schedule query templates refresh: " + ex.Message;
+                _logger?.Error(ex, "Query templates refresh could not be scheduled.");
+                SetTemplateStatus(TemplateRefreshMessage);
+                return false;
+            }
         }
 
-        private async Task<bool> RefreshRequestedTemplatesAsync()
+        private async Task WaitForTemplatesUiAccessAsync()
         {
-            bool succeeded;
-            do
+            await YieldToTemplateUiAsync();
+            if (_templateShell == null)
             {
-                _templateRefreshRequested = false;
-                succeeded = await RefreshTemplatesCoreAsync();
+                _templateShell = await GetServiceAsync(typeof(SVsShell)) as IVsShell;
+                await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+                if (_templateShell == null)
+                    throw new InvalidOperationException("The SSMS shell is not ready for query templates.");
             }
-            while (_templateRefreshRequested && !DisposalToken.IsCancellationRequested);
-            return succeeded;
+            await QueryTemplateUiGate.WaitAsync(YieldToTemplateUiAsync, CanAccessTemplatesUi,
+                token => Task.Delay(250, token), DisposalToken);
+        }
+
+        private async Task YieldToTemplateUiAsync()
+        {
+            DisposalToken.ThrowIfCancellationRequested();
+            // StartOnIdle retains idle priority when this continuation resumes.
+            // Yield between native operations so input and painting are processed.
+            await Task.Yield();
+            await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+        }
+
+        private bool CanAccessTemplatesUi()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            ErrorHandler.ThrowOnFailure(_templateShell.GetProperty((int)__VSSPROPID4.VSSPROPID_ShellInitialized, out object initialized));
+            ErrorHandler.ThrowOnFailure(_templateShell.GetProperty((int)__VSSPROPID4.VSSPROPID_IsModal, out object modal));
+            if (!(initialized is bool ready) || !(modal is bool isModal))
+                throw new InvalidOperationException("SSMS did not report its initialization and modal state.");
+            return ready && !isModal;
         }
 
         private async Task<bool> RefreshTemplatesCoreAsync()
         {
+            var elapsed = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                await WaitForTemplatesUiAccessAsync();
                 string folder = SettingsManager.GetTemplatesFolder();
+                _logger?.Info("Query templates: discovery started for {0}.", folder);
                 // Complete discovery before touching the working menu. No file
                 // contents are read until the user selects a script.
                 var catalog = await Task.Run(() => QueryTemplateCatalog.Load(folder, DisposalToken), DisposalToken);
-                await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+                // A Connect dialog can open while filesystem discovery runs.
+                await WaitForTemplatesUiAccessAsync();
+                _logger?.Info("Query templates: discovered {0} scripts in {1} ms; preparing menu.", catalog.FileCount, elapsed.ElapsedMilliseconds);
                 if (!string.Equals(folder, SettingsManager.GetTemplatesFolder(), StringComparison.OrdinalIgnoreCase))
                 {
-                    _templateRefreshRequested = true;
+                    TemplateRefreshMessage = "The templates folder changed during discovery. Use Refresh Templates to load the new folder.";
+                    SetTemplateStatus(TemplateRefreshMessage);
                     return false;
                 }
 
@@ -95,26 +126,35 @@ namespace AxialSqlTools
                 int failures = 0;
                 // Remove persisted controls while their native identities are
                 // still available. Tags and friendly captions do not identify them.
-                QueryTemplateMenuControls.Clear(m_commandBarQueryTemplates, m_plugin.Commands,
+                _logger?.Info("Query templates: removing old menu controls.");
+                await QueryTemplateMenuControls.ClearAsync(m_commandBarQueryTemplates, m_plugin.Commands,
                     new CommandID(RefreshTemplatesCommand.CommandSet, RefreshTemplatesCommand.CommandId),
                     new CommandID(OpenTemplatesFolderCommand.CommandSet, OpenTemplatesFolderCommand.CommandId),
-                    ex => _logger?.Debug(ex, "Could not remove a detached templates submenu."));
+                    ex => _logger?.Warn(ex, "Could not remove a detached templates submenu."),
+                    WaitForTemplatesUiAccessAsync, DisposalToken);
+                _logger?.Info("Query templates: old menu controls removed after {0} ms.", elapsed.ElapsedMilliseconds);
                 try
                 {
-                    m_commandRegistry.RemoveUnusedCommands(activeCommands);
+                    await WaitForTemplatesUiAccessAsync();
+                    await m_commandRegistry.RemoveUnusedCommandsAsync(activeCommands,
+                        WaitForTemplatesUiAccessAsync, DisposalToken);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     failures++;
                     warnings.Add("Could not remove an old template command: " + ex.Message);
                 }
-                int loaded = QueryTemplateMenuControls.Populate(catalog.Root, m_commandBarQueryTemplates,
+                var menuResult = await QueryTemplateMenuControls.PopulateAsync(catalog.Root, m_commandBarQueryTemplates,
                     m_plugin, m_commandRegistry,
                     file => new CommandProcessor(m_plugin, file.CommandName, file.Name, file.FullPath)
                     {
                         package = this,
                         FullFileName = file.FullPath
-                    }, warnings, ref failures);
+                    }, warnings, WaitForTemplatesUiAccessAsync, DisposalToken);
+                int loaded = menuResult.Loaded;
+                failures += menuResult.Failures;
+                await WaitForTemplatesUiAccessAsync();
                 var shell = GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
                 if (shell != null) ErrorHandler.ThrowOnFailure(shell.UpdateCommandUI(0));
                 foreach (string warning in warnings)
@@ -122,7 +162,7 @@ namespace AxialSqlTools
 
                 TemplateRefreshMessage = "Loaded " + loaded + " of " + catalog.FileCount + " query templates."
                     + (warnings.Count == 0 ? string.Empty : " " + warnings.Count + " warning(s); see the extension log.");
-                _logger?.Info("Query templates: {0} Folder: {1}", TemplateRefreshMessage, folder);
+                _logger?.Info("Query templates: {0} Folder: {1}; elapsed {2} ms.", TemplateRefreshMessage, folder, elapsed.ElapsedMilliseconds);
                 SetTemplateStatus(TemplateRefreshMessage);
                 return failures == 0;
             }
@@ -134,7 +174,7 @@ namespace AxialSqlTools
             {
                 await JoinableTaskFactory.SwitchToMainThreadAsync();
                 TemplateRefreshMessage = "Could not refresh query templates: " + ex.Message;
-                _logger?.Error(ex, "Query templates refresh failed.");
+                _logger?.Error(ex, "Query templates refresh failed after {0} ms.", elapsed.ElapsedMilliseconds);
                 SetTemplateStatus(TemplateRefreshMessage);
                 return false;
             }
@@ -142,13 +182,13 @@ namespace AxialSqlTools
 
         private async Task EnsureTemplatesMenuAsync()
         {
-            await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+            await WaitForTemplatesUiAccessAsync();
             if (m_plugin == null)
             {
                 var application = await GetServiceAsync(typeof(DTE)) as DTE2;
                 var proffer = await GetServiceAsync(typeof(SVsProfferCommands)) as IVsProfferCommands3;
                 var menuService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-                await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+                await WaitForTemplatesUiAccessAsync();
                 if (application == null || proffer == null || menuService == null)
                     throw new InvalidOperationException("The SSMS command services are not ready. Use Refresh Templates to retry.");
                 _templateIcons = new ImageList();
@@ -159,6 +199,7 @@ namespace AxialSqlTools
 
             // Resolve the VSCT-owned root on every attempt. A detached replacement
             // or an old COM reference cannot populate the visible toolbar menu.
+            await WaitForTemplatesUiAccessAsync();
             m_commandBarQueryTemplates = m_plugin.GetCommandBar(RefreshTemplatesCommand.CommandSet, 0x1100);
             if (m_commandRegistry == null)
                 m_commandRegistry = new CommandRegistry(m_plugin, m_commandBarQueryTemplates,

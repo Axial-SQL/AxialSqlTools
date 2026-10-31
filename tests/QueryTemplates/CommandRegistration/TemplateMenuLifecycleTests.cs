@@ -6,6 +6,8 @@ using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 internal static partial class CommandRegistrationTests
 {
@@ -42,8 +44,9 @@ internal static partial class CommandRegistrationTests
 
     private static void ClearMenu(Fixture fixture, List<Exception> warnings = null)
     {
-        QueryTemplateMenuControls.Clear(fixture.Bar, fixture.App.Commands, RefreshId, OpenFolderId,
-            ex => { if (warnings != null) warnings.Add(ex); else throw new InvalidOperationException("Unexpected cleanup warning.", ex); });
+        QueryTemplateMenuControls.ClearAsync(fixture.Bar, fixture.App.Commands, RefreshId, OpenFolderId,
+            ex => { if (warnings != null) warnings.Add(ex); else throw new InvalidOperationException("Unexpected cleanup warning.", ex); },
+            () => Task.CompletedTask, CancellationToken.None).GetAwaiter().GetResult();
     }
 
     private static void UnsupportedTagRegression()
@@ -251,15 +254,15 @@ internal static partial class CommandRegistrationTests
     {
         var handlers = new Dictionary<string, Handler>();
         var warnings = new List<string>();
-        int failures = 0;
-        QueryTemplateMenuControls.Populate(tree, fixture.Bar, fixture.Plugin, fixture.Registry,
+        var result = QueryTemplateMenuControls.PopulateAsync(tree, fixture.Bar, fixture.Plugin, fixture.Registry,
             file =>
             {
                 var handler = fixture.Handler(file.CommandName);
                 handlers.Add(file.CommandName, handler);
                 return handler;
-            }, warnings, ref failures);
-        Equal(0, failures);
+            }, warnings, () => Task.CompletedTask, CancellationToken.None).GetAwaiter().GetResult();
+        Equal(0, result.Failures);
+        Equal(11, result.Loaded);
         Equal(0, warnings.Count);
         Equal(13, fixture.Bar.Controls.Count); // Two built-ins, four folders, seven root scripts.
         var buttons = AllScriptButtons(fixture.Bar).ToList();
@@ -271,7 +274,7 @@ internal static partial class CommandRegistrationTests
             button.ThrowOnTagWrite = true;
             Equal(string.Empty, button.Tag);
             fixture.App.Commands.CommandInfo(button, out string nativeGuid, out int nativeId);
-            var named = fixture.App.Commands.Single(c => c.Guid == nativeGuid && c.ID == nativeId);
+            var named = fixture.App.Commands.GetByIdentity(nativeGuid, nativeId);
             var expected = handlers[named.Name];
             button.Click();
             Equal(1, expected.Invocations);
@@ -306,7 +309,7 @@ internal static partial class CommandRegistrationTests
             var previousButtons = AllScriptButtons(fixture.Bar).ToList();
             ClearMenu(fixture);
             Assert(previousButtons.All(button => button.Deleted), "Refresh left an old root or nested button behind.");
-            fixture.Registry.RemoveUnusedCommands(new HashSet<string>(previousHandlers.Keys));
+            RemoveUnused(fixture, new HashSet<string>(previousHandlers.Keys));
             var replacement = PopulateAndClick(fixture, tree);
             Assert(previousHandlers.Values.All(handler => handler.Invocations == 1), "Refresh invoked a stale handler.");
             previousHandlers = replacement;
@@ -316,7 +319,7 @@ internal static partial class CommandRegistrationTests
         Equal(0, restarted.MenuService.Count);
         ClearMenu(restarted);
         Assert(persistedButtons.All(button => button.Deleted), "A fresh registry failed to clean persisted native buttons.");
-        restarted.Registry.RemoveUnusedCommands(new HashSet<string>(previousHandlers.Keys));
+        RemoveUnused(restarted, new HashSet<string>(previousHandlers.Keys));
         PopulateAndClick(restarted, tree);
         Assert(previousHandlers.Values.All(handler => handler.Invocations == 1), "Restart reused a previous session callback.");
     }
