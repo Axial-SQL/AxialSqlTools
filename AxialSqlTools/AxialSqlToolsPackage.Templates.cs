@@ -93,6 +93,12 @@ namespace AxialSqlTools
                 CollectTemplateCommands(catalog.Root, activeCommands);
 
                 int failures = 0;
+                // Remove persisted controls while their native identities are
+                // still available. Tags and friendly captions do not identify them.
+                QueryTemplateMenuControls.Clear(m_commandBarQueryTemplates, m_plugin.Commands,
+                    new CommandID(RefreshTemplatesCommand.CommandSet, RefreshTemplatesCommand.CommandId),
+                    new CommandID(OpenTemplatesFolderCommand.CommandSet, OpenTemplatesFolderCommand.CommandId),
+                    ex => _logger?.Debug(ex, "Could not remove a detached templates submenu."));
                 try
                 {
                     m_commandRegistry.RemoveUnusedCommands(activeCommands);
@@ -102,8 +108,13 @@ namespace AxialSqlTools
                     failures++;
                     warnings.Add("Could not remove an old template command: " + ex.Message);
                 }
-                ClearTemplateControls(m_commandBarQueryTemplates);
-                int loaded = AddTemplateControls(catalog.Root, m_commandBarQueryTemplates, warnings, ref failures);
+                int loaded = QueryTemplateMenuControls.Populate(catalog.Root, m_commandBarQueryTemplates,
+                    m_plugin, m_commandRegistry,
+                    file => new CommandProcessor(m_plugin, file.CommandName, file.Name, file.FullPath)
+                    {
+                        package = this,
+                        FullFileName = file.FullPath
+                    }, warnings, ref failures);
                 var shell = GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
                 if (shell != null) ErrorHandler.ThrowOnFailure(shell.UpdateCommandUI(0));
                 foreach (string warning in warnings)
@@ -142,12 +153,13 @@ namespace AxialSqlTools
                     throw new InvalidOperationException("The SSMS command services are not ready. Use Refresh Templates to retry.");
                 _templateIcons = new ImageList();
                 _templateIcons.Images.Add(Properties.Resources.script);
-                m_plugin = new Plugin(application, proffer, _templateIcons, menuService, "AxialSqlTools", "Aurora.Connect");
+                m_plugin = new Plugin(application, proffer, _templateIcons, menuService, "AxialSqlTools", "Aurora.Connect",
+                    (ex, message) => _logger?.Warn(ex, message));
             }
 
             // Resolve the VSCT-owned root on every attempt. A detached replacement
             // or an old COM reference cannot populate the visible toolbar menu.
-            m_commandBarQueryTemplates = m_plugin.AddCommandBarMenu("Query Templates", MsoBarPosition.msoBarTop, null);
+            m_commandBarQueryTemplates = m_plugin.GetCommandBar(RefreshTemplatesCommand.CommandSet, 0x1100);
             if (m_commandRegistry == null)
                 m_commandRegistry = new CommandRegistry(m_plugin, m_commandBarQueryTemplates,
                     new Guid(PackageGuidString), new Guid(PackageGuidGroup));
@@ -157,110 +169,6 @@ namespace AxialSqlTools
         {
             foreach (var file in folder.Files) names.Add(file.CommandName);
             foreach (var child in folder.Folders) CollectTemplateCommands(child, names);
-        }
-
-        private static bool IsTemplateControl(CommandBarControl control)
-        {
-            return IsTemplateControlName(control.Tag) || IsTemplateControlName(control.Caption);
-        }
-
-        private static bool IsTemplateControlName(string name)
-        {
-            return !string.IsNullOrEmpty(name)
-                && (name.StartsWith("AxialSqlTools_Template_", StringComparison.Ordinal)
-                    || name.StartsWith("AxialSqlTools_Folder_", StringComparison.Ordinal)
-                    || IsLegacyTemplateName(name));
-        }
-
-        private static bool IsLegacyTemplateName(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return false;
-            int prefix = name.StartsWith("Template_", StringComparison.Ordinal) ? 9
-                : name.StartsWith("Folder_", StringComparison.Ordinal) ? 7 : 0;
-            return prefix != 0 && int.TryParse(name.Substring(prefix), out _);
-        }
-
-        private static void ClearTemplateControls(CommandBar bar)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            for (int index = bar.Controls.Count; index >= 1; index--)
-            {
-                var control = bar.Controls[index];
-                if (!IsTemplateControl(control)) continue;
-                if (control is CommandBarPopup popup)
-                {
-                    var childBar = popup.CommandBar;
-                    ClearTemplateControls(childBar);
-                    control.Delete();
-                    // Some shell versions remove the child bar with its popup.
-                    // Otherwise remove the named bar explicitly as well.
-                    try { childBar.Delete(); }
-                    catch (System.Runtime.InteropServices.COMException ex)
-                    {
-                        _logger?.Debug(ex, "Templates submenu was already removed with its parent control.");
-                    }
-                }
-                else
-                    control.Delete();
-            }
-        }
-
-        private int AddTemplateControls(QueryTemplateFolder folder, CommandBar bar,
-            List<string> warnings, ref int failures)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            int loaded = 0;
-            var childMenus = new List<KeyValuePair<QueryTemplateFolder, CommandBar>>();
-            foreach (var child in folder.Folders)
-            {
-                try
-                {
-                    var childBar = m_plugin.AddCommandBarMenu(child.CommandName, MsoBarPosition.msoBarMenuBar, bar);
-                    // Name/tag the parent immediately, so even a later failure can
-                    // be cleaned up by the next refresh.
-                    bool found = false;
-                    foreach (CommandBarControl control in bar.Controls)
-                    {
-                        if (!(control is CommandBarPopup popup)
-                            || !string.Equals(popup.CommandBar.Name, childBar.Name, StringComparison.Ordinal)) continue;
-                        control.Tag = child.CommandName;
-                        control.Caption = child.Name;
-                        found = true;
-                        break;
-                    }
-                    if (!found) throw new InvalidOperationException("The submenu was not attached to its parent.");
-                    childMenus.Add(new KeyValuePair<QueryTemplateFolder, CommandBar>(child, childBar));
-                }
-                catch (Exception ex)
-                {
-                    failures++;
-                    warnings.Add("Could not create templates menu '" + child.FullPath + "': " + ex.Message);
-                }
-            }
-
-            // Publish this folder's scripts before visiting descendants. A failed
-            // child must never prevent the root scripts from being registered.
-            foreach (var file in folder.Files)
-            {
-                try
-                {
-                    var handler = new CommandProcessor(m_plugin, file.CommandName, file.Name, file.FullPath)
-                    {
-                        package = this,
-                        FullFileName = file.FullPath
-                    };
-                    m_commandRegistry.RegisterCommand(false, handler, true, bar);
-                    loaded++;
-                }
-                catch (Exception ex)
-                {
-                    failures++;
-                    warnings.Add("Could not register template '" + file.FullPath + "': " + ex.Message);
-                }
-            }
-            foreach (var child in childMenus)
-                loaded += AddTemplateControls(child.Key, child.Value, warnings, ref failures);
-            return loaded;
         }
 
         private static void SetTemplateStatus(string message)

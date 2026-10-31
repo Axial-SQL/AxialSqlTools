@@ -207,7 +207,6 @@ namespace AxialSqlTools
                 await QuickSearchWindowCommand.InitializeAsync(this);
                 await SnippetManagerWindowCommand.InitializeAsync(this);
                 await SelectCurrentStatementCommand.InitializeAsync(this);
-                await ToggleBlockCommentCommand.InitializeAsync(this);
                 await SortSelectedTextCommand.InitializeAsync(this);
 
                 UpdateChecker.ScheduleCheck(this, SettingsManager.GetEnableUpdateChecks());

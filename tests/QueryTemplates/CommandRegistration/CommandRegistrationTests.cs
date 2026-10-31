@@ -9,7 +9,7 @@ using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-internal static class CommandRegistrationTests
+internal static partial class CommandRegistrationTests
 {
     private static int _passed;
 
@@ -31,6 +31,7 @@ internal static class CommandRegistrationTests
             Run("A missing VSCT root is not replaced by a detached menu", MissingRoot);
             Run("A submenu is reused only under the requested parent", ParentScopedSubmenu);
             Run("Submenu creation failures are reported", SubmenuFailures);
+            RunMenuLifecycleTests();
             Console.WriteLine("Passed " + _passed + " command-registration behavioral tests (stub host).");
             return 0;
         }
@@ -67,9 +68,11 @@ internal static class CommandRegistrationTests
         fixture.Registry.RegisterCommand(false, fixture.Handler("script"), true);
         var command = fixture.Command("script");
         Assert(command.Enabled && command.Visible && command.Supported, "Command started hidden or unsupported.");
-        var button = (CommandBarButton)fixture.Bar.Controls[0];
+        var button = (CommandBarButton)fixture.Bar.Controls[1];
         Assert(button.Visible && button.Enabled, "Button started hidden or disabled.");
-        Equal("script", button.Tag);
+        Equal(string.Empty, button.Tag);
+        Equal(command.CommandID.ID, button.NativeId);
+        Equal(command.CommandID.Guid, Guid.Parse(button.NativeGuid));
         Equal("Caption script", button.Caption);
         Equal("Tooltip script", button.TooltipText);
     }
@@ -202,7 +205,7 @@ internal static class CommandRegistrationTests
         var fixture = new Fixture();
         var unrelated = new CommandBar();
         ((CommandBars)fixture.App.CommandBars).Add("folder", unrelated);
-        var ownChild = new CommandBar();
+        var ownChild = new CommandBar { Name = "folder" };
         fixture.Bar.Controls.Add(new CommandBarPopup { Tag = "folder", CommandBar = ownChild });
         Assert(ReferenceEquals(ownChild, fixture.Plugin.AddCommandBarMenu("folder", MsoBarPosition.msoBarMenuBar, fixture.Bar)),
             "Submenu lookup used a globally named bar instead of the requested parent.");
@@ -262,20 +265,25 @@ internal static class CommandRegistrationTests
 
     private sealed class Fixture
     {
-        public readonly Guid Group = Guid.NewGuid();
-        public readonly DTE2 App = new DTE2();
-        public readonly CommandBar Bar = new CommandBar();
+        public readonly Guid Group;
+        public readonly DTE2 App;
+        public readonly CommandBar Bar;
         public readonly OleMenuCommandService MenuService = new OleMenuCommandService();
         public readonly FakeProffer Proffer;
         public readonly Plugin Plugin;
         public readonly CommandRegistry Registry;
+        public readonly List<Exception> Warnings = new List<Exception>();
 
-        public Fixture()
+        public Fixture(DTE2 app = null, CommandBar bar = null, Guid? group = null)
         {
+            App = app ?? new DTE2();
+            Bar = bar ?? new CommandBar();
+            Group = group ?? Guid.NewGuid();
+            App.Commands.MenuService = MenuService;
             Proffer = new FakeProffer(App);
             var icons = new ImageList();
             icons.Images.Add(new System.Drawing.Image());
-            Plugin = new Plugin(App, Proffer, icons, MenuService, "AxialSqlTools", "Test");
+            Plugin = new Plugin(App, Proffer, icons, MenuService, "AxialSqlTools", "Test", (ex, message) => Warnings.Add(ex));
             Registry = new CommandRegistry(Plugin, Bar, Guid.NewGuid(), Group);
         }
 
@@ -305,17 +313,18 @@ internal static class CommandRegistrationTests
     {
         public const int Failure = unchecked((int)0x80004005);
         private readonly DTE2 _app;
-        private uint _nextId = 100;
         public int NamedResult;
-        public int ControlResult;
+        public int ControlResult { get => _app.Commands.ControlResult; set => _app.Commands.ControlResult = value; }
         public int BarResult;
         public bool ReturnZeroId;
-        public bool ReturnNullControl;
+        public bool ReturnNullControl { get => _app.Commands.ReturnNullControl; set => _app.Commands.ReturnNullControl = value; }
         public bool ReturnNullBar;
         public int NamedCalls;
-        public int ControlCalls;
+        public int ControlCalls => _app.Commands.ControlCalls;
         public int BarCalls;
-        public Action<string> WhileAddingControl;
+        public Action<string> WhileAddingControl { get => _app.Commands.WhileAddingControl; set => _app.Commands.WhileAddingControl = value; }
+        public int ReturnedIdOffset;
+        public readonly Dictionary<CommandID, CommandBar> BarsByIdentity = new Dictionary<CommandID, CommandBar>();
 
         public FakeProffer(DTE2 app) { _app = app; }
 
@@ -326,21 +335,23 @@ internal static class CommandRegistrationTests
             NamedCalls++;
             id = 0;
             if (NamedResult < 0 || ReturnZeroId) return NamedResult;
-            id = _nextId++;
-            _app.Commands.Add(name, group, (int)id);
+            int nativeId = _app.Commands.AllocateId();
+            id = (uint)(nativeId + ReturnedIdOffset);
+            _app.Commands.Add(name, group, nativeId);
             return NamedResult;
         }
 
         public int AddCommandBarControl(string name, object parent, uint index, uint type, out object control)
         {
-            ControlCalls++;
-            WhileAddingControl?.Invoke(name);
             control = null;
-            if (ControlResult < 0 || ReturnNullControl) return ControlResult;
-            var button = new CommandBarButton();
-            ((CommandBar)parent).Controls.Add(button);
-            control = button;
-            return ControlResult;
+            throw new InvalidOperationException("Template buttons must bind through the native Command.AddControl API.");
+        }
+
+        public int FindCommandBar(object owner, ref Guid group, uint menuId, out object bar)
+        {
+            BarsByIdentity.TryGetValue(new CommandID(group, (int)menuId), out var found);
+            bar = found;
+            return 0;
         }
 
         public int AddCommandBar(string name, uint type, object parent, uint index, out object bar)

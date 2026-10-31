@@ -32,6 +32,7 @@ namespace Aurora
         private readonly ImageList _icons;
         private readonly string _panelName;
         private readonly string _connectPath;
+        private readonly Action<Exception, string> _warning;
 
         public DTE2 App => _app;
         public Commands Commands
@@ -56,7 +57,8 @@ namespace Aurora
             ImageList icons,
             OleMenuCommandService menuService,
             string panelName,
-            string connectPath)
+            string connectPath,
+            Action<Exception, string> warning = null)
         {
             _app = application;
             _proffer = profferCommands;
@@ -64,6 +66,18 @@ namespace Aurora
             _menuService = menuService;
             _panelName = panelName;
             _connectPath = connectPath;
+            _warning = warning;
+        }
+
+        internal void ReportWarning(Exception exception, string message) => _warning?.Invoke(exception, message);
+
+        public CommandBar GetCommandBar(Guid commandGroup, int commandId)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            object result;
+            ErrorHandler.ThrowOnFailure(_proffer.FindCommandBar(null, ref commandGroup, (uint)commandId, out result));
+            return result as CommandBar
+                ?? throw new InvalidOperationException("SSMS could not resolve the Query Templates menu by its command identity.");
         }
 
         public CommandBar AddCommandBar(string name, MsoBarPosition pos)
@@ -86,7 +100,7 @@ namespace Aurora
 
             foreach (CommandBarControl control in parent.Controls)
             {
-                if (control is CommandBarPopup popup && string.Equals(control.Tag, name, StringComparison.Ordinal))
+                if (control is CommandBarPopup popup && string.Equals(popup.CommandBar.Name, name, StringComparison.Ordinal))
                     return popup.CommandBar;
             }
 
@@ -143,36 +157,52 @@ namespace Aurora
         protected void RegisterGUIBar(OleMenuCommand vsCmd, CommandBar bar)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            var registered = _plugin.Commands.Item(CanonicalName, -1);
+            if (!Guid.TryParse(registered.Guid, out var registeredGroup)
+                || registeredGroup != vsCmd.CommandID.Guid || registered.ID != vsCmd.CommandID.ID)
+                throw new InvalidOperationException("The template command identity changed before its button was created: " + Name);
+
             CommandBarButton btn = null;
-            try
+            foreach (CommandBarControl control in bar.Controls)
             {
-                foreach (CommandBarControl control in bar.Controls)
-                    if (string.Equals(control.Tag, CanonicalName, StringComparison.Ordinal))
-                        btn = control as CommandBarButton;
-            }
-            catch { }
-
-            if (btn == null)
-            {
-                object newControl;
-                ErrorHandler.ThrowOnFailure(_plugin.ProfferCommands.AddCommandBarControl(
-                    CanonicalName,
-                    bar,
-                    (uint)bar.Controls.Count,
-                    (uint)vsCommandBarType.vsCommandBarTypeToolbar,
-                    out newControl));
-                btn = newControl as CommandBarButton;
+                if (control is CommandBarButton candidate
+                    && AxialSqlTools.QueryTemplateMenuControls.TryGetCommandId(_plugin.Commands, candidate, out var identity)
+                    && identity.Equals(vsCmd.CommandID))
+                {
+                    btn = candidate;
+                    break;
+                }
             }
 
             if (btn == null)
-                throw new InvalidOperationException("SSMS did not create the template button: " + Name);
+            {
+                // Bind through the shell's actual Command object. AddControl has
+                // an explicit one-based position; no name/type-based routing.
+                var created = registered.AddControl(bar, bar.Controls.Count + 1) as CommandBarControl;
+                btn = created as CommandBarButton;
+                if (btn == null)
+                {
+                    created?.Delete();
+                    throw new InvalidOperationException("SSMS did not create the template button: " + Name);
+                }
+            }
 
-            btn.Tag = CanonicalName;
+            if (!AxialSqlTools.QueryTemplateMenuControls.TryGetCommandId(_plugin.Commands, btn, out var buttonId)
+                || !buttonId.Equals(vsCmd.CommandID))
+            {
+                btn.Delete();
+                throw new InvalidOperationException("SSMS attached the template button to the wrong command: " + Name);
+            }
+
+            // Tag is not used by Visual Studio and must never identify controls.
             btn.Caption = Name;
             btn.TooltipText = Tooltip;
             btn.Visible = true;
-            btn.Enabled = true;
-            AssignIcon(btn, ScriptIconIndex);
+            btn.Enabled = vsCmd.Enabled;
+            // Restored controls can lose their image. Reapply it on each refresh,
+            // but a cosmetic COM failure must not disable a valid script command.
+            try { AssignIcon(btn, ScriptIconIndex); }
+            catch (Exception ex) { _plugin.ReportWarning(ex, "Could not set the icon for template '" + Name + "'."); }
         }
 
         protected void AssignIcon(CommandBarButton target, int idx)
@@ -222,25 +252,24 @@ namespace Aurora
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            // 1) Find or proffer named command
-            uint cmdId = 0;
+            // 1) Find or proffer the named command, then use the identity the
+            // shell exposes instead of assuming a cached/generated ID is current.
+            Command registered = null;
             try
             {
-                var existing = _plugin.Commands.Item(handler.CanonicalName, -1);
-                if (!Guid.TryParse(existing.Guid, out var commandGroup) || commandGroup != _cmdSet)
-                    throw new InvalidOperationException("A different extension owns command " + handler.CanonicalName);
-                cmdId = (uint)existing.ID;
+                registered = _plugin.Commands.Item(handler.CanonicalName, -1);
             }
             catch (System.Runtime.InteropServices.COMException) { }
             catch (ArgumentException) { }
 
-            if (cmdId == 0)
+            if (registered == null)
             {
+                uint profferedId;
                 ErrorHandler.ThrowOnFailure(_plugin.ProfferCommands.AddNamedCommand(
                     _pkgGuid,
                     _cmdSet,
                     handler.CanonicalName,
-                    out cmdId,
+                    out profferedId,
                     handler.CanonicalName,
                     handler.Name,
                     handler.Tooltip,
@@ -250,16 +279,22 @@ namespace Aurora
                     0,
                     0,
                     null));
+                if (profferedId == 0)
+                    throw new InvalidOperationException("SSMS did not register template command " + handler.CanonicalName);
+                registered = _plugin.Commands.Item(handler.CanonicalName, -1);
             }
 
-            if (cmdId == 0)
+            if (!Guid.TryParse(registered.Guid, out var commandGroup) || commandGroup != _cmdSet)
+                throw new InvalidOperationException("A different command group owns command " + handler.CanonicalName);
+            if (registered.ID <= 0)
                 throw new InvalidOperationException("SSMS did not register template command " + handler.CanonicalName);
+            uint cmdId = (uint)registered.ID;
 
             // 2) Get or create the OleMenuCommand
             var menuSvc = _plugin.MenuCommandService;
-            var cmdID = new CommandID(_cmdSet, (int)cmdId);
+            var cmdID = new CommandID(commandGroup, registered.ID);
             var ole = menuSvc.FindCommand(cmdID) as OleMenuCommand;
-            // SSMS can query status while AddCommand/AddCommandBarControl runs.
+            // SSMS can query status while AddCommand or Command.AddControl runs.
             // Publish the handler before making its control visible.
             _byId[cmdId] = handler;
             if (ole == null)
