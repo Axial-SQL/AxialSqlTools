@@ -12,6 +12,8 @@ using stdole;
 using System.ComponentModel.Design;
 using System.Collections.Generic;
 using Microsoft.VisualStudio;
+using System.Threading;
+using Task = System.Threading.Tasks.Task;
 
 namespace Aurora
 {
@@ -146,15 +148,15 @@ namespace Aurora
         public virtual int ScriptIconIndex => 0;
 
         // Called when registering GUI controls
-        public virtual bool RegisterGUI(OleMenuCommand vsCommand, CommandBar bar, bool toolBarOnly)
+        public virtual bool RegisterGUI(OleMenuCommand vsCommand, CommandBar bar, bool toolBarOnly, bool appendOnly = false)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (IconIndex >= 0 && toolBarOnly)
-                RegisterGUIBar(vsCommand, bar);
+                RegisterGUIBar(vsCommand, bar, appendOnly);
             return true;
         }
 
-        protected void RegisterGUIBar(OleMenuCommand vsCmd, CommandBar bar)
+        protected void RegisterGUIBar(OleMenuCommand vsCmd, CommandBar bar, bool appendOnly)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var registered = _plugin.Commands.Item(CanonicalName, -1);
@@ -163,14 +165,20 @@ namespace Aurora
                 throw new InvalidOperationException("The template command identity changed before its button was created: " + Name);
 
             CommandBarButton btn = null;
-            foreach (CommandBarControl control in bar.Controls)
+            // After the caller has cleared this menu, every script is new.
+            // Scanning every earlier button would make a rebuild quadratic and
+            // perform thousands of synchronous COM identity queries on the UI thread.
+            if (!appendOnly)
             {
-                if (control is CommandBarButton candidate
-                    && AxialSqlTools.QueryTemplateMenuControls.TryGetCommandId(_plugin.Commands, candidate, out var identity)
-                    && identity.Equals(vsCmd.CommandID))
+                foreach (CommandBarControl control in bar.Controls)
                 {
-                    btn = candidate;
-                    break;
+                    if (control is CommandBarButton candidate
+                        && AxialSqlTools.QueryTemplateMenuControls.TryGetCommandId(_plugin.Commands, candidate, out var identity)
+                        && identity.Equals(vsCmd.CommandID))
+                    {
+                        btn = candidate;
+                        break;
+                    }
                 }
             }
 
@@ -248,7 +256,8 @@ namespace Aurora
             bool doBindings,
             CommandBase handler,
             bool onlyToolbar,
-            CommandBar menuParent = null)
+            CommandBar menuParent = null,
+            bool appendOnly = false)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -309,7 +318,7 @@ namespace Aurora
 
             // 3) Always (re-)register the GUI control on the specified bar
             var targetBar = menuParent ?? _toolbar;
-            handler.RegisterGUI(ole, targetBar, onlyToolbar);
+            handler.RegisterGUI(ole, targetBar, onlyToolbar, appendOnly);
 
             // 4) Optional keyboard bindings
             if (doBindings)
@@ -324,36 +333,65 @@ namespace Aurora
 
         }
 
-        public void RemoveUnusedCommands(ISet<string> activeNames)
+        public async Task RemoveUnusedCommandsAsync(ISet<string> activeNames, Func<Task> beforeUiOperation,
+            CancellationToken cancellationToken)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            // Sweep persisted commands too. A previous SSMS session may have
-            // registered a file that has since disappeared, or old Template_N IDs.
-            var obsolete = new List<Command>();
-            foreach (Command command in _plugin.Commands)
-            {
-                string name = command.Name;
-                bool legacy = name != null && name.StartsWith("Template_", StringComparison.Ordinal)
-                    && int.TryParse(name.Substring(9), out _);
-                bool owned = name != null && name.StartsWith("AxialSqlTools_Template_", StringComparison.Ordinal);
-                if ((owned || legacy) && !activeNames.Contains(name)
-                    && Guid.TryParse(command.Guid, out var group) && group == _cmdSet)
-                    obsolete.Add(command);
-            }
-            Exception cleanupError = null;
-            foreach (var command in obsolete)
-            {
-                try { command.Delete(); }
-                catch (Exception ex) { if (cleanupError == null) cleanupError = ex; }
-            }
+            if (activeNames == null) throw new ArgumentNullException(nameof(activeNames));
+            if (beforeUiOperation == null) throw new ArgumentNullException(nameof(beforeUiOperation));
+            cancellationToken.ThrowIfCancellationRequested();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
-            foreach (uint id in new List<uint>(_byId.Keys))
+            // Never enumerate DTE.Commands: it includes every SSMS command and
+            // can trigger expensive shell/package work during startup. Cleanup
+            // is bounded by the commands this registry actually registered.
+            // Untracked persisted names are harmless: menu cleanup removes their
+            // visible controls, and a later load can reuse an exact named command.
+            Exception cleanupError = null;
+            foreach (var entry in new List<KeyValuePair<uint, CommandBase>>(_byId))
             {
-                if (activeNames.Contains(_byId[id].CanonicalName)) continue;
-                if (_commands.TryGetValue(id, out var ole))
-                    _plugin.MenuCommandService.RemoveCommand(ole);
-                _commands.Remove(id);
-                _byId.Remove(id);
+                uint id = entry.Key;
+                string name = entry.Value.CanonicalName;
+                if (activeNames.Contains(name)) continue;
+
+                // Await outside the cleanup try/finally: cancellation must not
+                // detach a command whose cleanup has not started yet.
+                cancellationToken.ThrowIfCancellationRequested();
+                await beforeUiOperation();
+                cancellationToken.ThrowIfCancellationRequested();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+
+                try
+                {
+                    Command command = null;
+                    try { command = _plugin.Commands.Item(name, -1); }
+                    catch (System.Runtime.InteropServices.COMException ex) when (
+                        ex.ErrorCode == unchecked((int)0x8002000B) // DISP_E_BADINDEX: no such named command.
+                        || ex.ErrorCode == unchecked((int)0x80020003)) // DISP_E_MEMBERNOTFOUND.
+                    {
+                        // The shell has already removed this command.
+                    }
+
+                    if (command != null)
+                    {
+                        if (!Guid.TryParse(command.Guid, out var group) || group != _cmdSet
+                            || command.ID <= 0 || (uint)command.ID != id)
+                            throw new InvalidOperationException("The identity of obsolete template command '" + name + "' changed; it was not deleted.");
+                        command.Delete();
+                    }
+                }
+                catch (Exception ex) { if (cleanupError == null) cleanupError = ex; }
+                finally
+                {
+                    // Even a shell lookup/delete failure must detach the old
+                    // callback, so a stale control cannot invoke an obsolete file.
+                    if (_commands.TryGetValue(id, out var ole))
+                    {
+                        try { _plugin.MenuCommandService.RemoveCommand(ole); }
+                        catch (Exception ex) { if (cleanupError == null) cleanupError = ex; }
+                    }
+                    _commands.Remove(id);
+                    _byId.Remove(id);
+                }
             }
             if (cleanupError != null)
                 throw new InvalidOperationException("SSMS could not remove an obsolete template command.", cleanupError);

@@ -26,12 +26,14 @@ internal static partial class CommandRegistrationTests
             Run("A command from another group is never reused", ForeignCommandCollision);
             Run("Refresh replaces handlers without duplicate controls or callbacks", HandlerReplacement);
             Run("Removing unused commands deletes bindings and disables stale callbacks", RemovedHandlers);
-            Run("Persisted cleanup removes only owned obsolete template commands", PersistedCleanup);
+            Run("Cleanup leaves unrelated and untracked persisted commands untouched", PersistedCleanup);
             Run("Cleanup reports deletion failure while disabling obsolete handlers", CleanupFailure);
             Run("A missing VSCT root is not replaced by a detached menu", MissingRoot);
             Run("A submenu is reused only under the requested parent", ParentScopedSubmenu);
             Run("Submenu creation failures are reported", SubmenuFailures);
             RunMenuLifecycleTests();
+            RunBoundedRegistrationTests();
+            RunAsyncMenuTests();
             Console.WriteLine("Passed " + _passed + " command-registration behavioral tests (stub host).");
             return 0;
         }
@@ -160,7 +162,7 @@ internal static partial class CommandRegistrationTests
         fixture.Registry.RegisterCommand(false, removed, true);
         fixture.Registry.RegisterCommand(false, kept, true);
         var stale = fixture.Command(removedName);
-        fixture.Registry.RemoveUnusedCommands(new HashSet<string> { keptName });
+        RemoveUnused(fixture, new HashSet<string> { keptName });
         Equal(1, fixture.App.Commands.DeletedCount);
         Equal(1, fixture.App.Commands.Count);
         Equal(1, fixture.MenuService.Count);
@@ -181,9 +183,14 @@ internal static partial class CommandRegistrationTests
         fixture.App.Commands.Add("Template_helper", fixture.Group, 203);
         const string activeName = "AxialSqlTools_Template_active";
         fixture.Registry.RegisterCommand(false, fixture.Handler(activeName), true);
-        fixture.Registry.RemoveUnusedCommands(new HashSet<string> { activeName });
-        Equal(2, fixture.App.Commands.DeletedCount);
-        Equal(3, fixture.App.Commands.Count);
+        fixture.App.Commands.ItemCalls = 0;
+        RemoveUnused(fixture, new HashSet<string> { activeName });
+        Equal(0, fixture.App.Commands.DeletedCount);
+        Equal(5, fixture.App.Commands.Count);
+        Equal(0, fixture.App.Commands.ItemCalls);
+        Equal(0, fixture.App.Commands.EnumerationCalls);
+        Equal(200, fixture.App.Commands.Item("AxialSqlTools_Template_obsolete", -1).ID);
+        Equal(201, fixture.App.Commands.Item("Template_99", -1).ID);
         Equal(202, fixture.App.Commands.Item("AxialSqlTools_Template_foreign", -1).ID);
         Equal(203, fixture.App.Commands.Item("Template_helper", -1).ID);
         Equal(1, fixture.MenuService.Count);
@@ -237,7 +244,7 @@ internal static partial class CommandRegistrationTests
         fixture.Registry.RegisterCommand(false, fixture.Handler(removed), true);
         var stale = fixture.Command(failed);
         fixture.App.Commands.FailDeleteName = failed;
-        Throws<InvalidOperationException>(() => fixture.Registry.RemoveUnusedCommands(new HashSet<string>()));
+        Throws<InvalidOperationException>(() => RemoveUnused(fixture, new HashSet<string>()));
         Equal(1, fixture.App.Commands.Count);
         Equal(1, fixture.App.Commands.DeletedCount);
         Equal(0, fixture.MenuService.Count);

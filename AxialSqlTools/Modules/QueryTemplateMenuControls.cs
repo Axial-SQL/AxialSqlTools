@@ -5,17 +5,29 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
 
 namespace AxialSqlTools
 {
+    internal sealed class QueryTemplateMenuResult
+    {
+        internal QueryTemplateMenuResult(int loaded, int failures) { Loaded = loaded; Failures = failures; }
+        internal int Loaded { get; }
+        internal int Failures { get; }
+    }
+
     internal static class QueryTemplateMenuControls
     {
+        private const int MaximumMenuDepth = 64;
+        private const int MaximumControlsPerMenu = 50000;
+
         internal static bool TryGetCommandId(Commands commands, CommandBarControl control, out CommandID id)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             id = null;
             if (commands == null || control == null) return false;
-
             try
             {
                 commands.CommandInfo(control, out string nativeGuid, out int nativeId);
@@ -27,10 +39,10 @@ namespace AxialSqlTools
             catch (ArgumentException) { return false; }
         }
 
-        internal static void Clear(CommandBar root, Commands commands, CommandID refreshCommand,
-            CommandID openFolderCommand, Action<Exception> cleanupWarning)
+        internal static async Task ClearAsync(CommandBar root, Commands commands, CommandID refreshCommand,
+            CommandID openFolderCommand, Action<Exception> cleanupWarning, Func<Task> beforeUiOperation,
+            CancellationToken cancellationToken)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
             if (root == null) throw new ArgumentNullException(nameof(root));
             if (commands == null) throw new ArgumentNullException(nameof(commands));
             if (refreshCommand == null) throw new ArgumentNullException(nameof(refreshCommand));
@@ -38,37 +50,56 @@ namespace AxialSqlTools
             if (refreshCommand.Equals(openFolderCommand))
                 throw new ArgumentException("The two built-in template actions must have distinct command identities.");
 
-            // Verify this is the expected VSCT menu before removing anything.
-            // Tag is not supported by Visual Studio command bars and captions
-            // may have changed or been localized since the previous session.
-            // Classify once before mutation. Re-querying a verified built-in
-            // during deletion could mistake a transient CommandInfo failure for
-            // an unowned control and delete Refresh/Open Templates Folder.
-            var dynamicControls = GetDynamicControls(Snapshot(root), commands, refreshCommand, openFolderCommand);
+            var snapshot = await SnapshotAsync(root, beforeUiOperation, cancellationToken);
+            // Classify before any mutation, and retain that decision throughout
+            // deletion even if a subsequent native identity query fails.
+            var dynamicControls = await GetDynamicControlsAsync(snapshot, commands, refreshCommand,
+                openFolderCommand, beforeUiOperation, cancellationToken);
+            await CheckpointAsync(beforeUiOperation, cancellationToken);
+            var ancestors = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { root.Name };
             for (int i = dynamicControls.Count - 1; i >= 0; i--)
-                DeleteControl(dynamicControls[i], cleanupWarning);
+                await DeleteControlAsync(dynamicControls[i], cleanupWarning, ancestors, 0,
+                    beforeUiOperation, cancellationToken);
 
-            if (GetDynamicControls(Snapshot(root), commands, refreshCommand, openFolderCommand).Count != 0)
+            var remaining = await SnapshotAsync(root, beforeUiOperation, cancellationToken);
+            if ((await GetDynamicControlsAsync(remaining, commands, refreshCommand, openFolderCommand,
+                beforeUiOperation, cancellationToken)).Count != 0)
                 throw new InvalidOperationException("SSMS could not remove an existing template menu item. Refresh was stopped to avoid duplicate scripts.");
         }
 
-        internal static int Populate(QueryTemplateFolder folder, CommandBar bar, Aurora.Plugin plugin,
-            Aurora.CommandRegistry registry, Func<QueryTemplateFile, Aurora.CommandBase> createHandler,
-            List<string> warnings, ref int failures)
+        internal static Task<QueryTemplateMenuResult> PopulateAsync(QueryTemplateFolder folder, CommandBar bar,
+            Aurora.Plugin plugin, Aurora.CommandRegistry registry, Func<QueryTemplateFile, Aurora.CommandBase> createHandler,
+            List<string> warnings, Func<Task> beforeUiOperation, CancellationToken cancellationToken)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            return PopulateFolderAsync(folder, bar, plugin, registry, createHandler, warnings,
+                beforeUiOperation, cancellationToken, 0);
+        }
+
+        private static async Task<QueryTemplateMenuResult> PopulateFolderAsync(QueryTemplateFolder folder,
+            CommandBar bar, Aurora.Plugin plugin, Aurora.CommandRegistry registry,
+            Func<QueryTemplateFile, Aurora.CommandBase> createHandler, List<string> warnings,
+            Func<Task> beforeUiOperation, CancellationToken cancellationToken, int depth)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (depth > MaximumMenuDepth)
+            {
+                warnings.Add("Templates menu nesting exceeds the supported depth: " + folder.FullPath);
+                return new QueryTemplateMenuResult(0, 1);
+            }
             int loaded = 0;
+            int failures = 0;
             var childMenus = new List<KeyValuePair<QueryTemplateFolder, CommandBar>>();
             foreach (var child in folder.Folders)
             {
+                await CheckpointAsync(beforeUiOperation, cancellationToken);
                 try
                 {
                     var childBar = plugin.AddCommandBarMenu(child.CommandName, MsoBarPosition.msoBarMenuBar, bar);
-                    // Locate the actual popup by its native bar name. Visual
-                    // Studio does not use Tag and restores friendly captions.
                     bool found = false;
-                    foreach (CommandBarControl control in bar.Controls)
+                    var controls = await SnapshotAsync(bar, beforeUiOperation, cancellationToken);
+                    foreach (var control in controls)
                     {
+                        await CheckpointAsync(beforeUiOperation, cancellationToken);
                         if (!(control is CommandBarPopup popup)
                             || !string.Equals(popup.CommandBar.Name, childBar.Name, StringComparison.Ordinal)) continue;
                         control.Caption = child.Name;
@@ -78,6 +109,7 @@ namespace AxialSqlTools
                     if (!found) throw new InvalidOperationException("The submenu was not attached to its parent.");
                     childMenus.Add(new KeyValuePair<QueryTemplateFolder, CommandBar>(child, childBar));
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     failures++;
@@ -85,16 +117,17 @@ namespace AxialSqlTools
                 }
             }
 
-            // Publish this folder's scripts before visiting descendants. A failed
-            // child must never prevent the root scripts from being registered.
             foreach (var file in folder.Files)
             {
+                await CheckpointAsync(beforeUiOperation, cancellationToken);
                 try
                 {
-                    var handler = createHandler(file);
-                    registry.RegisterCommand(false, handler, true, bar);
+                    // ClearAsync has already removed all dynamic controls. Avoid
+                    // rescanning the preceding buttons for every added script.
+                    registry.RegisterCommand(false, createHandler(file), true, bar, appendOnly: true);
                     loaded++;
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     failures++;
@@ -102,19 +135,25 @@ namespace AxialSqlTools
                 }
             }
             foreach (var child in childMenus)
-                loaded += Populate(child.Key, child.Value, plugin, registry, createHandler, warnings, ref failures);
-            return loaded;
+            {
+                var result = await PopulateFolderAsync(child.Key, child.Value, plugin, registry, createHandler,
+                    warnings, beforeUiOperation, cancellationToken, depth + 1);
+                loaded += result.Loaded;
+                failures += result.Failures;
+            }
+            return new QueryTemplateMenuResult(loaded, failures);
         }
 
-        private static List<CommandBarControl> GetDynamicControls(List<CommandBarControl> controls, Commands commands,
-            CommandID refreshCommand, CommandID openFolderCommand)
+        private static async Task<List<CommandBarControl>> GetDynamicControlsAsync(List<CommandBarControl> controls,
+            Commands commands, CommandID refreshCommand, CommandID openFolderCommand,
+            Func<Task> beforeUiOperation, CancellationToken cancellationToken)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
             bool hasRefresh = false;
             bool hasOpenFolder = false;
             var dynamicControls = new List<CommandBarControl>();
-            foreach (CommandBarControl control in controls)
+            foreach (var control in controls)
             {
+                await CheckpointAsync(beforeUiOperation, cancellationToken);
                 if (TryGetCommandId(commands, control, out var id) && refreshCommand.Equals(id))
                     hasRefresh = true;
                 else if (id != null && openFolderCommand.Equals(id))
@@ -127,40 +166,73 @@ namespace AxialSqlTools
             return dynamicControls;
         }
 
-        private static List<CommandBarControl> Snapshot(CommandBar bar)
+        private static async Task<List<CommandBarControl>> SnapshotAsync(CommandBar bar,
+            Func<Task> beforeUiOperation, CancellationToken cancellationToken)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var controls = new List<CommandBarControl>();
-            foreach (CommandBarControl control in bar.Controls) controls.Add(control);
+            await CheckpointAsync(beforeUiOperation, cancellationToken);
+            int count = bar.Controls.Count;
+            if (count < 0 || count > MaximumControlsPerMenu)
+                throw new InvalidOperationException("The templates menu contains an unexpected number of controls.");
+            var controls = new List<CommandBarControl>(count);
+            // Capture Count once. Never follow a growing native COM enumerator.
+            for (int index = 1; index <= count; index++)
+            {
+                await CheckpointAsync(beforeUiOperation, cancellationToken);
+                controls.Add(bar.Controls[index]);
+            }
             return controls;
         }
 
-        private static void DeleteControl(CommandBarControl control, Action<Exception> cleanupWarning)
+        private static async Task DeleteControlAsync(CommandBarControl control, Action<Exception> cleanupWarning,
+            HashSet<string> ancestors, int depth, Func<Task> beforeUiOperation, CancellationToken cancellationToken)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await CheckpointAsync(beforeUiOperation, cancellationToken);
             CommandBar child = null;
+            string childName = null;
+            bool enteredChild = false;
             if (control is CommandBarPopup popup)
             {
                 try
                 {
                     child = popup.CommandBar;
-                    var children = Snapshot(child);
-                    for (int i = children.Count - 1; i >= 0; i--)
-                        DeleteControl(children[i], cleanupWarning);
+                    childName = child.Name;
+                    if (depth >= MaximumMenuDepth || ancestors.Contains(childName))
+                    {
+                        // Remove only the cyclic/deep popup, never its ancestor
+                        // bar (which may be the root containing Refresh).
+                        child = null;
+                        cleanupWarning?.Invoke(new InvalidOperationException("Skipped cyclic or excessively nested templates menu: " + childName));
+                    }
+                    else
+                    {
+                        enteredChild = ancestors.Add(childName);
+                        var children = await SnapshotAsync(child, beforeUiOperation, cancellationToken);
+                        for (int i = children.Count - 1; i >= 0; i--)
+                            await DeleteControlAsync(children[i], cleanupWarning, ancestors, depth + 1,
+                                beforeUiOperation, cancellationToken);
+                    }
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex) { cleanupWarning?.Invoke(ex); }
+                finally { if (enteredChild) ancestors.Remove(childName); }
             }
-
-            // Removing the popup and its named bar are independent operations.
-            // A detached bar cleanup failure is cosmetic; a surviving root item
-            // is caught by Clear's postcondition before any scripts are appended.
+            await CheckpointAsync(beforeUiOperation, cancellationToken);
             try { control.Delete(); }
             catch (Exception ex) { cleanupWarning?.Invoke(ex); }
             if (child != null)
             {
+                await CheckpointAsync(beforeUiOperation, cancellationToken);
                 try { child.Delete(); }
                 catch (Exception ex) { cleanupWarning?.Invoke(ex); }
             }
+        }
+
+        private static async Task CheckpointAsync(Func<Task> beforeUiOperation, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await beforeUiOperation();
+            cancellationToken.ThrowIfCancellationRequested();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
         }
     }
 }

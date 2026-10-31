@@ -38,14 +38,33 @@ namespace EnvDTE
         public bool ReturnWrongBinding { get; set; }
         public bool FailButtonPicture { get; set; }
         public Action<string> WhileAddingControl { get; set; }
-        public IEnumerator<Command> GetEnumerator() => _commands.Values.GetEnumerator();
+        public int EnumerationCalls { get; private set; }
+        public int ItemCalls { get; set; }
+        public int CommandInfoCallCount { get; set; }
+        public string FailLookupName { get; set; }
+        public int LookupFailureHResult { get; set; } = unchecked((int)0x80004005);
+        public IEnumerator<Command> GetEnumerator()
+        {
+            EnumerationCalls++;
+            throw new InvalidOperationException("Enumerating the global DTE.Commands collection is forbidden during template operations.");
+        }
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public Command Item(string name, int id)
         {
+            ItemCalls++;
+            if (name == FailLookupName) throw new COMException("Simulated command lookup failure.", LookupFailureHResult);
             if (!_commands.TryGetValue(name, out var command))
                 throw new COMException("Command not found.", unchecked((int)0x8002000B));
             return command;
+        }
+
+        // Test-only inspection does not expose the shell's global enumerator.
+        internal Command GetByIdentity(string guid, int id)
+        {
+            foreach (var command in _commands.Values)
+                if (command.Guid == guid && command.ID == id) return command;
+            throw new InvalidOperationException("No command has this native identity.");
         }
 
         public int AllocateId()
@@ -98,6 +117,7 @@ namespace EnvDTE
 
         public void CommandInfo(object control, out string guid, out int id)
         {
+            CommandInfoCallCount++;
             var native = control as CommandBarControl;
             if (native != null) native.CommandInfoCalls++;
             if (native == null || native.FailCommandInfo || string.IsNullOrEmpty(native.NativeGuid)
@@ -175,6 +195,8 @@ namespace Microsoft.VisualStudio.CommandBars
     public sealed class CommandBarControls : IEnumerable<CommandBarControl>
     {
         private readonly List<CommandBarControl> _items = new List<CommandBarControl>();
+        public bool ThrowOnEnumeration { get; set; }
+        public int EnumerationCalls { get; private set; }
         public int Count => _items.Count;
         public CommandBarControl this[int index]
         {
@@ -192,7 +214,12 @@ namespace Microsoft.VisualStudio.CommandBars
             control.Owner = this;
         }
         internal void Remove(CommandBarControl control) => _items.Remove(control);
-        public IEnumerator<CommandBarControl> GetEnumerator() => _items.GetEnumerator();
+        public IEnumerator<CommandBarControl> GetEnumerator()
+        {
+            EnumerationCalls++;
+            if (ThrowOnEnumeration) throw new InvalidOperationException("Native COM control enumeration is forbidden in this test.");
+            return _items.GetEnumerator();
+        }
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
@@ -246,7 +273,20 @@ namespace Microsoft.VisualStudio
 
 namespace Microsoft.VisualStudio.Shell
 {
-    public static class ThreadHelper { public static void ThrowIfNotOnUIThread() { } }
+    public static class ThreadHelper
+    {
+        public static TestJoinableTaskFactory JoinableTaskFactory { get; } = new TestJoinableTaskFactory();
+        public static void ThrowIfNotOnUIThread() { }
+    }
+
+    public sealed class TestJoinableTaskFactory
+    {
+        public System.Threading.Tasks.Task SwitchToMainThreadAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return System.Threading.Tasks.Task.CompletedTask;
+        }
+    }
 
     public sealed class OleMenuCommand : MenuCommand
     {
