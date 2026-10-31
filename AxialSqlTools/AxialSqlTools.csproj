@@ -483,7 +483,7 @@
       <Version>1.5.1</Version>
     </PackageReference>
     <PackageReference Include="NLog">
-      <Version>6.2.1</Version>
+      <Version>6.2.2</Version>
     </PackageReference>
     <PackageReference Include="MySqlConnector">
       <Version>2.6.2</Version>
@@ -510,13 +510,13 @@
       <ForceIncludeInVSIX>true</ForceIncludeInVSIX>
     </PackageReference>
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces">
-      <Version>10.0.12</Version>
+      <Version>10.0.14</Version>
     </PackageReference>
     <PackageReference Include="System.Buffers">
       <Version>4.6.1</Version>
     </PackageReference>
     <PackageReference Include="System.Collections.Immutable">
-      <Version>10.0.12</Version>
+      <Version>10.0.14</Version>
     </PackageReference>
     <PackageReference Include="System.Memory">
       <Version>4.6.3</Version>
@@ -531,13 +531,13 @@
       <Version>6.1.2</Version>
     </PackageReference>
     <PackageReference Include="System.Security.Cryptography.ProtectedData">
-      <Version>10.0.12</Version>
+      <Version>10.0.14</Version>
     </PackageReference>
     <PackageReference Include="System.Text.Encodings.Web">
-      <Version>10.0.12</Version>
+      <Version>10.0.14</Version>
     </PackageReference>
     <PackageReference Include="System.Text.Json">
-      <Version>10.0.12</Version>
+      <Version>10.0.14</Version>
     </PackageReference>
     <PackageReference Include="System.Threading.Tasks.Extensions">
       <Version>4.6.3</Version>
