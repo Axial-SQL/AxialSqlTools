@@ -198,10 +198,12 @@ namespace Microsoft.VisualStudio.CommandBars
         public bool ThrowOnEnumeration { get; set; }
         public int EnumerationCalls { get; private set; }
         public int Count => _items.Count;
+        public int IndexReads { get; set; }
         public CommandBarControl this[int index]
         {
             get
             {
+                IndexReads++;
                 if (index < 1 || index > _items.Count) throw new COMException("Native control index is one-based.");
                 return _items[index - 1];
             }

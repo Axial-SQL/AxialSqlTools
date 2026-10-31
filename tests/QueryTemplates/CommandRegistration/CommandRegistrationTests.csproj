@@ -9,10 +9,12 @@
     <Compile Include="../../../AxialSqlTools/Modules/AuroraCore.cs" Link="AuroraCore.cs" />
     <Compile Include="../../../AxialSqlTools/Modules/QueryTemplateMenuControls.cs" Link="QueryTemplateMenuControls.cs" />
     <Compile Include="../../../AxialSqlTools/Modules/QueryTemplateCatalog.cs" Link="QueryTemplateCatalog.cs" />
+    <Compile Include="../../../AxialSqlTools/Modules/QueryTemplateUiBatcher.cs" Link="QueryTemplateUiBatcher.cs" />
     <Compile Include="CommandRegistrationTests.cs" />
     <Compile Include="TemplateMenuLifecycleTests.cs" />
     <Compile Include="BoundedCommandRegistrationTests.cs" />
     <Compile Include="AsyncTemplateMenuTests.cs" />
+    <Compile Include="NativeMenuPerformanceTests.cs" />
     <Compile Include="CommandRegistrationHostStubs.cs" />
   </ItemGroup>
 </Project>

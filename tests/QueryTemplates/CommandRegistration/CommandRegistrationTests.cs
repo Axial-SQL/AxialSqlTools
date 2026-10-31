@@ -34,6 +34,7 @@ internal static partial class CommandRegistrationTests
             RunMenuLifecycleTests();
             RunBoundedRegistrationTests();
             RunAsyncMenuTests();
+            RunNativePerformanceTests();
             Console.WriteLine("Passed " + _passed + " command-registration behavioral tests (stub host).");
             return 0;
         }
@@ -331,6 +332,10 @@ internal static partial class CommandRegistrationTests
         public int BarCalls;
         public Action<string> WhileAddingControl { get => _app.Commands.WhileAddingControl; set => _app.Commands.WhileAddingControl = value; }
         public int ReturnedIdOffset;
+        public bool InsertPopupAtPriorSlot;
+        public bool AttachPopupToWrongBar;
+        public CommandBar LastCreatedBar;
+        public CommandBar ReturnedBarOverride;
         public readonly Dictionary<CommandID, CommandBar> BarsByIdentity = new Dictionary<CommandID, CommandBar>();
 
         public FakeProffer(DTE2 app) { _app = app; }
@@ -367,10 +372,18 @@ internal static partial class CommandRegistrationTests
             bar = null;
             if (BarResult < 0 || ReturnNullBar) return BarResult;
             var child = new CommandBar();
+            LastCreatedBar = child;
             if (parent is CommandBar parentBar)
-                parentBar.Controls.Add(new CommandBarPopup { Caption = name, CommandBar = child });
+            {
+                int position = InsertPopupAtPriorSlot ? Math.Max(1, (int)index) : (int)index + 1;
+                parentBar.Controls.Insert(position, new CommandBarPopup
+                {
+                    Caption = name,
+                    CommandBar = AttachPopupToWrongBar ? new CommandBar { Name = "Unrelated child bar" } : child
+                });
+            }
             ((CommandBars)_app.CommandBars).Add(name, child);
-            bar = child;
+            bar = ReturnedBarOverride ?? child;
             return BarResult;
         }
     }

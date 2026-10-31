@@ -94,20 +94,9 @@ namespace AxialSqlTools
                 await CheckpointAsync(beforeUiOperation, cancellationToken);
                 try
                 {
-                    var childBar = plugin.AddCommandBarMenu(child.CommandName, MsoBarPosition.msoBarMenuBar, bar);
-                    bool found = false;
-                    var controls = await SnapshotAsync(bar, beforeUiOperation, cancellationToken);
-                    foreach (var control in controls)
-                    {
-                        await CheckpointAsync(beforeUiOperation, cancellationToken);
-                        if (!(control is CommandBarPopup popup)
-                            || !string.Equals(popup.CommandBar.Name, childBar.Name, StringComparison.Ordinal)) continue;
-                        control.Caption = child.Name;
-                        found = true;
-                        break;
-                    }
-                    if (!found) throw new InvalidOperationException("The submenu was not attached to its parent.");
-                    childMenus.Add(new KeyValuePair<QueryTemplateFolder, CommandBar>(child, childBar));
+                    var popup = plugin.AddCommandBarMenuPopup(child.CommandName, bar, appendOnly: true);
+                    popup.Caption = child.Name;
+                    childMenus.Add(new KeyValuePair<QueryTemplateFolder, CommandBar>(child, popup.CommandBar));
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)

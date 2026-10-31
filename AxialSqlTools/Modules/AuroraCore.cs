@@ -100,10 +100,21 @@ namespace Aurora
             if (parent == null)
                 return ((CommandBars)_app.CommandBars)[name]; // The root is supplied by VSCT. Never create a detached replacement.
 
-            foreach (CommandBarControl control in parent.Controls)
+            return AddCommandBarMenuPopup(name, parent).CommandBar;
+        }
+
+        internal CommandBarPopup AddCommandBarMenuPopup(string name, CommandBar parent, bool appendOnly = false)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (parent == null) throw new ArgumentNullException(nameof(parent));
+            if (!appendOnly)
             {
-                if (control is CommandBarPopup popup && string.Equals(popup.CommandBar.Name, name, StringComparison.Ordinal))
-                    return popup.CommandBar;
+                int existingCount = GetMenuControlCount(parent);
+                for (int index = 1; index <= existingCount; index++)
+                {
+                    var existing = FindMatchingPopup(parent, index, name);
+                    if (existing != null) return existing;
+                }
             }
 
             // A failed/previous refresh may leave a named bar without a parent
@@ -114,14 +125,59 @@ namespace Aurora
             catch (ArgumentException) { }
             if (orphan != null) orphan.Delete();
 
+            int insertionIndex = GetMenuControlCount(parent);
             object newBar;
             ErrorHandler.ThrowOnFailure(_proffer.AddCommandBar(name, (uint)vsCommandBarType.vsCommandBarTypeMenu, parent,
-                                  parent == null ? 0u : (uint)parent.Controls.Count,
+                                  (uint)insertionIndex,
                                   out newBar));
             var result = newBar as CommandBar;
             if (result == null)
                 throw new InvalidOperationException("SSMS did not create the templates submenu: " + name);
-            return result;
+            bool ownsReturnedBar = false;
+            try
+            {
+                if (!string.Equals(result.Name, name, StringComparison.Ordinal))
+                    throw new InvalidOperationException("SSMS returned a different templates submenu: " + name);
+                ownsReturnedBar = true;
+                if (GetMenuControlCount(parent) != insertionIndex + 1)
+                    throw new InvalidOperationException("SSMS did not attach exactly one templates submenu: " + name);
+
+                // Normal creation appends one popup. Verify the native child-bar
+                // name before using the indexed control. The adjacent-slot probe
+                // accommodates a host's insertion convention without scanning all
+                // previously created siblings on every folder.
+                var popup = FindMatchingPopup(parent, insertionIndex + 1, name);
+                if (popup == null && insertionIndex > 0)
+                    popup = FindMatchingPopup(parent, insertionIndex, name);
+                if (popup == null)
+                    throw new InvalidOperationException("SSMS attached the templates submenu at an unexpected location: " + name);
+                return popup;
+            }
+            catch
+            {
+                if (ownsReturnedBar)
+                {
+                    try { result.Delete(); }
+                    catch (Exception ex) { ReportWarning(ex, "Could not remove an unattached templates submenu '" + name + "'."); }
+                }
+                throw;
+            }
+        }
+
+        private static int GetMenuControlCount(CommandBar parent)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            int count = parent.Controls.Count;
+            if (count < 0 || count > 50000)
+                throw new InvalidOperationException("The templates menu contains an unexpected number of controls.");
+            return count;
+        }
+
+        private static CommandBarPopup FindMatchingPopup(CommandBar parent, int index, string name)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var popup = parent.Controls[index] as CommandBarPopup;
+            return popup != null && string.Equals(popup.CommandBar.Name, name, StringComparison.Ordinal) ? popup : null;
         }
     }
 
@@ -130,6 +186,8 @@ namespace Aurora
     {
         private readonly Plugin _plugin;
         private readonly string _name, _canonical, _tooltip;
+        private Command _resolvedGuiCommand;
+        private CommandID _resolvedGuiCommandId;
 
         protected CommandBase(string name, string canonicalName, Plugin plugin, string tooltip)
         {
@@ -156,12 +214,35 @@ namespace Aurora
             return true;
         }
 
+        internal bool RegisterGUIWithResolvedCommand(OleMenuCommand vsCommand, CommandBar bar,
+            bool toolBarOnly, bool appendOnly, Command registered)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var previousCommand = _resolvedGuiCommand;
+            var previousId = _resolvedGuiCommandId;
+            _resolvedGuiCommand = registered;
+            _resolvedGuiCommandId = vsCommand.CommandID;
+            try
+            {
+                // Keep virtual dispatch for existing command subclasses. The
+                // resolved command is scoped to this call, never cached across
+                // refreshes or retained if an override throws or reenters.
+                return RegisterGUI(vsCommand, bar, toolBarOnly, appendOnly);
+            }
+            finally
+            {
+                _resolvedGuiCommand = previousCommand;
+                _resolvedGuiCommandId = previousId;
+            }
+        }
+
         protected void RegisterGUIBar(OleMenuCommand vsCmd, CommandBar bar, bool appendOnly)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var registered = _plugin.Commands.Item(CanonicalName, -1);
-            if (!Guid.TryParse(registered.Guid, out var registeredGroup)
-                || registeredGroup != vsCmd.CommandID.Guid || registered.ID != vsCmd.CommandID.ID)
+            bool hasResolvedCommand = _resolvedGuiCommand != null && vsCmd.CommandID.Equals(_resolvedGuiCommandId);
+            var registered = hasResolvedCommand ? _resolvedGuiCommand : _plugin.Commands.Item(CanonicalName, -1);
+            if (!hasResolvedCommand && (!Guid.TryParse(registered.Guid, out var registeredGroup)
+                || registeredGroup != vsCmd.CommandID.Guid || registered.ID != vsCmd.CommandID.ID))
                 throw new InvalidOperationException("The template command identity changed before its button was created: " + Name);
 
             CommandBarButton btn = null;
@@ -295,13 +376,14 @@ namespace Aurora
 
             if (!Guid.TryParse(registered.Guid, out var commandGroup) || commandGroup != _cmdSet)
                 throw new InvalidOperationException("A different command group owns command " + handler.CanonicalName);
-            if (registered.ID <= 0)
+            int registeredId = registered.ID;
+            if (registeredId <= 0)
                 throw new InvalidOperationException("SSMS did not register template command " + handler.CanonicalName);
-            uint cmdId = (uint)registered.ID;
+            uint cmdId = (uint)registeredId;
 
             // 2) Get or create the OleMenuCommand
             var menuSvc = _plugin.MenuCommandService;
-            var cmdID = new CommandID(commandGroup, registered.ID);
+            var cmdID = new CommandID(commandGroup, registeredId);
             var ole = menuSvc.FindCommand(cmdID) as OleMenuCommand;
             // SSMS can query status while AddCommand or Command.AddControl runs.
             // Publish the handler before making its control visible.
@@ -318,15 +400,14 @@ namespace Aurora
 
             // 3) Always (re-)register the GUI control on the specified bar
             var targetBar = menuParent ?? _toolbar;
-            handler.RegisterGUI(ole, targetBar, onlyToolbar, appendOnly);
+            handler.RegisterGUIWithResolvedCommand(ole, targetBar, onlyToolbar, appendOnly, registered);
 
             // 4) Optional keyboard bindings
             if (doBindings)
             {
                 try
                 {
-                    var vsCmd = _plugin.Commands.Item(handler.CanonicalName, -1);
-                    handler.BindToKeyboard(vsCmd);
+                    handler.BindToKeyboard(registered);
                 }
                 catch { }
             }
