@@ -1,7 +1,5 @@
-using Aurora;
 using EnvDTE;
 using EnvDTE80;
-using Microsoft.VisualStudio.CommandBars;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio;
@@ -13,7 +11,6 @@ using System.ComponentModel.Design;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Windows.Forms;
 using Task = System.Threading.Tasks.Task;
 
 namespace AxialSqlTools
@@ -224,8 +221,6 @@ namespace AxialSqlTools
             {
 
                 DTE2 application = GetGlobalService(typeof(DTE)) as DTE2;
-                IVsProfferCommands3 profferCommands3 = await base.GetServiceAsync(typeof(SVsProfferCommands)) as IVsProfferCommands3;
-                OleMenuCommandService oleMenuCommandService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
 
                 var command = application.Commands.Item("Query.Execute");
                 m_queryExecuteEvent = application.Events.get_CommandEvents(command.Guid, command.ID);
@@ -242,29 +237,6 @@ namespace AxialSqlTools
                 // The active editor may predate this package's asynchronous initialization.
                 WindowActivated_Event(application.ActiveWindow, null);
                 StartActiveWindowConnectionMonitor();
-
-                // "File.ConnectObjectExplorer"
-                // "Query.Connect"
-                // 
-
-                //---------------------------------------------------------------------------
-                // Query Templates
-                ImageList icons = new ImageList();
-                icons.Images.Add(Resources.script);
-
-                m_plugin = new Plugin(application, profferCommands3, icons, oleMenuCommandService, "AxialSqlTools", "Aurora.Connect");
-
-                CommandBar commandBar = m_plugin.AddCommandBar("Axial SQL Tools", MsoBarPosition.msoBarTop);
-                m_commandRegistry = new CommandRegistry(m_plugin, commandBar, new Guid(PackageGuidString), new Guid(PackageGuidGroup));
-
-                m_commandBarQueryTemplates = m_plugin.AddCommandBarMenu("Query Templates", MsoBarPosition.msoBarTop, null);
-
-                //---------------------------------------------------------------------------
-                LoadGlobalSnippets();
-                SnippetService.ReloadSnippets();
-
-                //---------------------------------------------------------------------------
-                RefreshTemplatesList();
 
             }
             catch (Exception ex)
@@ -283,11 +255,24 @@ namespace AxialSqlTools
 
             }
 
+            // Template startup must not depend on editor events or snippet files.
+            StartQueryTemplatesInitialization();
+            try
+            {
+                LoadGlobalSnippets();
+                SnippetService.ReloadSnippets();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not load snippets.");
+            }
+
             try
             {
                 await JoinableTaskFactory.SwitchToMainThreadAsync();
-                MenuCommand CmdSqlServerBuilds = m_plugin.MenuCommandService.FindCommand(new CommandID(SqlServerBuildsWindowCommand.CommandSet, SqlServerBuildsWindowCommand.CommandId));
-                CmdSqlServerBuilds.Visible = true;
+                var menuService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
+                MenuCommand CmdSqlServerBuilds = menuService?.FindCommand(new CommandID(SqlServerBuildsWindowCommand.CommandSet, SqlServerBuildsWindowCommand.CommandId));
+                if (CmdSqlServerBuilds != null) CmdSqlServerBuilds.Visible = true;
                 await RefreshSqlServerBuildsAsync();
 
             }
@@ -303,6 +288,7 @@ namespace AxialSqlTools
             if (disposing)
             {
                 _jobQuickViewCommand?.Dispose();
+                _templateIcons?.Dispose();
                 UpdateChecker.LaunchDeferredUpdateOnClose();
             }
 
