@@ -134,6 +134,7 @@
     <Compile Include="Modules\QueryTemplateMenuControls.cs" />
     <Compile Include="Modules\QueryTemplateRefreshCoordinator.cs" />
     <Compile Include="Modules\QueryTemplateUiGate.cs" />
+    <Compile Include="Modules\QueryTemplateUiBatcher.cs" />
     <Compile Include="AxialSqlToolsPackage.Templates.cs">
       <DependentUpon>AxialSqlToolsPackage.cs</DependentUpon>
     </Compile>

@@ -8,7 +8,9 @@
   <ItemGroup>
     <Compile Include="../../../AxialSqlTools/Modules/QueryTemplateRefreshCoordinator.cs" Link="QueryTemplateRefreshCoordinator.cs" />
     <Compile Include="../../../AxialSqlTools/Modules/QueryTemplateUiGate.cs" Link="QueryTemplateUiGate.cs" />
+    <Compile Include="../../../AxialSqlTools/Modules/QueryTemplateUiBatcher.cs" Link="QueryTemplateUiBatcher.cs" />
     <Compile Include="QueryTemplateRefreshCoordinatorTests.cs" />
     <Compile Include="QueryTemplateUiGateTests.cs" />
+    <Compile Include="QueryTemplateUiBatcherTests.cs" />
   </ItemGroup>
 </Project>

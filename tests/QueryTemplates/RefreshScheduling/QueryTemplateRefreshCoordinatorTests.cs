@@ -28,6 +28,13 @@ internal static class QueryTemplateRefreshCoordinatorTests
             await Run("The UI gate rechecks modality after discovery", QueryTemplateUiGateTests.RecheckAfterDiscovery);
             await Run("UI gate cancellation before and during waits stops access", QueryTemplateUiGateTests.Cancellation);
             await Run("A failed UI state check propagates without retrying", QueryTemplateUiGateTests.StateCheckFailure);
+            await Run("512 fast checkpoints batch into 15 intervening UI yields", QueryTemplateUiBatcherTests.FastBatches);
+            await Run("Elapsed time ends a UI batch after slow native work", QueryTemplateUiBatcherTests.TimeBudget);
+            await Run("The configured operation cap ends a UI batch", QueryTemplateUiBatcherTests.OperationLimit);
+            await Run("Batch cancellation stops access before and during gates", QueryTemplateUiBatcherTests.Cancellation);
+            await Run("A failed batch gate propagates and is retried", QueryTemplateUiBatcherTests.FailedGateRetries);
+            await Run("Modality is checked between operations inside a UI batch", QueryTemplateUiBatcherTests.ModalCheckpoint);
+            await Run("Stage boundaries force a new UI gate", QueryTemplateUiBatcherTests.ForcedStageBoundary);
             Console.WriteLine("Passed " + _passed + " Query Templates refresh scheduling tests.");
             return 0;
         }

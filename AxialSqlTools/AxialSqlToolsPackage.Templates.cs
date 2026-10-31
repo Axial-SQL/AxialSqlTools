@@ -66,7 +66,7 @@ namespace AxialSqlTools
 
         private async Task WaitForTemplatesUiAccessAsync()
         {
-            await YieldToTemplateUiAsync();
+            await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
             if (_templateShell == null)
             {
                 _templateShell = await GetServiceAsync(typeof(SVsShell)) as IVsShell;
@@ -82,7 +82,7 @@ namespace AxialSqlTools
         {
             DisposalToken.ThrowIfCancellationRequested();
             // StartOnIdle retains idle priority when this continuation resumes.
-            // Yield between native operations so input and painting are processed.
+            // Yield between short batches so input and painting are processed.
             await Task.Yield();
             await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
         }
@@ -119,11 +119,15 @@ namespace AxialSqlTools
                 }
 
                 await EnsureTemplatesMenuAsync();
+                var uiBatcher = new QueryTemplateUiBatcher(CanAccessTemplatesUi,
+                    token => WaitForTemplatesUiAccessAsync(), () => elapsed.ElapsedMilliseconds);
+                Func<Task> beforeUiOperation = () => uiBatcher.CheckpointAsync(DisposalToken);
                 var warnings = new List<string>(catalog.Warnings);
                 var activeCommands = new HashSet<string>(StringComparer.Ordinal);
                 CollectTemplateCommands(catalog.Root, activeCommands);
 
                 int failures = 0;
+                long menuStartedAt = elapsed.ElapsedMilliseconds;
                 // Remove persisted controls while their native identities are
                 // still available. Tags and friendly captions do not identify them.
                 _logger?.Info("Query templates: removing old menu controls.");
@@ -131,13 +135,12 @@ namespace AxialSqlTools
                     new CommandID(RefreshTemplatesCommand.CommandSet, RefreshTemplatesCommand.CommandId),
                     new CommandID(OpenTemplatesFolderCommand.CommandSet, OpenTemplatesFolderCommand.CommandId),
                     ex => _logger?.Warn(ex, "Could not remove a detached templates submenu."),
-                    WaitForTemplatesUiAccessAsync, DisposalToken);
+                    beforeUiOperation, DisposalToken);
                 _logger?.Info("Query templates: old menu controls removed after {0} ms.", elapsed.ElapsedMilliseconds);
                 try
                 {
-                    await WaitForTemplatesUiAccessAsync();
                     await m_commandRegistry.RemoveUnusedCommandsAsync(activeCommands,
-                        WaitForTemplatesUiAccessAsync, DisposalToken);
+                        beforeUiOperation, DisposalToken);
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
@@ -151,12 +154,14 @@ namespace AxialSqlTools
                     {
                         package = this,
                         FullFileName = file.FullPath
-                    }, warnings, WaitForTemplatesUiAccessAsync, DisposalToken);
+                    }, warnings, beforeUiOperation, DisposalToken);
                 int loaded = menuResult.Loaded;
                 failures += menuResult.Failures;
-                await WaitForTemplatesUiAccessAsync();
+                await beforeUiOperation();
                 var shell = GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
                 if (shell != null) ErrorHandler.ThrowOnFailure(shell.UpdateCommandUI(0));
+                _logger?.Info("Query templates: menu work took {0} ms, including {1} batch waits totaling {2} ms.",
+                    elapsed.ElapsedMilliseconds - menuStartedAt, uiBatcher.YieldCount, uiBatcher.WaitMilliseconds);
                 foreach (string warning in warnings)
                     _logger?.Warn("Query templates: {0}", warning);
 
