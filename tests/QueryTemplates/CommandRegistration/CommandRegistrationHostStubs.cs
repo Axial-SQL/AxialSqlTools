@@ -281,7 +281,7 @@ namespace Microsoft.VisualStudio.Shell
         public static void ThrowIfNotOnUIThread() { }
     }
 
-    public sealed class TestJoinableTaskFactory
+    public sealed partial class TestJoinableTaskFactory
     {
         public System.Threading.Tasks.Task SwitchToMainThreadAsync(System.Threading.CancellationToken cancellationToken)
         {

@@ -23,6 +23,20 @@ namespace AxialSqlTools
         private const int MaximumMenuDepth = 64;
         private const int MaximumControlsPerMenu = 50000;
 
+        private sealed class ChildMenu
+        {
+            internal ChildMenu(QueryTemplateFolder folder, CommandBarPopup popup, CommandBar bar)
+            {
+                Folder = folder;
+                Popup = popup;
+                Bar = bar;
+            }
+
+            internal QueryTemplateFolder Folder { get; }
+            internal CommandBarPopup Popup { get; }
+            internal CommandBar Bar { get; }
+        }
+
         internal static bool TryGetCommandId(Commands commands, CommandBarControl control, out CommandID id)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -88,7 +102,7 @@ namespace AxialSqlTools
             }
             int loaded = 0;
             int failures = 0;
-            var childMenus = new List<KeyValuePair<QueryTemplateFolder, CommandBar>>();
+            var childMenus = new List<ChildMenu>();
             foreach (var child in folder.Folders)
             {
                 await CheckpointAsync(beforeUiOperation, cancellationToken);
@@ -96,7 +110,9 @@ namespace AxialSqlTools
                 {
                     var popup = plugin.AddCommandBarMenuPopup(child.CommandName, bar, appendOnly: true);
                     popup.Caption = child.Name;
-                    childMenus.Add(new KeyValuePair<QueryTemplateFolder, CommandBar>(child, popup.CommandBar));
+                    popup.Visible = true;
+                    popup.Enabled = false;
+                    childMenus.Add(new ChildMenu(child, popup, popup.CommandBar));
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
@@ -125,10 +141,24 @@ namespace AxialSqlTools
             }
             foreach (var child in childMenus)
             {
-                var result = await PopulateFolderAsync(child.Key, child.Value, plugin, registry, createHandler,
+                var result = await PopulateFolderAsync(child.Folder, child.Bar, plugin, registry, createHandler,
                     warnings, beforeUiOperation, cancellationToken, depth + 1);
                 loaded += result.Loaded;
                 failures += result.Failures;
+                await CheckpointAsync(beforeUiOperation, cancellationToken);
+                try
+                {
+                    // Publish this branch's state directly. Opening a submenu or
+                    // a global command-status refresh must not activate its scripts.
+                    child.Popup.Enabled = result.Loaded > 0;
+                    child.Popup.Visible = true;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    failures++;
+                    warnings.Add("Could not enable templates menu '" + child.Folder.FullPath + "': " + ex.Message);
+                }
             }
             return new QueryTemplateMenuResult(loaded, failures);
         }
