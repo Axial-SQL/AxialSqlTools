@@ -21,26 +21,27 @@ namespace AxialSqlTools
         private CommandBar m_commandBarQueryTemplates;
         private ImageList _templateIcons;
         private readonly QueryTemplateRefreshCoordinator _templateRefreshCoordinator = new QueryTemplateRefreshCoordinator();
-        private Microsoft.VisualStudio.Threading.JoinableTask _templateStartupTask;
+        private Task _templateStartupTask;
         private Microsoft.VisualStudio.Threading.JoinableTask _templateRefreshWorker;
         private IVsShell _templateShell;
+        private bool _templatesWaitingForUi;
 
         internal string TemplateRefreshMessage { get; private set; }
 
         private void StartQueryTemplatesInitialization()
         {
-            // ShellInitialized only means the message loop has started. A Connect
-            // dialog may still be open. Idle priority must be explicit: the SDK's
-            // default background priority is allowed to run inside modal dialogs.
-            _templateStartupTask = JoinableTaskFactory.StartOnIdle(async () =>
+            _logger?.Info("Query templates: startup requested.");
+            _templateStartupTask = InitializeQueryTemplatesOnStartupAsync();
+        }
+
+        private async Task InitializeQueryTemplatesOnStartupAsync()
+        {
+            try
             {
-                try
-                {
-                    await RefreshTemplatesListAsync();
-                }
-                catch (OperationCanceledException) when (DisposalToken.IsCancellationRequested) { }
-                catch (Exception ex) { _logger?.Error(ex, "Query templates startup failed. Use Refresh Templates to retry."); }
-            }, VsTaskRunContext.UIThreadIdlePriority);
+                await RefreshTemplatesListAsync();
+            }
+            catch (OperationCanceledException) when (DisposalToken.IsCancellationRequested) { }
+            catch (Exception ex) { _logger?.Error(ex, "Query templates startup failed. Use Refresh Templates to retry."); }
         }
 
         public async Task<bool> RefreshTemplatesListAsync()
@@ -50,8 +51,11 @@ namespace AxialSqlTools
             // native UI code. Repeated requests share one run, without a rerun loop.
             try
             {
+                // The explicit NormalPriority uses the dispatcher queue, not the
+                // shell's idle queue, despite this SDK helper's name. The helper
+                // posts asynchronously and detaches package-initialization relevance.
                 return await _templateRefreshCoordinator.RequestAsync(RefreshTemplatesCoreAsync,
-                    work => _templateRefreshWorker = JoinableTaskFactory.StartOnIdle(work, VsTaskRunContext.UIThreadIdlePriority));
+                    work => _templateRefreshWorker = JoinableTaskFactory.StartOnIdle(work, VsTaskRunContext.UIThreadNormalPriority));
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
@@ -81,9 +85,10 @@ namespace AxialSqlTools
         private async Task YieldToTemplateUiAsync()
         {
             DisposalToken.ThrowIfCancellationRequested();
-            // StartOnIdle retains idle priority when this continuation resumes.
-            // Yield between short batches so input and painting are processed.
-            await Task.Yield();
+            // A timed pause lets input/painting run between normal-priority batches.
+            // Task.Yield alone can repeatedly queue work ahead of user input.
+            // No continuation depends on the shell entering idle or a menu opening.
+            await Task.Delay(1, DisposalToken);
             await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
         }
 
@@ -94,12 +99,19 @@ namespace AxialSqlTools
             ErrorHandler.ThrowOnFailure(_templateShell.GetProperty((int)__VSSPROPID4.VSSPROPID_IsModal, out object modal));
             if (!(initialized is bool ready) || !(modal is bool isModal))
                 throw new InvalidOperationException("SSMS did not report its initialization and modal state.");
-            return ready && !isModal;
+            bool canAccess = ready && !isModal;
+            if (!canAccess && !_templatesWaitingForUi)
+                _logger?.Info("Query templates: waiting for UI access (shell initialized: {0}; modal: {1}).", ready, isModal);
+            else if (canAccess && _templatesWaitingForUi)
+                _logger?.Info("Query templates: UI access restored; resuming loading.");
+            _templatesWaitingForUi = !canAccess;
+            return canAccess;
         }
 
         private async Task<bool> RefreshTemplatesCoreAsync()
         {
             var elapsed = System.Diagnostics.Stopwatch.StartNew();
+            _logger?.Info("Query templates: normal-priority UI worker started.");
             try
             {
                 await WaitForTemplatesUiAccessAsync();
@@ -159,6 +171,9 @@ namespace AxialSqlTools
                 failures += menuResult.Failures;
                 await beforeUiOperation();
                 var shell = GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+                // Controls and popup states are already set directly. Request the
+                // usual deferred invalidation; never synchronously query every
+                // SSMS command while completing a bounded templates batch.
                 if (shell != null) ErrorHandler.ThrowOnFailure(shell.UpdateCommandUI(0));
                 _logger?.Info("Query templates: menu work took {0} ms, including {1} batch waits totaling {2} ms.",
                     elapsed.ElapsedMilliseconds - menuStartedAt, uiBatcher.YieldCount, uiBatcher.WaitMilliseconds);
