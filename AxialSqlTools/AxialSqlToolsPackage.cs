@@ -44,6 +44,7 @@ namespace AxialSqlTools
     [ProvideToolWindow(typeof(AboutWindow), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(ToolWindowGridToEmail), Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(HealthDashboard_Server), Style = VsDockStyle.MDI)]
+    [ProvideToolWindow(typeof(DistributedAgDashboardWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(DataCompare.DataCompareWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(PivotGrid.PivotGridWindow), MultiInstances = true, Style = VsDockStyle.MDI)]
     [ProvideToolWindow(typeof(JobQuickView.JobQuickViewPane), MultiInstances = true, Style = VsDockStyle.MDI, DocumentLikeTool = true, Transient = true)]
@@ -68,6 +69,7 @@ namespace AxialSqlTools
         public event EventHandler SQLBuildsChanged;
 
         private Task _sqlBuildsRefreshTask;
+        private DistributedAgDashboardCommand _distributedAgDashboardCommand;
         private JobQuickView.JobQuickViewCommand _jobQuickViewCommand;
 
         public Task RefreshSqlServerBuildsAsync(string localFile = null)
@@ -195,6 +197,7 @@ namespace AxialSqlTools
                 await ExportGridToAsInsertsCommand.InitializeAsync(this);
                 await ToolWindowGridToEmailCommand.InitializeAsync(this);
                 await HealthDashboard_ServerCommand.InitializeAsync(this);
+                _distributedAgDashboardCommand = await DistributedAgDashboardCommand.InitializeAsync(this);
                 await DataTransferWindowCommand.InitializeAsync(this);
                 await DataCompare.DataCompareWindowCommand.InitializeAsync(this);
                 await DataImportWindowCommand.InitializeAsync(this);
@@ -287,6 +290,7 @@ namespace AxialSqlTools
         {
             if (disposing)
             {
+                _distributedAgDashboardCommand?.Dispose();
                 _jobQuickViewCommand?.Dispose();
                 _templateIcons?.Dispose();
                 UpdateChecker.LaunchDeferredUpdateOnClose();
