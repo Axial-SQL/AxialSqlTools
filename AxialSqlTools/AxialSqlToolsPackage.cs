@@ -68,6 +68,7 @@ namespace AxialSqlTools
         public event EventHandler SQLBuildsChanged;
 
         private Task _sqlBuildsRefreshTask;
+        private Task _sqlBuildsStartupTask;
         private JobQuickView.JobQuickViewCommand _jobQuickViewCommand;
 
         public Task RefreshSqlServerBuildsAsync(string localFile = null)
@@ -79,12 +80,15 @@ namespace AxialSqlTools
 
         private async Task RefreshSqlServerBuildsCoreAsync(string localFile)
         {
+            DisposalToken.ThrowIfCancellationRequested();
             SQLBuildsIsLoading = true;
             SQLBuildsChanged?.Invoke(this, EventArgs.Empty);
             try
             {
-                var result = await Task.Run(() => SQLBuilds.DownloadSqlServerBuildInfo(localFile));
-                await JoinableTaskFactory.SwitchToMainThreadAsync();
+                var result = await Task.Run(() => SQLBuilds.DownloadSqlServerBuildInfo(localFile), DisposalToken);
+                DisposalToken.ThrowIfCancellationRequested();
+                await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+                DisposalToken.ThrowIfCancellationRequested();
                 SQLBuildsLoadState = result;
                 if (result.HasData)
                 {
@@ -92,6 +96,7 @@ namespace AxialSqlTools
                     SQLBuildsLastSuccess = result;
                 }
             }
+            catch (OperationCanceledException) when (DisposalToken.IsCancellationRequested) { }
             catch (Exception ex)
             {
                 _logger?.Error(ex, "SQL Server build refresh failed.");
@@ -102,7 +107,32 @@ namespace AxialSqlTools
             finally
             {
                 SQLBuildsIsLoading = false;
-                SQLBuildsChanged?.Invoke(this, EventArgs.Empty);
+                if (!DisposalToken.IsCancellationRequested)
+                    SQLBuildsChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private async Task InitializeSqlServerBuildsAsync()
+        {
+            try
+            {
+                // Defer the menu update and loading event as well as the download.
+                await Task.Yield();
+                await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+                DisposalToken.ThrowIfCancellationRequested();
+                var menuService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
+                await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+                DisposalToken.ThrowIfCancellationRequested();
+                MenuCommand command = menuService?.FindCommand(new CommandID(SqlServerBuildsWindowCommand.CommandSet,
+                    SqlServerBuildsWindowCommand.CommandId));
+                if (command != null) command.Visible = true;
+                DisposalToken.ThrowIfCancellationRequested();
+                await RefreshSqlServerBuildsAsync();
+            }
+            catch (OperationCanceledException) when (DisposalToken.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, "SQL Server build startup refresh failed.");
             }
         }
 
@@ -179,12 +209,16 @@ namespace AxialSqlTools
             PackageInstance = this;
 
             InitializeLogging();
+            _logger.Info("Axial SQL Tools package initialization started.");
 
             try
             {
-                await FormatQueryCommand.InitializeAsync(this);
                 await RefreshTemplatesCommand.InitializeAsync(this);
                 await OpenTemplatesFolderCommand.InitializeAsync(this);
+                // Queue templates as soon as their static actions are bound.
+                // Unrelated command registration and editor events must not delay them.
+                StartQueryTemplatesInitialization();
+                await FormatQueryCommand.InitializeAsync(this);
                 await ExportGridToExcelCommand.InitializeAsync(this);
                 await ExportGridToGoogleSheetCommand.InitializeAsync(this);
                 await SettingsWindowCommand.InitializeAsync(this);
@@ -255,8 +289,6 @@ namespace AxialSqlTools
 
             }
 
-            // Template startup must not depend on editor events or snippet files.
-            StartQueryTemplatesInitialization();
             try
             {
                 LoadGlobalSnippets();
@@ -267,20 +299,10 @@ namespace AxialSqlTools
                 _logger.Error(ex, "Could not load snippets.");
             }
 
-            try
-            {
-                await JoinableTaskFactory.SwitchToMainThreadAsync();
-                var menuService = await GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-                MenuCommand CmdSqlServerBuilds = menuService?.FindCommand(new CommandID(SqlServerBuildsWindowCommand.CommandSet, SqlServerBuildsWindowCommand.CommandId));
-                if (CmdSqlServerBuilds != null) CmdSqlServerBuilds.Visible = true;
-                await RefreshSqlServerBuildsAsync();
-
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "An exception occurred");
-            }
-
+            // Keep the observed download task separate from package initialization.
+            // A slow network response must not postpone package-load completion.
+            _sqlBuildsStartupTask = InitializeSqlServerBuildsAsync();
+            _logger.Info("Axial SQL Tools package initialization completed.");
         }
 
         protected override void Dispose(bool disposing)

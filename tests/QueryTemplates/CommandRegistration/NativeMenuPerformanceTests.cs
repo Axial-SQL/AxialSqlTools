@@ -20,6 +20,8 @@ internal static partial class CommandRegistrationTests
         Run("Resolved GUI registration preserves overrides and scopes its cached command", ResolvedCommandPreservesVirtualRegistration);
         Run("A native identity change during publication is still rejected", ResolvedCommandStillValidatesNativeBinding);
         Run("512-script production rendering uses 15 UI yields with linear cold and warm lookups", RendererUsesBatchedUiAccess);
+        Run("Only populated popup branches are enabled before any global UI refresh", PopupStateIsPublishedDirectly);
+        Run("Popup activation waits for its final UI checkpoint", PopupActivationAwaitsCheckpoint);
     }
 
     private static QueryTemplateFolder SiblingTree(int count)
@@ -63,7 +65,7 @@ internal static partial class CommandRegistrationTests
             Equal(0, result.Failures);
             Equal(0, warnings.Count);
             Equal(count, fixture.Bar.Controls.IndexReads);
-            Equal(count * 2, checkpoints); // One per folder and one per script.
+            Equal(count * 3, checkpoints); // Create folder, register script, enable populated folder.
             Equal(count, fixture.App.Commands.CommandInfoCallCount);
             Equal(count * (pass == 0 ? 2 : 1), fixture.App.Commands.ItemCalls);
             Equal(previousEnumerations, fixture.Bar.Controls.EnumerationCalls);
@@ -74,6 +76,7 @@ internal static partial class CommandRegistrationTests
                 var popup = (CommandBarPopup)fixture.Bar.Controls[i + 3];
                 Equal(tree.Folders[i].Name, popup.Caption);
                 Equal(tree.Folders[i].CommandName, popup.CommandBar.Name);
+                Assert(popup.Visible && popup.Enabled, "A populated sibling folder awaited global UI refresh.");
             }
         }
         Equal(0, fixture.App.Commands.EnumerationCalls);
@@ -181,6 +184,63 @@ internal static partial class CommandRegistrationTests
             Equal(count * (pass == 0 ? 2 : 1), fixture.App.Commands.ItemCalls);
             Equal(count + 2, fixture.Bar.Controls.Count);
         }
+    }
+
+    private static void PopupStateIsPublishedDirectly()
+    {
+        var fixture = new Fixture();
+        AddBuiltIns(fixture);
+        string root = Path.Combine(Path.GetTempPath(), "AxialSqlTools-popup-state");
+        string parentPath = Path.Combine(root, "Parent");
+        string nestedPath = Path.Combine(parentPath, "Nested");
+        var nested = new QueryTemplateFolder(nestedPath, new List<QueryTemplateFolder>(),
+            new List<QueryTemplateFile> { new QueryTemplateFile(Path.Combine(nestedPath, "script.sql")) });
+        var parent = new QueryTemplateFolder(parentPath, new List<QueryTemplateFolder> { nested },
+            new List<QueryTemplateFile>());
+        var empty = new QueryTemplateFolder(Path.Combine(root, "Empty"), new List<QueryTemplateFolder>(),
+            new List<QueryTemplateFile>());
+        var tree = new QueryTemplateFolder(root, new List<QueryTemplateFolder> { empty, parent },
+            new List<QueryTemplateFile>());
+        var handler = fixture.Handler(nested.Files[0].CommandName);
+        var warnings = new List<string>();
+        var result = QueryTemplateMenuControls.PopulateAsync(tree, fixture.Bar, fixture.Plugin, fixture.Registry,
+            file => handler, warnings, () => Task.CompletedTask, CancellationToken.None).GetAwaiter().GetResult();
+        Equal(1, result.Loaded);
+        Equal(0, result.Failures);
+        Equal(0, warnings.Count);
+
+        // No menu-open event, status query, or global UI refresh has run.
+        var emptyPopup = (CommandBarPopup)fixture.Bar.Controls[3];
+        var parentPopup = (CommandBarPopup)fixture.Bar.Controls[4];
+        var nestedPopup = (CommandBarPopup)parentPopup.CommandBar.Controls[1];
+        Assert(emptyPopup.Visible && !emptyPopup.Enabled, "An empty popup was unnecessarily enabled.");
+        Assert(parentPopup.Visible && parentPopup.Enabled,
+            "A parent with scripts only in descendants did not become usable.");
+        Assert(nestedPopup.Visible && nestedPopup.Enabled, "The nested popup required a global UI refresh.");
+        var button = (CommandBarButton)nestedPopup.CommandBar.Controls[1];
+        Assert(button.Visible && button.Enabled, "The nested script was not published with its popup.");
+        button.Click();
+        Equal(1, handler.Invocations);
+    }
+
+    private static void PopupActivationAwaitsCheckpoint()
+    {
+        var fixture = new Fixture();
+        AddBuiltIns(fixture);
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        int checkpoints = 0;
+        var pending = QueryTemplateMenuControls.PopulateAsync(SiblingTree(1), fixture.Bar, fixture.Plugin,
+            fixture.Registry, file => fixture.Handler(file.CommandName), new List<string>(),
+            () => ++checkpoints == 3 ? release.Task : Task.CompletedTask, CancellationToken.None);
+        var popup = (CommandBarPopup)fixture.Bar.Controls[3];
+        Assert(!pending.IsCompleted && popup.Visible && !popup.Enabled,
+            "The popup became enabled before its final UI checkpoint completed.");
+        release.SetResult(true);
+        var result = pending.GetAwaiter().GetResult();
+        Equal(1, result.Loaded);
+        Equal(0, result.Failures);
+        Equal(3, checkpoints);
+        Assert(popup.Visible && popup.Enabled, "The popup did not become usable when the UI gate opened.");
     }
 
     private sealed class RegistrationOverride : CommandBase
