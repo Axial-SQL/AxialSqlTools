@@ -15,6 +15,7 @@
     <Compile Include="BoundedCommandRegistrationTests.cs" />
     <Compile Include="AsyncTemplateMenuTests.cs" />
     <Compile Include="NativeMenuPerformanceTests.cs" />
+    <Compile Include="TemplateReconciliationTests.cs" />
     <Compile Include="CommandRegistrationHostStubs.cs" />
   </ItemGroup>
 </Project>

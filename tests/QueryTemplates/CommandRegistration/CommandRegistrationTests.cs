@@ -35,6 +35,7 @@ internal static partial class CommandRegistrationTests
             RunBoundedRegistrationTests();
             RunAsyncMenuTests();
             RunNativePerformanceTests();
+            RunReconciliationTests();
             Console.WriteLine("Passed " + _passed + " command-registration behavioral tests (stub host).");
             return 0;
         }
