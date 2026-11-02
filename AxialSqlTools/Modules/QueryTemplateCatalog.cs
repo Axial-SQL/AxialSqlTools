@@ -9,7 +9,7 @@ using System.Threading;
 namespace AxialSqlTools
 {
     // A filesystem snapshot, independent of the SSMS command bars. Read it before
-    // replacing a working menu so an unavailable templates root does not erase it.
+    // reconciling a working menu so an unavailable templates root does not erase it.
     internal sealed class QueryTemplateCatalog
     {
         private QueryTemplateCatalog(QueryTemplateFolder root, List<string> warnings)
@@ -84,8 +84,10 @@ namespace AxialSqlTools
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SecurityException)
                 {
-                    // One bad descendant must not prevent root-level scripts or
-                    // sibling folders from appearing.
+                    // Preserve the identity of an unreadable branch. Its absence
+                    // from a partial snapshot must not be mistaken for deletion.
+                    folders.Add(new QueryTemplateFolder(directory, new List<QueryTemplateFolder>(),
+                        new List<QueryTemplateFile>(), false));
                     warnings.Add("Could not read templates folder '" + directory + "': " + ex.Message);
                 }
             }
@@ -122,18 +124,21 @@ namespace AxialSqlTools
 
     internal sealed class QueryTemplateFolder
     {
-        public QueryTemplateFolder(string fullPath, List<QueryTemplateFolder> folders, List<QueryTemplateFile> files)
+        public QueryTemplateFolder(string fullPath, List<QueryTemplateFolder> folders, List<QueryTemplateFile> files,
+            bool isAvailable = true)
         {
             FullPath = fullPath;
             Name = Path.GetFileName(fullPath);
             CommandName = QueryTemplateCatalog.GetCommandName(fullPath, true);
             Folders = folders.AsReadOnly();
             Files = files.AsReadOnly();
+            IsAvailable = isAvailable;
         }
 
         public string FullPath { get; }
         public string Name { get; }
         public string CommandName { get; }
+        public bool IsAvailable { get; }
         public IReadOnlyList<QueryTemplateFolder> Folders { get; }
         public IReadOnlyList<QueryTemplateFile> Files { get; }
     }

@@ -121,7 +121,15 @@ internal static class QueryTemplateCatalogTests
             var catalog = QueryTemplateCatalog.Load(root, CancellationToken.None, fileSystem);
             Equal(2, catalog.FileCount);
             Equal("root.sql", catalog.Root.Files[0].Name);
-            Equal("good", catalog.Root.Folders.Single().Name);
+            Equal("bad,good", string.Join(",", catalog.Root.Folders.Select(f => f.Name)));
+            var unavailable = catalog.Root.Folders[0];
+            Assert(!unavailable.IsAvailable, "Unreadable branch was reported as a complete snapshot.");
+            Equal(denied, unavailable.FullPath);
+            Equal(QueryTemplateCatalog.GetCommandName(denied, true), unavailable.CommandName);
+            Equal(0, unavailable.Files.Count);
+            Equal(0, unavailable.Folders.Count);
+            Assert(catalog.Root.IsAvailable && catalog.Root.Folders[1].IsAvailable,
+                "Readable root or sibling was reported as unavailable.");
             Equal(1, catalog.Warnings.Count);
             Assert(catalog.Warnings[0].Contains(denied), "Warning did not identify the inaccessible folder.");
         });

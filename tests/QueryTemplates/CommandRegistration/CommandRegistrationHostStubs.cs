@@ -43,6 +43,12 @@ namespace EnvDTE
         public int CommandInfoCallCount { get; set; }
         public string FailLookupName { get; set; }
         public int LookupFailureHResult { get; set; } = unchecked((int)0x80004005);
+        internal CommandBars Bars { get; set; }
+        public int BarCalls { get; private set; }
+        public int BarResult { get; set; }
+        public bool ReturnNullBar { get; set; }
+        public string FailBarName { get; set; }
+        public CommandBar LastCreatedBar { get; private set; }
         public IEnumerator<Command> GetEnumerator()
         {
             EnumerationCalls++;
@@ -76,6 +82,7 @@ namespace EnvDTE
 
         public void Add(string name, Guid group, int id)
         {
+            NativeMutationLog.CommandAdds++;
             _commands.Add(name, new Command
             {
                 Name = name,
@@ -84,11 +91,26 @@ namespace EnvDTE
                 Owner = this,
                 DeleteAction = () =>
                 {
+                    NativeMutationLog.CommandDeletes++;
                     if (name == FailDeleteName) throw new COMException("Simulated command deletion failure.");
                     _commands.Remove(name);
                     DeletedCount++;
                 }
             });
+        }
+
+        public object AddCommandBar(string name, vsCommandBarType type, object parent, int position)
+        {
+            BarCalls++;
+            if (BarResult < 0 || name == FailBarName)
+                throw new COMException("Simulated native AddCommandBar failure.", unchecked((int)0x80004005));
+            if (ReturnNullBar) return null;
+            var child = new CommandBar();
+            LastCreatedBar = child;
+            Bars.Add(name, child);
+            if (parent is CommandBar parentBar)
+                parentBar.Controls.Insert(position, new CommandBarPopup { Caption = name, CommandBar = child });
+            return child;
         }
 
         internal object AddControl(Command command, CommandBar parent, int position)
@@ -133,6 +155,7 @@ namespace EnvDTE80
 {
     public sealed class DTE2
     {
+        public DTE2() { Commands.Bars = (Microsoft.VisualStudio.CommandBars.CommandBars)CommandBars; }
         public EnvDTE.Commands Commands { get; } = new EnvDTE.Commands();
         public object CommandBars { get; } = new Microsoft.VisualStudio.CommandBars.CommandBars();
     }
@@ -143,16 +166,41 @@ namespace Microsoft.VisualStudio.CommandBars
     public enum MsoBarPosition { msoBarTop, msoBarMenuBar }
     public enum MsoButtonStyle { msoButtonAutomatic, msoButtonIconAndCaption }
 
+    // Count attempted native mutations, including redundant writes of the same
+    // value. Reconciliation must preserve controls, not just their final count.
+    public static class NativeMutationLog
+    {
+        public static int PropertyWrites;
+        public static int PictureWrites;
+        public static int StyleWrites;
+        public static int ControlInsertions;
+        public static int ControlDeletes;
+        public static int BarDeletes;
+        public static int CommandAdds;
+        public static int CommandDeletes;
+        public static void Reset()
+        {
+            PropertyWrites = PictureWrites = StyleWrites = ControlInsertions = ControlDeletes = BarDeletes = 0;
+            CommandAdds = CommandDeletes = 0;
+        }
+    }
+
     public class CommandBarControl
     {
+        private string _caption;
+        private string _tooltipText;
+        private bool _visible;
+        private bool _enabled;
         // Documented Visual Studio behavior: this Office compatibility property
         // is not used. Persisting it here would conceal the real regression.
         public string Tag { get => string.Empty; set { if (ThrowOnTagWrite) throw new COMException("Tag is unsupported."); } }
         public bool ThrowOnTagWrite { get; set; }
-        public string Caption { get; set; }
-        public string TooltipText { get; set; }
-        public bool Visible { get; set; }
-        public bool Enabled { get; set; }
+        public int PropertyWrites { get; private set; }
+        protected void RecordPropertyWrite() { PropertyWrites++; NativeMutationLog.PropertyWrites++; }
+        public string Caption { get => _caption; set { RecordPropertyWrite(); _caption = value; } }
+        public string TooltipText { get => _tooltipText; set { RecordPropertyWrite(); _tooltipText = value; } }
+        public bool Visible { get => _visible; set { RecordPropertyWrite(); _visible = value; } }
+        public bool Enabled { get => _enabled; set { RecordPropertyWrite(); _enabled = value; } }
         public string NativeGuid { get; set; }
         public int NativeId { get; set; }
         public bool FailCommandInfo { get; set; }
@@ -163,6 +211,7 @@ namespace Microsoft.VisualStudio.CommandBars
         internal CommandBarControls Owner { get; set; }
         public void Delete(bool temporary = false)
         {
+            NativeMutationLog.ControlDeletes++;
             if (FailDelete) throw new COMException("Simulated control deletion failure.");
             Owner?.Remove(this);
             Deleted = true;
@@ -171,14 +220,26 @@ namespace Microsoft.VisualStudio.CommandBars
 
     public sealed class CommandBarButton : CommandBarControl
     {
-        private object _picture;
+        private stdole.StdPicture _picture;
+        private MsoButtonStyle _style;
+        public int PictureWrites { get; private set; }
         public bool FailPicture { get; set; }
-        public object Picture
+        public stdole.StdPicture Picture
         {
             get => _picture;
-            set { if (FailPicture) throw new COMException("Simulated picture assignment failure."); _picture = value; }
+            set
+            {
+                PictureWrites++;
+                NativeMutationLog.PictureWrites++;
+                if (FailPicture) throw new COMException("Simulated picture assignment failure.");
+                _picture = value;
+            }
         }
-        public MsoButtonStyle Style { get; set; }
+        public MsoButtonStyle Style
+        {
+            get => _style;
+            set { RecordPropertyWrite(); NativeMutationLog.StyleWrites++; _style = value; }
+        }
         public Action<CommandBarButton> Dispatch { get; set; }
         public void Click()
         {
@@ -199,11 +260,13 @@ namespace Microsoft.VisualStudio.CommandBars
         public int EnumerationCalls { get; private set; }
         public int Count => _items.Count;
         public int IndexReads { get; set; }
+        public bool FailIndexReads { get; set; }
         public CommandBarControl this[int index]
         {
             get
             {
                 IndexReads++;
+                if (FailIndexReads) throw new COMException("Simulated native child-control read failure.");
                 if (index < 1 || index > _items.Count) throw new COMException("Native control index is one-based.");
                 return _items[index - 1];
             }
@@ -211,6 +274,7 @@ namespace Microsoft.VisualStudio.CommandBars
         public void Add(CommandBarControl control) => Insert(Count + 1, control);
         public void Insert(int position, CommandBarControl control)
         {
+            NativeMutationLog.ControlInsertions++;
             if (position < 1 || position > _items.Count + 1) throw new COMException("Native insertion position is one-based.");
             _items.Insert(position - 1, control);
             control.Owner = this;
@@ -234,6 +298,7 @@ namespace Microsoft.VisualStudio.CommandBars
         public bool FailDelete { get; set; }
         public void Delete()
         {
+            NativeMutationLog.BarDeletes++;
             if (FailDelete) throw new COMException("Simulated named bar deletion failure.");
             DeleteAction?.Invoke();
             Deleted = true;
@@ -328,7 +393,7 @@ namespace Microsoft.VisualStudio.Shell.Interop
     }
 }
 
-namespace stdole { public sealed class StdPicture { } }
+namespace stdole { public sealed class StdPicture { public short Type { get; set; } = 1; } }
 namespace System.Drawing { public class Image { } }
 namespace System.Windows.Forms
 {

@@ -18,6 +18,8 @@ internal static class PackageOrchestrationTests
         {
             Run("The fake host pumps normal posts and never pumps idle-priority tasks", SchedulerModelsIdleStarvation);
             Run("Actual package startup eagerly loads root and nested scripts without a menu-open event", StartupWithoutOpeningMenus);
+            Run("Actual package refresh leaves unchanged native controls and registrations untouched", UnchangedRefresh);
+            Run("Actual package retains its menu when the templates root is unavailable", UnavailableRootRefresh);
             Run("Actual startup makes no native mutations while a modal dialog is open", ModalStartupWaitsSafely);
             Run("Disposal before the queued startup worker runs completes without native changes", DisposeBeforeWorkerStarts);
             Run("Disposal interrupts a modal startup wait without native changes", DisposeDuringModalWait);
@@ -102,6 +104,88 @@ internal static class PackageOrchestrationTests
                 VerifyCompletedCatalog(host, folder);
             }
         });
+    }
+
+    private static void UnchangedRefresh()
+    {
+        WithCatalog(folder =>
+        {
+            using (var host = new PackageTestHost(folder))
+            using (host.Scheduler.EnterNormalContext())
+            {
+                host.Package.StartTemplatesForTest();
+                host.Scheduler.PumpNormalUntil(() => host.Package.StartupCompletionForTest.IsCompleted);
+                host.Package.StartupCompletionForTest.GetAwaiter().GetResult();
+                VerifyCompletedCatalog(host, folder);
+                var controls = NativeControls(host.Root).ToArray();
+                int mutations = host.NativeMutations;
+                int registrations = host.PublishedCommands.Count;
+                NativeMutationLog.Reset();
+                host.App.Commands.ItemCalls = 0;
+                var refresh = host.Package.RefreshTemplatesListAsync();
+                host.Scheduler.PumpNormalUntil(() => refresh.IsCompleted);
+                Assert(refresh.GetAwaiter().GetResult(), "An unchanged refresh reported failure.");
+                Assert(controls.SequenceEqual(NativeControls(host.Root)), "An unchanged refresh replaced native controls.");
+                VerifyNoNativeWrites();
+                Equal(mutations, host.NativeMutations);
+                Equal(registrations, host.PublishedCommands.Count);
+                Equal(0, host.App.Commands.ItemCalls);
+                Equal(1, host.UpdateRequests.Count);
+                Equal(0, host.StatusQueries);
+                Equal(0, host.MenuOpenEvents);
+            }
+        });
+    }
+
+    private static void UnavailableRootRefresh()
+    {
+        WithCatalog(folder =>
+        {
+            using (var host = new PackageTestHost(folder))
+            using (host.Scheduler.EnterNormalContext())
+            {
+                host.Package.StartTemplatesForTest();
+                host.Scheduler.PumpNormalUntil(() => host.Package.StartupCompletionForTest.IsCompleted);
+                host.Package.StartupCompletionForTest.GetAwaiter().GetResult();
+                var controls = NativeControls(host.Root).ToArray();
+                NativeMutationLog.Reset();
+                SettingsManager.Folder = Path.Combine(folder, "unavailable");
+                var refresh = host.Package.RefreshTemplatesListAsync();
+                host.Scheduler.PumpNormalUntil(() => refresh.IsCompleted);
+                Assert(!refresh.GetAwaiter().GetResult(), "Unavailable root unexpectedly succeeded.");
+                Assert(controls.SequenceEqual(NativeControls(host.Root)), "Unavailable root erased the working menu.");
+                VerifyNoNativeWrites();
+                Equal(1, host.UpdateRequests.Count);
+                SettingsManager.Folder = folder;
+                refresh = host.Package.RefreshTemplatesListAsync();
+                host.Scheduler.PumpNormalUntil(() => refresh.IsCompleted);
+                Assert(refresh.GetAwaiter().GetResult(), "Refresh did not recover after restoring the root.");
+                Assert(controls.SequenceEqual(NativeControls(host.Root)), "Recovery rebuilt retained controls.");
+                VerifyNoNativeWrites();
+            }
+        });
+    }
+
+    private static IEnumerable<CommandBarControl> NativeControls(CommandBar bar)
+    {
+        foreach (CommandBarControl control in bar.Controls)
+        {
+            yield return control;
+            if (control is CommandBarPopup popup)
+                foreach (var child in NativeControls(popup.CommandBar)) yield return child;
+        }
+    }
+
+    private static void VerifyNoNativeWrites()
+    {
+        Equal(0, NativeMutationLog.ControlInsertions);
+        Equal(0, NativeMutationLog.ControlDeletes);
+        Equal(0, NativeMutationLog.BarDeletes);
+        Equal(0, NativeMutationLog.CommandAdds);
+        Equal(0, NativeMutationLog.CommandDeletes);
+        Equal(0, NativeMutationLog.PropertyWrites);
+        Equal(0, NativeMutationLog.PictureWrites);
+        Equal(0, NativeMutationLog.StyleWrites);
     }
 
     private static void DisposeBeforeWorkerStarts()

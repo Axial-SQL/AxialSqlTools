@@ -164,6 +164,38 @@ namespace Aurora
             }
         }
 
+        internal CommandBarPopup InsertCommandBarMenuPopup(string name, CommandBar parent, int position)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            int count = GetMenuControlCount(parent);
+            if (position < 1 || position > count + 1) throw new ArgumentOutOfRangeException(nameof(position));
+            CommandBar orphan = null;
+            try { orphan = ((CommandBars)_app.CommandBars)[name]; }
+            catch (System.Runtime.InteropServices.COMException) { }
+            catch (ArgumentException) { }
+            if (orphan != null) orphan.Delete();
+
+            var created = _app.Commands.AddCommandBar(name, vsCommandBarType.vsCommandBarTypeMenu,
+                parent, position) as CommandBar;
+            if (created == null || !string.Equals(created.Name, name, StringComparison.Ordinal))
+                throw new InvalidOperationException("SSMS did not create the requested templates submenu: " + name);
+            try
+            {
+                if (GetMenuControlCount(parent) != count + 1)
+                    throw new InvalidOperationException("SSMS did not attach exactly one templates submenu: " + name);
+                var popup = FindMatchingPopup(parent, position, name);
+                if (popup == null)
+                    throw new InvalidOperationException("SSMS attached the templates submenu at an unexpected location: " + name);
+                return popup;
+            }
+            catch
+            {
+                try { created.Delete(); }
+                catch (Exception ex) { ReportWarning(ex, "Could not remove an unattached templates submenu '" + name + "'."); }
+                throw;
+            }
+        }
+
         private static int GetMenuControlCount(CommandBar parent)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -294,6 +326,34 @@ namespace Aurora
             catch (Exception ex) { _plugin.ReportWarning(ex, "Could not set the icon for template '" + Name + "'."); }
         }
 
+        internal bool RepairTemplateControl(CommandBarButton button, OleMenuCommand command)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            bool repaired = false;
+            // Native controls can survive an SSMS restart. Preserve their COM
+            // identities and leave correct properties entirely untouched.
+            if (!string.Equals(button.Caption, Name, StringComparison.Ordinal)) { button.Caption = Name; repaired = true; }
+            if (!string.Equals(button.TooltipText, Tooltip, StringComparison.Ordinal)) { button.TooltipText = Tooltip; repaired = true; }
+            if (!button.Visible) { button.Visible = true; repaired = true; }
+            if (button.Enabled != command.Enabled) { button.Enabled = command.Enabled; repaired = true; }
+            try
+            {
+                var picture = button.Picture;
+                if (picture == null || picture.Type <= 0)
+                {
+                    button.Picture = ImageConverter.LoadPictureFromImage(_plugin.Icons.Images[ScriptIconIndex]);
+                    repaired = true;
+                }
+                if (button.Style != MsoButtonStyle.msoButtonIconAndCaption)
+                {
+                    button.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    repaired = true;
+                }
+            }
+            catch (Exception ex) { _plugin.ReportWarning(ex, "Could not restore the icon for template '" + Name + "'."); }
+            return repaired;
+        }
+
         protected void AssignIcon(CommandBarButton target, int idx)
         {
             target.Picture = ImageConverter.LoadPictureFromImage(_plugin.Icons.Images[idx]);
@@ -315,6 +375,17 @@ namespace Aurora
             => (StdPicture)GetIPictureDispFromPicture(i);
     }
 
+    internal sealed class TemplateCommandRegistration
+    {
+        internal TemplateCommandRegistration(Command nativeCommand, OleMenuCommand command, CommandBase handler, string fullPath)
+        { NativeCommand = nativeCommand; Command = command; Handler = handler; FullPath = fullPath; }
+        internal Command NativeCommand { get; }
+        internal OleMenuCommand Command { get; }
+        internal CommandBase Handler { get; }
+        internal string FullPath { get; }
+        internal CommandID Identity => Command.CommandID;
+    }
+
     //---- Registers commands and (re)adds GUI controls
     public class CommandRegistry
     {
@@ -323,6 +394,8 @@ namespace Aurora
         private readonly Guid _pkgGuid, _cmdSet;
         private readonly Dictionary<uint, CommandBase> _byId = new Dictionary<uint, CommandBase>();
         private readonly Dictionary<uint, OleMenuCommand> _commands = new Dictionary<uint, OleMenuCommand>();
+        private readonly Dictionary<string, TemplateCommandRegistration> _registrations =
+            new Dictionary<string, TemplateCommandRegistration>(StringComparer.OrdinalIgnoreCase);
 
         public CommandRegistry(Plugin plugin, CommandBar toolbar, Guid packageGuid, Guid cmdGroupGuid)
         {
@@ -342,6 +415,77 @@ namespace Aurora
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
+            var registration = RegisterNativeCommand(handler, null);
+            var registered = registration.NativeCommand;
+            var ole = registration.Command;
+
+            // 3) Always (re-)register the GUI control on the specified bar
+            var targetBar = menuParent ?? _toolbar;
+            handler.RegisterGUIWithResolvedCommand(ole, targetBar, onlyToolbar, appendOnly, registered);
+
+            // 4) Optional keyboard bindings
+            if (doBindings)
+            {
+                try
+                {
+                    handler.BindToKeyboard(registered);
+                }
+                catch { }
+            }
+
+        }
+
+        internal bool IsTemplateCommandCached(string canonicalName) => _registrations.ContainsKey(canonicalName);
+
+        internal TemplateCommandRegistration EnsureTemplateCommand(string canonicalName, string fullPath,
+            Func<CommandBase> createHandler, bool forceLookup = false)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!forceLookup && _registrations.TryGetValue(canonicalName, out var cached))
+            {
+                if (!string.Equals(cached.FullPath, fullPath, StringComparison.Ordinal))
+                {
+                    // Path hashes are case insensitive, but a case-only rename
+                    // still updates the visible name and the path used on click.
+                    var replacement = createHandler();
+                    cached = new TemplateCommandRegistration(cached.NativeCommand, cached.Command, replacement, fullPath);
+                    _registrations[canonicalName] = cached;
+                    _byId[(uint)cached.Identity.ID] = replacement;
+                }
+                UpdateStatus((uint)cached.Identity.ID, cached.Command);
+                return cached;
+            }
+            var handler = _registrations.TryGetValue(canonicalName, out cached)
+                && string.Equals(cached.FullPath, fullPath, StringComparison.Ordinal) ? cached.Handler : createHandler();
+            return RegisterNativeCommand(handler, fullPath);
+        }
+
+        internal IEnumerable<string> GetCommandNamesUnderFolder(string fullPath)
+        {
+            string prefix = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            foreach (var entry in _registrations)
+                if (entry.Value.FullPath != null && entry.Value.FullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    yield return entry.Key;
+        }
+
+        internal CommandBarButton InsertTemplateControl(TemplateCommandRegistration registration, CommandBar bar, int position)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var created = registration.NativeCommand.AddControl(bar, position) as CommandBarControl;
+            var button = created as CommandBarButton;
+            if (button == null || !AxialSqlTools.QueryTemplateMenuControls.TryGetCommandId(_plugin.Commands, button, out var id)
+                || !registration.Identity.Equals(id))
+            {
+                created?.Delete();
+                throw new InvalidOperationException("SSMS attached the template button to the wrong command: " + registration.Handler.Name);
+            }
+            return button;
+        }
+
+        private TemplateCommandRegistration RegisterNativeCommand(CommandBase handler, string fullPath)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
             // 1) Find or proffer the named command, then use the identity the
             // shell exposes instead of assuming a cached/generated ID is current.
             Command registered = null;
@@ -349,7 +493,8 @@ namespace Aurora
             {
                 registered = _plugin.Commands.Item(handler.CanonicalName, -1);
             }
-            catch (System.Runtime.InteropServices.COMException) { }
+            catch (System.Runtime.InteropServices.COMException ex) when (
+                ex.ErrorCode == unchecked((int)0x8002000B) || ex.ErrorCode == unchecked((int)0x80020003)) { }
             catch (ArgumentException) { }
 
             if (registered == null)
@@ -381,10 +526,25 @@ namespace Aurora
                 throw new InvalidOperationException("SSMS did not register template command " + handler.CanonicalName);
             uint cmdId = (uint)registeredId;
 
+            if (_registrations.TryGetValue(handler.CanonicalName, out var previous)
+                && previous.Identity.ID != registeredId)
+            {
+                _plugin.MenuCommandService.RemoveCommand(previous.Command);
+                _commands.Remove((uint)previous.Identity.ID);
+                _byId.Remove((uint)previous.Identity.ID);
+            }
+
             // 2) Get or create the OleMenuCommand
             var menuSvc = _plugin.MenuCommandService;
             var cmdID = new CommandID(commandGroup, registeredId);
             var ole = menuSvc.FindCommand(cmdID) as OleMenuCommand;
+            if (ole != null && (!_commands.TryGetValue(cmdId, out var ownedOle) || !ReferenceEquals(ole, ownedOle)))
+            {
+                // A new registry must own its callbacks, even when the host
+                // retained a previous package instance's command service entry.
+                menuSvc.RemoveCommand(ole);
+                ole = null;
+            }
             // SSMS can query status while AddCommand or Command.AddControl runs.
             // Publish the handler before making its control visible.
             _byId[cmdId] = handler;
@@ -397,20 +557,9 @@ namespace Aurora
             }
             UpdateStatus(cmdId, ole);
             _commands[cmdId] = ole;
-
-            // 3) Always (re-)register the GUI control on the specified bar
-            var targetBar = menuParent ?? _toolbar;
-            handler.RegisterGUIWithResolvedCommand(ole, targetBar, onlyToolbar, appendOnly, registered);
-
-            // 4) Optional keyboard bindings
-            if (doBindings)
-            {
-                try
-                {
-                    handler.BindToKeyboard(registered);
-                }
-                catch { }
-            }
+            var registration = new TemplateCommandRegistration(registered, ole, handler, fullPath);
+            _registrations[handler.CanonicalName] = registration;
+            return registration;
 
         }
 
@@ -472,6 +621,7 @@ namespace Aurora
                     }
                     _commands.Remove(id);
                     _byId.Remove(id);
+                    _registrations.Remove(name);
                 }
             }
             if (cleanupError != null)

@@ -135,23 +135,24 @@ namespace AxialSqlTools
                     token => WaitForTemplatesUiAccessAsync(), () => elapsed.ElapsedMilliseconds);
                 Func<Task> beforeUiOperation = () => uiBatcher.CheckpointAsync(DisposalToken);
                 var warnings = new List<string>(catalog.Warnings);
-                var activeCommands = new HashSet<string>(StringComparer.Ordinal);
-                CollectTemplateCommands(catalog.Root, activeCommands);
-
                 int failures = 0;
                 long menuStartedAt = elapsed.ElapsedMilliseconds;
-                // Remove persisted controls while their native identities are
-                // still available. Tags and friendly captions do not identify them.
-                _logger?.Info("Query templates: removing old menu controls.");
-                await QueryTemplateMenuControls.ClearAsync(m_commandBarQueryTemplates, m_plugin.Commands,
+                _logger?.Info("Query templates: reconciling existing menu controls.");
+                var menuResult = await QueryTemplateMenuControls.ReconcileAsync(catalog.Root, m_commandBarQueryTemplates,
+                    m_plugin, m_commandRegistry,
+                    file => new CommandProcessor(m_plugin, file.CommandName, file.Name, file.FullPath)
+                    {
+                        package = this,
+                        FullFileName = file.FullPath
+                    },
                     new CommandID(RefreshTemplatesCommand.CommandSet, RefreshTemplatesCommand.CommandId),
                     new CommandID(OpenTemplatesFolderCommand.CommandSet, OpenTemplatesFolderCommand.CommandId),
-                    ex => _logger?.Warn(ex, "Could not remove a detached templates submenu."),
-                    beforeUiOperation, DisposalToken);
-                _logger?.Info("Query templates: old menu controls removed after {0} ms.", elapsed.ElapsedMilliseconds);
+                    warnings, beforeUiOperation, DisposalToken);
+                // Prune handlers only after reconciliation. An unreadable branch
+                // contributes its retained registrations to the active set.
                 try
                 {
-                    await m_commandRegistry.RemoveUnusedCommandsAsync(activeCommands,
+                    await m_commandRegistry.RemoveUnusedCommandsAsync(menuResult.ActiveCommandNames,
                         beforeUiOperation, DisposalToken);
                 }
                 catch (OperationCanceledException) { throw; }
@@ -160,21 +161,18 @@ namespace AxialSqlTools
                     failures++;
                     warnings.Add("Could not remove an old template command: " + ex.Message);
                 }
-                var menuResult = await QueryTemplateMenuControls.PopulateAsync(catalog.Root, m_commandBarQueryTemplates,
-                    m_plugin, m_commandRegistry,
-                    file => new CommandProcessor(m_plugin, file.CommandName, file.Name, file.FullPath)
-                    {
-                        package = this,
-                        FullFileName = file.FullPath
-                    }, warnings, beforeUiOperation, DisposalToken);
                 int loaded = menuResult.Loaded;
                 failures += menuResult.Failures;
-                await beforeUiOperation();
-                var shell = GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
-                // Controls and popup states are already set directly. Request the
-                // usual deferred invalidation; never synchronously query every
-                // SSMS command while completing a bounded templates batch.
-                if (shell != null) ErrorHandler.ThrowOnFailure(shell.UpdateCommandUI(0));
+                if (menuResult.HasChanges)
+                {
+                    await beforeUiOperation();
+                    var shell = GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+                    // Request deferred status only after a change. A no-change
+                    // refresh must not trigger SSMS-wide command queries either.
+                    if (shell != null) ErrorHandler.ThrowOnFailure(shell.UpdateCommandUI(0));
+                }
+                _logger?.Info("Query templates: retained {0}, added {1}, removed {2}, repaired {3} menu items.",
+                    menuResult.Retained, menuResult.Added, menuResult.Removed, menuResult.Repaired);
                 _logger?.Info("Query templates: menu work took {0} ms, including {1} batch waits totaling {2} ms.",
                     elapsed.ElapsedMilliseconds - menuStartedAt, uiBatcher.YieldCount, uiBatcher.WaitMilliseconds);
                 foreach (string warning in warnings)
@@ -224,12 +222,6 @@ namespace AxialSqlTools
             if (m_commandRegistry == null)
                 m_commandRegistry = new CommandRegistry(m_plugin, m_commandBarQueryTemplates,
                     new Guid(PackageGuidString), new Guid(PackageGuidGroup));
-        }
-
-        private static void CollectTemplateCommands(QueryTemplateFolder folder, HashSet<string> names)
-        {
-            foreach (var file in folder.Files) names.Add(file.CommandName);
-            foreach (var child in folder.Folders) CollectTemplateCommands(child, names);
         }
 
         private static void SetTemplateStatus(string message)
