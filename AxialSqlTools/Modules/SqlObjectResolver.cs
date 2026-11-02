@@ -12,19 +12,33 @@ namespace AxialSqlTools
 {
     internal static class SqlObjectResolver
     {
-        // Both commands use the same metadata query and master fallback. ConfigureAwait(false)
+        // Both commands use the same metadata query and platform-aware master fallback. ConfigureAwait(false)
         // also allows the existing synchronous scripting command to use this lookup.
         public static async Task<List<ScriptObjectSelectionItem>> FindObjectsAsync(
             string connectionString, string selectedName, CancellationToken cancellationToken)
         {
             var name = SqlObjectName.Parse(selectedName);
-            using (var connection = new SqlConnection(connectionString))
+            var builder = new SqlConnectionStringBuilder(connectionString);
+            // Azure SQL Database requires a new connection to change databases. Set the
+            // catalog before opening, including for explicit database.schema.object names.
+            if (name.DatabaseName != null)
+                builder.InitialCatalog = name.DatabaseName;
+            using (var connection = new SqlConnection(builder.ConnectionString))
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                string database = name.DatabaseName ?? connection.Database;
-                var matches = await QueryObjectsAsync(connection, database, name, cancellationToken).ConfigureAwait(false);
-                if (!string.Equals(database, "master", StringComparison.OrdinalIgnoreCase))
-                    matches.AddRange(await QueryObjectsAsync(connection, "master", name, cancellationToken).ConfigureAwait(false));
+                var matches = await QueryObjectsAsync(connection, name, cancellationToken).ConfigureAwait(false);
+                if (!string.Equals(connection.Database, "master", StringComparison.OrdinalIgnoreCase)
+                    && await SupportsMasterLookupAsync(connection, cancellationToken).ConfigureAwait(false))
+                {
+                    // Preserve the original credentials. Connection.ConnectionString can
+                    // omit the password after Open when Persist Security Info is false.
+                    builder.InitialCatalog = "master";
+                    using (var master = new SqlConnection(builder.ConnectionString))
+                    {
+                        await master.OpenAsync(cancellationToken).ConfigureAwait(false);
+                        matches.AddRange(await QueryObjectsAsync(master, name, cancellationToken).ConfigureAwait(false));
+                    }
+                }
 
                 if (matches.Count == 0)
                     throw new InvalidOperationException($"The specified object was not found: '{selectedName}'.");
@@ -45,12 +59,27 @@ namespace AxialSqlTools
             return dialog.ShowDialog() == true ? dialog.SelectedObject : null;
         }
 
-        private static async Task<List<ScriptObjectSelectionItem>> QueryObjectsAsync(SqlConnection connection,
-            string database, SqlObjectName name, CancellationToken cancellationToken)
+        private static async Task<bool> SupportsMasterLookupAsync(SqlConnection connection, CancellationToken cancellationToken)
         {
-            // The database identifier cannot be parameterized. Quote it independently of the
-            // parameterized object/schema values, including names containing closing brackets.
-            string sql = "USE " + SqlObjectName.Quote(database) + @";
+            using (var command = new SqlCommand("SELECT CONVERT(int, SERVERPROPERTY('EngineEdition'));", connection))
+            {
+                var edition = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                // SQL Server, Managed Instance and SQL Edge share an instance-level master.
+                // Database-scoped Azure services must not require access to virtual master.
+                switch (Convert.ToInt32(edition))
+                {
+                    case 1: case 2: case 3: case 4: case 8: case 9:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        private static async Task<List<ScriptObjectSelectionItem>> QueryObjectsAsync(SqlConnection connection,
+            SqlObjectName name, CancellationToken cancellationToken)
+        {
+            string sql = @"
 SELECT o.type_desc, s.name, COALESCE(tt.name, o.name), o.object_id, DB_NAME(),
        o.parent_object_id, COALESCE(pt.name, p.name), p.type_desc, c.name
 FROM sys.objects AS o
