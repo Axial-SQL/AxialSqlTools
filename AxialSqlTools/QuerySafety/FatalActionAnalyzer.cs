@@ -17,7 +17,9 @@ namespace AxialSqlTools.QuerySafety
     {
         public List<FatalAction> Actions { get; } = new List<FatalAction>();
         public string Limitation { get; set; }
-        public bool RequiresConfirmation => Actions.Count != 0 || Limitation != null;
+
+        // Let SSMS report parse errors unless the analyzer also detected a destructive action.
+        public bool RequiresConfirmation => Actions.Count != 0;
     }
 
     internal static class FatalActionAnalyzer
@@ -34,7 +36,7 @@ namespace AxialSqlTools.QuerySafety
             fragment?.Accept(new ActionVisitor(result));
             if (errors.Count != 0)
             {
-                // A partially parsed script must not silently bypass the warning.
+                // Partial analysis still prevents repeat approval when a destructive action is detected.
                 var first = errors[0];
                 result.Limitation = "The query could not be fully checked (SQL syntax or unsupported syntax near line " + first.Line +
                     "). Review it before running. Repeat approval is unavailable for this execution.";
