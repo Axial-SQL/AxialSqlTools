@@ -33,64 +33,52 @@ namespace AxialSqlTools.JobQuickView
         {
             if (string.IsNullOrEmpty(jobName))
                 throw new ArgumentException("A job name is required.", nameof(jobName));
-            return LoadCoreAsync(null, jobName, cancellationToken);
+            return LoadCoreAsync(null, jobName, true, cancellationToken);
         }
 
         public Task<JobQuickViewSnapshot> LoadAsync(Guid jobId, CancellationToken cancellationToken)
         {
             ValidateJobId(jobId);
-            return LoadCoreAsync(jobId, null, cancellationToken);
+            return LoadCoreAsync(jobId, null, true, cancellationToken);
         }
 
-        private async Task<JobQuickViewSnapshot> LoadCoreAsync(Guid? jobId, string jobName, CancellationToken token)
+        // Poll only execution state and summary rows. Job definitions, schedules, step
+        // history and output messages stay on the explicit full/detail loading paths.
+        public Task<JobQuickViewSnapshot> LoadExecutionAsync(Guid jobId, CancellationToken cancellationToken)
+        {
+            ValidateJobId(jobId);
+            return LoadCoreAsync(jobId, null, false, cancellationToken);
+        }
+
+        private async Task<JobQuickViewSnapshot> LoadCoreAsync(Guid? jobId, string jobName,
+            bool includeDefinition, CancellationToken token)
         {
             using (var connection = await OpenAsync(token).ConfigureAwait(false))
             {
-                var snapshot = new JobQuickViewSnapshot();
-                using (var command = Procedure(connection, "dbo.sp_help_job"))
+                var snapshot = new JobQuickViewSnapshot { SchedulesLoaded = includeDefinition };
+                var warnings = new List<string>();
+                if (includeDefinition)
                 {
-                    if (jobId.HasValue)
-                        command.Parameters.Add("@job_id", SqlDbType.UniqueIdentifier).Value = jobId.Value;
-                    else
-                        command.Parameters.Add("@job_name", SqlDbType.NVarChar, 128).Value = jobName;
-                    command.Parameters.Add("@job_aspect", SqlDbType.VarChar, 9).Value = "JOB";
-                    using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
+                    await ReadJobAsync(connection, snapshot, jobId, jobName, token).ConfigureAwait(false);
+                    // Read nvarchar(max) directly: sp_help_job's documented step result can be truncated.
+                    snapshot.Steps = await ReadStepsAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
+                    try
                     {
-                        if (!await reader.ReadAsync(token).ConfigureAwait(false))
-                            throw new InvalidOperationException("The job no longer exists or the current login cannot view it.");
-                        snapshot.JobId = (Guid)reader["job_id"];
-                        snapshot.Name = Text(reader, "name");
-                        snapshot.Owner = Text(reader, "owner");
-                        snapshot.Category = Text(reader, "category");
-                        snapshot.Description = Text(reader, "description");
-                        snapshot.CreatedAt = ServerDateTime(reader, "date_created");
-                        snapshot.ModifiedAt = ServerDateTime(reader, "date_modified");
-                        snapshot.IsEnabled = Number(reader, "enabled") != 0;
-                        snapshot.StartStepId = Number(reader, "start_step_id");
-                        int status = Number(reader, "current_execution_status");
-                        snapshot.IsRunning = JobQuickViewValue.IsRunning(status);
-                        snapshot.ExecutionStatus = JobQuickViewValue.ExecutionStatus(status);
-                        snapshot.LastRunStarted = JobQuickViewValue.DateTimeFromAgent(Number(reader, "last_run_date"), Number(reader, "last_run_time"));
-                        snapshot.LastRunOutcome = snapshot.LastRunStarted.HasValue
-                            ? JobQuickViewValue.Outcome(Number(reader, "last_run_outcome")) : "No history";
-                        snapshot.LastRunMessage = string.Empty;
-                        snapshot.NextRun = snapshot.IsEnabled
-                            ? JobQuickViewValue.DateTimeFromAgent(Number(reader, "next_run_date"), Number(reader, "next_run_time")) : null;
+                        snapshot.Schedules = await ReadSchedulesAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
+                    }
+                    catch (SqlException ex) when (!token.IsCancellationRequested)
+                    {
+                        snapshot.SchedulesLoaded = false;
+                        warnings.Add("Schedules could not be loaded: " + ex.Message);
                     }
                 }
+                else
+                {
+                    snapshot.JobId = jobId.Value;
+                }
 
-                var warnings = new List<string>();
-                // Read nvarchar(max) directly: sp_help_job's documented step result can be truncated.
-                snapshot.Steps = await ReadStepsAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
-                try
-                {
-                    snapshot.Schedules = await ReadSchedulesAsync(connection, snapshot.JobId, token).ConfigureAwait(false);
-                }
-                catch (SqlException ex) when (!token.IsCancellationRequested)
-                {
-                    snapshot.SchedulesLoaded = false;
-                    warnings.Add("Schedules could not be loaded: " + ex.Message);
-                }
+                // Read summaries and activity before the live state. The final live
+                // observation decides whether an activity row still represents an active run.
                 try
                 {
                     await ReadHistoryAsync(connection, snapshot, token).ConfigureAwait(false);
@@ -108,10 +96,77 @@ namespace AxialSqlTools.JobQuickView
                 {
                     warnings.Add("Execution timing could not be loaded: " + ex.Message);
                 }
+                await ReadJobAsync(connection, snapshot, snapshot.JobId, null, token).ConfigureAwait(false);
+                if (snapshot.IsRunning == true &&
+                    (snapshot.ActivityStoppedAt.HasValue || HasCompletedActivity(snapshot)))
+                {
+                    // Agent writes activity, history and live state separately. Recheck once
+                    // when their samples cross a completion or rapid restart; never loop.
+                    await ReadActivityAsync(connection, snapshot, token).ConfigureAwait(false);
+                    await ReadJobAsync(connection, snapshot, snapshot.JobId, null, token).ConfigureAwait(false);
+                }
+                if (snapshot.IsRunning != true || (snapshot.ActivityStoppedAt.HasValue &&
+                    !string.Equals(snapshot.ExecutionStatus, "Completing", StringComparison.Ordinal)))
+                {
+                    // A stopped activity can still describe completion actions, but must
+                    // never supply the start time of a newly executing or queued run.
+                    snapshot.RunningSince = null;
+                    snapshot.RunningDuration = null;
+                }
+                if (snapshot.HistoryLoaded && snapshot.History.Count > 0)
+                    ApplyLastHistory(snapshot);
                 if (!snapshot.IsRunning.HasValue)
                     warnings.Add("The current execution state is unavailable. SQL Server Agent may be stopped.");
                 snapshot.ActivityWarning = string.Join(Environment.NewLine, warnings);
                 return snapshot;
+            }
+        }
+
+        private static bool HasCompletedActivity(JobQuickViewSnapshot snapshot)
+        {
+            if (!snapshot.HistoryLoaded || !snapshot.ActivityStartedAt.HasValue ||
+                string.IsNullOrWhiteSpace(snapshot.ExecutionServer)) return false;
+            long startSecond = snapshot.ActivityStartedAt.Value.Ticks / TimeSpan.TicksPerSecond;
+            foreach (var run in snapshot.History)
+                if (run.StartedAt.HasValue && run.StartedAt.Value.Ticks / TimeSpan.TicksPerSecond == startSecond &&
+                    string.Equals(run.Server, snapshot.ExecutionServer, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            return false;
+        }
+
+        private static async Task ReadJobAsync(SqlConnection connection, JobQuickViewSnapshot snapshot,
+            Guid? jobId, string jobName, CancellationToken token)
+        {
+            using (var command = Procedure(connection, "dbo.sp_help_job"))
+            {
+                if (jobId.HasValue)
+                    command.Parameters.Add("@job_id", SqlDbType.UniqueIdentifier).Value = jobId.Value;
+                else
+                    command.Parameters.Add("@job_name", SqlDbType.NVarChar, 128).Value = jobName;
+                command.Parameters.Add("@job_aspect", SqlDbType.VarChar, 9).Value = "JOB";
+                using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
+                {
+                    if (!await reader.ReadAsync(token).ConfigureAwait(false))
+                        throw new InvalidOperationException("The job no longer exists or the current login cannot view it.");
+                    snapshot.JobId = (Guid)reader["job_id"];
+                    snapshot.Name = Text(reader, "name");
+                    snapshot.Owner = Text(reader, "owner");
+                    snapshot.Category = Text(reader, "category");
+                    snapshot.Description = Text(reader, "description");
+                    snapshot.CreatedAt = ServerDateTime(reader, "date_created");
+                    snapshot.ModifiedAt = ServerDateTime(reader, "date_modified");
+                    snapshot.IsEnabled = Number(reader, "enabled") != 0;
+                    snapshot.StartStepId = Number(reader, "start_step_id");
+                    int status = Number(reader, "current_execution_status");
+                    snapshot.IsRunning = JobQuickViewValue.IsRunning(status);
+                    snapshot.ExecutionStatus = JobQuickViewValue.ExecutionStatus(status);
+                    snapshot.LastRunStarted = JobQuickViewValue.DateTimeFromAgent(Number(reader, "last_run_date"), Number(reader, "last_run_time"));
+                    snapshot.LastRunOutcome = snapshot.LastRunStarted.HasValue
+                        ? JobQuickViewValue.Outcome(Number(reader, "last_run_outcome")) : "No history";
+                    snapshot.LastRunMessage = string.Empty;
+                    snapshot.NextRun = snapshot.IsEnabled
+                        ? JobQuickViewValue.DateTimeFromAgent(Number(reader, "next_run_date"), Number(reader, "next_run_time")) : null;
+                }
             }
         }
 
@@ -198,12 +253,19 @@ ORDER BY s.step_id;";
                 }
             }
             snapshot.History = runs;
-            if (runs.Count > 0)
-            {
-                snapshot.LastRunStarted = runs[0].StartedAt;
-                snapshot.LastRunDuration = runs[0].Duration;
-                snapshot.LastRunOutcome = runs[0].Outcome;
-            }
+        }
+
+        private static void ApplyLastHistory(JobQuickViewSnapshot snapshot)
+        {
+            var latest = snapshot.History[0];
+            // A newer completion can become visible to sp_help_job after the summary
+            // query. Keep that newer outcome until its duration arrives on the next poll.
+            if (snapshot.LastRunStarted.HasValue && latest.StartedAt.HasValue
+                && snapshot.LastRunStarted.Value > latest.StartedAt.Value)
+                return;
+            snapshot.LastRunStarted = latest.StartedAt;
+            snapshot.LastRunDuration = latest.Duration;
+            snapshot.LastRunOutcome = latest.Outcome;
         }
 
         // The list never reads messages or step rows. Details require an explicit selection.
@@ -304,15 +366,46 @@ ORDER BY h.instance_id;";
         {
             // Omitting @session_id asks Agent for its latest session. Old sessions can contain
             // unfinished rows after a crash; only the live sp_help_job state determines IsRunning.
-            using (var command = Procedure(connection, "dbo.sp_help_jobactivity", snapshot.JobId))
+            // Use the same server clock as start_execution_date, never the workstation's clock.
+            const string sql = @"
+EXEC dbo.sp_help_jobactivity @job_id = @job_id;
+SELECT GETDATE() AS server_now,
+       CONVERT(nvarchar(128), SERVERPROPERTY(N'ServerName')) AS execution_server;";
+            snapshot.RunningSince = null;
+            snapshot.RunningDuration = null;
+            snapshot.AgentSessionId = null;
+            snapshot.LastCompletedHistoryId = null;
+            snapshot.ActivityStartedAt = null;
+            snapshot.ActivityStoppedAt = null;
+            snapshot.ExecutionServer = null;
+            using (var command = Query(connection, sql, snapshot.JobId))
             using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
             {
-                if (await reader.ReadAsync(token).ConfigureAwait(false)
-                    && snapshot.IsRunning == true
-                    && reader["stop_execution_date"] == DBNull.Value
-                    && reader["start_execution_date"] != DBNull.Value)
+                if (await reader.ReadAsync(token).ConfigureAwait(false))
                 {
-                    snapshot.RunningSince = DateTime.SpecifyKind((DateTime)reader["start_execution_date"], DateTimeKind.Unspecified);
+                    int sessionId = Number(reader, "session_id");
+                    snapshot.AgentSessionId = sessionId > 0 ? (int?)sessionId : null;
+                    snapshot.ActivityStartedAt = ServerDateTime(reader, "start_execution_date");
+                    snapshot.ActivityStoppedAt = ServerDateTime(reader, "stop_execution_date");
+                    if (snapshot.ActivityStoppedAt.HasValue)
+                    {
+                        int historyId = Number(reader, "job_history_id");
+                        snapshot.LastCompletedHistoryId = historyId > 0 ? (int?)historyId : null;
+                    }
+                    // This is a timing candidate only. LoadCoreAsync samples live Agent
+                    // status after this read. Stopped activity can only time Completing.
+                    snapshot.RunningSince = snapshot.ActivityStartedAt;
+                }
+                if (await reader.NextResultAsync(token).ConfigureAwait(false)
+                    && await reader.ReadAsync(token).ConfigureAwait(false))
+                {
+                    snapshot.ExecutionServer = Text(reader, "execution_server");
+                    DateTime? serverNow = ServerDateTime(reader, "server_now");
+                    if (serverNow.HasValue && snapshot.RunningSince.HasValue)
+                    {
+                        TimeSpan elapsed = serverNow.Value - snapshot.RunningSince.Value;
+                        snapshot.RunningDuration = elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed;
+                    }
                 }
             }
         }
@@ -328,6 +421,39 @@ ORDER BY h.instance_id;";
         {
             return ExecuteActionAsync("dbo.sp_start_job", jobId, null, cancellationToken);
         }
+
+        public async Task StartFromStepAsync(Guid jobId, Guid stepUid, CancellationToken cancellationToken)
+        {
+            ValidateJobId(jobId);
+            if (stepUid == Guid.Empty)
+                throw new ArgumentException("Select a saved job step to start from.", nameof(stepUid));
+
+            using (var connection = await OpenAsync(cancellationToken).ConfigureAwait(false))
+            using (var command = Query(connection, StartFromStepSql, jobId))
+            {
+                command.Parameters.Add("@step_uid", SqlDbType.UniqueIdentifier).Value = stepUid;
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        // Resolve the current name by stable UID and start in the same server batch. This
+        // handles renamed/reordered steps without trusting a stale name or ordinal and
+        // avoids an extra client round trip between the lookup and start request.
+        internal const string StartFromStepSql = @"
+SET NOCOUNT ON;
+DECLARE @step_name sysname;
+SELECT @step_name = s.step_name
+FROM dbo.sysjobsteps AS s
+INNER JOIN dbo.sysjobs_view AS j ON j.job_id = s.job_id
+WHERE s.job_id = @job_id AND s.step_uid = @step_uid;
+
+IF @step_name IS NULL
+    THROW 50003, 'The selected job step is no longer available. Refresh the job and select a step again.', 1;
+
+DECLARE @result int;
+EXEC @result = dbo.sp_start_job @job_id = @job_id, @step_name = @step_name;
+IF @result <> 0
+    THROW 50004, 'SQL Server Agent did not accept the requested job action. Refresh the job and try again.', 1;";
 
         public Task StopAsync(Guid jobId, CancellationToken cancellationToken)
         {

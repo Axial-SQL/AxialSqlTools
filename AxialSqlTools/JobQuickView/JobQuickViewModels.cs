@@ -18,6 +18,16 @@ namespace AxialSqlTools.JobQuickView
         public bool? IsRunning { get; internal set; }
         public string ExecutionStatus { get; internal set; }
         public DateTime? RunningSince { get; internal set; }
+        // Server-local elapsed time at the last sample. The UI can advance this with a
+        // monotonic clock without comparing the workstation's timezone to Agent dates.
+        public TimeSpan? RunningDuration { get; internal set; }
+        public int? AgentSessionId { get; internal set; }
+        public int? LastCompletedHistoryId { get; internal set; }
+        public string ExecutionServer { get; internal set; }
+        // Raw latest-session activity identifies a just-finished run separately from
+        // a new live execution that may not have received its start timestamp yet.
+        public DateTime? ActivityStartedAt { get; internal set; }
+        public DateTime? ActivityStoppedAt { get; internal set; }
         public DateTime? NextRun { get; internal set; }
         public DateTime? LastRunStarted { get; internal set; }
         public TimeSpan? LastRunDuration { get; internal set; }

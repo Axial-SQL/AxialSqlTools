@@ -69,6 +69,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="JobQuickView\JobQuickViewModels.cs" />
+    <Compile Include="JobQuickView\JobQuickViewExecutionHistory.cs" />
     <Compile Include="JobQuickView\JobQuickViewService.cs" />
     <Compile Include="JobQuickView\JobQuickViewCommand.cs" />
     <Compile Include="JobQuickView\JobQuickViewPane.cs" />
