@@ -422,6 +422,39 @@ SELECT GETDATE() AS server_now,
             return ExecuteActionAsync("dbo.sp_start_job", jobId, null, cancellationToken);
         }
 
+        public async Task StartFromStepAsync(Guid jobId, Guid stepUid, CancellationToken cancellationToken)
+        {
+            ValidateJobId(jobId);
+            if (stepUid == Guid.Empty)
+                throw new ArgumentException("Select a saved job step to start from.", nameof(stepUid));
+
+            using (var connection = await OpenAsync(cancellationToken).ConfigureAwait(false))
+            using (var command = Query(connection, StartFromStepSql, jobId))
+            {
+                command.Parameters.Add("@step_uid", SqlDbType.UniqueIdentifier).Value = stepUid;
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        // Resolve the current name by stable UID and start in the same server batch. This
+        // handles renamed/reordered steps without trusting a stale name or ordinal and
+        // avoids an extra client round trip between the lookup and start request.
+        internal const string StartFromStepSql = @"
+SET NOCOUNT ON;
+DECLARE @step_name sysname;
+SELECT @step_name = s.step_name
+FROM dbo.sysjobsteps AS s
+INNER JOIN dbo.sysjobs_view AS j ON j.job_id = s.job_id
+WHERE s.job_id = @job_id AND s.step_uid = @step_uid;
+
+IF @step_name IS NULL
+    THROW 50003, 'The selected job step is no longer available. Refresh the job and select a step again.', 1;
+
+DECLARE @result int;
+EXEC @result = dbo.sp_start_job @job_id = @job_id, @step_name = @step_name;
+IF @result <> 0
+    THROW 50004, 'SQL Server Agent did not accept the requested job action. Refresh the job and try again.', 1;";
+
         public Task StopAsync(Guid jobId, CancellationToken cancellationToken)
         {
             return ExecuteActionAsync("dbo.sp_stop_job", jobId, null, cancellationToken);

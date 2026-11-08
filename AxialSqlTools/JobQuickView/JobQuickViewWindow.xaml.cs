@@ -60,6 +60,9 @@ namespace AxialSqlTools.JobQuickView
         internal string JobName => snapshot?.Name ?? requestedJobName;
         internal event EventHandler CaptionChanged;
 
+        private bool CanStartJob => !closed && snapshot != null && !busy && !refreshing &&
+            !activityStale && snapshot.IsRunning == false;
+
         private void SetCaption(string value)
         {
             if (Caption == value) return;
@@ -608,7 +611,14 @@ namespace AxialSqlTools.JobQuickView
         {
             if (closed) return;
             bool canAct = snapshot != null && !busy && !refreshing;
-            StartButton.IsEnabled = canAct && !activityStale && snapshot.IsRunning == false;
+            StartButton.IsEnabled = CanStartJob;
+            StartStepButton.IsEnabled = CanStartJob && selectedDraft != null && !selectedDraft.IsRemoved &&
+                selectedDraft.Latest.StepUid != Guid.Empty;
+            StartStepButton.ToolTip = selectedDraft == null
+                ? "Select a step to start the job from that point using its saved commands."
+                : selectedDraft.IsRemoved ? "This step was removed from the job. Refresh and select an existing step."
+                : "Start the job at step " + selectedDraft.DisplayName + ". Uses the commands saved on the server " +
+                    "and follows the job's configured success and failure actions.";
             StopButton.IsEnabled = canAct && !activityStale && snapshot.IsRunning == true;
             EnabledButton.IsEnabled = canAct;
             EnabledActionText.Text = snapshot?.IsEnabled == false ? "Enable job" : "Disable job";
@@ -641,11 +651,26 @@ namespace AxialSqlTools.JobQuickView
 
         private async void Start_Click(object sender, RoutedEventArgs e)
         {
-            if (snapshot == null) return;
+            if (!CanStartJob) return;
             if (drafts.Any(d => d.IsDirty) && !Confirm(
                 "There are unsaved step changes. Start the job using its currently saved commands?",
                 "Start job")) return;
+            if (!CanStartJob) return;
             await RunActionAsync(() => service.StartAsync(snapshot.JobId, token), "Start requested. SQL Server Agent will update the running status.");
+        }
+
+        private async void StartStep_Click(object sender, RoutedEventArgs e)
+        {
+            if (!CanStartJob || selectedDraft == null || selectedDraft.IsRemoved ||
+                selectedDraft.Latest.StepUid == Guid.Empty) return;
+            var step = selectedDraft.Latest;
+            string stepLabel = "step " + step.StepId + " ('" + step.Name + "')";
+            if (drafts.Any(d => d.IsDirty) && !Confirm(
+                "There are unsaved step changes. Start the job from " + stepLabel + " using its currently saved commands?",
+                "Start job from selected step")) return;
+            if (!CanStartJob) return;
+            await RunActionAsync(() => service.StartFromStepAsync(snapshot.JobId, step.StepUid, token),
+                "Start requested from " + stepLabel + ". SQL Server Agent will update the running status.");
         }
 
         private async void Stop_Click(object sender, RoutedEventArgs e)

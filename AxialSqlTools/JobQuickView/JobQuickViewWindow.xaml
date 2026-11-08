@@ -197,7 +197,18 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <TextBlock Grid.Row="2" Text="Drafts stay with each step." FontSize="11" Margin="11,8" TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="2" Margin="10,8">
+                        <Button x:Name="StartStepButton" Style="{StaticResource ActionButton}" Click="StartStep_Click"
+                                IsEnabled="False" Margin="0,0,0,7" HorizontalAlignment="Stretch"
+                                ToolTip="Select a step to start the job from that point using its saved commands."
+                                AutomationProperties.Name="Start job from selected step">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Path Data="M 0,0 L 12,7 L 0,14 Z" Style="{StaticResource ActionIcon}" />
+                                <TextBlock Text="Start from this step" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="Drafts stay with each step." FontSize="11" Margin="1,0,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
                 </Grid>
             </Border>
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"
