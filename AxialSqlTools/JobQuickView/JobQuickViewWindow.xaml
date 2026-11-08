@@ -5,7 +5,7 @@
         Background="{DynamicResource AxialThemeBackgroundBrush}"
         Foreground="{DynamicResource AxialThemeForegroundBrush}"
         FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True"
-        Loaded="Window_Loaded"
+        Loaded="Window_Loaded" Unloaded="Window_Unloaded" IsVisibleChanged="Window_IsVisibleChanged"
         PreviewKeyDown="Window_PreviewKeyDown">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -31,6 +31,35 @@
                 <Setter Property="Stretch" Value="Uniform" /><Setter Property="Margin" Value="0,0,5,0" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+            </Style>
+            <Style x:Key="ActivitySpinner" TargetType="Path">
+                <Setter Property="Width" Value="14" /><Setter Property="Height" Value="14" />
+                <Setter Property="Data" Value="M 7,1 A 6,6 0 1 1 1,7" />
+                <Setter Property="Stroke" Value="{DynamicResource QuickManageBlueForegroundBrush}" />
+                <Setter Property="StrokeThickness" Value="2" />
+                <Setter Property="StrokeStartLineCap" Value="Round" /><Setter Property="StrokeEndLineCap" Value="Round" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+                <Setter Property="RenderTransform"><Setter.Value><RotateTransform /></Setter.Value></Setter>
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                    <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                            <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True" />
+                            <Condition Binding="{Binding IsVisible, RelativeSource={RelativeSource Self}}" Value="True" />
+                        </MultiDataTrigger.Conditions>
+                        <MultiDataTrigger.EnterActions>
+                            <BeginStoryboard x:Name="SpinAnimation">
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                     From="0" To="360" Duration="0:0:1" />
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </MultiDataTrigger.EnterActions>
+                        <MultiDataTrigger.ExitActions><RemoveStoryboard BeginStoryboardName="SpinAnimation" /></MultiDataTrigger.ExitActions>
+                    </MultiDataTrigger>
+                </Style.Triggers>
             </Style>
             <Style x:Key="DetailTable" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
                 <Setter Property="AutoGenerateColumns" Value="False" />
@@ -66,7 +95,11 @@
                             <TextBlock x:Name="EnabledText" Text="Loading" FontSize="11" FontWeight="SemiBold" />
                         </Border>
                         <Border x:Name="RunningBadge" Style="{StaticResource StatusBadge}">
-                            <TextBlock x:Name="RunningText" Text="Checking status" FontSize="11" FontWeight="SemiBold" />
+                            <StackPanel Orientation="Horizontal">
+                                <Path x:Name="RunningSpinner" Style="{StaticResource ActivitySpinner}" Margin="0,0,5,0"
+                                      Stroke="{Binding Foreground, ElementName=RunningText}" AutomationProperties.Name="Job is running" />
+                                <TextBlock x:Name="RunningText" Text="Checking status" FontSize="11" FontWeight="SemiBold" />
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </Grid>
@@ -279,16 +312,19 @@
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding Item.RunStatus}" Value="1"><Setter Property="Background" Value="{DynamicResource QuickManageGreenBackgroundBrush}" /></DataTrigger>
                                                             <DataTrigger Binding="{Binding Item.RunStatus}" Value="0"><Setter Property="Background" Value="{DynamicResource QuickManageDirtyBackgroundBrush}" /></DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="Background" Value="{DynamicResource QuickManageBlueBackgroundBrush}" /></DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Border.Style>
-                                                <Path Width="14" Height="14" Stretch="Uniform" StrokeThickness="2"
-                                                      ToolTip="{Binding Item.Outcome}" AutomationProperties.Name="{Binding Item.Outcome}">
+                                                <Grid ToolTip="{Binding Summary}" AutomationProperties.Name="{Binding Summary}">
+                                                <Path Style="{StaticResource ActivitySpinner}" Tag="{Binding IsAnimating}" />
+                                                <Path Width="14" Height="14" Stretch="Uniform" StrokeThickness="2">
                                                     <Path.Style>
                                                         <Style TargetType="Path">
                                                             <Setter Property="Data" Value="M 1,7 L 13,7" />
                                                             <Setter Property="Stroke" Value="{DynamicResource QuickManageAmberForegroundBrush}" />
                                                             <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsAnimating}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
                                                                 <DataTrigger Binding="{Binding Item.RunStatus}" Value="1">
                                                                     <Setter Property="Data" Value="M 1,7 L 5,11 L 13,2" />
                                                                     <Setter Property="Stroke" Value="{DynamicResource QuickManageGreenForegroundBrush}" />
@@ -301,6 +337,7 @@
                                                         </Style>
                                                     </Path.Style>
                                                 </Path>
+                                                </Grid>
                                             </Border>
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />

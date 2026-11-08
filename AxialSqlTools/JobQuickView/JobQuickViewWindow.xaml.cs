@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -30,8 +31,16 @@ namespace AxialSqlTools.JobQuickView
         private readonly ObservableCollection<StepDraft> drafts = new ObservableCollection<StepDraft>();
         private JobQuickViewSnapshot snapshot;
         private StepDraft selectedDraft;
-        private HistoryRow selectedHistory;
-        private HistoryRow[] historyRows = Array.Empty<HistoryRow>();
+        private readonly JobQuickViewExecutionHistory executionHistory = new JobQuickViewExecutionHistory();
+        private readonly DispatcherTimer activityTimer;
+        private readonly Stopwatch activitySampleAge = Stopwatch.StartNew();
+        private readonly Stopwatch activityPollAge = Stopwatch.StartNew();
+        private JobQuickViewExecutionRow selectedHistory;
+        private CancellationTokenSource executionRefreshCancellation;
+        private long executionRefreshVersion;
+        private bool executionRefreshing;
+        private bool activityStale;
+        private string activityRefreshError;
         private JobQuickViewHistoryRun loadedHistory;
         private CancellationTokenSource historyDetailsCancellation;
         private long historyDetailsVersion;
@@ -69,6 +78,12 @@ namespace AxialSqlTools.JobQuickView
             ServerText.Text = this.serverName;
             SetCaption(requestedJobName + " - Quick Manage");
             StepsList.ItemsSource = drafts;
+            HistoryList.ItemsSource = executionHistory.Rows;
+            activityTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            activityTimer.Tick += ActivityTimer_Tick;
             CommandEditor.Options.ConvertTabsToSpaces = false;
             CommandEditor.Options.IndentationSize = 4;
             CommandEditor.TextArea.Caret.PositionChanged += Caret_PositionChanged;
@@ -80,16 +95,160 @@ namespace AxialSqlTools.JobQuickView
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if (loaded || closed) return;
+            if (closed) return;
+            UpdateActivityTimer();
+            if (loaded) return;
             loaded = true;
             JobCommandEditorSupport.ApplyHostEditorFont(CommandEditor);
             await RefreshAsync();
+        }
+
+        private void Window_Unloaded(object sender, RoutedEventArgs e)
+        {
+            activityTimer?.Stop();
+            CancelExecutionRefresh();
+        }
+
+        private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            UpdateActivityTimer();
+        }
+
+        private void UpdateActivityTimer()
+        {
+            if (activityTimer == null) return;
+            if (!closed && IsLoaded && IsVisible)
+                activityTimer.Start();
+            else
+            {
+                activityTimer.Stop();
+                CancelExecutionRefresh();
+            }
+        }
+
+        private async void ActivityTimer_Tick(object sender, EventArgs e)
+        {
+            if (closed || !IsLoaded || !IsVisible) return;
+            if (!activityStale && executionHistory.ActiveRun != null)
+            {
+                executionHistory.ActiveRun.UpdateElapsed(activitySampleAge.Elapsed);
+                if (selectedHistory?.IsActive == true) UpdateActiveHistoryDetails();
+            }
+            if (snapshot != null && !busy && !refreshing && !executionRefreshing
+                && activityPollAge.Elapsed >= TimeSpan.FromSeconds(5))
+                await RefreshExecutionAsync();
+        }
+
+        private async Task RefreshExecutionAsync()
+        {
+            if (closed || snapshot == null || busy || refreshing || executionRefreshing) return;
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
+            executionRefreshCancellation = cancellation;
+            executionRefreshing = true;
+            long version = ++executionRefreshVersion;
+            try
+            {
+                var result = await service.LoadExecutionAsync(snapshot.JobId, cancellation.Token);
+                if (closed || cancellation.IsCancellationRequested || version != executionRefreshVersion) return;
+                // Background updates touch execution state only, never step drafts or schedules.
+                PreserveExecutionHistory(result);
+                snapshot.IsEnabled = result.IsEnabled;
+                snapshot.IsRunning = result.IsRunning;
+                snapshot.ExecutionStatus = result.ExecutionStatus;
+                snapshot.RunningSince = result.RunningSince;
+                snapshot.RunningDuration = result.RunningDuration;
+                snapshot.AgentSessionId = result.AgentSessionId;
+                snapshot.LastCompletedHistoryId = result.LastCompletedHistoryId;
+                snapshot.ExecutionServer = result.ExecutionServer;
+                snapshot.ActivityStartedAt = result.ActivityStartedAt;
+                snapshot.ActivityStoppedAt = result.ActivityStoppedAt;
+                snapshot.LastRunStarted = result.LastRunStarted;
+                snapshot.LastRunDuration = result.LastRunDuration;
+                snapshot.LastRunOutcome = result.LastRunOutcome;
+                snapshot.NextRun = result.NextRun;
+                snapshot.History = result.History;
+                snapshot.HistoryLoaded = result.HistoryLoaded;
+                snapshot.HistoryNote = result.HistoryNote;
+                snapshot.ActivityWarning = result.ActivityWarning;
+                ApplyActivityState(result);
+                ApplyExecutionSummary(snapshot);
+                bool completedSelection = ApplyHistory(snapshot);
+                RefreshText.Text = "Status checked " + DateTime.Now.ToString("T", CultureInfo.CurrentCulture);
+                RefreshText.ToolTip = result.ActivityWarning;
+                UpdateActions();
+                // The user already selected this execution while it was running. Once its
+                // summary appears, load its final details once; other selections stay untouched.
+                if (completedSelection) await LoadSelectedHistoryAsync();
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                if (!closed && !cancellation.IsCancellationRequested && version == executionRefreshVersion)
+                {
+                    MarkActivityStale(ex.Message);
+                    RefreshText.Text = "Live status unavailable";
+                    RefreshText.ToolTip = ex.Message;
+                    UpdateActions();
+                }
+            }
+            finally
+            {
+                if (ReferenceEquals(executionRefreshCancellation, cancellation))
+                {
+                    executionRefreshCancellation = null;
+                    executionRefreshing = false;
+                    activityPollAge.Restart();
+                }
+                cancellation.Dispose();
+            }
+        }
+
+        private void CancelExecutionRefresh()
+        {
+            executionRefreshVersion++;
+            executionRefreshCancellation?.Cancel();
+            executionRefreshCancellation = null;
+            executionRefreshing = false;
+        }
+
+        private void PreserveExecutionHistory(JobQuickViewSnapshot result)
+        {
+            if (!result.HistoryLoaded && snapshot != null)
+            {
+                result.History = snapshot.History;
+                result.HistoryNote = snapshot.HistoryNote;
+                result.LastRunStarted = snapshot.LastRunStarted;
+                result.LastRunDuration = snapshot.LastRunDuration;
+                result.LastRunOutcome = snapshot.LastRunOutcome;
+            }
+        }
+
+        private void ApplyActivityState(JobQuickViewSnapshot result)
+        {
+            activityStale = !result.IsRunning.HasValue;
+            activityRefreshError = activityStale ? "Current execution status is unavailable" : null;
+            activitySampleAge.Restart();
+            activityPollAge.Restart();
+        }
+
+        private void MarkActivityStale(string error)
+        {
+            activityStale = true;
+            activityRefreshError = "Live status update failed";
+            executionHistory.MarkActivityStale();
+            RunningText.Text = "Status unavailable";
+            RunningText.ToolTip = error;
+            RunningSpinner.Tag = false;
+            SetStatusBadge(RunningBadge, RunningText, "Amber");
+            if (snapshot != null) UpdateHistoryStatus(snapshot);
+            if (selectedHistory?.IsActive == true) UpdateActiveHistoryDetails();
         }
 
         private async Task<bool> RefreshAsync()
         {
             if (closed || busy || refreshing) return false;
             refreshing = true;
+            CancelExecutionRefresh();
             if (historyDetailsLoading) ResetHistoryDetails(selectedHistory);
             CancelHistoryDetails();
             RefreshText.Text = snapshot == null ? "Loading job information..." : "Refreshing...";
@@ -104,6 +263,7 @@ namespace AxialSqlTools.JobQuickView
                 if (selectedHistory != null) await LoadSelectedHistoryAsync();
                 if (closed) return false;
                 RefreshText.Text = "Updated " + DateTime.Now.ToString("T", CultureInfo.CurrentCulture);
+                RefreshText.ToolTip = result.ActivityWarning;
                 if (!string.IsNullOrWhiteSpace(result.ActivityWarning))
                 {
                     ShowMessage(result.ActivityWarning, false);
@@ -120,6 +280,7 @@ namespace AxialSqlTools.JobQuickView
                 if (!closed)
                 {
                     RefreshText.Text = "Refresh failed";
+                    MarkActivityStale(ex.Message);
                     ShowMessage("Could not refresh this job. " + ex.Message +
                         (snapshot == null ? " Use Refresh to retry." : " Displayed information may be out of date; drafts are preserved."), true);
                     if (snapshot == null)
@@ -140,19 +301,16 @@ namespace AxialSqlTools.JobQuickView
             finally
             {
                 refreshing = false;
+                activityPollAge.Restart();
                 if (!closed) UpdateActions();
             }
         }
 
         private void ApplySnapshot(JobQuickViewSnapshot result)
         {
-            if (!result.HistoryLoaded && snapshot != null)
-            {
-                // A failed history query keeps the previously displayed list available.
-                result.History = snapshot.History;
-                result.HistoryNote = snapshot.HistoryNote;
-            }
+            PreserveExecutionHistory(result);
             snapshot = result;
+            ApplyActivityState(result);
             JobNameText.Text = result.Name;
             JobNameText.ToolTip = result.Name;
             ServerText.Text = serverName + "  |  Owner: " + EmptyValue(result.Owner);
@@ -226,6 +384,7 @@ namespace AxialSqlTools.JobQuickView
             EnabledText.Text = result.IsEnabled ? "Enabled" : "Disabled";
             RunningText.Text = EmptyValue(result.ExecutionStatus, "Status unknown");
             RunningText.ToolTip = result.RunningSince.HasValue ? "Started " + ServerDate(result.RunningSince) + " (server local time)" : null;
+            RunningSpinner.Tag = result.IsRunning == true && !activityStale;
             ApplyStatusBadges();
             LastRunSummaryText.Text = EmptyValue(result.LastRunOutcome, "No recorded execution");
             LastRunSummaryText.SetResourceReference(TextBlock.ForegroundProperty,
@@ -241,52 +400,53 @@ namespace AxialSqlTools.JobQuickView
 
         private void UpdateHistoryStatus(JobQuickViewSnapshot result)
         {
-            string currentStatus = "Current status: " + EmptyValue(result.ExecutionStatus, "Unknown") +
-                (result.RunningSince.HasValue ? " (started " + HistoryDate(result.RunningSince) + ")" : string.Empty);
-            HistoryStatusText.Text = result.HistoryLoaded
-                ? result.History.Count + (result.History.Count == 1 ? " run" : " runs") + "  |  " + currentStatus
-                : currentStatus + "  |  History refresh failed";
+            string currentStatus = activityStale
+                ? EmptyValue(activityRefreshError, "Current execution status is unavailable")
+                : "Current status: " + EmptyValue(result.ExecutionStatus, "Unknown") +
+                    (result.IsRunning == true && result.RunningSince.HasValue
+                        ? " (started " + HistoryDate(result.RunningSince) + ")" : string.Empty);
+            int completedCount = executionHistory.Rows.Count(row => !row.IsActive);
+            string count = completedCount + (completedCount == 1 ? " completed run" : " completed runs");
+            if (executionHistory.ActiveRun != null) count += activityStale ? " + 1 unconfirmed run" : " + 1 active run";
+            HistoryStatusText.Text = count + "  |  " + currentStatus +
+                (result.HistoryLoaded ? string.Empty : "  |  History refresh failed");
         }
 
-        private void ApplyHistory(JobQuickViewSnapshot result)
+        private bool ApplyHistory(JobQuickViewSnapshot result)
         {
-            UpdateHistoryStatus(result);
-            if (!result.HistoryLoaded)
-            {
-                HistoryNoteText.Text = historyRows.Length == 0
-                    ? "Execution summaries could not be loaded. Use Refresh to retry."
-                    : "Showing previously loaded executions. Use Refresh to retry.";
-                HistoryEmptyText.Text = "Execution summaries could not be loaded. Use Refresh to retry.";
-                HistoryEmptyText.Visibility = historyRows.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-                return;
-            }
-
-            int? selectedId = selectedHistory?.Item.InstanceId;
-            CancelHistoryDetails();
-            historyRows = result.History.Select(run => new HistoryRow(run)).ToArray();
-            var selection = historyRows.FirstOrDefault(row => row.Item.InstanceId == selectedId);
+            var previousSelection = selectedHistory;
             applyingHistory = true;
             try
             {
-                HistoryList.ItemsSource = historyRows;
-                HistoryList.SelectedItem = selection;
-                selectedHistory = selection;
+                selectedHistory = executionHistory.Apply(result, previousSelection, serverName);
+                HistoryList.SelectedItem = selectedHistory;
             }
             finally { applyingHistory = false; }
-            // Preserve selection without auto-selecting a run. RefreshAsync reloads selected details.
-            if (selection == null || loadedHistory?.InstanceId != selection.Item.InstanceId)
-                ResetHistoryDetails(selection);
-            HistoryEmptyText.Text = "No retained executions. This job may not have run, or its history was purged.";
-            HistoryEmptyText.Visibility = historyRows.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-            HistoryNoteText.Text = EmptyValue(result.HistoryNote,
-                "Select an execution to load its steps and messages. Times use the SQL Server's local time.");
+            bool selectionChanged = !ReferenceEquals(previousSelection, selectedHistory);
+            if (selectionChanged)
+            {
+                CancelHistoryDetails();
+                ResetHistoryDetails(selectedHistory);
+            }
+            else if (selectedHistory?.IsActive == true)
+                UpdateActiveHistoryDetails();
+            UpdateHistoryStatus(result);
+            HistoryEmptyText.Text = result.HistoryLoaded
+                ? "No retained executions. This job may not have run, or its history was purged."
+                : "Execution summaries could not be loaded. Use Refresh to retry.";
+            HistoryEmptyText.Visibility = executionHistory.Rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            HistoryNoteText.Text = !result.HistoryLoaded
+                ? "Completed history could not be refreshed. Previously loaded executions are kept. Use Refresh to retry."
+                : "Execution status updates every 5 seconds while this view is visible. " + EmptyValue(result.HistoryNote,
+                    "Select an execution to load its steps and messages. Times use the SQL Server's local time.");
             UpdateActions();
+            return selectionChanged && selectedHistory != null && !selectedHistory.IsActive;
         }
 
         private async void History_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (closed || applyingHistory) return;
-            selectedHistory = HistoryList.SelectedItem as HistoryRow;
+            selectedHistory = HistoryList.SelectedItem as JobQuickViewExecutionRow;
             await LoadSelectedHistoryAsync();
         }
 
@@ -302,7 +462,7 @@ namespace AxialSqlTools.JobQuickView
             var selection = selectedHistory;
             ResetHistoryDetails(selection);
             UpdateActions();
-            if (closed || snapshot == null || selection == null) return;
+            if (closed || snapshot == null || selection == null || selection.IsActive) return;
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
             historyDetailsCancellation = cancellation;
             long version = historyDetailsVersion;
@@ -317,8 +477,8 @@ namespace AxialSqlTools.JobQuickView
                 if (closed || cancellation.IsCancellationRequested || version != historyDetailsVersion
                     || selectedHistory?.Item.InstanceId != run.InstanceId) return;
                 loadedHistory = run;
-                HistoryEntriesGrid.ItemsSource = new[] { new HistoryRow(run) }
-                    .Concat(run.Steps.Select(step => new HistoryRow(step))).ToArray();
+                HistoryEntriesGrid.ItemsSource = new[] { new JobQuickViewExecutionRow(run) }
+                    .Concat(run.Steps.Select(step => new JobQuickViewExecutionRow(step))).ToArray();
                 HistorySelectionNoteText.Text = run.Note ?? string.Empty;
                 HistorySelectionNoteText.Visibility = string.IsNullOrWhiteSpace(run.Note) ? Visibility.Collapsed : Visibility.Visible;
                 HistoryEntriesGrid.SelectedIndex = 0;
@@ -352,7 +512,7 @@ namespace AxialSqlTools.JobQuickView
             historyDetailsLoading = false;
         }
 
-        private void ResetHistoryDetails(HistoryRow selection)
+        private void ResetHistoryDetails(JobQuickViewExecutionRow selection)
         {
             loadedHistory = null;
             HistoryEntriesGrid.ItemsSource = null;
@@ -365,11 +525,26 @@ namespace AxialSqlTools.JobQuickView
             HistoryMessageText.Text = selection == null
                 ? "Select an execution on the left to load its steps and output messages."
                 : "Use Load details to retrieve this execution's steps and messages.";
+            if (selection?.IsActive == true) UpdateActiveHistoryDetails();
+        }
+
+        private void UpdateActiveHistoryDetails()
+        {
+            if (selectedHistory?.IsActive != true) return;
+            HistoryTitleText.Text = selectedHistory.Title;
+            HistoryDetailText.Text = selectedHistory.Summary;
+            HistoryContextText.Text = (selectedHistory.Item.StartedAt.HasValue
+                ? "Started " + HistoryDate(selectedHistory.Item.StartedAt) + "  |  " : string.Empty) +
+                "Server: " + EmptyValue(selectedHistory.Item.Server, serverName);
+            HistoryContextText.Visibility = Visibility.Visible;
+            HistoryMessageText.Text = selectedHistory.IsStale
+                ? "The current execution status could not be confirmed. The displayed status and elapsed time are from the last successful check. Automatic checks will retry; you can also use Refresh."
+                : "This execution is still active. Its status and elapsed time update automatically. Steps and output messages will be available after SQL Server Agent records the completed execution.";
         }
 
         private void HistoryEntry_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var entry = HistoryEntriesGrid.SelectedItem as HistoryRow;
+            var entry = HistoryEntriesGrid.SelectedItem as JobQuickViewExecutionRow;
             if (entry == null) return;
             HistoryDetailText.Text = entry.EntryLabel + "  |  " + entry.Summary;
             HistoryMessageText.Text = EmptyValue(entry.Item.Message, "No output message was recorded for this entry.");
@@ -433,15 +608,16 @@ namespace AxialSqlTools.JobQuickView
         {
             if (closed) return;
             bool canAct = snapshot != null && !busy && !refreshing;
-            StartButton.IsEnabled = canAct && snapshot.IsRunning == false;
-            StopButton.IsEnabled = canAct && snapshot.IsRunning == true;
+            StartButton.IsEnabled = canAct && !activityStale && snapshot.IsRunning == false;
+            StopButton.IsEnabled = canAct && !activityStale && snapshot.IsRunning == true;
             EnabledButton.IsEnabled = canAct;
             EnabledActionText.Text = snapshot?.IsEnabled == false ? "Enable job" : "Disable job";
             EnabledIcon.SetResourceReference(System.Windows.Shapes.Path.DataProperty,
                 snapshot?.IsEnabled == false ? "EnableIconGeometry" : "DisableIconGeometry");
             RefreshButton.IsEnabled = !busy && !refreshing;
             HistoryList.IsEnabled = !refreshing;
-            HistoryDetailsRetryButton.IsEnabled = selectedHistory != null && !historyDetailsLoading && !refreshing;
+            HistoryDetailsRetryButton.Visibility = selectedHistory?.IsActive == true ? Visibility.Collapsed : Visibility.Visible;
+            HistoryDetailsRetryButton.IsEnabled = selectedHistory != null && !selectedHistory.IsActive && !historyDetailsLoading && !refreshing;
             HistoryDetailsRetryButton.Content = historyDetailsLoading ? "Loading..." : loadedHistory == null ? "Load / retry details" : "Reload details";
             StepsList.IsEnabled = !busy;
             CommandEditor.IsReadOnly = selectedDraft == null || busy;
@@ -481,6 +657,7 @@ namespace AxialSqlTools.JobQuickView
         private async Task RunActionAsync(Func<Task> action, string successMessage)
         {
             if (closed || busy || refreshing || snapshot == null) return;
+            CancelExecutionRefresh();
             busy = true;
             mutating = true;
             UpdateActions();
@@ -666,7 +843,7 @@ namespace AxialSqlTools.JobQuickView
         private void ApplyStatusBadges()
         {
             SetStatusBadge(EnabledBadge, EnabledText, snapshot?.IsEnabled == true ? "Green" : "Amber");
-            SetStatusBadge(RunningBadge, RunningText, snapshot?.IsRunning == true ? "Green" : snapshot?.IsRunning == false ? "Blue" : "Amber");
+            SetStatusBadge(RunningBadge, RunningText, activityStale ? "Amber" : snapshot?.IsRunning == true ? "Green" : snapshot?.IsRunning == false ? "Blue" : "Amber");
         }
 
         private static void SetStatusBadge(Border badge, TextBlock text, string color)
@@ -735,6 +912,11 @@ namespace AxialSqlTools.JobQuickView
         {
             if (closed) return;
             closed = true;
+            activityTimer.Stop();
+            activityTimer.Tick -= ActivityTimer_Tick;
+            RunningSpinner.Tag = false;
+            executionHistory.MarkActivityStale();
+            CancelExecutionRefresh();
             CancelHistoryDetails();
             lifetime.Cancel();
             lifetime.Dispose();
@@ -767,16 +949,6 @@ namespace AxialSqlTools.JobQuickView
             public string Status { get; set; }
             public string Description { get; set; }
             public string NextRun { get; set; }
-        }
-
-        private sealed class HistoryRow
-        {
-            public JobQuickViewHistoryItem Item { get; }
-            public string Title => HistoryDate(Item.StartedAt);
-            public string EntryLabel => Item.StepId == 0 ? "Job outcome" : "Step " + Item.StepId + ": " + EmptyValue(Item.StepName, "Unnamed step");
-            public string Summary => EmptyValue(Item.Outcome) + "  |  " + Duration(Item.Duration);
-            public string DurationText => Duration(Item.Duration);
-            public HistoryRow(JobQuickViewHistoryItem item) { Item = item; }
         }
 
         private sealed class StepDraft : INotifyPropertyChanged
